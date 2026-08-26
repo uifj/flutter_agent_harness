@@ -28,7 +28,6 @@ import 'theme/dsw_theme.dart';
 import 'ui/app_frame.dart';
 import 'ui/conversation/conversation_root.dart';
 import 'ui/conversation/details_panel.dart';
-import 'ui/layout/details_column.dart';
 import 'ui/settings/model_settings.dart';
 import 'ui/sidebar/sidebar.dart';
 
@@ -61,22 +60,22 @@ class _DshAppState extends State<DshApp> {
 
   final _tail = StreamingTail();
   final _layout = LayoutController();
-  final _detailsColumn = DetailsColumnController();
   final _terminals = TerminalManager();
   late final ConversationController _conversation;
   late final SessionIndex _sessions;
   late final WorkbenchController _workbench;
 
+  /// The bottom panel's own workbench: its own tree and its own per-session
+  /// layouts, under its own store directory. The two panels share nothing but
+  /// the terminal pool and the conversation — better-sidebar's trees never
+  /// exchange panes or tabs.
+  late final WorkbenchController _bottomWorkbench;
+
   /// dsh's `openDetails(target)` is one call that both points the panel at a
-  /// tool call and opens the column it lives in. Here those are two objects, and
-  /// this is where they are joined — plus a third since the workbench moved into
-  /// the same column: pointing the panel at a call has to bring the panel
-  /// forward, or the click lands behind the workbench and reads as a no-op.
+  /// tool call and opens the column it lives in. Here those are two objects,
+  /// and this is where they are joined.
   late final DetailsSelection _selection = DetailsSelection(
-    onSelect: () {
-      _detailsColumn.show(DetailsView.details);
-      _layout.openDetails();
-    },
+    onSelect: _layout.openDetails,
   );
 
   bool _settingsOpen = false;
@@ -92,6 +91,13 @@ class _DshAppState extends State<DshApp> {
       store: WorkbenchStore.open(widget.support),
       workspaceRoot: widget.settings.value.workspaceRoot,
     );
+    _bottomWorkbench = WorkbenchController(
+      // Its own directory, not a second handle on the same one: the two panels
+      // persist independently, and one shared store would have them fighting
+      // over the same per-session file.
+      store: WorkbenchStore.open(Directory('${widget.support.path}/bottom')),
+      workspaceRoot: widget.settings.value.workspaceRoot,
+    );
     _conversation = ConversationController(
       runtime: _runtime,
       tail: _tail,
@@ -103,6 +109,7 @@ class _DshAppState extends State<DshApp> {
         _sessions.setActive(id);
         _sessions.refresh();
         _workbench.bindSession(id);
+        _bottomWorkbench.bindSession(id);
       },
     );
     _sessions.refresh();
@@ -121,11 +128,11 @@ class _DshAppState extends State<DshApp> {
     // inside its debounce window, and the write has to finish before the queue is
     // cleared. `dispose` cannot await, so the ordering lives in `shutdown`.
     _workbench.shutdown();
+    _bottomWorkbench.shutdown();
     // Safety net: the tabs close their own sessions as they unmount, but the
     // state teardown at app exit is not guaranteed to run each body's dispose,
     // and a shell that outlives its window is a leak on the host.
     _terminals.dispose();
-    _detailsColumn.dispose();
     _selection.dispose();
     _layout.dispose();
     _tail.dispose();
@@ -151,6 +158,7 @@ class _DshAppState extends State<DshApp> {
     // The workbench reads the same folder as the tools, through the same guard,
     // so it moves whether or not the runtime is rebuilt.
     _workbench.workspaceRoot = next.workspaceRoot;
+    _bottomWorkbench.workspaceRoot = next.workspaceRoot;
     if (!next.requiresRuntimeRestart(previous)) {
       _runtime.workspaceRoot = next.workspaceRoot;
       return;
@@ -163,6 +171,7 @@ class _DshAppState extends State<DshApp> {
     // The dropped conversation took its layout with it, the same as the two
     // session commands below.
     await _workbench.bindSession(null);
+    await _bottomWorkbench.bindSession(null);
     await _sessions.adoptRuntime(_runtime);
     // Disposed last: it may still be unwinding a turn the swap just abandoned.
     await replaced.dispose();
@@ -189,27 +198,34 @@ class _DshAppState extends State<DshApp> {
           // state read here is never stale.
           onToggleDetails: _layout.toggleDetails,
           detailsOpen: _layout.details != 0,
+          onToggleWorkbench: _layout.toggleWorkbench,
+          workbenchOpen: _layout.workbench != 0,
+          onToggleBottom: _layout.toggleBottom,
+          bottomOpen: _layout.bottom != 0,
         ),
         center: DetailsSelectionScope(
           selection: _selection,
           child: ConversationRoot(conversation: _conversation, tail: _tail),
         ),
-        details: DetailsColumn(
-          controller: _detailsColumn,
-          details: DetailsPanel(
-            conversation: _conversation,
-            selection: _selection,
-            // Closing the column keeps the selection. dsh's `closeDetails` does
-            // the same — it is a layout write and nothing else — which is what
-            // lets the pill on the call already selected reopen the panel onto it.
-            onClose: _layout.closeDetails,
-          ),
-          workbench: Workbench(
-            workbench: _workbench,
-            conversation: _conversation,
-            terminals: _terminals,
-            onClose: _layout.closeDetails,
-          ),
+        details: DetailsPanel(
+          conversation: _conversation,
+          selection: _selection,
+          // Closing the column keeps the selection. dsh's `closeDetails` does
+          // the same — it is a layout write and nothing else — which is what
+          // lets the pill on the call already selected reopen the panel onto it.
+          onClose: _layout.closeDetails,
+        ),
+        workbench: Workbench(
+          workbench: _workbench,
+          conversation: _conversation,
+          terminals: _terminals,
+          onClose: _layout.closeWorkbench,
+        ),
+        bottom: Workbench(
+          workbench: _bottomWorkbench,
+          conversation: _conversation,
+          terminals: _terminals,
+          onClose: _layout.closeBottom,
         ),
         overlay: _overlay(),
       ),
@@ -244,6 +260,7 @@ class _DshAppState extends State<DshApp> {
     _selection.clear();
     _sessions.setActive(null);
     await _workbench.bindSession(null);
+    await _bottomWorkbench.bindSession(null);
   }
 
   Future<void> _openSession(String id) async {
@@ -251,5 +268,6 @@ class _DshAppState extends State<DshApp> {
     _selection.clear();
     _sessions.setActive(id);
     await _workbench.bindSession(id);
+    await _bottomWorkbench.bindSession(id);
   }
 }

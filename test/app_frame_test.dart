@@ -55,6 +55,8 @@ void main() {
     WidgetTester tester, {
     double width = 1400,
     Widget details = const SizedBox(),
+    Widget workbench = const SizedBox(),
+    Widget bottom = const SizedBox(),
   }) async {
     tester.view.physicalSize = Size(width, 900);
     tester.view.devicePixelRatio = 1;
@@ -75,9 +77,15 @@ void main() {
               onOpenSettings: () {},
               onToggleDetails: layout.toggleDetails,
               detailsOpen: layout.details != 0,
+              onToggleWorkbench: layout.toggleWorkbench,
+              workbenchOpen: layout.workbench != 0,
+              onToggleBottom: layout.toggleBottom,
+              bottomOpen: layout.bottom != 0,
             ),
             center: ConversationRoot(conversation: controller, tail: tail),
             details: details,
+            workbench: workbench,
+            bottom: bottom,
           ),
         ),
       ),
@@ -133,10 +141,13 @@ void main() {
   ) async {
     // The contract, asserted directly rather than through whatever happens to
     // overflow when it is broken: a column animates its own width, and the child
-    // inside it is laid out at the target for the whole slide.
+    // inside it is laid out at the target for the whole slide. Wide enough that
+    // details can open beside the workbench, or the closing slide never happens
+    // and there is nothing to observe.
     final seen = <double>[];
     await pump(
       tester,
+      width: 1800,
       details: LayoutBuilder(
         builder: (context, constraints) {
           seen.add(constraints.maxWidth);
@@ -170,6 +181,54 @@ void main() {
 
     layout.closeDetails();
     await cross(tester);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the bottom row opens and closes without unmounting its child', (
+    tester,
+  ) async {
+    await pump(tester, bottom: const Text('the bottom panel'));
+    await cross(tester);
+    final text = find.text('the bottom panel');
+    // The row starts closed at zero height — better-sidebar's
+    // `makeDefaultState` ships `bottomOpen: false` — but its child is mounted
+    // from the first frame: the shells a bottom panel hosts must survive being
+    // hidden.
+    expect(text, findsOneWidget);
+    expect(tester.renderObject<RenderBox>(text).size.height, 0);
+
+    layout.openBottom();
+    await cross(tester);
+    expect(tester.renderObject<RenderBox>(text).size.height, bottomDefault);
+    expect(tester.takeException(), isNull);
+
+    layout.closeBottom();
+    await cross(tester);
+    expect(text, findsOneWidget);
+    expect(tester.renderObject<RenderBox>(text).size.height, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the workbench column keeps its child mounted while closed', (
+    tester,
+  ) async {
+    await pump(tester, workbench: const Text('the workbench column'));
+    await cross(tester);
+    final text = find.text('the workbench column');
+    // The column starts open at the contract default.
+    expect(text, findsOneWidget);
+    expect(tester.renderObject<RenderBox>(text).size.width, workbenchDefault);
+
+    layout.closeWorkbench();
+    await cross(tester);
+    // A closed column is hidden, not gone — same keep-alive contract as the
+    // details column beside it.
+    expect(text, findsOneWidget);
+    expect(tester.renderObject<RenderBox>(text).size.width, 0);
+
+    layout.openWorkbench();
+    await cross(tester);
+    expect(tester.renderObject<RenderBox>(text).size.width, workbenchDefault);
     expect(tester.takeException(), isNull);
   });
 

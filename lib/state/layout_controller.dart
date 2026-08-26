@@ -1,9 +1,12 @@
 // Panel geometry: width preferences, drags, and the narrow-viewport override.
 //
-// A 1:1 port of dsh's `ui-layout/src/client/stores.ts`. The preference IS the
+// A 1:1 port of dsh's `ui-layout/src/client/stores.ts`, extended with the
+// workbench column and bottom row better-sidebar adds. The preference IS the
 // width, so closing a panel forgets its drag width and reopening restores the
-// contract default. Nothing here derives layout — that is `computeColumns`'s job,
-// and it is a pure function of these values plus the viewport.
+// contract default. Nothing here derives layout — that is `computeColumns`'s
+// job, and it is a pure function of these values plus the viewport.
+
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 
@@ -17,6 +20,17 @@ class LayoutController extends ChangeNotifier {
   /// Details width preference in px; 0 means closed. Starts closed.
   double get details => _details;
   double _details = 0;
+
+  /// Workbench width preference in px; 0 means closed. Starts open at the
+  /// contract default — better-sidebar's right panel is the app's primary
+  /// surface, not an inspection drawer.
+  double get workbench => _workbench;
+  double _workbench = workbenchDefault;
+
+  /// Bottom row height preference in px; 0 means closed. Starts closed —
+  /// `makeDefaultState` (`state.ts:224`) ships `bottomOpen: false`.
+  double get bottom => _bottom;
+  double _bottom = 0;
 
   /// Mirrors the frame's breakpoint reading, so [toggleSidebar] can pick its
   /// semantics. The frame solves its geometry from the viewport directly — this
@@ -42,6 +56,25 @@ class LayoutController extends ChangeNotifier {
     final next = clampWidth(px, detailsMin, detailsMax);
     if (next == _details) return;
     _details = next;
+    notifyListeners();
+  }
+
+  /// Drag write. The ceiling is applied at solve time against the viewport in
+  /// hand, so this clamp is the static contract range only.
+  void setWorkbench(double px) {
+    final next = clampWidth(px, workbenchMin, workbenchMax);
+    if (next == _workbench) return;
+    _workbench = next;
+    notifyListeners();
+  }
+
+  /// Drag write for the bottom row's height. The viewport-relative ceiling is
+  /// derived at solve time ([computeBottom]); here it is only kept above the
+  /// floor, so a drag cannot cross the open/closed line.
+  void setBottom(double px) {
+    final next = math.max(bottomMin, px.roundToDouble());
+    if (next == _bottom) return;
+    _bottom = next;
     notifyListeners();
   }
 
@@ -80,6 +113,34 @@ class LayoutController extends ChangeNotifier {
   }
 
   void toggleDetails() => _details == 0 ? openDetails() : closeDetails();
+
+  void openWorkbench() {
+    if (_workbench != 0) return;
+    _workbench = workbenchDefault;
+    notifyListeners();
+  }
+
+  void closeWorkbench() {
+    if (_workbench == 0) return;
+    _workbench = 0;
+    notifyListeners();
+  }
+
+  void toggleWorkbench() => _workbench == 0 ? openWorkbench() : closeWorkbench();
+
+  void openBottom() {
+    if (_bottom != 0) return;
+    _bottom = bottomDefault;
+    notifyListeners();
+  }
+
+  void closeBottom() {
+    if (_bottom == 0) return;
+    _bottom = 0;
+    notifyListeners();
+  }
+
+  void toggleBottom() => _bottom == 0 ? openBottom() : closeBottom();
 
   /// True while a divider is being dragged. Column animations are suppressed for
   /// the duration, matching `.frame[data-dragging] { transition: none }` — an

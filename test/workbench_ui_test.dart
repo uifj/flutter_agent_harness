@@ -13,10 +13,6 @@
 //     in opposite directions, so both directions are pinned;
 //   * the file tree against a real directory, since its whole job is to agree with
 //     the disk through the same guard the tools use.
-//
-// The details column's switcher is here too rather than in its own file: it exists
-// only because the workbench had to share a column, and what matters about it is
-// that switching keeps both panels mounted.
 
 import 'dart:io';
 
@@ -28,7 +24,6 @@ import 'package:agent_harness/sidebar/ui/workbench_tab_bar.dart';
 import 'package:agent_harness/state/conversation_controller.dart';
 import 'package:agent_harness/state/streaming_tail.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
-import 'package:agent_harness/ui/layout/details_column.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
@@ -328,41 +323,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         find.text('No workspace folder is set, so there is nothing to list.'),
-        findsOneWidget,
-      );
-    });
-  });
-
-  group('the details column', () {
-    testWidgets('switches panels without unmounting either', (tester) async {
-      final controller = DetailsColumnController();
-      addTearDown(controller.dispose);
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: dswThemeData(Brightness.light),
-          home: Scaffold(
-            body: SizedBox(
-              width: 360,
-              height: 600,
-              child: DetailsColumn(
-                controller: controller,
-                details: const Text('the details panel'),
-                workbench: const Text('the workbench'),
-              ),
-            ),
-          ),
-        ),
-      );
-
-      expect(find.text('the details panel'), findsOneWidget);
-      expect(find.text('the workbench', skipOffstage: false), findsOneWidget);
-
-      await tester.tap(find.text('Workbench'));
-      await tester.pumpAndSettle();
-      expect(controller.view, DetailsView.workbench);
-      expect(find.text('the workbench'), findsOneWidget);
-      expect(
-        find.text('the details panel', skipOffstage: false),
         findsOneWidget,
       );
     });

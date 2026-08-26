@@ -1,21 +1,27 @@
-// The three-column shell: sidebar | center | details.
+// The five-region shell: sidebar | center | details | workbench, over a bottom
+// row.
 //
 // A port of `deepseek-harness/packages/client/ui-layout/src/client/AppFrame.tsx`
-// and its module CSS. The frame owns the viewport reading, the concession solve
-// ([computeColumns]), the drag handles, and the sidebar's `collapsed`/`width`
-// parameters — the sidebar cannot know them, because they are outputs of the
-// solve.
+// and its module CSS, widened to better-sidebar's layout: the workbench is its
+// own right column (the tool surface, not an inspection drawer), and a bottom
+// panel row spans the full width beneath the columns. The frame owns the
+// viewport reading, the concession solve ([computeColumns], [computeBottom]),
+// the drag handles, and the sidebar's `collapsed`/`width` parameters — the
+// panels cannot know them, because they are outputs of the solve.
 //
-// Two behaviours worth keeping straight while reading:
+// Three behaviours worth keeping straight while reading:
 //
-//   * Column widths animate on the slow curve, and the animation is switched off
-//     for the whole gesture (`.frame[data-dragging] { transition: none }`): an
-//     eased track cannot follow the pointer.
-//   * The sidebar is handed the *target* width and is laid out at it regardless
-//     of how far the column has slid, so nothing reflows mid-slide. The column
+//   * Column widths and the bottom row's height animate on the slow curve, and
+//     the animation is switched off for the whole gesture
+//     (`.frame[data-dragging] { transition: none }`): an eased track cannot
+//     follow the pointer.
+//   * A column is handed the *target* width and is laid out at it regardless of
+//     how far the column has slid, so nothing reflows mid-slide. The column
 //     clips instead. That is what [OverflowBox] is doing below. A child that
-//     wants a width of its own anyway — the rail, while its wide content fades —
-//     releases the constraint the same way and is clipped in turn.
+//     wants a width of its own anyway — the rail, while its wide content fades
+//     — releases the constraint the same way and is clipped in turn.
+//   * Closed panels stay mounted at zero size. Closing a workbench must not
+//     throw away its editors; hiding the bottom row must not kill its shells.
 
 import 'dart:math' as math;
 
@@ -28,7 +34,7 @@ import '../theme/dsw_theme.dart';
 import 'layout/columns.dart';
 
 /// Which divider a gesture belongs to.
-enum _Side { sidebar, details }
+enum _Region { sidebar, details, workbench, bottom }
 
 class AppFrame extends StatefulWidget {
   const AppFrame({
@@ -37,6 +43,8 @@ class AppFrame extends StatefulWidget {
     required this.sidebarBuilder,
     required this.center,
     required this.details,
+    required this.workbench,
+    required this.bottom,
     this.overlay,
   });
 
@@ -52,7 +60,14 @@ class AppFrame extends StatefulWidget {
   /// not throw away its state.
   final Widget details;
 
-  /// Floats over all three columns; only hit-tests where it paints.
+  /// The workbench column. Same keep-alive contract as [details].
+  final Widget workbench;
+
+  /// The bottom panel row. Spans the full width beneath the columns; stays
+  /// mounted at zero height when closed.
+  final Widget bottom;
+
+  /// Floats over everything; only hit-tests where it paints.
   final Widget? overlay;
 
   @override
@@ -60,14 +75,15 @@ class AppFrame extends StatefulWidget {
 }
 
 class _AppFrameState extends State<AppFrame> {
-  /// The rendered width captured at drag start. Grabbing a concession-clamped
+  /// The rendered size captured at drag start. Grabbing a concession-clamped
   /// panel must not jump back to the stored preference, and the base stays frozen
   /// for the whole gesture so deltas do not compound.
   double _base = 0;
-  double _dx = 0;
-  _Side? _dragging;
-  _Side? _hovered;
+  double _delta = 0;
+  _Region? _dragging;
+  _Region? _hovered;
   bool _detailsHovered = false;
+  bool _workbenchHovered = false;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -80,6 +96,7 @@ class _AppFrameState extends State<AppFrame> {
     final layout = widget.layout;
     final color = context.dsw;
     final viewport = constraints.maxWidth;
+    final viewportHeight = constraints.maxHeight;
 
     // The store's narrow flag only decides what `toggleSidebar` means. The
     // geometry below is solved from the viewport in hand, so crossing the
@@ -97,7 +114,13 @@ class _AppFrameState extends State<AppFrame> {
       narrowExpanded: layout.narrowExpanded,
     );
     final collapsed = preference == 0;
-    final cols = computeColumns(viewport, preference, layout.details);
+    final cols = computeColumns(
+      viewport,
+      preference,
+      layout.details,
+      layout.workbench,
+    );
+    final bottomHeight = computeBottom(layout.bottom, viewportHeight);
 
     // The solver lets the sidebar keep its width even when the viewport cannot
     // pay for it (it never concedes). Clamping here keeps that from becoming a
@@ -106,6 +129,10 @@ class _AppFrameState extends State<AppFrame> {
     final detailsWidth = math.min(
       cols.details,
       math.max(0.0, viewport - sidebarWidth),
+    );
+    final workbenchWidth = math.min(
+      cols.workbench,
+      math.max(0.0, viewport - sidebarWidth - detailsWidth),
     );
 
     final duration = _dragging != null
@@ -116,53 +143,112 @@ class _AppFrameState extends State<AppFrame> {
       color: color.bgBase,
       child: Stack(
         children: [
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _column(
-                width: sidebarWidth,
-                duration: duration,
-                decoration: BoxDecoration(
-                  color: color.sidebarFill,
-                  border: Border(right: BorderSide(color: color.borderL1)),
+              Expanded(
+                child: Row(
+                  children: [
+                    _column(
+                      width: sidebarWidth,
+                      duration: duration,
+                      decoration: BoxDecoration(
+                        color: color.sidebarFill,
+                        border: Border(
+                          right: BorderSide(color: color.borderL1),
+                        ),
+                      ),
+                      child: widget.sidebarBuilder(
+                        context,
+                        collapsed,
+                        sidebarWidth,
+                      ),
+                    ),
+                    Expanded(child: ClipRect(child: widget.center)),
+                    MouseRegion(
+                      onEnter: (_) => setState(() => _detailsHovered = true),
+                      onExit: (_) => setState(() => _detailsHovered = false),
+                      child: _column(
+                        width: detailsWidth,
+                        duration: duration,
+                        decoration: BoxDecoration(
+                          // A closed column is still mounted, so its border
+                          // would paint a 1px seam against the center.
+                          border: detailsWidth == 0
+                              ? null
+                              : Border(
+                                  left: BorderSide(color: color.borderL2),
+                                ),
+                        ),
+                        child: widget.details,
+                      ),
+                    ),
+                    MouseRegion(
+                      onEnter: (_) => setState(() => _workbenchHovered = true),
+                      onExit: (_) => setState(() => _workbenchHovered = false),
+                      child: _column(
+                        width: workbenchWidth,
+                        duration: duration,
+                        decoration: BoxDecoration(
+                          border: workbenchWidth == 0
+                              ? null
+                              : Border(
+                                  left: BorderSide(color: color.borderL2),
+                                ),
+                        ),
+                        child: widget.workbench,
+                      ),
+                    ),
+                  ],
                 ),
-                child: widget.sidebarBuilder(context, collapsed, sidebarWidth),
               ),
-              Expanded(child: ClipRect(child: widget.center)),
-              MouseRegion(
-                onEnter: (_) => setState(() => _detailsHovered = true),
-                onExit: (_) => setState(() => _detailsHovered = false),
-                child: _column(
-                  width: detailsWidth,
-                  duration: duration,
-                  decoration: BoxDecoration(
-                    // A closed details column is still mounted, so its border
-                    // would paint a 1px seam against the center.
-                    border: detailsWidth == 0
-                        ? null
-                        : Border(left: BorderSide(color: color.borderL2)),
-                  ),
-                  child: widget.details,
-                ),
+              _row(
+                height: bottomHeight,
+                duration: duration,
+                border: bottomHeight == 0
+                    ? null
+                    : BorderSide(color: color.borderL2),
+                child: widget.bottom,
               ),
             ],
           ),
-          if (widget.overlay != null) Positioned.fill(child: widget.overlay!),
+          if (widget.overlay != null)
+            Positioned.fill(child: widget.overlay!),
           // The collapsed rail is fixed-width: no handle while closed.
           if (!collapsed)
-            _handle(
-              side: _Side.sidebar,
+            _divider(
+              region: _Region.sidebar,
               left: sidebarWidth,
               duration: duration,
               color: color,
               cols: cols,
+              bottomHeight: bottomHeight,
             ),
           if (detailsWidth > 0)
-            _handle(
-              side: _Side.details,
-              left: viewport - detailsWidth,
+            _divider(
+              region: _Region.details,
+              left: viewport - detailsWidth - workbenchWidth,
               duration: duration,
               color: color,
               cols: cols,
+              bottomHeight: bottomHeight,
+            ),
+          if (workbenchWidth > 0)
+            _divider(
+              region: _Region.workbench,
+              left: viewport - workbenchWidth,
+              duration: duration,
+              color: color,
+              cols: cols,
+              bottomHeight: bottomHeight,
+            ),
+          if (bottomHeight > 0)
+            _bottomDivider(
+              top: viewportHeight - bottomHeight,
+              duration: duration,
+              color: color,
+              cols: cols,
+              bottomHeight: bottomHeight,
             ),
         ],
       ),
@@ -197,46 +283,80 @@ class _AppFrameState extends State<AppFrame> {
     ),
   );
 
+  /// The bottom track. Same keep-alive and no-reflow contracts as [_column],
+  /// on the vertical axis; the width is the frame's, so only height animates.
+  ///
+  /// The decoration is always present — a closed row still needs its clip, and
+  /// `Container` refuses to clip without one — with a transparent border
+  /// standing in for "none".
+  Widget _row({
+    required double height,
+    required Duration duration,
+    required BorderSide? border,
+    required Widget child,
+  }) => AnimatedContainer(
+    duration: duration,
+    curve: DswMotion.easeInOut,
+    height: height,
+    clipBehavior: Clip.hardEdge,
+    decoration: BoxDecoration(border: Border(top: border ?? BorderSide.none)),
+    child: OverflowBox(
+      alignment: AlignmentDirectional.topStart,
+      minHeight: 0,
+      maxHeight: double.infinity,
+      child: SizedBox(width: double.infinity, height: height, child: child),
+    ),
+  );
+
   /// An 8px hit strip centred on a column border, above the column content.
   ///
-  /// The details side also carries a 12x32 pill, revealed on hover over either
-  /// the strip or the column it resizes.
-  Widget _handle({
-    required _Side side,
+  /// The details and workbench sides also carry a 12x32 pill, revealed on hover
+  /// over either the strip or the column it resizes — the two panels a user
+  /// closes and reopens by hand. The pill cross-fades rather than popping, so its
+  /// [AnimatedOpacity] is mounted whenever the strip is.
+  Widget _divider({
+    required _Region region,
     required double left,
     required Duration duration,
     required DswAlias color,
     required Columns cols,
+    required double bottomHeight,
   }) {
-    final isDetails = side == _Side.details;
-    final active = _hovered == side || _dragging == side;
-    final showPill = isDetails && (active || _detailsHovered);
+    final active = _hovered == region || _dragging == region;
+    final pill = switch (region) {
+      _Region.details => _detailsHovered || active,
+      _Region.workbench => _workbenchHovered || active,
+      _Region.sidebar => false,
+      _Region.bottom => false,
+    };
 
     return AnimatedPositioned(
       duration: duration,
       curve: DswMotion.easeInOut,
       left: left - 4,
       top: 0,
-      bottom: 0,
+      bottom: bottomHeight,
       width: 8,
       child: MouseRegion(
         cursor: SystemMouseCursors.resizeColumn,
-        onEnter: (_) => setState(() => _hovered = side),
+        onEnter: (_) => setState(() => _hovered = region),
         onExit: (_) => setState(() {
-          if (_hovered == side) _hovered = null;
+          if (_hovered == region) _hovered = null;
         }),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           // No throttling: Flutter coalesces the writes into one build per frame
           // on its own, which is what dsh's rAF wrapper is for.
-          onHorizontalDragStart: (_) => _startDrag(side, cols),
-          onHorizontalDragUpdate: (event) => _drag(side, event.delta.dx),
+          onHorizontalDragStart: (_) => _startDrag(region, cols, bottomHeight),
+          onHorizontalDragUpdate: (event) =>
+              _drag(region, event.delta.dx),
           onHorizontalDragEnd: (_) => _endDrag(),
           onHorizontalDragCancel: _endDrag,
-          child: isDetails
-              ? Center(
+          child: region == _Region.sidebar
+              ? const SizedBox.expand()
+              : Center(
                   child: AnimatedOpacity(
-                    opacity: showPill ? 1 : 0,
+                    opacity: pill ? 1 : 0,
                     duration: DswMotion.respecting(context, DswMotion.slow),
                     curve: DswMotion.easeInOut,
                     child: Container(
@@ -255,29 +375,72 @@ class _AppFrameState extends State<AppFrame> {
                       ),
                     ),
                   ),
-                )
-              : const SizedBox.expand(),
+                ),
         ),
       ),
     );
   }
 
-  void _startDrag(_Side side, Columns cols) {
+  /// The bottom row's resize strip: same 8px hit area, centred on the row's
+  /// top border and spanning its full width.
+  Widget _bottomDivider({
+    required double top,
+    required Duration duration,
+    required DswAlias color,
+    required Columns cols,
+    required double bottomHeight,
+  }) => AnimatedPositioned(
+    duration: duration,
+    curve: DswMotion.easeInOut,
+    left: 0,
+    right: 0,
+    top: top - 4,
+    height: 8,
+    child: MouseRegion(
+      cursor: SystemMouseCursors.resizeRow,
+      onEnter: (_) => setState(() => _hovered = _Region.bottom),
+      onExit: (_) => setState(() {
+        if (_hovered == _Region.bottom) _hovered = null;
+      }),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onVerticalDragStart: (_) =>
+            _startDrag(_Region.bottom, cols, bottomHeight),
+        onVerticalDragUpdate: (event) => _drag(_Region.bottom, event.delta.dy),
+        onVerticalDragEnd: (_) => _endDrag(),
+        onVerticalDragCancel: _endDrag,
+        child: const SizedBox.expand(),
+      ),
+    ),
+  );
+
+  void _startDrag(_Region region, Columns cols, double bottomHeight) {
     setState(() {
-      _dragging = side;
-      _dx = 0;
-      _base = side == _Side.details ? cols.details : cols.sidebar;
+      _dragging = region;
+      _delta = 0;
+      _base = switch (region) {
+        _Region.sidebar => cols.sidebar,
+        _Region.details => cols.details,
+        _Region.workbench => cols.workbench,
+        _Region.bottom => bottomHeight,
+      };
     });
     widget.layout.isDragging = true;
   }
 
-  void _drag(_Side side, double dx) {
-    _dx += dx;
-    // Details grows leftwards, so its handle reads the delta inverted.
-    if (side == _Side.details) {
-      widget.layout.setDetails(_base - _dx);
-    } else {
-      widget.layout.setSidebar(_base + _dx);
+  void _drag(_Region region, double d) {
+    _delta += d;
+    // The right-hand panels grow leftwards, and the bottom row grows upwards,
+    // so those handles read their deltas inverted.
+    switch (region) {
+      case _Region.sidebar:
+        widget.layout.setSidebar(_base + _delta);
+      case _Region.details:
+        widget.layout.setDetails(_base - _delta);
+      case _Region.workbench:
+        widget.layout.setWorkbench(_base - _delta);
+      case _Region.bottom:
+        widget.layout.setBottom(_base - _delta);
     }
   }
 

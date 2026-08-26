@@ -37,6 +37,11 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
 
+  # The framework's own widgets reach for MaterialIcons (PopupMenuButton's
+  # default chevron, selection handles); app code uses Lucide via
+  # flutter_lucide.
+  uses-material-design: true
+
   # To add assets to your package, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg
