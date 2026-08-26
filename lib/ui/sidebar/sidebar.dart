@@ -38,10 +38,6 @@ class Sidebar extends StatefulWidget {
     required this.onOpenSettings,
     required this.onToggleDetails,
     required this.detailsOpen,
-    required this.onToggleWorkbench,
-    required this.workbenchOpen,
-    required this.onToggleBottom,
-    required this.bottomOpen,
   });
 
   /// The resolved rail state, decided by the frame's concession solve.
@@ -64,18 +60,6 @@ class Sidebar extends StatefulWidget {
   /// Whether the details column is currently open, so the toggle can show the
   /// active state. Fed from the frame's rebuild on [LayoutController].
   final bool detailsOpen;
-
-  /// Toggles the workbench column — better-sidebar's panel-right button.
-  final VoidCallback onToggleWorkbench;
-
-  /// Whether the workbench column is currently open.
-  final bool workbenchOpen;
-
-  /// Toggles the bottom panel row — better-sidebar's panel-bottom button.
-  final VoidCallback onToggleBottom;
-
-  /// Whether the bottom row is currently open.
-  final bool bottomOpen;
 
   @override
   State<Sidebar> createState() => _SidebarState();
@@ -359,8 +343,6 @@ class _SidebarState extends State<Sidebar> {
                 ),
               ),
               _detailsToggle(color, wide: true),
-              _workbenchToggle(color, wide: true),
-              _bottomToggle(color, wide: true),
             ],
           )
         : Column(
@@ -377,14 +359,16 @@ class _SidebarState extends State<Sidebar> {
               ),
               const SizedBox(height: 4),
               _detailsToggle(color, wide: false),
-              _workbenchToggle(color, wide: false),
-              _bottomToggle(color, wide: false),
             ],
           ),
   );
 
   /// The right-column switch: the panel-right mirror of the header's
   /// panel-left toggle. Active tint while the column is open.
+  ///
+  /// The workbench and bottom panels' toggles live at the viewport's top-right
+  /// corner, not here — better-sidebar pins them beside the panels they switch,
+  /// and a footer copy would be a second answer to the same question.
   Widget _detailsToggle(DswAlias color, {required bool wide}) => _IconButton(
     onTap: widget.onToggleDetails,
     wide: wide,
@@ -396,35 +380,6 @@ class _SidebarState extends State<Sidebar> {
         size: wide ? 16 : 18,
         color: widget.detailsOpen ? color.labelPrimary : color.labelSecondary,
       ),
-    ),
-  );
-
-  /// The workbench column's switch — better-sidebar's `IconPanelRightOutline16`.
-  Widget _workbenchToggle(DswAlias color, {required bool wide}) => _IconButton(
-    onTap: widget.onToggleWorkbench,
-    wide: wide,
-    tooltip: widget.workbenchOpen
-        ? 'Close workbench panel'
-        : 'Open workbench panel',
-    builder: (_) => Icon(
-      LucideIcons.panel_right,
-      size: wide ? 16 : 18,
-      color: widget.workbenchOpen
-          ? color.labelPrimary
-          : color.labelSecondary,
-    ),
-  );
-
-  /// The bottom panel row's switch — better-sidebar's
-  /// `IconPanelBottomOutline16`.
-  Widget _bottomToggle(DswAlias color, {required bool wide}) => _IconButton(
-    onTap: widget.onToggleBottom,
-    wide: wide,
-    tooltip: widget.bottomOpen ? 'Close bottom panel' : 'Open bottom panel',
-    builder: (_) => Icon(
-      LucideIcons.panel_bottom,
-      size: wide ? 16 : 18,
-      color: widget.bottomOpen ? color.labelPrimary : color.labelSecondary,
     ),
   );
 }

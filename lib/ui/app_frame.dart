@@ -1,18 +1,21 @@
-// The five-region shell: sidebar | center | details | workbench, over a bottom
-// row.
+// The five-region shell: sidebar | center | details | workbench, with the
+// bottom panel squeezing only the center column.
 //
 // A port of `deepseek-harness/packages/client/ui-layout/src/client/AppFrame.tsx`
 // and its module CSS, widened to better-sidebar's layout: the workbench is its
-// own right column (the tool surface, not an inspection drawer), and a bottom
-// panel row spans the full width beneath the columns. The frame owns the
-// viewport reading, the concession solve ([computeColumns], [computeBottom]),
-// the drag handles, and the sidebar's `collapsed`/`width` parameters — the
-// panels cannot know them, because they are outputs of the solve.
+// own right column (the tool surface, not an inspection drawer), and the bottom
+// panel sits beneath the CENTER column alone — from the sidebar's right edge to
+// the workbench's left — exactly as `sidebar.module.css:197-221` describes it
+// ("neither sidebar gives up any position; the right panel keeps its full
+// height"). The frame owns the viewport reading, the concession solve
+// ([computeColumns], [computeBottom]), the drag handles, the viewport-corner
+// toggle cluster, and the sidebar's `collapsed`/`width` parameters — the panels
+// cannot know them, because they are outputs of the solve.
 //
 // Three behaviours worth keeping straight while reading:
 //
-//   * Column widths and the bottom row's height animate on the slow curve, and
-//     the animation is switched off for the whole gesture
+//   * Column widths and the bottom panel's height animate on the slow curve,
+//     and the animation is switched off for the whole gesture
 //     (`.frame[data-dragging] { transition: none }`): an eased track cannot
 //     follow the pointer.
 //   * A column is handed the *target* width and is laid out at it regardless of
@@ -21,11 +24,12 @@
 //     wants a width of its own anyway — the rail, while its wide content fades
 //     — releases the constraint the same way and is clipped in turn.
 //   * Closed panels stay mounted at zero size. Closing a workbench must not
-//     throw away its editors; hiding the bottom row must not kill its shells.
+//     throw away its editors; hiding the bottom panel must not kill its shells.
 
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../state/layout_controller.dart';
 import '../theme/dsw_alias.dart';
@@ -143,77 +147,105 @@ class _AppFrameState extends State<AppFrame> {
       color: color.bgBase,
       child: Stack(
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          Row(
             children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    _column(
-                      width: sidebarWidth,
-                      duration: duration,
-                      decoration: BoxDecoration(
-                        color: color.sidebarFill,
-                        border: Border(
-                          right: BorderSide(color: color.borderL1),
-                        ),
-                      ),
-                      child: widget.sidebarBuilder(
-                        context,
-                        collapsed,
-                        sidebarWidth,
-                      ),
-                    ),
-                    Expanded(child: ClipRect(child: widget.center)),
-                    MouseRegion(
-                      onEnter: (_) => setState(() => _detailsHovered = true),
-                      onExit: (_) => setState(() => _detailsHovered = false),
-                      child: _column(
-                        width: detailsWidth,
-                        duration: duration,
-                        decoration: BoxDecoration(
-                          // A closed column is still mounted, so its border
-                          // would paint a 1px seam against the center.
-                          border: detailsWidth == 0
-                              ? null
-                              : Border(
-                                  left: BorderSide(color: color.borderL2),
-                                ),
-                        ),
-                        child: widget.details,
-                      ),
-                    ),
-                    MouseRegion(
-                      onEnter: (_) => setState(() => _workbenchHovered = true),
-                      onExit: (_) => setState(() => _workbenchHovered = false),
-                      child: _column(
-                        width: workbenchWidth,
-                        duration: duration,
-                        decoration: BoxDecoration(
-                          border: workbenchWidth == 0
-                              ? null
-                              : Border(
-                                  left: BorderSide(color: color.borderL2),
-                                ),
-                        ),
-                        child: widget.workbench,
-                      ),
-                    ),
-                  ],
+              _column(
+                width: sidebarWidth,
+                duration: duration,
+                decoration: BoxDecoration(
+                  color: color.sidebarFill,
+                  border: Border(
+                    right: BorderSide(color: color.borderL1),
+                  ),
+                ),
+                child: widget.sidebarBuilder(
+                  context,
+                  collapsed,
+                  sidebarWidth,
                 ),
               ),
-              _row(
-                height: bottomHeight,
-                duration: duration,
-                border: bottomHeight == 0
-                    ? null
-                    : BorderSide(color: color.borderL2),
-                child: widget.bottom,
+              // The center column: the conversation above, the bottom panel
+              // beneath it. The bottom panel squeezes ONLY this column — the
+              // side columns keep their full height, which is why it lives in
+              // here rather than as a row under the whole frame.
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) => Stack(
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(child: ClipRect(child: widget.center)),
+                          _row(
+                            height: bottomHeight,
+                            duration: duration,
+                            border: bottomHeight == 0
+                                ? null
+                                : BorderSide(color: color.borderL2),
+                            child: widget.bottom,
+                          ),
+                        ],
+                      ),
+                      if (bottomHeight > 0)
+                        _bottomDivider(
+                          top: constraints.maxHeight - bottomHeight,
+                          duration: duration,
+                          color: color,
+                          cols: cols,
+                          bottomHeight: bottomHeight,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              MouseRegion(
+                onEnter: (_) => setState(() => _detailsHovered = true),
+                onExit: (_) => setState(() => _detailsHovered = false),
+                child: _column(
+                  width: detailsWidth,
+                  duration: duration,
+                  decoration: BoxDecoration(
+                    // A closed column is still mounted, so its border
+                    // would paint a 1px seam against the center.
+                    border: detailsWidth == 0
+                        ? null
+                        : Border(
+                            left: BorderSide(color: color.borderL2),
+                          ),
+                  ),
+                  child: widget.details,
+                ),
+              ),
+              MouseRegion(
+                onEnter: (_) => setState(() => _workbenchHovered = true),
+                onExit: (_) => setState(() => _workbenchHovered = false),
+                child: _column(
+                  width: workbenchWidth,
+                  duration: duration,
+                  decoration: BoxDecoration(
+                    border: workbenchWidth == 0
+                        ? null
+                        : Border(
+                            left: BorderSide(color: color.borderL2),
+                          ),
+                  ),
+                  child: widget.workbench,
+                ),
               ),
             ],
           ),
           if (widget.overlay != null)
             Positioned.fill(child: widget.overlay!),
+          // The persistent panel toggles at the viewport's top-right corner:
+          // the bottom panel's glyph left of the workbench's, always pinned
+          // whether the panels are open or not — while the workbench is open
+          // they squeeze into its tab strip's reserved right end
+          // (`sidebar.module.css:57-78`).
+          Positioned(
+            top: 3,
+            right: 10,
+            child: _ToggleCluster(layout: layout, narrow: narrow),
+          ),
           // The collapsed rail is fixed-width: no handle while closed.
           if (!collapsed)
             _divider(
@@ -222,7 +254,6 @@ class _AppFrameState extends State<AppFrame> {
               duration: duration,
               color: color,
               cols: cols,
-              bottomHeight: bottomHeight,
             ),
           if (detailsWidth > 0)
             _divider(
@@ -231,7 +262,6 @@ class _AppFrameState extends State<AppFrame> {
               duration: duration,
               color: color,
               cols: cols,
-              bottomHeight: bottomHeight,
             ),
           if (workbenchWidth > 0)
             _divider(
@@ -240,15 +270,6 @@ class _AppFrameState extends State<AppFrame> {
               duration: duration,
               color: color,
               cols: cols,
-              bottomHeight: bottomHeight,
-            ),
-          if (bottomHeight > 0)
-            _bottomDivider(
-              top: viewportHeight - bottomHeight,
-              duration: duration,
-              color: color,
-              cols: cols,
-              bottomHeight: bottomHeight,
             ),
         ],
       ),
@@ -320,7 +341,6 @@ class _AppFrameState extends State<AppFrame> {
     required Duration duration,
     required DswAlias color,
     required Columns cols,
-    required double bottomHeight,
   }) {
     final active = _hovered == region || _dragging == region;
     final pill = switch (region) {
@@ -335,7 +355,7 @@ class _AppFrameState extends State<AppFrame> {
       curve: DswMotion.easeInOut,
       left: left - 4,
       top: 0,
-      bottom: bottomHeight,
+      bottom: 0,
       width: 8,
       child: MouseRegion(
         cursor: SystemMouseCursors.resizeColumn,
@@ -347,7 +367,7 @@ class _AppFrameState extends State<AppFrame> {
           behavior: HitTestBehavior.opaque,
           // No throttling: Flutter coalesces the writes into one build per frame
           // on its own, which is what dsh's rAF wrapper is for.
-          onHorizontalDragStart: (_) => _startDrag(region, cols, bottomHeight),
+          onHorizontalDragStart: (_) => _startDrag(region, cols, 0),
           onHorizontalDragUpdate: (event) =>
               _drag(region, event.delta.dx),
           onHorizontalDragEnd: (_) => _endDrag(),
@@ -447,5 +467,91 @@ class _AppFrameState extends State<AppFrame> {
   void _endDrag() {
     setState(() => _dragging = null);
     widget.layout.isDragging = false;
+  }
+}
+
+/// The viewport-corner cluster of panel toggles — `sidebar.module.css:57-117`.
+///
+/// Two 28px circular buttons side by side, the bottom panel's glyph LEFT of the
+/// workbench's. Pinned to the corner whether the panels are open or not; the
+/// workbench's open strips reserve their right end for it, so it squeezes into
+/// the tab band instead of covering tabs. A narrow viewport merges the two
+/// panels into one drawer, so the bottom toggle is not offered there.
+class _ToggleCluster extends StatelessWidget {
+  const _ToggleCluster({required this.layout, required this.narrow});
+
+  final LayoutController layout;
+  final bool narrow;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      if (!narrow)
+        _ToggleButton(
+          icon: LucideIcons.panel_bottom,
+          tooltip: layout.bottom == 0 ? 'Open bottom panel' : 'Collapse bottom panel',
+          onTap: layout.toggleBottom,
+        ),
+      _ToggleButton(
+        icon: LucideIcons.panel_right,
+        tooltip: layout.workbench == 0
+            ? 'Open workbench panel'
+            : 'Collapse workbench panel',
+        onTap: layout.toggleWorkbench,
+      ),
+    ],
+  );
+}
+
+/// One 28px circle of the cluster: transparent fill, secondary ink, hover
+/// raises the fill — the app's own icon-button shape, no border, no shadow.
+class _ToggleButton extends StatefulWidget {
+  const _ToggleButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  State<_ToggleButton> createState() => _ToggleButtonState();
+}
+
+class _ToggleButtonState extends State<_ToggleButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.dsw;
+    return Tooltip(
+      message: widget.tooltip,
+      waitDuration: const Duration(milliseconds: 500),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: GestureDetector(
+          onTap: widget.onTap,
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: _hovered ? color.interactiveBgHover : Colors.transparent,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              widget.icon,
+              size: 16,
+              color: _hovered ? color.labelPrimary : color.labelSecondary,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

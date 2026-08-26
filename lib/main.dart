@@ -181,10 +181,6 @@ class _DshAppState extends State<DshApp> {
           // state read here is never stale.
           onToggleDetails: _layout.toggleDetails,
           detailsOpen: _layout.details != 0,
-          onToggleWorkbench: _layout.toggleWorkbench,
-          workbenchOpen: _layout.workbench != 0,
-          onToggleBottom: _layout.toggleBottom,
-          bottomOpen: _layout.bottom != 0,
         ),
         center: DetailsSelectionScope(
           selection: _selection,

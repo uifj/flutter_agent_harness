@@ -77,10 +77,6 @@ void main() {
               onOpenSettings: () {},
               onToggleDetails: layout.toggleDetails,
               detailsOpen: layout.details != 0,
-              onToggleWorkbench: layout.toggleWorkbench,
-              workbenchOpen: layout.workbench != 0,
-              onToggleBottom: layout.toggleBottom,
-              bottomOpen: layout.bottom != 0,
             ),
             center: ConversationRoot(conversation: controller, tail: tail),
             details: details,
@@ -209,27 +205,69 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('the workbench column keeps its child mounted while closed', (
+  testWidgets('the bottom panel squeezes only the center column', (
     tester,
   ) async {
-    await pump(tester, workbench: const Text('the workbench column'));
+    // The side column's own height, captured from inside it — a Text would
+    // only ever report its own line box.
+    final sideHeights = <double>[];
+    await pump(
+      tester,
+      workbench: LayoutBuilder(
+        builder: (context, constraints) {
+          sideHeights.add(constraints.maxHeight);
+          return const Text('the workbench column');
+        },
+      ),
+      bottom: const Text('the bottom panel'),
+    );
+    layout.openBottom();
     await cross(tester);
-    final text = find.text('the workbench column');
-    // The column starts open at the contract default.
-    expect(text, findsOneWidget);
-    expect(tester.renderObject<RenderBox>(text).size.width, workbenchDefault);
 
-    layout.closeWorkbench();
-    await cross(tester);
-    // A closed column is hidden, not gone — same keep-alive contract as the
-    // details column beside it.
-    expect(text, findsOneWidget);
-    expect(tester.renderObject<RenderBox>(text).size.width, 0);
-
-    layout.openWorkbench();
-    await cross(tester);
-    expect(tester.renderObject<RenderBox>(text).size.width, workbenchDefault);
+    // The workbench column keeps its full height (the bottom panel never takes
+    // vertical position from the side columns — `sidebar.module.css:124-126`).
+    expect(sideHeights, everyElement(900.0));
+    // And the bottom panel spans from the sidebar's right edge to the
+    // workbench's left — not the whole viewport.
+    final bottom = tester.renderObject<RenderBox>(find.text('the bottom panel'));
+    expect(bottom.size.height, bottomDefault);
+    expect(bottom.size.width, 1400 - sidebarDefault - workbenchDefault);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the corner toggle cluster switches both panels', (tester) async {
+    await pump(tester);
+    await cross(tester);
+    // Both toggles are pinned at the viewport corner from the first frame,
+    // whatever the panels' state.
+    expect(find.byTooltip('Collapse workbench panel'), findsOneWidget);
+    expect(find.byTooltip('Open bottom panel'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Collapse workbench panel'));
+    await cross(tester);
+    expect(layout.workbench, 0);
+
+    await tester.tap(find.byTooltip('Open workbench panel'));
+    await cross(tester);
+    expect(layout.workbench, workbenchDefault);
+
+    await tester.tap(find.byTooltip('Open bottom panel'));
+    await cross(tester);
+    expect(layout.bottom, bottomDefault);
+
+    await tester.tap(find.byTooltip('Collapse bottom panel'));
+    await cross(tester);
+    expect(layout.bottom, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('narrow hides the bottom toggle', (tester) async {
+    await pump(tester, width: 800);
+    await cross(tester);
+    // Narrow viewports merge the two panels into one drawer, so the bottom
+    // panel's toggle is not offered (`Sidebar.tsx:1350-1355`).
+    expect(find.byTooltip('Collapse workbench panel'), findsOneWidget);
+    expect(find.byTooltip('Open bottom panel'), findsNothing);
   });
 
   testWidgets('a turn runs through the squeezed frame', (tester) async {

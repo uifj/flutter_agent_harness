@@ -10,6 +10,10 @@
 //   * Right-click opens the per-tab context menu (`TabBar.tsx:106-172`): close,
 //     close others, close all, and the send-to-other-panel twin of dragging the
 //     tab there. The source's float item waits for free windows to exist (C3).
+//   * The `+` at the strip's right end opens the new-tab menu over the openable
+//     types (`TabBar.tsx:234-265`): explorer, terminal, git, sub-agents — this
+//     panel's own openers, which is why the workbench needs no header row of
+//     them. An empty pane shows the same options as cards (`split-pane.tsx:113`).
 //   * Drag a tab within the strip to reorder, or onto another pane to move it
 //     there. Both are the same [Draggable] payload; which one happens is decided
 //     by whichever [DragTarget] takes the drop, so the strip does not need to know
@@ -33,8 +37,9 @@ import '../model/split_node.dart';
 import '../state/workbench_controller.dart';
 import 'tab_registry.dart';
 
-/// Strip height. The source's `--tabbar-h`.
-const tabBarHeight = 30.0;
+/// Strip height — the source's 34px band (`sidebar.module.css:343`), tall
+/// enough that the 28px circular controls sit in it at top:3.
+const tabBarHeight = 34.0;
 
 /// What a tab drag carries: enough to run [SidebarState.moveTab] without asking
 /// the tree where the tab came from, which would be a second answer that can
@@ -52,6 +57,7 @@ class WorkbenchTabBar extends StatelessWidget {
     required this.workbench,
     required this.pane,
     required this.showSplitControls,
+    this.reserveTrailing = 0,
   });
 
   final WorkbenchController workbench;
@@ -61,6 +67,11 @@ class WorkbenchTabBar extends StatelessWidget {
   /// column at its minimum width, where a split would produce two panes too
   /// narrow to read.
   final bool showSplitControls;
+
+  /// Width pinned at the strip's right end for chrome that is not the strip's
+  /// own — the panel toggle cluster squeezing into the open panel's top-right
+  /// (`sidebar.module.css:83-85` reserves 72px the same way).
+  final double reserveTrailing;
 
   @override
   Widget build(BuildContext context) {
@@ -109,9 +120,103 @@ class WorkbenchTabBar extends StatelessWidget {
               onTap: () => workbench.splitPane(SplitDirection.row),
             ),
           ],
-          const SizedBox(width: 2),
+          // The `+` menu, after the tabs — the strip's one opener, so the panel
+          // needs no header row of them.
+          _NewTabButton(workbench: workbench),
+          SizedBox(width: reserveTrailing),
         ],
       ),
+    );
+  }
+}
+
+/// The `+`: the new-tab menu over the openable types, in registry order.
+///
+/// Editor and diff are deliberately absent — they are response tabs (a file
+/// opens because something asked for it), which is the source's own `hidden`
+/// rule for the `+` menu (`builtins/tabs.tsx`). Explorer is disabled rather
+/// than hidden when there is no workspace, matching `available` returning
+/// false (`Sidebar.tsx:162-179`).
+class _NewTabButton extends StatelessWidget {
+  const _NewTabButton({required this.workbench});
+
+  final WorkbenchController workbench;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.dsw;
+    return PopupMenuButton<String>(
+      tooltip: 'New tab',
+      position: PopupMenuPosition.under,
+      constraints: const BoxConstraints(minWidth: 180),
+      onSelected: (id) {
+        switch (id) {
+          case 'explorer':
+            final root = workbench.workspaceRoot;
+            if (root != null) workbench.openFolder(root);
+          case 'terminal':
+            workbench.openTerminal();
+          case 'git':
+            workbench.openGit();
+          case 'subagent':
+            workbench.openSubagents();
+        }
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'explorer',
+          enabled: workbench.workspaceRoot != null,
+          child: _optionRow(
+            context,
+            LucideIcons.folder_open,
+            'Explorer',
+            enabled: workbench.workspaceRoot != null,
+          ),
+        ),
+        PopupMenuItem(
+          value: 'terminal',
+          child: _optionRow(context, LucideIcons.terminal, 'Terminal'),
+        ),
+        PopupMenuItem(
+          value: 'git',
+          child: _optionRow(context, LucideIcons.git_branch, 'Source control'),
+        ),
+        PopupMenuItem(
+          value: 'subagent',
+          child: _optionRow(context, LucideIcons.network, 'Sub-agents'),
+        ),
+      ],
+      child: Container(
+        width: 30,
+        height: tabBarHeight,
+        color: Colors.transparent,
+        child: Icon(
+          LucideIcons.plus,
+          size: 14,
+          color: color.labelSecondary,
+        ),
+      ),
+    );
+  }
+
+  Widget _optionRow(
+    BuildContext context,
+    IconData icon,
+    String label, {
+    bool enabled = true,
+  }) {
+    final color = context.dsw;
+    final tint = enabled ? color.labelPrimary : color.labelCaption;
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 14,
+          color: enabled ? color.labelSecondary : color.labelCaption,
+        ),
+        const SizedBox(width: 6),
+        Text(label, style: DswType.xs13.copyWith(color: tint)),
+      ],
     );
   }
 }

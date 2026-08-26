@@ -70,15 +70,16 @@ void main() {
     support.deleteSync(recursive: true);
   });
 
-  /// The workbench at the details column's default width, which is the width
-  /// every layout decision in it was made for.
+  /// The workbench at the width its strips were made for: the workbench
+  /// column's default plus the toggle cluster's reserve, so the tab chips,
+  /// split controls, `+` and reserve all fit together.
   Future<void> pump(WidgetTester tester, [WorkbenchController? controller]) =>
       tester.pumpWidget(
         MaterialApp(
           theme: dswThemeData(Brightness.light),
           home: Scaffold(
             body: SizedBox(
-              width: 360,
+              width: 460,
               height: 600,
               child: Workbench(
                 workbench: controller ?? workbench,
@@ -156,21 +157,50 @@ void main() {
     });
   });
 
-  group('the header', () {
-    testWidgets('names the folder, or says there is none', (tester) async {
+  group('the panel chrome', () {
+    // The source's `.panel` is a resize strip + panelBody(Workbench) — the tab
+    // strip IS the top chrome, so there is no header row to name a folder or
+    // carry openers: the `+` menu holds them.
+    testWidgets('has no header row above the tab strip', (tester) async {
       await pump(tester);
-      expect(find.text('No folder'), findsOneWidget);
-
-      workbench.workspaceRoot = '/somewhere/my-project';
-      await tester.pump();
-      expect(find.text('my-project'), findsOneWidget);
+      expect(find.text('No folder'), findsNothing);
     });
 
-    testWidgets('closes the column', (tester) async {
+    testWidgets('the + menu opens the openable types', (tester) async {
       await pump(tester);
-      await tester.tap(find.byTooltip('Close panel'));
-      await tester.pump();
-      expect(closed, 1);
+      await tester.tap(find.byTooltip('New tab'));
+      await tester.pumpAndSettle();
+      // Scoped to the menu rows: an empty pane's welcome cards carry the same
+      // labels behind the popup. The predicate matcher is because find.byType
+      // is generic-exact (PopupMenuItem<String> ≠ PopupMenuItem<dynamic>).
+      Finder menuRow(String label) => find.ancestor(
+        of: find.text(label),
+        matching: find.byWidgetPredicate((w) => w is PopupMenuItem),
+      );
+      expect(menuRow('Explorer'), findsOneWidget);
+      expect(menuRow('Terminal'), findsOneWidget);
+      expect(menuRow('Source control'), findsOneWidget);
+      expect(menuRow('Sub-agents'), findsOneWidget);
+
+      await tester.tap(menuRow('Source control'));
+      await tester.pumpAndSettle();
+      expect(workbench.state.tabs.single.type, BuiltinTabType.git);
+    });
+
+    testWidgets('the + menu disables Explorer without a workspace', (
+      tester,
+    ) async {
+      await pump(tester);
+      await tester.tap(find.byTooltip('New tab'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.ancestor(
+          of: find.text('Explorer'),
+          matching: find.byWidgetPredicate((w) => w is PopupMenuItem),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(workbench.state.tabs, isEmpty);
     });
   });
 
@@ -404,7 +434,7 @@ void main() {
           body: Column(
             children: [
               SizedBox(
-                width: 360,
+                width: 460,
                 height: 300,
                 child: Workbench(
                   workbench: workbench,
@@ -414,7 +444,7 @@ void main() {
                 ),
               ),
               SizedBox(
-                width: 800,
+                width: 900,
                 height: 240,
                 child: Workbench(
                   workbench: workbench,
@@ -430,7 +460,7 @@ void main() {
       ),
     );
 
-    testWidgets('a tab opened in the right column sends to the bottom panel', (
+    testWidgets('a tab opened in the right column crosses to the bottom panel', (
       tester,
     ) async {
       await pumpBoth(tester);
@@ -441,42 +471,27 @@ void main() {
       expect(workbench.state.tabs.single.type, BuiltinTabType.git);
       expect(workbench.state.bottomTabs, isEmpty);
 
-      await tester.tap(find.byIcon(LucideIcons.arrow_down_to_line));
+      workbench.sendTabToOtherPanel(
+        workbench.state.activePane,
+        workbench.state.tabs.single.id,
+      );
       await tester.pump();
 
-      // The tab crossed the trees without a drag: the right column's pane is
-      // empty, the bottom panel's strip holds the tab, and the bottom pane is
-      // now the active one.
+      // The tab crossed the trees: the right column's pane is empty, the
+      // bottom panel's strip holds the tab, and the bottom pane is now the
+      // active one.
       expect(workbench.state.tabs, isEmpty);
       expect(workbench.state.bottomTabs.single.type, BuiltinTabType.git);
       expect(workbench.state.activePane, workbench.state.bottomPanes.single.id);
 
-      // And the bottom panel's own send button sends it back.
-      await tester.tap(find.byIcon(LucideIcons.arrow_up_from_line));
+      // And the bottom panel's strip can send it back.
+      workbench.sendTabToOtherPanel(
+        workbench.state.activePane,
+        workbench.state.bottomTabs.single.id,
+      );
       await tester.pump();
       expect(workbench.state.bottomTabs, isEmpty);
       expect(workbench.state.tabs.single.type, BuiltinTabType.git);
-    });
-
-    testWidgets('the send button is inert while the active pane is the other panel\'s', (
-      tester,
-    ) async {
-      await pumpBoth(tester);
-      workbench.openGit();
-      workbench.openTerminal();
-      await tester.pump();
-
-      // The terminal landed in the right column's active pane; the bottom
-      // panel's send button must not fire at it.
-      final bottomSend = find.byIcon(LucideIcons.arrow_up_from_line);
-      expect(tester.widget<Tooltip>(find.ancestor(
-        of: bottomSend,
-        matching: find.byType(Tooltip),
-      ).first).message, contains('Send the panel'));
-      await tester.tap(bottomSend);
-      await tester.pump();
-      expect(workbench.state.bottomTabs, isEmpty);
-      expect(workbench.state.tabs, isNotEmpty);
     });
   });
 }

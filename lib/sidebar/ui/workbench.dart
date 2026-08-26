@@ -17,9 +17,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import '../../host/git.dart';
 import '../../host/terminal_manager.dart';
 import '../../state/conversation_controller.dart';
-import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_theme.dart';
-import '../../theme/dsw_typography.dart';
 import '../model/sidebar_tab.dart';
 import '../state/workbench_controller.dart';
 import 'split_view.dart';
@@ -98,6 +96,11 @@ void _registerBuiltinTabs() {
 /// tree to show, not which state to read.
 enum WorkbenchPanel { right, bottom }
 
+/// What the open right panel's strips reserve at their right end for the
+/// viewport-corner toggle cluster — `sidebar.module.css:83-85` reserves 72px
+/// the same way, so the tabs genuinely yield space to the cluster.
+const _clusterReserve = 72.0;
+
 class Workbench extends StatelessWidget {
   Workbench({
     super.key,
@@ -123,7 +126,8 @@ class Workbench extends StatelessWidget {
   final VoidCallback onClose;
 
   /// Which panel this instance renders — the right column's tree or the bottom
-  /// panel's. The header's send button and the split view follow it.
+  /// panel's. The right panel's strips reserve their right end for the toggle
+  /// cluster; the bottom panel sits below it and needs no reserve.
   final WorkbenchPanel panel;
 
   /// The pty pool the terminal tabs draw from. The app passes its own so the
@@ -144,7 +148,7 @@ class Workbench extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: color.bgLayer1,
-        border: Border(left: BorderSide(color: color.borderL1)),
+        border: Border(left: BorderSide(color: color.borderL2)),
       ),
       child: GitHost(
         runner: git,
@@ -163,17 +167,17 @@ class Workbench extends StatelessWidget {
                     state.bottomPanes.length == 1,
                   ),
                 };
-                return Column(
-                  children: [
-                    _Header(workbench: workbench, panel: panel, onClose: onClose),
-                    Expanded(
-                      child: SplitView(
-                        workbench: workbench,
-                        node: node,
-                        alone: alone,
-                      ),
-                    ),
-                  ],
+                // The panel's top chrome is its first tab strip — there is no
+                // header row above it, so the strip's `+` menu is the only
+                // opener surface (`.panel` = resize strip + panelBody in the
+                // source).
+                return SplitView(
+                  workbench: workbench,
+                  node: node,
+                  alone: alone,
+                  reserveTrailing: panel == WorkbenchPanel.right
+                      ? _clusterReserve
+                      : 0,
                 );
               },
             ),
@@ -181,177 +185,5 @@ class Workbench extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-/// The panel's own title row, above the panes. Holds the openers that are not
-/// tied to a pane; a pane's own controls live in its tab strip.
-///
-/// No title text: the switcher above it already names this panel, and a second
-/// "Workbench" would be the same word twice in 60 vertical pixels. What the row
-/// says instead is which folder the panes are looking at.
-///
-/// The openers land in the ACTIVE pane, whichever panel holds it — the source's
-/// single `activePane` — so both panels' headers open into the pane the user
-/// last touched, not necessarily their own. The send button, by contrast, is
-/// per-panel: it moves THIS panel's visible tab to the other one, and is armed
-/// only while the active pane belongs to this panel.
-class _Header extends StatelessWidget {
-  const _Header({
-    required this.workbench,
-    required this.panel,
-    required this.onClose,
-  });
-
-  final WorkbenchController workbench;
-  final WorkbenchPanel panel;
-  final VoidCallback onClose;
-
-  /// The active tab this panel could send to the other one, or null when the
-  /// active pane is not this panel's (or shows no tab) — the button's armed
-  /// state and its payload at once.
-  (String, String)? _sendable() {
-    final state = workbench.state;
-    final mine = panel == WorkbenchPanel.right
-        ? state.panes
-        : state.bottomPanes;
-    for (final leaf in mine) {
-      if (leaf.id == state.activePane) {
-        final tab = leaf.active;
-        return tab == null ? null : (leaf.id, tab);
-      }
-    }
-    return null;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final color = context.dsw;
-    final root = workbench.workspaceRoot;
-    final sendable = _sendable();
-    return Container(
-      height: 32,
-      padding: const EdgeInsets.only(left: 12, right: 6),
-      decoration: BoxDecoration(
-        color: color.bgLayer1,
-        border: Border(bottom: BorderSide(color: color.borderL1)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              root == null ? 'No folder' : root.split('/').last,
-              style: DswType.xxsStrong12.copyWith(color: color.labelSecondary),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(width: 6),
-          _HeaderButton(
-            icon: LucideIcons.folder_open,
-            tooltip: root == null
-                ? 'Set a workspace folder in settings first'
-                : 'Show files',
-            onTap: root == null ? null : () => workbench.openFolder(root),
-          ),
-          _HeaderButton(
-            icon: LucideIcons.terminal,
-            tooltip: 'New terminal',
-            onTap: workbench.openTerminal,
-          ),
-          _HeaderButton(
-            icon: LucideIcons.git_branch,
-            tooltip: 'Source control',
-            onTap: workbench.openGit,
-          ),
-          _HeaderButton(
-            icon: LucideIcons.network,
-            tooltip: 'Sub-agents',
-            onTap: workbench.openSubagents,
-          ),
-          _HeaderButton(
-            icon: panel == WorkbenchPanel.right
-                ? LucideIcons.arrow_down_to_line
-                : LucideIcons.arrow_up_from_line,
-            tooltip: sendable == null
-                ? (panel == WorkbenchPanel.right
-                      ? 'Send the panel\u2019s active tab to the bottom panel'
-                      : 'Send the panel\u2019s active tab to the side panel')
-                : 'Send tab to ${panel == WorkbenchPanel.right ? 'bottom' : 'side'} panel',
-            onTap: sendable == null
-                ? null
-                : () => workbench.sendTabToOtherPanel(
-                    sendable.$1,
-                    sendable.$2,
-                  ),
-          ),
-          _HeaderButton(
-            icon: LucideIcons.x,
-            tooltip: 'Close panel',
-            onTap: onClose,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeaderButton extends StatefulWidget {
-  const _HeaderButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String tooltip;
-
-  /// Null disables it — the tooltip then says why, which a hidden button cannot.
-  final VoidCallback? onTap;
-
-  @override
-  State<_HeaderButton> createState() => _HeaderButtonState();
-}
-
-class _HeaderButtonState extends State<_HeaderButton> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = context.dsw;
-    final enabled = widget.onTap != null;
-    return Tooltip(
-      message: widget.tooltip,
-      child: MouseRegion(
-        cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
-          onTap: widget.onTap,
-          behavior: HitTestBehavior.opaque,
-          child: Container(
-            width: 22,
-            height: 22,
-            decoration: BoxDecoration(
-              color: _hovered && enabled
-                  ? color.interactiveBgHover
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Center(
-              child: Icon(
-                widget.icon,
-                size: 13,
-                color: _tint(color, enabled),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Color _tint(DswAlias color, bool enabled) {
-    if (!enabled) return color.labelCaption;
-    return _hovered ? color.labelPrimary : color.labelTertiary;
   }
 }
