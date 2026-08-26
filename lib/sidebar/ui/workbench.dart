@@ -92,12 +92,19 @@ void _registerBuiltinTabs() {
   );
 }
 
+/// Which of the two panels a [Workbench] renders. Both panels share one
+/// [WorkbenchController] and its one [SidebarState] — the trees are two halves
+/// of a single layout, and tabs cross between them — so the panel says which
+/// tree to show, not which state to read.
+enum WorkbenchPanel { right, bottom }
+
 class Workbench extends StatelessWidget {
   Workbench({
     super.key,
     required this.workbench,
     required this.conversation,
     required this.onClose,
+    this.panel = WorkbenchPanel.right,
     TerminalManager? terminals,
     GitRunner? git,
   }) : terminals = terminals ?? TerminalManager(),
@@ -114,6 +121,10 @@ class Workbench extends StatelessWidget {
 
   /// Closes the whole column, the way the details panel's own header does.
   final VoidCallback onClose;
+
+  /// Which panel this instance renders — the right column's tree or the bottom
+  /// panel's. The header's send button and the split view follow it.
+  final WorkbenchPanel panel;
 
   /// The pty pool the terminal tabs draw from. The app passes its own so the
   /// shells die with the app rather than with this column; a default one is
@@ -145,14 +156,21 @@ class Workbench extends StatelessWidget {
               animation: workbench,
               builder: (context, _) {
                 final state = workbench.state;
+                final (node, alone) = switch (panel) {
+                  WorkbenchPanel.right => (state.tree, state.panes.length == 1),
+                  WorkbenchPanel.bottom => (
+                    state.bottomTree,
+                    state.bottomPanes.length == 1,
+                  ),
+                };
                 return Column(
                   children: [
-                    _Header(workbench: workbench, onClose: onClose),
+                    _Header(workbench: workbench, panel: panel, onClose: onClose),
                     Expanded(
                       child: SplitView(
                         workbench: workbench,
-                        node: state.tree,
-                        alone: state.panes.length == 1,
+                        node: node,
+                        alone: alone,
                       ),
                     ),
                   ],
@@ -166,22 +184,51 @@ class Workbench extends StatelessWidget {
   }
 }
 
-/// The column's own title row, above the panes. Holds the openers that are not
+/// The panel's own title row, above the panes. Holds the openers that are not
 /// tied to a pane; a pane's own controls live in its tab strip.
 ///
 /// No title text: the switcher above it already names this panel, and a second
 /// "Workbench" would be the same word twice in 60 vertical pixels. What the row
 /// says instead is which folder the panes are looking at.
+///
+/// The openers land in the ACTIVE pane, whichever panel holds it — the source's
+/// single `activePane` — so both panels' headers open into the pane the user
+/// last touched, not necessarily their own. The send button, by contrast, is
+/// per-panel: it moves THIS panel's visible tab to the other one, and is armed
+/// only while the active pane belongs to this panel.
 class _Header extends StatelessWidget {
-  const _Header({required this.workbench, required this.onClose});
+  const _Header({
+    required this.workbench,
+    required this.panel,
+    required this.onClose,
+  });
 
   final WorkbenchController workbench;
+  final WorkbenchPanel panel;
   final VoidCallback onClose;
+
+  /// The active tab this panel could send to the other one, or null when the
+  /// active pane is not this panel's (or shows no tab) — the button's armed
+  /// state and its payload at once.
+  (String, String)? _sendable() {
+    final state = workbench.state;
+    final mine = panel == WorkbenchPanel.right
+        ? state.panes
+        : state.bottomPanes;
+    for (final leaf in mine) {
+      if (leaf.id == state.activePane) {
+        final tab = leaf.active;
+        return tab == null ? null : (leaf.id, tab);
+      }
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
     final root = workbench.workspaceRoot;
+    final sendable = _sendable();
     return Container(
       height: 32,
       padding: const EdgeInsets.only(left: 12, right: 6),
@@ -220,6 +267,22 @@ class _Header extends StatelessWidget {
             icon: LucideIcons.network,
             tooltip: 'Sub-agents',
             onTap: workbench.openSubagents,
+          ),
+          _HeaderButton(
+            icon: panel == WorkbenchPanel.right
+                ? LucideIcons.arrow_down_to_line
+                : LucideIcons.arrow_up_from_line,
+            tooltip: sendable == null
+                ? (panel == WorkbenchPanel.right
+                      ? 'Send the panel\u2019s active tab to the bottom panel'
+                      : 'Send the panel\u2019s active tab to the side panel')
+                : 'Send tab to ${panel == WorkbenchPanel.right ? 'bottom' : 'side'} panel',
+            onTap: sendable == null
+                ? null
+                : () => workbench.sendTabToOtherPanel(
+                    sendable.$1,
+                    sendable.$2,
+                  ),
           ),
           _HeaderButton(
             icon: LucideIcons.x,

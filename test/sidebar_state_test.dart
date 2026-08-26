@@ -59,6 +59,7 @@ void main() {
       // reproduce the state.ts:559-564 hazard.
       final orphaned = SidebarState(
         tree: removeLeafAt(panes.state.tree, panes.right),
+        bottomTree: panes.state.bottomTree,
         activePane: panes.right,
         expanded: const {},
         nextTerminal: 1,
@@ -306,6 +307,156 @@ void main() {
       final split = state.tree as SidebarSplit;
       expect(split.dir, SplitDirection.col);
       expect(split.children.first.id, panes.left);
+    });
+  });
+
+  group('cross-panel moves', () {
+    /// A layout with 'a' in the right column and 'b' in the bottom panel —
+    /// the two panels each holding one tab, the right one active.
+    ({SidebarState state, String right, String bottom}) twoPanels() {
+      var state = SidebarState.initial().openTab(_tab('a'));
+      final right = state.activePane;
+      state = state
+          .focusPane(state.bottomPanes.single.id)
+          .openTab(_tab('b'));
+      final bottom = state.bottomPanes.single.id;
+      // Right active again, so the openers' landing pane is unambiguous in the
+      // assertions that follow.
+      state = state.focusPane(right);
+      return (state: state, right: right, bottom: bottom);
+    }
+
+    test('moveTab crosses panels: the tab leaves its tree for the other', () {
+      final panels = twoPanels();
+      final state = panels.state.moveTab(
+        panels.right,
+        'a',
+        panels.bottom,
+      );
+      expect(state.tabs, isEmpty);
+      expect(state.bottomTabs.map((tab) => tab.id), ['b', 'a']);
+      expect(state.panes.single.tabs, isEmpty);
+      // The drop target becomes active, wherever it lives.
+      expect(state.activePane, panels.bottom);
+    });
+
+    test('moveTab back works the same way in reverse', () {
+      final panels = twoPanels();
+      final state = panels.state.moveTab(
+        panels.bottom,
+        'b',
+        panels.right,
+      );
+      expect(state.bottomTabs, isEmpty);
+      expect(state.tabs.map((tab) => tab.id), ['a', 'b']);
+      expect(state.activePane, panels.right);
+    });
+
+    test('moveTabToEdge splits a pane of the OTHER tree', () {
+      final panels = twoPanels();
+      final state = panels.state.moveTabToEdge(
+        panels.right,
+        'a',
+        panels.bottom,
+        DropZone.right,
+      );
+      expect(state.tabs, isEmpty);
+      // The bottom tree went from one pane to a horizontal split; the tab is
+      // alone in the trailing pane, which is now active.
+      final split = state.bottomTree as SidebarSplit;
+      expect(split.dir, SplitDirection.row);
+      expect((split.children.last as SidebarLeaf).tabs.single.id, 'a');
+      expect(state.activePane, split.children.last.id);
+      expect(state.bottomPanes.length, 2);
+    });
+
+    test('the emptied source pane of a lone tree survives as an empty pane', () {
+      final panels = twoPanels();
+      final state = panels.state.moveTab(panels.right, 'a', panels.bottom);
+      // A tree always keeps somewhere to put the next tab.
+      expect(state.panes.length, 1);
+      expect(state.panes.single.tabs, isEmpty);
+    });
+
+    test('an open lands in the bottom pane while it is the active one', () {
+      final panels = twoPanels();
+      final state = panels.state.focusPane(panels.bottom).openTab(_tab('c'));
+      expect(state.bottomTabs.map((tab) => tab.id), ['b', 'c']);
+      expect(state.tabs.map((tab) => tab.id), ['a']);
+    });
+
+    test('openTab dedupes across panels: the instance is focused, not copied', () {
+      final panels = twoPanels();
+      final state = panels.state.openTab(_tab('b'));
+      expect(state.bottomTabs.map((tab) => tab.id), ['b']);
+      expect(state.activePane, panels.bottom);
+    });
+
+    test('moveTabToOtherTree stacks into the other tree\'s first pane', () {
+      final panels = twoPanels();
+      final state = panels.state.moveTabToOtherTree(panels.right, 'a');
+      expect(state.tabs, isEmpty);
+      expect(state.bottomTabs.map((tab) => tab.id), ['b', 'a']);
+      expect(state.activePane, panels.bottom);
+    });
+
+    test('closing the bottom pane the state points at re-points to the right column', () {
+      // A pane only leaves the tree when it has siblings — closing the last
+      // tab of a lone pane empties it in place, and the pointer stays valid.
+      final panels = twoPanels();
+      var state = panels.state.focusPane(panels.bottom).splitPane(
+        SplitDirection.row,
+      );
+      final fresh = state.bottomPanes.last.id;
+      state = state.focusPane(fresh).openTab(_tab('c'));
+      expect(state.bottomPanes.length, 2);
+
+      state = state.closeTab(fresh, 'c');
+      expect(state.bottomPanes.length, 1);
+      // The removed pane was the active one; the pointer falls back to the
+      // right column's first pane — the primary surface.
+      expect(state.activePane, panels.right);
+    });
+
+    test('the layout round-trips with its bottom tree', () {
+      final panels = twoPanels();
+      final back = SidebarState.fromJson(panels.state.toJson());
+      expect(back.tabs.map((tab) => tab.id), ['a']);
+      expect(back.bottomTabs.map((tab) => tab.id), ['b']);
+      expect(back.activePane, panels.state.activePane);
+    });
+
+    test('a document with no bottom tree gets a fresh empty one', () {
+      var state = SidebarState.initial().openTab(_tab('a'));
+      // Strip the bottom tree, as a pre-dual-tree document would be.
+      final legacy = SidebarState.fromJson({
+        ...state.toJson()..remove('bottomTree'),
+      });
+      expect(legacy.tabs.map((tab) => tab.id), ['a']);
+      expect(legacy.bottomTabs, isEmpty);
+      expect(legacy.bottomPanes.length, 1);
+      // And the fresh pane's id cannot collide with the right tree's.
+      expect(legacy.bottomPanes.single.id == legacy.panes.single.id, isFalse);
+    });
+
+    test('a pane id shared by both trees is re-minted on load', () {
+      // Hand-build the ambiguity: the same pane id in both trees. Loading must
+      // repair it, or every operation would dispatch to the bottom tree.
+      final state = SidebarState.fromJson({
+        'tree': {'kind': 'leaf', 'id': 'pane:1', 'tabs': [], 'active': null},
+        'bottomTree': {
+          'kind': 'leaf',
+          'id': 'pane:1',
+          'tabs': [],
+          'active': null,
+        },
+        'activePane': 'pane:1',
+        'expanded': [],
+        'nextTerminal': 1,
+        'nextId': 1,
+      });
+      expect(state.panes.single.id, 'pane:1');
+      expect(state.bottomPanes.single.id, isNot('pane:1'));
     });
   });
 

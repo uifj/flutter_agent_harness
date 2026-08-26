@@ -202,6 +202,12 @@ class WorkbenchController extends ChangeNotifier implements WorkbenchSink {
     DropZone zone,
   ) => _apply(_state.moveTabToEdge(fromPane, tabId, toPane, zone));
 
+  /// Sends [tabId] of [fromPane] to the other panel — the header button that
+  /// stands in for dragging the tab there, so a tab can change panels without a
+  /// pointer.
+  void sendTabToOtherPanel(String fromPane, String tabId) =>
+      _apply(_state.moveTabToOtherTree(fromPane, tabId));
+
   void resize(String splitId, int index, double delta) =>
       _apply(_state.resize(splitId, index, delta));
 

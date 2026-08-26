@@ -365,7 +365,7 @@ void main() {
     });
   });
 
-  group('dedupeNodeIds', () {
+  group('mintTakenIds', () {
     test('re-mints the second pane sharing an id, keeping the first', () {
       // The state.ts:150-158 bug: mapLeaf would otherwise visit both panes and
       // every open would land in two places.
@@ -376,7 +376,7 @@ void main() {
         children: [_leaf('pane:1', ['a']), _leaf('pane:1', ['b'])],
       );
       final minter = IdMinter(9);
-      final next = dedupeNodeIds(tree, minter);
+      final next = mintTakenIds(tree, <String>{}, minter);
       final ids = allLeaves(next).map((leaf) => leaf.id).toList();
       expect(ids.first, 'pane:1');
       expect(ids.last, 'pane:9');
@@ -387,8 +387,107 @@ void main() {
     test('leaves an already-unique tree untouched', () {
       final tree = _leaf('pane:1', ['a']);
       final minter = IdMinter(5);
-      expect(identical(dedupeNodeIds(tree, minter), tree), isTrue);
+      expect(identical(mintTakenIds(tree, <String>{}, minter), tree), isTrue);
       expect(minter.next, 5);
+    });
+
+    test('one shared set across two trees keeps their ids disjoint', () {
+      // A pane id in both trees would make dispatch-by-id ambiguous — the
+      // bottom tree would always win, whoever asked.
+      final right = _leaf('pane:1', ['a']);
+      final bottom = _leaf('pane:1', ['b']);
+      final minter = IdMinter(3);
+      final taken = <String>{};
+      final dedupedRight = mintTakenIds(right, taken, minter);
+      final dedupedBottom = mintTakenIds(bottom, taken, minter);
+      expect(identical(dedupedRight, right), isTrue);
+      expect((dedupedBottom as SidebarLeaf).id, 'pane:3');
+      expect(minter.next, 4);
+    });
+  });
+
+  group('takeTabFrom', () {
+    test('removes the tab and reports the pane it emptied', () {
+      final tree = _leaf('pane:1', ['a', 'b']);
+      final taken = takeTabFrom(tree, 'pane:1', 'a');
+      expect(taken, isNotNull);
+      final (next, tab, emptied) = taken!;
+      expect(tab.id, 'a');
+      expect(emptied, isFalse);
+      final leaf = next as SidebarLeaf;
+      expect(leaf.tabs.map((t) => t.id), ['b']);
+      // The pane's active tab hands over.
+      expect(leaf.active, 'b');
+    });
+
+    test('reports the emptied pane but leaves it in place', () {
+      // Collapsing is the caller's call: a move whose target is the same pane
+      // must not.
+      final tree = _leaf('pane:1', ['a']);
+      final result = takeTabFrom(tree, 'pane:1', 'a')!;
+      expect(result.$3, isTrue);
+      expect((result.$1 as SidebarLeaf).tabs, isEmpty);
+    });
+
+    test('a pane not holding the tab is untouched', () {
+      final tree = _leaf('pane:1', ['a']);
+      expect(takeTabFrom(tree, 'pane:2', 'a'), isNull);
+      expect(takeTabFrom(tree, 'pane:1', 'z'), isNull);
+    });
+  });
+
+  group('moveTabBetweenTrees', () {
+    test('stacks the tab into the target pane of the other tree', () {
+      final from = _leaf('pane:1', ['a', 'b']);
+      final to = _leaf('pane:2', ['c']);
+      final moved = moveTabBetweenTrees(from, to, 'pane:1', 'b', 'pane:2');
+      expect(moved, isNotNull);
+      final (source, target) = moved!;
+      expect((source as SidebarLeaf).tabs.map((t) => t.id), ['a']);
+      expect((target as SidebarLeaf).tabs.map((t) => t.id), ['c', 'b']);
+      expect(target.active, 'b');
+    });
+
+    test('the source pane collapses when the tab was its last', () {
+      final from = _leaf('pane:1', ['a']);
+      final to = _leaf('pane:2', ['c']);
+      final (source, target) =
+          moveTabBetweenTrees(from, to, 'pane:1', 'a', 'pane:2')!;
+      expect((source as SidebarLeaf).tabs, isEmpty);
+      expect((target as SidebarLeaf).tabs.map((t) => t.id), ['c', 'a']);
+    });
+
+    test('a missing target pane leaves both trees alone', () {
+      final from = _leaf('pane:1', ['a']);
+      final to = _leaf('pane:2', ['c']);
+      expect(moveTabBetweenTrees(from, to, 'pane:1', 'a', 'pane:9'), isNull);
+    });
+  });
+
+  group('moveTabBetweenTreesToEdge', () {
+    test('lands the tab alone in a fresh pane of the other tree', () {
+      final from = _leaf('pane:1', ['a', 'b']);
+      final to = _leaf('pane:2', ['c']);
+      final minter = IdMinter(7);
+      final moved = moveTabBetweenTreesToEdge(
+        from,
+        to,
+        'pane:1',
+        'b',
+        'pane:2',
+        SplitDirection.row,
+        false,
+        minter,
+      );
+      expect(moved, isNotNull);
+      final (source, target, fresh) = moved!;
+      expect((source as SidebarLeaf).tabs.map((t) => t.id), ['a']);
+      // The target tree split into [old, fresh]; the tab is alone in the fresh.
+      final split = target as SidebarSplit;
+      expect(split.dir, SplitDirection.row);
+      expect((split.children.last as SidebarLeaf).tabs.single.id, 'b');
+      expect(fresh, split.children.last.id);
+      expect(minter.next, 9); // one pane, one split
     });
   });
 }

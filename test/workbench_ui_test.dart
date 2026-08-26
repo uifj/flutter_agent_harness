@@ -17,6 +17,7 @@
 import 'dart:io';
 
 import 'package:agent_harness/host/terminal_manager.dart';
+import 'package:agent_harness/sidebar/model/sidebar_tab.dart';
 import 'package:agent_harness/sidebar/state/workbench_controller.dart';
 import 'package:agent_harness/sidebar/state/workbench_store.dart';
 import 'package:agent_harness/sidebar/ui/workbench.dart';
@@ -325,6 +326,92 @@ void main() {
         find.text('No workspace folder is set, so there is nothing to list.'),
         findsOneWidget,
       );
+    });
+  });
+
+  group('the two panels', () {
+    /// Both panels, sharing the one controller and its one state — the shape
+    /// `main.dart` mounts. Each renders its own tree of the same layout.
+    Future<void> pumpBoth(WidgetTester tester) => tester.pumpWidget(
+      MaterialApp(
+        theme: dswThemeData(Brightness.light),
+        home: Scaffold(
+          body: Column(
+            children: [
+              SizedBox(
+                width: 360,
+                height: 300,
+                child: Workbench(
+                  workbench: workbench,
+                  conversation: conversation,
+                  terminals: pool,
+                  onClose: () {},
+                ),
+              ),
+              SizedBox(
+                width: 800,
+                height: 240,
+                child: Workbench(
+                  workbench: workbench,
+                  conversation: conversation,
+                  terminals: pool,
+                  onClose: () {},
+                  panel: WorkbenchPanel.bottom,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    testWidgets('a tab opened in the right column sends to the bottom panel', (
+      tester,
+    ) async {
+      await pumpBoth(tester);
+      workbench.openGit();
+      await tester.pump();
+
+      // One tab strip per panel; the git tab lives in the right column's.
+      expect(workbench.state.tabs.single.type, BuiltinTabType.git);
+      expect(workbench.state.bottomTabs, isEmpty);
+
+      await tester.tap(find.byIcon(LucideIcons.arrow_down_to_line));
+      await tester.pump();
+
+      // The tab crossed the trees without a drag: the right column's pane is
+      // empty, the bottom panel's strip holds the tab, and the bottom pane is
+      // now the active one.
+      expect(workbench.state.tabs, isEmpty);
+      expect(workbench.state.bottomTabs.single.type, BuiltinTabType.git);
+      expect(workbench.state.activePane, workbench.state.bottomPanes.single.id);
+
+      // And the bottom panel's own send button sends it back.
+      await tester.tap(find.byIcon(LucideIcons.arrow_up_from_line));
+      await tester.pump();
+      expect(workbench.state.bottomTabs, isEmpty);
+      expect(workbench.state.tabs.single.type, BuiltinTabType.git);
+    });
+
+    testWidgets('the send button is inert while the active pane is the other panel\'s', (
+      tester,
+    ) async {
+      await pumpBoth(tester);
+      workbench.openGit();
+      workbench.openTerminal();
+      await tester.pump();
+
+      // The terminal landed in the right column's active pane; the bottom
+      // panel's send button must not fire at it.
+      final bottomSend = find.byIcon(LucideIcons.arrow_up_from_line);
+      expect(tester.widget<Tooltip>(find.ancestor(
+        of: bottomSend,
+        matching: find.byType(Tooltip),
+      ).first).message, contains('Send the panel'));
+      await tester.tap(bottomSend);
+      await tester.pump();
+      expect(workbench.state.bottomTabs, isEmpty);
+      expect(workbench.state.tabs, isNotEmpty);
     });
   });
 }

@@ -432,35 +432,120 @@ int maxCounterSuffix(SplitNode node) {
   return max;
 }
 
-/// Re-mints any node id that appears twice in [node].
+/// Takes [tabId] out of the pane [paneId] of [node].
+///
+/// The removal the three move gestures share. The pane keeps its place even
+/// when the tab was its last — that is reported as the third element, because
+/// collapsing it is the caller's call: a move whose drop target is that same
+/// pane must not collapse it (the reorder would delete the pane it is
+/// reordering into). Returns null, with [node] untouched, when [paneId] does
+/// not hold [tabId].
+(SplitNode, SidebarTab, bool)? takeTabFrom(
+  SplitNode node,
+  String paneId,
+  String tabId,
+) {
+  var emptied = false;
+  SidebarTab? taken;
+  final next = mapLeaf(node, paneId, (leaf) {
+    if (!leaf.tabs.any((tab) => tab.id == tabId)) return leaf;
+    taken = leaf.tabs.firstWhere((tab) => tab.id == tabId);
+    final tabs = [
+      for (final tab in leaf.tabs)
+        if (tab.id != tabId) tab,
+    ];
+    emptied = tabs.isEmpty;
+    return leaf.copyWith(
+      tabs: tabs,
+      active: leaf.active == tabId
+          ? (tabs.isEmpty ? null : tabs.last.id)
+          : leaf.active,
+      clearActive: leaf.active == tabId && tabs.isEmpty,
+    );
+  });
+  if (taken == null) return null;
+  return (next, taken!, emptied);
+}
+
+/// Moves [tabId] from the tree [from] into the pane [toPaneId] of the tree
+/// [to] — the cross-panel drag-to-center.
+///
+/// The tab is appended to the target pane's strip and made its visible tab;
+/// the source pane collapses when the tab was its last. Returns the two
+/// rewritten trees, or null — with both trees untouched — when [from] does not
+/// hold [tabId] or [to] does not hold [toPaneId] (a move that dropped the tab
+/// rather than moving it).
+(SplitNode, SplitNode)? moveTabBetweenTrees(
+  SplitNode from,
+  SplitNode to,
+  String fromPane,
+  String tabId,
+  String toPaneId,
+) {
+  final taken = takeTabFrom(from, fromPane, tabId);
+  if (taken == null) return null;
+  final (stripped, tab, emptied) = taken;
+  final source = emptied ? removeLeafAt(stripped, fromPane) : stripped;
+  final target = mapLeaf(
+    to,
+    toPaneId,
+    (leaf) => leaf.copyWith(tabs: [...leaf.tabs, tab], active: tab.id),
+  );
+  if (identical(target, to)) return null;
+  return (source, target);
+}
+
+/// The cross-panel drag-to-edge: [tabId] leaves [from] and lands alone in a
+/// fresh pane of [to], split from [toPaneId] toward [dir] ([front] side
+/// first). Returns the rewritten trees plus the fresh pane's id — the pane the
+/// caller should make active — or null with both trees untouched.
+(SplitNode, SplitNode, String)? moveTabBetweenTreesToEdge(
+  SplitNode from,
+  SplitNode to,
+  String fromPane,
+  String tabId,
+  String toPaneId,
+  SplitDirection dir,
+  bool front,
+  IdMinter minter,
+) {
+  final taken = takeTabFrom(from, fromPane, tabId);
+  if (taken == null) return null;
+  final (stripped, tab, emptied) = taken;
+  final source = emptied ? removeLeafAt(stripped, fromPane) : stripped;
+  final result = insertLeafAt(to, toPaneId, dir, tab, front, minter);
+  if (identical(result.$1, to)) return null;
+  return (source, result.$1, result.$2);
+}
+
+/// Re-mints every node id in [node] that [taken] already holds.
 ///
 /// This is the repair `state.ts:150-158` describes the symptom of: two panes
 /// sharing an id make [mapLeaf] visit both, so every open lands in two places at
 /// once. The source prevents the collision by seeding its global counter;
 /// preventing it is not enough for a file that already has one, which is what
-/// this pass is for. The first occurrence keeps the id so a stable `activePane`
-/// still resolves.
-SplitNode dedupeNodeIds(SplitNode node, IdMinter minter) {
-  final seen = <String>{};
-  SplitNode walk(SplitNode current) {
-    final id = seen.add(current.id)
-        ? current.id
-        : minter.mint(current is SidebarSplit ? 'split' : 'pane');
-    switch (current) {
-      case SidebarLeaf():
-        return id == current.id
-            ? current
-            : SidebarLeaf(id: id, tabs: current.tabs, active: current.active);
-      case SidebarSplit():
-        final children = [for (final child in current.children) walk(child)];
-        return SidebarSplit(
-          id: id,
-          dir: current.dir,
-          sizes: current.sizes,
-          children: children,
-        );
-    }
+/// this pass is for. One shared set across two trees keeps their ids disjoint
+/// too — a pane id in both would make any dispatch by id ambiguous (the bottom
+/// tree would always win, whoever asked). The first occurrence keeps the id so
+/// a stable `activePane` still resolves; with a fresh set this dedupes a single
+/// tree.
+SplitNode mintTakenIds(SplitNode node, Set<String> taken, IdMinter minter) {
+  final id = taken.add(node.id)
+      ? node.id
+      : minter.mint(node is SidebarSplit ? 'split' : 'pane');
+  switch (node) {
+    case SidebarLeaf():
+      return id == node.id
+          ? node
+          : SidebarLeaf(id: id, tabs: node.tabs, active: node.active);
+    case SidebarSplit():
+      return SidebarSplit(
+        id: id,
+        dir: node.dir,
+        sizes: node.sizes,
+        children: [
+          for (final child in node.children) mintTakenIds(child, taken, minter),
+        ],
+      );
   }
-
-  return walk(node);
 }
