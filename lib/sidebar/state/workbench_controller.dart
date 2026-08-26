@@ -178,6 +178,12 @@ class WorkbenchController extends ChangeNotifier implements WorkbenchSink {
   void closeTab(String paneId, String tabId) =>
       _apply(_state.closeTab(paneId, tabId));
 
+  /// The strip's right-click pair: close everything but [keepId], or everything.
+  void closeOtherTabs(String paneId, String keepId) =>
+      _apply(_state.closeOtherTabs(paneId, keepId));
+
+  void closeAllTabs(String paneId) => _apply(_state.closeAllTabs(paneId));
+
   void activateTab(String paneId, String tabId) =>
       _apply(_state.activateTab(paneId, tabId));
 

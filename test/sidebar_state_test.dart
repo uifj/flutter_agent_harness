@@ -22,6 +22,19 @@ SidebarTab _tab(String id) =>
   return (state: state, left: left, right: right);
 }
 
+/// A layout with 'a' in the right column and 'b' in the bottom panel —
+/// the two panels each holding one tab, the right one active.
+({SidebarState state, String right, String bottom}) _twoPanels() {
+  var state = SidebarState.initial().openTab(_tab('a'));
+  final right = state.activePane;
+  state = state.focusPane(state.bottomPanes.single.id).openTab(_tab('b'));
+  final bottom = state.bottomPanes.single.id;
+  // Right active again, so the openers' landing pane is unambiguous in the
+  // assertions that follow.
+  state = state.focusPane(right);
+  return (state: state, right: right, bottom: bottom);
+}
+
 void main() {
   group('initial', () {
     test('is one empty pane which is the active one', () {
@@ -123,6 +136,86 @@ void main() {
     test('is a no-op for a tab the pane does not hold', () {
       final state = SidebarState.initial().openTab(_tab('a'));
       expect(identical(state.closeTab(state.activePane, 'z'), state), isTrue);
+    });
+  });
+
+  group('closeOtherTabs', () {
+    test('keeps the named tab and shows it', () {
+      var state = SidebarState.initial()
+          .openTab(_tab('a'))
+          .openTab(_tab('b'))
+          .openTab(_tab('c'));
+      final pane = state.activePane;
+      // 'b' showing, 'a' kept — the kept tab wins the pane either way.
+      state = state.activateTab(pane, 'b').closeOtherTabs(pane, 'a');
+      expect(state.panes.single.tabs.map((tab) => tab.id), ['a']);
+      expect(state.panes.single.active, 'a');
+    });
+
+    test('in a pane with siblings, collapses it to nothing but the kept tab', () {
+      final panes = _twoPanes();
+      final state = panes.state
+          .openTab(_tab('c'))
+          .closeOtherTabs(panes.right, 'c');
+      // The right pane's other tab ('b') closed; the pane survives holding 'c'.
+      expect(state.panes.length, 2);
+      expect(state.paneOf('c')!.id, panes.right);
+      expect(state.paneOf('c')!.tabs.map((tab) => tab.id), ['c']);
+    });
+
+    test('a keep-id the pane does not hold empties and collapses it', () {
+      final panes = _twoPanes();
+      final state = panes.state.closeOtherTabs(panes.right, 'z');
+      expect(state.panes.length, 1);
+      expect(state.panes.single.tabs.map((tab) => tab.id), ['a']);
+    });
+
+    test('a lone pane keeps its only tab as a no-op', () {
+      final state = SidebarState.initial().openTab(_tab('a'));
+      expect(
+        identical(state.closeOtherTabs(state.activePane, 'a'), state),
+        isTrue,
+      );
+    });
+
+    test('works on the bottom tree\'s panes too', () {
+      final panels = _twoPanels();
+      var state = panels.state.focusPane(panels.bottom).openTab(_tab('c'));
+      state = state.closeOtherTabs(panels.bottom, 'b');
+      expect(state.bottomTabs.map((tab) => tab.id), ['b']);
+      expect(state.bottomPanes.single.active, 'b');
+    });
+  });
+
+  group('closeAllTabs', () {
+    test('empties a lone pane in place', () {
+      var state = SidebarState.initial()
+          .openTab(_tab('a'))
+          .openTab(_tab('b'));
+      state = state.closeAllTabs(state.activePane);
+      expect(state.panes.length, 1);
+      expect(state.panes.single.tabs, isEmpty);
+      expect(state.panes.single.active, isNull);
+    });
+
+    test('collapses a pane that has siblings', () {
+      final panes = _twoPanes();
+      final state = panes.state.closeAllTabs(panes.right);
+      expect(state.panes.length, 1);
+      expect(state.panes.single.tabs.map((tab) => tab.id), ['a']);
+      expect(state.activePane, panes.left);
+    });
+
+    test('an already-empty pane is a no-op', () {
+      final state = SidebarState.initial();
+      expect(identical(state.closeAllTabs(state.activePane), state), isTrue);
+    });
+
+    test('works on the bottom tree\'s panes too', () {
+      final panels = _twoPanels();
+      final state = panels.state.closeAllTabs(panels.bottom);
+      expect(state.bottomPanes.single.tabs, isEmpty);
+      expect(state.activePane, panels.right);
     });
   });
 
@@ -311,23 +404,8 @@ void main() {
   });
 
   group('cross-panel moves', () {
-    /// A layout with 'a' in the right column and 'b' in the bottom panel —
-    /// the two panels each holding one tab, the right one active.
-    ({SidebarState state, String right, String bottom}) twoPanels() {
-      var state = SidebarState.initial().openTab(_tab('a'));
-      final right = state.activePane;
-      state = state
-          .focusPane(state.bottomPanes.single.id)
-          .openTab(_tab('b'));
-      final bottom = state.bottomPanes.single.id;
-      // Right active again, so the openers' landing pane is unambiguous in the
-      // assertions that follow.
-      state = state.focusPane(right);
-      return (state: state, right: right, bottom: bottom);
-    }
-
     test('moveTab crosses panels: the tab leaves its tree for the other', () {
-      final panels = twoPanels();
+      final panels = _twoPanels();
       final state = panels.state.moveTab(
         panels.right,
         'a',
@@ -341,7 +419,7 @@ void main() {
     });
 
     test('moveTab back works the same way in reverse', () {
-      final panels = twoPanels();
+      final panels = _twoPanels();
       final state = panels.state.moveTab(
         panels.bottom,
         'b',
@@ -353,7 +431,7 @@ void main() {
     });
 
     test('moveTabToEdge splits a pane of the OTHER tree', () {
-      final panels = twoPanels();
+      final panels = _twoPanels();
       final state = panels.state.moveTabToEdge(
         panels.right,
         'a',
@@ -371,7 +449,7 @@ void main() {
     });
 
     test('the emptied source pane of a lone tree survives as an empty pane', () {
-      final panels = twoPanels();
+      final panels = _twoPanels();
       final state = panels.state.moveTab(panels.right, 'a', panels.bottom);
       // A tree always keeps somewhere to put the next tab.
       expect(state.panes.length, 1);
@@ -379,21 +457,21 @@ void main() {
     });
 
     test('an open lands in the bottom pane while it is the active one', () {
-      final panels = twoPanels();
+      final panels = _twoPanels();
       final state = panels.state.focusPane(panels.bottom).openTab(_tab('c'));
       expect(state.bottomTabs.map((tab) => tab.id), ['b', 'c']);
       expect(state.tabs.map((tab) => tab.id), ['a']);
     });
 
     test('openTab dedupes across panels: the instance is focused, not copied', () {
-      final panels = twoPanels();
+      final panels = _twoPanels();
       final state = panels.state.openTab(_tab('b'));
       expect(state.bottomTabs.map((tab) => tab.id), ['b']);
       expect(state.activePane, panels.bottom);
     });
 
     test('moveTabToOtherTree stacks into the other tree\'s first pane', () {
-      final panels = twoPanels();
+      final panels = _twoPanels();
       final state = panels.state.moveTabToOtherTree(panels.right, 'a');
       expect(state.tabs, isEmpty);
       expect(state.bottomTabs.map((tab) => tab.id), ['b', 'a']);
@@ -403,7 +481,7 @@ void main() {
     test('closing the bottom pane the state points at re-points to the right column', () {
       // A pane only leaves the tree when it has siblings — closing the last
       // tab of a lone pane empties it in place, and the pointer stays valid.
-      final panels = twoPanels();
+      final panels = _twoPanels();
       var state = panels.state.focusPane(panels.bottom).splitPane(
         SplitDirection.row,
       );
@@ -419,7 +497,7 @@ void main() {
     });
 
     test('the layout round-trips with its bottom tree', () {
-      final panels = twoPanels();
+      final panels = _twoPanels();
       final back = SidebarState.fromJson(panels.state.toJson());
       expect(back.tabs.map((tab) => tab.id), ['a']);
       expect(back.bottomTabs.map((tab) => tab.id), ['b']);

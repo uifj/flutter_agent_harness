@@ -202,6 +202,71 @@ void main() {
       expect(workbench.state.tabs, isEmpty);
     });
 
+    group('the right-click menu', () {
+      Future<void> rightClick(WidgetTester tester, Finder chip) async {
+        final gesture = await tester.startGesture(
+          tester.getCenter(chip),
+          kind: PointerDeviceKind.mouse,
+          buttons: kSecondaryButton,
+        );
+        await gesture.up();
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('offers close, and closes', (tester) async {
+        workbench.openGit();
+        await pump(tester);
+        expect(find.text('Source Control'), findsOneWidget);
+
+        await rightClick(tester, find.text('Source Control'));
+        expect(find.text('Close'), findsOneWidget);
+        expect(find.text('Close all'), findsOneWidget);
+        expect(find.text('Send to bottom panel'), findsOneWidget);
+        // One tab only: "close others" would read as a no-op.
+        expect(find.text('Close others'), findsNothing);
+
+        await tester.tap(find.text('Close'));
+        await tester.pumpAndSettle();
+        expect(workbench.state.tabs, isEmpty);
+      });
+
+      testWidgets('close all empties the strip', (tester) async {
+        workbench.openGit();
+        workbench.openTerminal();
+        await pump(tester);
+        expect(workbench.state.tabs, hasLength(2));
+
+        await rightClick(tester, find.text('Source Control'));
+        await tester.tap(find.text('Close all'));
+        await tester.pumpAndSettle();
+        expect(workbench.state.tabs, isEmpty);
+        // A lone pane survives as the welcome pane.
+        expect(workbench.state.panes, hasLength(1));
+      });
+
+      testWidgets('close others keeps only the clicked tab', (tester) async {
+        workbench.openGit();
+        workbench.openTerminal();
+        await pump(tester);
+
+        await rightClick(tester, find.text('Terminal 1'));
+        await tester.tap(find.text('Close others'));
+        await tester.pumpAndSettle();
+        expect(workbench.state.tabs.single.type, BuiltinTabType.terminal);
+      });
+
+      testWidgets('send moves the tab to the bottom panel', (tester) async {
+        workbench.openGit();
+        await pump(tester);
+
+        await rightClick(tester, find.text('Source Control'));
+        await tester.tap(find.text('Send to bottom panel'));
+        await tester.pumpAndSettle();
+        expect(workbench.state.tabs, isEmpty);
+        expect(workbench.state.bottomTabs.single.type, BuiltinTabType.git);
+      });
+    });
+
     testWidgets('the close affordance closes a tab', (tester) async {
       workbench.openGit();
       await pump(tester);

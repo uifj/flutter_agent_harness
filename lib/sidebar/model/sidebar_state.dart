@@ -234,6 +234,47 @@ class SidebarState {
     );
   }
 
+  /// Closes every tab of [paneId] but [keepId] — the strip's right-click
+  /// "close others".
+  ///
+  /// The kept tab becomes the pane's visible one, wherever in the strip it was:
+  /// the pane is about to hold it alone, so whatever showed before is going.
+  SidebarState closeOtherTabs(String paneId, String keepId) {
+    var emptied = false;
+    final next = _mapPane(paneId, (leaf) {
+      final keep = leaf.tabs.where((tab) => tab.id == keepId).toList();
+      if (keep.length == leaf.tabs.length) return leaf;
+      emptied = keep.isEmpty;
+      return leaf.copyWith(tabs: keep, active: keep.isEmpty ? null : keep.last.id);
+    });
+    if (identical(next, this) || !emptied) return next;
+    return next._withTrees(
+      bottomTree: _isBottom(paneId)
+          ? removeLeafAt(next.bottomTree, paneId)
+          : next.bottomTree,
+      tree: _isBottom(paneId) ? next.tree : removeLeafAt(next.tree, paneId),
+    );
+  }
+
+  /// Closes every tab of [paneId] — the strip's right-click "close all". Same
+  /// collapse rule as one close: an emptied pane leaves its tree when it has
+  /// siblings, and stays as the welcome pane when it does not.
+  SidebarState closeAllTabs(String paneId) {
+    var emptied = false;
+    final next = _mapPane(paneId, (leaf) {
+      if (leaf.tabs.isEmpty) return leaf;
+      emptied = true;
+      return leaf.copyWith(tabs: const [], active: null, clearActive: true);
+    });
+    if (identical(next, this) || !emptied) return next;
+    return next._withTrees(
+      bottomTree: _isBottom(paneId)
+          ? removeLeafAt(next.bottomTree, paneId)
+          : next.bottomTree,
+      tree: _isBottom(paneId) ? next.tree : removeLeafAt(next.tree, paneId),
+    );
+  }
+
   /// Makes [tabId] the visible tab of [paneId], and that pane active.
   SidebarState activateTab(String paneId, String tabId) =>
       _mapPane(

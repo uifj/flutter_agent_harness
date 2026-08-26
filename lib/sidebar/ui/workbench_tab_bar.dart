@@ -7,6 +7,9 @@
 //     is the one browsers and editors share, and it is why this uses a raw
 //     [Listener] rather than [GestureDetector]: Flutter's tap recognisers only
 //     report the primary button.
+//   * Right-click opens the per-tab context menu (`TabBar.tsx:106-172`): close,
+//     close others, close all, and the send-to-other-panel twin of dragging the
+//     tab there. The source's float item waits for free windows to exist (C3).
 //   * Drag a tab within the strip to reorder, or onto another pane to move it
 //     there. Both are the same [Draggable] payload; which one happens is decided
 //     by whichever [DragTarget] takes the drop, so the strip does not need to know
@@ -14,8 +17,8 @@
 //   * Horizontal scroll, because a pane in a 300px column overflows at three tabs
 //     and a strip that clips them makes them unreachable.
 //
-// Not ported: the source's overflow menu and its per-tab context menu. Both are
-// menus over gestures that already exist here; the strip scrolls instead.
+// Not ported: the source's overflow menu. It is a menu over gestures that
+// already exist here; the strip scrolls instead.
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -274,6 +277,7 @@ class _TabChipState extends State<_TabChip> {
         child: GestureDetector(
           onTap: () =>
               widget.workbench.activateTab(widget.paneId, widget.tab.id),
+          onSecondaryTapDown: _menu,
           behavior: HitTestBehavior.opaque,
           child: Tooltip(
             message: widget.tab.path ?? widget.tab.title,
@@ -286,6 +290,76 @@ class _TabChipState extends State<_TabChip> {
   }
 
   void _close() => widget.workbench.closeTab(widget.paneId, widget.tab.id);
+
+  /// Where a right-click's menu opens, at the cursor. Same anchor recipe as
+  /// the git tab's row menus.
+  RelativeRect _menuAt(Offset global) {
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    return RelativeRect.fromRect(
+      Rect.fromPoints(global, global),
+      Offset.zero & overlay.size,
+    );
+  }
+
+  /// The per-tab context menu: the close family, then the send that stands in
+  /// for dragging the tab to the other panel. "Close others" needs others to be
+  /// there, or it would read as a no-op on a one-tab strip.
+  Future<void> _menu(TapDownDetails details) async {
+    final state = widget.workbench.state;
+    final inBottom = state.bottomPanes.any((pane) => pane.id == widget.paneId);
+    final others = state.paneOf(widget.tab.id)?.tabs.length ?? 1;
+    final result = await showMenu<String>(
+      context: context,
+      position: _menuAt(details.globalPosition),
+      constraints: const BoxConstraints(minWidth: 190),
+      items: [
+        PopupMenuItem(value: 'close', child: _menuRow(LucideIcons.x, 'Close')),
+        if (others > 1)
+          PopupMenuItem(
+            value: 'others',
+            child: _menuRow(LucideIcons.list_x, 'Close others'),
+          ),
+        PopupMenuItem(
+          value: 'all',
+          child: _menuRow(LucideIcons.square_x, 'Close all'),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          value: 'send',
+          child: _menuRow(
+            inBottom ? LucideIcons.arrow_up_from_line : LucideIcons.arrow_down_to_line,
+            inBottom ? 'Send to side panel' : 'Send to bottom panel',
+          ),
+        ),
+      ],
+    );
+    switch (result) {
+      case 'close':
+        _close();
+      case 'others':
+        widget.workbench.closeOtherTabs(widget.paneId, widget.tab.id);
+      case 'all':
+        widget.workbench.closeAllTabs(widget.paneId);
+      case 'send':
+        widget.workbench.sendTabToOtherPanel(widget.paneId, widget.tab.id);
+      case null:
+        break;
+    }
+  }
+
+  /// One menu row: 12px icon, 5px gap, label — the same shape the git tab's
+  /// menus use. The colour is read here rather than in the route so the menu
+  /// matches the strip's theme even mid-theme-change.
+  Widget _menuRow(IconData icon, String label) {
+    final color = context.dsw;
+    return Row(
+      children: [
+        Icon(icon, size: 12, color: color.labelSecondary),
+        const SizedBox(width: 5),
+        Text(label, style: DswType.xs13.copyWith(color: color.labelPrimary)),
+      ],
+    );
+  }
 }
 
 /// The strip's trailing space, which appends on drop.
