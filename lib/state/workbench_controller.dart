@@ -1,7 +1,7 @@
 // The one mutable thing in the workbench.
 //
 // Everything interesting about the layout is a pure function in
-// `lib/sidebar/model/`; this holds the current value of it, tells listeners when
+// `lib/model/`; this holds the current value of it, tells listeners when
 // it changed, and hands it to the store. Keeping it that thin is what makes the
 // reducers testable and this file mostly plumbing.
 //
@@ -24,8 +24,8 @@
 
 import 'package:flutter/foundation.dart';
 
-import '../../model/workbench.dart';
-import '../../model/workspace.dart';
+import '../model/workbench.dart';
+import '../model/workspace.dart';
 import '../model/sidebar_state.dart';
 import '../model/sidebar_tab.dart';
 import '../model/split_node.dart';
@@ -106,6 +106,11 @@ class WorkbenchController extends ChangeNotifier implements WorkbenchSink {
         _layouts[key] ??
         (key == _unsaved ? null : _store.load(key)) ??
         SidebarState.initial();
+    // A session bound while narrow gets the same merge a breakpoint-crossing
+    // performs: its bottom-panel tabs arrive in the one visible panel. The
+    // reducer's idempotence makes this safe even when the layout was already
+    // migrated before the bind.
+    if (mobileMerge) _state = _state.migrateBottomTabs();
     notifyListeners();
   }
 
@@ -136,6 +141,40 @@ class WorkbenchController extends ChangeNotifier implements WorkbenchSink {
 
   // --- Opens ---
 
+  /// The tab types the user has switched off. Fed from the workbench prefs by
+  /// the app entry; kept as a set of the disabled rather than the full map
+  /// because the opens below ask one question — "may this type open?" — and
+  /// nothing else.
+  ///
+  /// A disabled type refuses every open here but never closes a tab already on
+  /// screen: a conversation's saved layout is its own record, and editing it
+  /// behind the user's back is the one thing the source's switch never does.
+  Set<String> disabledTabs = const {};
+
+  /// Replaces [disabledTabs]. The controller does not own the prefs document,
+  /// so the app entry pushes the change in — this is the one seam, called
+  /// whenever the prefs store notifies.
+  void setDisabledTabs(Set<String> next) {
+    if (setEquals(disabledTabs, next)) return;
+    disabledTabs = next;
+  }
+
+  /// Whether the mobile merge is in force: one panel, the bottom tabs folded
+  /// into it. Fed by the app entry from the layout controller's breakpoint
+  /// reading — the controller cannot see the viewport, only the consequence.
+  ///
+  /// Turning it ON runs the migration immediately, so a desktop→narrow
+  /// crossing moves the tabs in the same notification the drawer appears in.
+  /// Turning it OFF does nothing: the merge is permanent by design, and the
+  /// bottom panel returns as the empty welcome.
+  bool mobileMerge = false;
+
+  void setMobileMerge(bool value) {
+    if (mobileMerge == value) return;
+    mobileMerge = value;
+    if (value) _apply(_state.migrateBottomTabs());
+  }
+
   /// Opens [absolutePath] in an editor tab, optionally scrolled to [line].
   ///
   /// A file already open is focused rather than opened twice; when a [line] came
@@ -154,24 +193,92 @@ class WorkbenchController extends ChangeNotifier implements WorkbenchSink {
   /// Opens [absolutePath] as a file tree root, already expanded — a collapsed
   /// root is a tab showing one row.
   void openFolder(String absolutePath) {
+    if (disabledTabs.contains(BuiltinTabType.explorer)) return;
     _apply(
       _state.openTab(SidebarTab.explorer(absolutePath)).expand(absolutePath),
     );
   }
 
   /// Opens a fresh terminal tab.
-  void openTerminal() => _apply(_state.openTerminal());
+  void openTerminal() {
+    if (disabledTabs.contains(BuiltinTabType.terminal)) return;
+    _apply(_state.openTerminal());
+  }
+
+  /// Opens a fresh terminal tab in the bottom panel's first pane — the
+  /// bottomPanelAutoTerminal behaviour. The type switch still gates it, as the
+  /// source says ("the terminal quota/type still gates the attempt"): a
+  /// disabled terminal type means no terminal anywhere, including the seed.
+  void openTerminalInBottom() {
+    if (disabledTabs.contains(BuiltinTabType.terminal)) return;
+    final panes = _state.bottomPanes;
+    if (panes.isEmpty) {
+      openTerminal();
+      return;
+    }
+    _apply(_state.openTerminalIn(panes.first.id));
+  }
 
   /// Opens the single git tab, or focuses it.
-  void openGit() => _apply(_state.openTab(SidebarTab.git));
+  void openGit() {
+    if (disabledTabs.contains(BuiltinTabType.git)) return;
+    _apply(_state.openTab(SidebarTab.git));
+  }
 
   /// Opens the single sub-agent tab, or focuses it.
-  void openSubagents() => _apply(_state.openTab(SidebarTab.subagent));
+  void openSubagents() {
+    if (disabledTabs.contains(BuiltinTabType.subagent)) return;
+    _apply(_state.openTab(SidebarTab.subagent));
+  }
+
+  /// Opens the single side-chat tab, or focuses it.
+  void openSideChat() {
+    if (disabledTabs.contains(BuiltinTabType.sidechat)) return;
+    _apply(_state.openSideChat());
+  }
+
+  /// Opens a browser tab at [url], or focuses the one already on it.
+  void openBrowser(String url) {
+    if (disabledTabs.contains(BuiltinTabType.browser)) return;
+    _apply(_state.openBrowser(url));
+  }
+
+  /// Opens a fresh browser tab with no address yet — the `+` menu's entry.
+  void openBrowserUntitled() {
+    if (disabledTabs.contains(BuiltinTabType.browser)) return;
+    _apply(_state.openBrowserUntitled());
+  }
 
   /// Opens a diff for [ref] the sticky way — see [SidebarState.openDiffTab].
   void openDiff(SidebarDiffRef ref) {
     _apply(_state.openDiffTab(_state.activePane, SidebarTab.diff(ref)));
   }
+
+  // --- Free windows ---
+
+  /// Floats [tabId] at [x],[y] (overlay coordinates), with [vw]/[vh] as the
+  /// viewport the geometry clamps against — the caller has the layer's size,
+  /// the state does not.
+  void floatTab(String tabId, double x, double y, double vw, double vh) =>
+      _apply(_state.floatTab(tabId, x, y, vw, vh));
+
+  /// Moves a free window; the commit on drag release, not per frame.
+  void moveFloat(String floatId, double x, double y, double vw, double vh) =>
+      _apply(_state.moveFloat(floatId, x, y, vw, vh));
+
+  /// Resizes a free window from its SE corner; the commit on release.
+  void resizeFloat(String floatId, double w, double h, double vw, double vh) =>
+      _apply(_state.resizeFloat(floatId, w, h, vw, vh));
+
+  /// Brings a free window to the top of the stack.
+  void raiseFloat(String floatId) => _apply(_state.raiseFloat(floatId));
+
+  /// Docks a free window back, into [toPane] or the active pane.
+  void dockFloat(String floatId, [String? toPane]) =>
+      _apply(_state.dockFloat(floatId, toPane));
+
+  /// Closes the free window holding [tabId] — the tab goes with it.
+  void closeFloatByTab(String tabId) => _apply(_state.closeFloatByTab(tabId));
 
   // --- Tab and pane gestures ---
 
@@ -231,11 +338,10 @@ class WorkbenchController extends ChangeNotifier implements WorkbenchSink {
         openFolder(target.target);
         return null;
       case OpenKind.url:
-        // better-sidebar has a browser tab type backed by a webview; this app
-        // has no webview and deliberately did not port one, so there is nowhere
-        // for a URL to go. Saying so beats opening the user's browser from a
-        // model tool call.
-        return 'this workbench cannot show URLs; only files and folders';
+        // The browser tab is where a URL goes — the model's `sidebar_open`
+        // link clicks land here, same as a typed address.
+        openBrowser(target.target);
+        return null;
     }
   }
 

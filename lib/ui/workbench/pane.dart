@@ -22,14 +22,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
+import '../../l10n/locales.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
-import '../model/sidebar_state.dart';
-import '../model/split_node.dart';
-import '../state/workbench_controller.dart';
+import '../../model/sidebar_state.dart';
+import '../../model/sidebar_tab.dart';
+import '../../model/split_node.dart';
+import '../../state/workbench_controller.dart';
 import 'tab_registry.dart';
+import 'workbench_prefs_scope.dart';
 import 'workbench_tab_bar.dart';
 
 /// Fraction of the pane each edge zone claims.
@@ -234,6 +237,7 @@ class _Welcome extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = context.dsw;
     final focused = workbench.state.activePane == paneId;
+    final prefs = WorkbenchPrefsScope.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -242,8 +246,8 @@ class _Welcome extends StatelessWidget {
           children: [
             Text(
               focused
-                  ? 'Files open here.'
-                  : 'Click to open files in this pane.',
+                  ? context.tr('filesOpenHere')
+                  : context.tr('clickToOpenFiles'),
               textAlign: TextAlign.center,
               style: DswType.xs13.copyWith(color: color.labelTertiary),
             ),
@@ -253,34 +257,55 @@ class _Welcome extends StatelessWidget {
               spacing: 6,
               runSpacing: 6,
               children: [
-                _WelcomeAction(
-                  label: 'Explorer',
-                  icon: LucideIcons.folder_open,
-                  // Disabled rather than hidden when there is no workspace: the
-                  // action is the thing that explains what is missing.
-                  onTap: workbench.workspaceRoot == null
-                      ? null
-                      : () {
-                          workbench.focusPane(paneId);
-                          workbench.openFolder(workbench.workspaceRoot!);
-                        },
-                ),
-                _WelcomeAction(
-                  label: 'Terminal',
-                  icon: LucideIcons.terminal,
-                  onTap: () {
-                    workbench.focusPane(paneId);
-                    workbench.openTerminal();
-                  },
-                ),
-                _WelcomeAction(
-                  label: 'Source control',
-                  icon: LucideIcons.git_branch,
-                  onTap: () {
-                    workbench.focusPane(paneId);
-                    workbench.openGit();
-                  },
-                ),
+                if (prefs.tabEnabled(BuiltinTabType.explorer))
+                  _WelcomeAction(
+                    label: context.tr('explorer'),
+                    icon: LucideIcons.folder_open,
+                    // Disabled rather than hidden when there is no workspace: the
+                    // action is the thing that explains what is missing.
+                    onTap: workbench.workspaceRoot == null
+                        ? null
+                        : () {
+                            workbench.focusPane(paneId);
+                            workbench.openFolder(workbench.workspaceRoot!);
+                          },
+                  ),
+                if (prefs.tabEnabled(BuiltinTabType.terminal))
+                  _WelcomeAction(
+                    label: context.tr('terminal'),
+                    icon: LucideIcons.terminal,
+                    onTap: () {
+                      workbench.focusPane(paneId);
+                      workbench.openTerminal();
+                    },
+                  ),
+                if (prefs.tabEnabled(BuiltinTabType.git))
+                  _WelcomeAction(
+                    label: context.tr('git'),
+                    icon: LucideIcons.git_branch,
+                    onTap: () {
+                      workbench.focusPane(paneId);
+                      workbench.openGit();
+                    },
+                  ),
+                if (prefs.tabEnabled(BuiltinTabType.browser))
+                  _WelcomeAction(
+                    label: context.tr('browser'),
+                    icon: LucideIcons.globe,
+                    onTap: () {
+                      workbench.focusPane(paneId);
+                      workbench.openBrowserUntitled();
+                    },
+                  ),
+                if (prefs.tabEnabled(BuiltinTabType.sidechat))
+                  _WelcomeAction(
+                    label: context.tr('sidechat'),
+                    icon: LucideIcons.message_square_plus,
+                    onTap: () {
+                      workbench.focusPane(paneId);
+                      workbench.openSideChat();
+                    },
+                  ),
               ],
             ),
           ],
@@ -370,7 +395,7 @@ class _Unknown extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Text(
-          'This version has nothing to show a "$type" tab with.',
+          context.tr('unknownTabType', {'type': type}),
           textAlign: TextAlign.center,
           style: DswType.xs13.copyWith(color: color.labelTertiary),
         ),

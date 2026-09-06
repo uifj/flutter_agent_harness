@@ -1,35 +1,35 @@
-// The app entry: read the settings, build the runtime, wire the four controllers
-// into the frame.
+// The app entry: read the settings, build the scope, run the frame.
 //
-// Assembly only. Every decision of consequence lives in the piece that owns it —
-// the concession solve in `ui/layout/columns.dart`, the turn projection in
-// `genkit/agent_runtime.dart`, the transcript in `state/`. What is here is the
-// order those pieces have to be built in, and the one thing none of them can do
-// alone: swapping the runtime when the model settings change.
+// Assembly only, twice over: `main` decides the order the stores are opened
+// in, and `_DshAppState` decides what hangs where in the tree. Every decision
+// of consequence lives in the piece that owns it — the runtime swap and the
+// controller wiring in `state/app_scope.dart`, the concession solve in
+// `ui/layout/columns.dart`, the turn projection in
+// `state/conversation_controller.dart`.
 
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
-import 'genkit/agent_runtime.dart';
-import 'host/terminal_manager.dart';
-import 'model/app_settings.dart';
-import 'sidebar/state/workbench_controller.dart';
-import 'sidebar/state/workbench_store.dart';
-import 'sidebar/ui/workbench.dart';
-import 'state/conversation_controller.dart';
+import 'genkit/models_endpoint.dart';
+import 'host/project_folder_ops.dart';
+import 'l10n/locales.dart';
+import 'model/app_settings.dart' as cfg;
+import 'state/app_scope.dart';
 import 'state/details_selection.dart';
-import 'state/layout_controller.dart';
-import 'state/session_index.dart';
+import 'state/prefs_store.dart';
 import 'state/settings_store.dart';
-import 'state/streaming_tail.dart';
 import 'theme/dsw_theme.dart';
 import 'ui/app_frame.dart';
 import 'ui/conversation/conversation_root.dart';
 import 'ui/conversation/details_panel.dart';
+import 'ui/conversation/hero_workspace_picker.dart';
 import 'ui/settings/model_settings.dart';
 import 'ui/sidebar/sidebar.dart';
+import 'ui/workbench/free_window_layer.dart';
+import 'ui/workbench/workbench.dart';
+import 'ui/workbench/workbench_prefs_scope.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,11 +38,24 @@ Future<void> main() async {
   // any further entitlement.
   final support = await getApplicationSupportDirectory();
   final settings = await SettingsStore.open(support);
-  runApp(DshApp(support: support, settings: settings));
+  final prefs = await PrefsStore.open(support);
+  // The workspace access a previous launch recorded has to be claimed BEFORE
+  // anything reads under the root — the file tree's first listing, the
+  // session restore, the tools. A failure here is not an error: the hero
+  // picker's own UI is the "ask again" path.
+  await restoreWorkspaceAccess(
+    bookmark: settings.value.workspaceBookmark,
+  );
+  runApp(DshApp(support: support, settings: settings, prefs: prefs));
 }
 
 class DshApp extends StatefulWidget {
-  const DshApp({super.key, required this.support, required this.settings});
+  const DshApp({
+    super.key,
+    required this.support,
+    required this.settings,
+    required this.prefs,
+  });
 
   final Directory support;
 
@@ -50,55 +63,30 @@ class DshApp extends StatefulWidget {
   /// file, and can put the settings panel up if not.
   final SettingsStore settings;
 
+  /// The workbench preferences, opened alongside the settings for the same
+  /// reason: the first frame's tab menus already need to know the switches.
+  final PrefsStore prefs;
+
   @override
   State<DshApp> createState() => _DshAppState();
 }
 
 class _DshAppState extends State<DshApp> {
-  late final Directory _sessionRoot;
-  late AgentRuntime _runtime;
-
-  final _tail = StreamingTail();
-  final _layout = LayoutController();
-  final _terminals = TerminalManager();
-  late final ConversationController _conversation;
-  late final SessionIndex _sessions;
-  late final WorkbenchController _workbench;
-
-  /// dsh's `openDetails(target)` is one call that both points the panel at a
-  /// tool call and opens the column it lives in. Here those are two objects,
-  /// and this is where they are joined.
-  late final DetailsSelection _selection = DetailsSelection(
-    onSelect: _layout.openDetails,
+  /// Everything that outlives a frame: the runtime, the nine controllers, and
+  /// the settings-save path that swaps the runtime. See `app_scope.dart`.
+  late final AppScope _scope = AppScope(
+    support: widget.support,
+    settings: widget.settings,
+    prefs: widget.prefs,
   );
 
+  /// The settings panel's visibility — the one piece of app-wide state that
+  /// is a view concern rather than a controller's.
   bool _settingsOpen = false;
 
   @override
   void initState() {
     super.initState();
-    _sessionRoot = Directory('${widget.support.path}/sessions')
-      ..createSync(recursive: true);
-    _runtime = _build(widget.settings.value);
-    _sessions = SessionIndex(_runtime);
-    _workbench = WorkbenchController(
-      store: WorkbenchStore.open(widget.support),
-      workspaceRoot: widget.settings.value.workspaceRoot,
-    );
-    _conversation = ConversationController(
-      runtime: _runtime,
-      tail: _tail,
-      // A conversation gets its id from its first persisted turn, so this is when
-      // a new session becomes listable — and when the sidebar can mark it. It is
-      // also when the workbench layout built while composing that turn acquires
-      // somewhere to be saved; see [WorkbenchController.bindSession].
-      onSessionPersisted: (id) {
-        _sessions.setActive(id);
-        _sessions.refresh();
-        _workbench.bindSession(id);
-      },
-    );
-    _sessions.refresh();
     // Nothing works without a key, and the composer's failure message is a worse
     // way to learn that than the panel that fixes it. dsh opens an onboarding
     // dialog on the same condition.
@@ -107,145 +95,155 @@ class _DshAppState extends State<DshApp> {
 
   @override
   void dispose() {
-    _runtime.dispose();
-    _conversation.dispose();
-    _sessions.dispose();
-    // One call, not flush-then-dispose: the last layout change may still be
-    // inside its debounce window, and the write has to finish before the queue is
-    // cleared. `dispose` cannot await, so the ordering lives in `shutdown`.
-    _workbench.shutdown();
-    // Safety net: the tabs close their own sessions as they unmount, but the
-    // state teardown at app exit is not guaranteed to run each body's dispose,
-    // and a shell that outlives its window is a leak on the host.
-    _terminals.dispose();
-    _selection.dispose();
-    _layout.dispose();
-    _tail.dispose();
+    _scope.dispose();
     super.dispose();
   }
 
-  AgentRuntime _build(AppSettings settings) => AgentRuntime(
-    settings: settings,
-    sessionRoot: _sessionRoot,
-    support: widget.support,
-  )..workspaceRoot = settings.workspaceRoot;
-
-  /// Persists the edited settings, then brings the runtime in line with them.
-  ///
-  /// The model fields, the MCP server set and the skills directory are all
-  /// baked into a registered agent, so a change to any of them is a rebuild;
-  /// the workspace is a live setter and is not. Both controllers are handed
-  /// the replacement, which drops the open conversation — it belonged to the
-  /// old connection. It stays on disk.
-  Future<void> _save(AppSettings next) async {
-    final previous = widget.settings.value;
-    await widget.settings.save(next);
-    // The workbench reads the same folder as the tools, through the same guard,
-    // so it moves whether or not the runtime is rebuilt.
-    _workbench.workspaceRoot = next.workspaceRoot;
-    if (!next.requiresRuntimeRestart(previous)) {
-      _runtime.workspaceRoot = next.workspaceRoot;
-      return;
-    }
-    final replaced = _runtime;
-    _runtime = _build(next);
-    _conversation.adoptRuntime(_runtime);
-    _selection.clear();
-    _sessions.setActive(null);
-    // The dropped conversation took its layout with it, the same as the two
-    // session commands below.
-    await _workbench.bindSession(null);
-    await _sessions.adoptRuntime(_runtime);
-    // Disposed last: it may still be unwinding a turn the swap just abandoned.
-    await replaced.dispose();
-  }
-
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    title: 'Agent Harness',
-    debugShowCheckedModeBanner: false,
-    theme: dswThemeData(Brightness.light),
-    darkTheme: dswThemeData(Brightness.dark),
-    home: Scaffold(
-      body: AppFrame(
-        layout: _layout,
-        sidebarBuilder: (context, collapsed, width) => Sidebar(
-          collapsed: collapsed,
-          width: width,
-          sessions: _sessions,
-          onNewSession: _newSession,
-          onToggle: _layout.toggleSidebar,
-          onOpenSession: _openSession,
-          onOpenSettings: () => setState(() => _settingsOpen = true),
-          // The frame rebuilds the sidebar on every layout write, so the open
-          // state read here is never stale.
-          onToggleDetails: _layout.toggleDetails,
-          detailsOpen: _layout.details != 0,
+  Widget build(BuildContext context) => ListenableBuilder(
+    // The document the settings screen commits: theme and locale are read at
+    // the MaterialApp level, which sits ABOVE the panels' own scopes, so the
+    // rebuild has to start here for either to take effect without a restart.
+    listenable: widget.settings,
+    builder: (context, _) => MaterialApp(
+      title: 'Agent Harness',
+      debugShowCheckedModeBanner: false,
+      theme: dswThemeData(Brightness.light),
+      darkTheme: dswThemeData(Brightness.dark),
+      // The mode the settings screen writes. `system` hands the decision to the
+      // platform's own brightness, which MaterialApp reads through this same
+      // parameter — there is nothing else to wire.
+      themeMode: switch (widget.settings.value.theme) {
+        cfg.ThemeMode.system => ThemeMode.system,
+        cfg.ThemeMode.light => ThemeMode.light,
+        cfg.ThemeMode.dark => ThemeMode.dark,
+      },
+      home: Scaffold(
+        // The locale seat, resolved once per document: an explicit choice wins,
+        // `system` follows the platform. The scope wraps the whole body — the
+        // frame, the free windows and the settings panel that floats over them
+        // all read the same resolution.
+        body: AppLocaleScope(
+          locale: switch (widget.settings.value.locale) {
+            cfg.LocaleMode.en => AppLocaleId.en,
+            cfg.LocaleMode.zh => AppLocaleId.zh,
+            cfg.LocaleMode.system =>
+              Platform.localeName.toLowerCase().startsWith('zh')
+                  ? AppLocaleId.zh
+                  : AppLocaleId.en,
+          },
+          // The prefs scope wraps the whole frame — the tab strip's `+` menu, the
+          // empty pane's cards and the terminal's glyphs all read it, and the
+          // settings panel that writes it floats over the same tree.
+          child: ListenableBuilder(
+            listenable: widget.prefs,
+            builder: (context, _) => WorkbenchPrefsScope(
+              prefs: widget.prefs.value,
+              child: AppFrame(
+                layout: _scope.layout,
+                sidebarBuilder: (context, collapsed, width) => Sidebar(
+                  collapsed: collapsed,
+                  width: width,
+                  sessions: _scope.sessions,
+                  onNewSession: _scope.newSession,
+                  onToggle: _scope.layout.toggleSidebar,
+                  onOpenSession: _scope.openSession,
+                  onOpenSettings: () => setState(() => _settingsOpen = true),
+                  // The frame rebuilds the sidebar on every layout write, so the open
+                  // state read here is never stale.
+                  onToggleDetails: _scope.layout.toggleDetails,
+                  detailsOpen: _scope.layout.details != 0,
+                ),
+                center: DetailsSelectionScope(
+                  selection: _scope.selection,
+                  child: ListenableBuilder(
+                    // The hero's picker reads the saved document, not a form, so it has
+                    // to rebuild on save — a folder adopted anywhere (the hero itself,
+                    // the settings panel) shows here in the same write that recorded it.
+                    listenable: widget.settings,
+                    builder: (context, _) => HeroWorkspaceScope(
+                      workspaceRoot: widget.settings.value.workspaceRoot,
+                      recent: widget.settings.value.recentWorkspaces,
+                      onPick: _scope.pickFromHero,
+                      onAdopt: _scope.adoptRecent,
+                      child: ConversationRoot(
+                        conversation: _scope.conversation,
+                        tail: _scope.tail,
+                        modelDirectory: _scope.modelDirectory,
+                        // The seat offers; the host commits. The commit is a
+                        // plain model-field save — the scope's, so the runtime
+                        // follows the choice the way any model change does.
+                        onModelSelected: _scope.selectModel,
+                        // dsh-at-file's Remote, in one process: the index
+                        // runs off the UI thread and lands as entries.
+                        onLookupFiles: _scope.lookupWorkspaceFiles,
+                      ),
+                    ),
+                  ),
+                ),
+                details: DetailsPanel(
+                  conversation: _scope.conversation,
+                  selection: _scope.selection,
+                  // Closing the column keeps the selection. dsh's `closeDetails` does
+                  // the same — it is a layout write and nothing else — which is what
+                  // lets the pill on the call already selected reopen the panel onto it.
+                  onClose: _scope.layout.closeDetails,
+                ),
+                workbench: Workbench(
+                  workbench: _scope.workbench,
+                  conversation: _scope.conversation,
+                  sideChat: _scope.sideChat,
+                  terminals: _scope.terminals,
+                  onClose: _scope.layout.closeWorkbench,
+                ),
+                bottom: Workbench(
+                  workbench: _scope.workbench,
+                  conversation: _scope.conversation,
+                  sideChat: _scope.sideChat,
+                  terminals: _scope.terminals,
+                  onClose: _scope.layout.closeBottom,
+                  panel: WorkbenchPanel.bottom,
+                ),
+                overlay: _overlay(),
+              ),
+            ),
+          ),
         ),
-        center: DetailsSelectionScope(
-          selection: _selection,
-          child: ConversationRoot(conversation: _conversation, tail: _tail),
-        ),
-        details: DetailsPanel(
-          conversation: _conversation,
-          selection: _selection,
-          // Closing the column keeps the selection. dsh's `closeDetails` does
-          // the same — it is a layout write and nothing else — which is what
-          // lets the pill on the call already selected reopen the panel onto it.
-          onClose: _layout.closeDetails,
-        ),
-        workbench: Workbench(
-          workbench: _workbench,
-          conversation: _conversation,
-          terminals: _terminals,
-          onClose: _layout.closeWorkbench,
-        ),
-        bottom: Workbench(
-          workbench: _workbench,
-          conversation: _conversation,
-          terminals: _terminals,
-          onClose: _layout.closeBottom,
-          panel: WorkbenchPanel.bottom,
-        ),
-        overlay: _overlay(),
       ),
     ),
   );
 
   Widget? _overlay() {
-    if (!_settingsOpen) return null;
-    return ListenableBuilder(
-      // The panel reads the saved document, so it has to rebuild on save — that
-      // is what turns the credential dot green without closing anything.
-      listenable: widget.settings,
-      builder: (context, _) => SettingsPanel(
-        settings: widget.settings.value,
-        onSave: _save,
-        onClose: () => setState(() => _settingsOpen = false),
-      ),
+    // The free windows first: they float over everything, and the settings
+    // panel — when it is up — floats over them.
+    final floats = FreeWindowLayer(
+      workbench: _scope.workbench,
+      conversation: _scope.conversation,
+      sideChat: _scope.sideChat,
+      terminals: _scope.terminals,
     );
-  }
-
-  /// Both session commands drop the selection. The transcript they replace is
-  /// where the selected call lived, and a selection that outlives it would leave
-  /// the panel on `notInWindow` with no way back — that state is for a call
-  /// scrolled out of the window, not for one from another conversation.
-  ///
-  /// The workbench follows for the same reason it is keyed by session at all: the
-  /// files a conversation was about are part of that conversation. Binding to null
-  /// is not "empty" — it is the unsaved conversation's own layout, which the next
-  /// first turn will carry over.
-  Future<void> _newSession() async {
-    _conversation.startNewSession();
-    _selection.clear();
-    _sessions.setActive(null);
-    await _workbench.bindSession(null);
-  }
-
-  Future<void> _openSession(String id) async {
-    await _conversation.openSession(id);
-    _selection.clear();
-    _sessions.setActive(id);
-    await _workbench.bindSession(id);
+    if (!_settingsOpen) return floats;
+    return Stack(
+      children: [
+        floats,
+        ListenableBuilder(
+          // The panel reads the saved document, so it has to rebuild on save —
+          // that is what turns the credential dot green without closing
+          // anything.
+          listenable: widget.settings,
+          builder: (context, _) => SettingsPanel(
+            settings: widget.settings.value,
+            onSave: _scope.save,
+            onClose: () => setState(() => _settingsOpen = false),
+            onPickFolder: _scope.pickFolder,
+            workbenchPrefs: widget.prefs.value,
+            onPrefsChange: (next) => widget.prefs.save(next),
+            // The endpoint interrogation behind "Test connection" and the
+            // model quick-select: one HTTP fetcher, shared by both.
+            modelsFetcher: const HttpModelsEndpointFetcher(),
+          ),
+        ),
+      ],
+    );
   }
 }

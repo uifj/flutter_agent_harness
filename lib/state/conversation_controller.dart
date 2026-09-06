@@ -14,6 +14,8 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 
+import '../model/approval_mode.dart';
+import '../model/attached_image.dart';
 import '../model/conversation.dart';
 import '../model/turn_event.dart';
 import '../model/turn_source.dart';
@@ -59,20 +61,109 @@ class ConversationController extends ChangeNotifier {
 
   String? get sessionId => _runtime.sessionId;
 
+  /// How gated tools behave from the next call. Held here so the composer's
+  /// selector reads one notifier; forwarded to the runtime, which is where the
+  /// tools consult it.
+  ApprovalMode get approvalMode => _approvalMode;
+  ApprovalMode _approvalMode = ApprovalMode.ask;
+
+  set approvalMode(ApprovalMode mode) {
+    if (mode == _approvalMode) return;
+    _approvalMode = mode;
+    _runtime.approvalMode = mode;
+    notifyListeners();
+  }
+
+  /// The plan of record — the text of the last successful `plan` tool call, or
+  /// null when the conversation has none yet.
+  ///
+  /// Derived by scanning the transcript rather than cached: a restore rebuilds
+  /// it for free, and the scan is over a handful of tool nodes.
+  String? get currentPlan {
+    for (final node in _nodes.reversed) {
+      if (node is! ToolCallNode || node.name != 'plan') continue;
+      final output = node.output;
+      if (output is Map && output['ok'] == true) {
+        final text = output['plan'];
+        return text is String && text.isNotEmpty ? text : null;
+      }
+    }
+    return null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Session stats (dsh's StatsLine figures)
+  // ---------------------------------------------------------------------------
+
+  /// The conversation's settled turns, for the stats line's counts. A user
+  /// message begins one; a failed turn still counts — the user experienced it.
+  int get _turnCount => _nodes.whereType<UserMessageNode>().length;
+
+  /// Window-scoped tool wall time: the sum over settled tool calls of
+  /// `startedAt → finishedAt`, the same pair dsh folds from its tool-result
+  /// nodes. A restored-from-snapshot call has no stamps and contributes
+  /// nothing rather than a zero.
+  int get toolWallMs {
+    var total = 0;
+    for (final node in _nodes) {
+      if (node is! ToolCallNode) continue;
+      final started = node.startedAt;
+      final finished = node.finishedAt;
+      if (started == null || finished == null) continue;
+      final ms = finished.difference(started).inMilliseconds;
+      if (ms > 0) total += ms;
+    }
+    return total;
+  }
+
+  /// The running sums of the runtime's turn measurements. Only turns the
+  /// runtime could measure land here; `_reset` clears them with the nodes,
+  /// so a session switch cannot carry one conversation's figures into the
+  /// next's line.
+  int _llmMs = 0;
+  int _ttftMs = 0;
+  int _ttftTurns = 0;
+
+  /// Summed LLM wall time over measured turns — dsh's `stats.llm`.
+  int get llmWallMs => _llmMs;
+
+  /// Mean first-token latency over turns that produced a token — dsh's
+  /// `stats.ttftAverage`. Null when no turn did.
+  double? get ttftAverageMs =>
+      _ttftTurns == 0 ? null : _ttftMs / _ttftTurns;
+
+  /// Accumulated from [TurnFinished.usage] — see [_handle].
+  void _absorb(TurnUsage? usage) {
+    if (usage == null) return;
+    _llmMs += usage.wallMs;
+    final ttft = usage.ttftMs;
+    if (ttft != null) {
+      _ttftMs += ttft;
+      _ttftTurns++;
+    }
+  }
+
+  /// Whether the stats line has anything to say — mounted by ConversationRoot
+  /// to keep the row's seat rather than conditionally shifting the composer.
+  bool get hasStats =>
+      _turnCount > 0 || _llmMs > 0 || toolWallMs > 0 || _ttftTurns > 0;
+
   // ---------------------------------------------------------------------------
   // Commands
   // ---------------------------------------------------------------------------
 
-  Future<void> send(String text) async {
+  Future<void> send(String text, {List<AttachedImage> images = const []}) async {
     if (isInputBlocked) return;
     final trimmed = text.trim();
-    if (trimmed.isEmpty) return;
+    if (trimmed.isEmpty && images.isEmpty) return;
 
-    _nodes.add(UserMessageNode(id: _newId(), text: trimmed));
+    _nodes.add(
+      UserMessageNode(id: _newId(), text: trimmed, images: images),
+    );
     _isBusy = true;
     notifyListeners();
 
-    await _consume(_runtime.send(trimmed));
+    await _consume(_runtime.send(trimmed, images: images));
   }
 
   /// Answers the pending approval and lets the paused turn continue.
@@ -229,8 +320,14 @@ class ConversationController extends ChangeNotifier {
           ),
         );
 
-      case TurnFinished(:final outcome, :final sessionId, :final errorMessage):
+      case TurnFinished(
+        :final outcome,
+        :final sessionId,
+        :final errorMessage,
+        :final usage,
+      ):
         _freezeTail();
+        _absorb(usage);
         _isBusy = false;
         if (outcome == TurnOutcome.failed) {
           _nodes.add(
@@ -321,6 +418,11 @@ class ConversationController extends ChangeNotifier {
     _toolNodeIds.clear();
     _pendingApproval = null;
     _isBusy = false;
+    // The stats describe THIS conversation's turns; the next one starts its
+    // ledger clean rather than inheriting figures it cannot account for.
+    _llmMs = 0;
+    _ttftMs = 0;
+    _ttftTurns = 0;
   }
 
   /// Ids are minted here rather than derived from content, so they stay stable

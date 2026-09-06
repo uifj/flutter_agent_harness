@@ -24,7 +24,9 @@ import 'dart:io';
 import 'package:genkit/genkit.dart';
 import 'package:schemantic/schemantic.dart';
 
+import '../model/approval_mode.dart';
 import '../model/workspace.dart';
+import '../state/fs_revision.dart';
 import 'file_search.dart';
 import 'read_window.dart';
 import 'shell_run.dart';
@@ -53,13 +55,40 @@ SchemanticType<Map<String, dynamic>> _objectSchema(
 /// Registration happens once, in [define]; the tools read [workspace] at call
 /// time, so opening a different folder does not mean re-registering anything.
 class WorkspaceTools {
-  WorkspaceTools(this._ai);
+  WorkspaceTools(this._ai, {ApprovalModeHolder? approval})
+    : _approval = approval ?? ApprovalModeHolder();
 
   final Genkit _ai;
+
+  /// How gated calls decide, read at call time so switching is live.
+  final ApprovalModeHolder _approval;
 
   /// Null until the user opens a folder — in which case every tool refuses,
   /// telling the model why.
   Workspace? workspace;
+
+  /// The one line every gated tool runs before it does anything. Returns the
+  /// refusal when the mode says no, null when the call may proceed.
+  ///
+  /// `ask` interrupts — the interruption surfaces as the approval panel.
+  /// `plan` refuses outright: plan mode is read-only, and a refusal the model
+  /// can read is a firmer boundary than a prompt it has to wait on.
+  /// `auto` skips the gate entirely.
+  Map<String, dynamic>? gateRefusal() {
+    if (_approval.value == ApprovalMode.plan) {
+      return {
+        'ok': false,
+        'error':
+            'Plan mode is on: the workspace is read-only until the user '
+            'approves the plan. Read, search and plan are available; make no '
+            'changes.',
+      };
+    }
+    return null;
+  }
+
+  /// Whether the approval interrupt should fire for this call.
+  bool get shouldInterrupt => _approval.value == ApprovalMode.ask;
 
   Workspace get _workspace {
     final ws = workspace;
@@ -183,12 +212,16 @@ class WorkspaceTools {
       }
 
       if (context.resumed == null) {
-        context.interrupt({
-          'kind': 'write',
-          'path': ws.relative(path),
-          'bytes': utf8.encode(content).length,
-          'exists': File(path).existsSync(),
-        });
+        final refusal = gateRefusal();
+        if (refusal != null) return refusal;
+        if (shouldInterrupt) {
+          context.interrupt({
+            'kind': 'write',
+            'path': ws.relative(path),
+            'bytes': utf8.encode(content).length,
+            'exists': File(path).existsSync(),
+          });
+        }
       }
       if (_declined(context.resumed)) {
         return {'ok': false, 'error': 'The user declined this write.'};
@@ -198,6 +231,9 @@ class WorkspaceTools {
         final file = File(path);
         file.parent.createSync(recursive: true);
         file.writeAsStringSync(content);
+        // The tree's revision: an agent write is the one change the panels
+        // cannot see on their own, so it is the one that announces itself.
+        bumpFsRevision();
         return {
           'ok': true,
           'path': ws.relative(path),
@@ -280,12 +316,16 @@ class WorkspaceTools {
       }
 
       if (context.resumed == null) {
-        context.interrupt({
-          'kind': 'edit',
-          'path': ws.relative(path),
-          'replacements': edited.replacements,
-          'bytes': utf8.encode(edited.content).length,
-        });
+        final refusal = gateRefusal();
+        if (refusal != null) return refusal;
+        if (shouldInterrupt) {
+          context.interrupt({
+            'kind': 'edit',
+            'path': ws.relative(path),
+            'replacements': edited.replacements,
+            'bytes': utf8.encode(edited.content).length,
+          });
+        }
       }
       if (_declined(context.resumed)) {
         return {'ok': false, 'error': 'The user declined this edit.'};
@@ -306,6 +346,9 @@ class WorkspaceTools {
                 replaceAll: replaceAll,
               );
         file.writeAsStringSync(outcome.content);
+        // Same announcement as a write: an edit changed the disk, and the
+        // tree that shows it should not wait for the user to notice.
+        bumpFsRevision();
         return {
           'ok': true,
           'path': ws.relative(path),
@@ -524,12 +567,16 @@ class WorkspaceTools {
       }
 
       if (context.resumed == null) {
-        context.interrupt({
-          'kind': 'bash',
-          'command': command,
-          'description': input['description'],
-          'workdir': ws.relative(workdir),
-        });
+        final refusal = gateRefusal();
+        if (refusal != null) return refusal;
+        if (shouldInterrupt) {
+          context.interrupt({
+            'kind': 'bash',
+            'command': command,
+            'description': input['description'],
+            'workdir': ws.relative(workdir),
+          });
+        }
       }
       if (_declined(context.resumed)) {
         return {'ok': false, 'error': 'The user declined this command.'};

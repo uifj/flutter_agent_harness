@@ -112,19 +112,33 @@ class _AppFrameState extends State<AppFrame> {
       });
     }
 
+    // The mobile merge, at its own breakpoint: below 768 the workbench becomes
+    // a full-width drawer floating over the centre, and the bottom panel is not
+    // a thing that exists. Between 768 and 1024 the desktop two-panel layout is
+    // deliberately retained — a split-screen laptop is not a phone.
+    final merge = viewport < mobileMergeViewport;
+    if (layout.mobile != merge) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) layout.setMobile(merge);
+      });
+    }
+
     final preference = effectiveSidebarPreference(
       viewport: viewport,
       sidebarPreference: layout.sidebar,
       narrowExpanded: layout.narrowExpanded,
     );
     final collapsed = preference == 0;
+    // Merged, the workbench column is not solved for — the drawer overlays the
+    // centre instead of squeezing it, so the solve pays the centre everything
+    // the panels are not taking.
     final cols = computeColumns(
       viewport,
       preference,
       layout.details,
-      layout.workbench,
+      merge ? 0 : layout.workbench,
     );
-    final bottomHeight = computeBottom(layout.bottom, viewportHeight);
+    final bottomHeight = merge ? 0.0 : computeBottom(layout.bottom, viewportHeight);
 
     // The solver lets the sidebar keep its width even when the viewport cannot
     // pay for it (it never concedes). Clamping here keeps that from becoming a
@@ -216,14 +230,47 @@ class _AppFrameState extends State<AppFrame> {
                   child: widget.details,
                 ),
               ),
-              MouseRegion(
-                onEnter: (_) => setState(() => _workbenchHovered = true),
-                onExit: (_) => setState(() => _workbenchHovered = false),
+              // Merged, the workbench is not a column: it is the drawer below,
+              // overlaying this row rather than taking width from it.
+              if (!merge)
+                MouseRegion(
+                  onEnter: (_) => setState(() => _workbenchHovered = true),
+                  onExit: (_) => setState(() => _workbenchHovered = false),
+                  child: _column(
+                    width: workbenchWidth,
+                    duration: duration,
+                    decoration: BoxDecoration(
+                      border: workbenchWidth == 0
+                          ? null
+                          : Border(
+                              left: BorderSide(color: color.borderL2),
+                            ),
+                    ),
+                    child: widget.workbench,
+                  ),
+                ),
+            ],
+          ),
+          // The merged workbench: a full-width drawer pinned over the centre,
+          // floating — the columns below it are not squeezed, and the sidebar
+          // keeps its rail underneath. Closed, it stays mounted at zero width
+          // like every other panel, for the same keep-alive reasons.
+          if (merge)
+            Positioned(
+              top: 0,
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Align(
+                alignment: Alignment.centerRight,
                 child: _column(
-                  width: workbenchWidth,
+                  width: layout.workbench == 0 ? 0 : viewport,
                   duration: duration,
                   decoration: BoxDecoration(
-                    border: workbenchWidth == 0
+                    color: color.bgLayer1,
+                    // The same seam rule as the columns: a closed drawer must
+                    // not paint its border as a 1px sliver over the centre.
+                    border: layout.workbench == 0
                         ? null
                         : Border(
                             left: BorderSide(color: color.borderL2),
@@ -232,8 +279,7 @@ class _AppFrameState extends State<AppFrame> {
                   child: widget.workbench,
                 ),
               ),
-            ],
-          ),
+            ),
           if (widget.overlay != null)
             Positioned.fill(child: widget.overlay!),
           // The persistent panel toggles at the viewport's top-right corner:
@@ -244,7 +290,9 @@ class _AppFrameState extends State<AppFrame> {
           Positioned(
             top: 3,
             right: 10,
-            child: _ToggleCluster(layout: layout, narrow: narrow),
+            // The merge's own breakpoint, not the sidebar's: between 768 and
+            // 1024 the desktop pair of toggles stays.
+            child: _ToggleCluster(layout: layout, narrow: merge),
           ),
           // The collapsed rail is fixed-width: no handle while closed.
           if (!collapsed)
@@ -263,7 +311,7 @@ class _AppFrameState extends State<AppFrame> {
               color: color,
               cols: cols,
             ),
-          if (workbenchWidth > 0)
+          if (workbenchWidth > 0 && !merge)
             _divider(
               region: _Region.workbench,
               left: viewport - workbenchWidth,

@@ -8,17 +8,20 @@ environment:
   flutter: ">=1.17.0"
 
 dependencies:
+  file_picker: ^10.3.7
   flutter:
     sdk: flutter
+  flutter_inappwebview: ^6.1.5
   flutter_lucide: ^1.33.0
   flutter_pty: ^0.4.2
-  genkit: ^0.15.1
-  genkit_anthropic: ^0.2.11
-  genkit_google_genai: ^0.2.12
-  genkit_mcp: ^0.2.4
-  genkit_middleware: ^0.5.1
-  genkit_openai: ^0.3.7
+  genkit: ^0.16.1
+  genkit_anthropic: ^0.3.1
+  genkit_google_genai: ^0.3.1
+  genkit_mcp: ^0.3.1
+  genkit_middleware: ^0.6.1
+  genkit_openai: ^0.4.1
   gpt_markdown: ^1.2.1
+  pasteboard: ^0.2.0
   path: ^1.9.1
   path_provider: ^2.1.6
   re_editor: ^0.10.0

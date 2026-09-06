@@ -22,7 +22,10 @@ import 'package:genkit_openai/genkit_openai.dart';
 import 'package:path/path.dart' as p;
 
 import '../model/app_settings.dart';
+import '../model/approval_mode.dart';
+import '../model/attached_image.dart';
 import '../model/conversation.dart';
+import '../model/mention_expansion.dart';
 import '../model/model_settings.dart';
 import '../model/todo_state.dart';
 import '../model/turn_event.dart';
@@ -90,9 +93,21 @@ instead — with file paths and line numbers where they matter. Be concise:
 only your final message is returned to the caller.
 ''';
 
+/// The side chat's prompt: the thread pinned in the workbench's Side Chat tab.
+///
+/// No tools and no store — a side question is a one-shot aside, not a session,
+/// and it must never touch the workspace or the main thread's transcript.
+const _sidePrompt = '''
+You are the side assistant pinned in a workbench panel. The user asks quick
+asides here while a main conversation runs elsewhere. You have no tools: answer
+from the question and general knowledge, and say so plainly when the answer
+needs files or commands the main thread can run instead. Be brief.
+''';
+
 /// Registry name of the MCP host, and of the delegation target.
 const _mcpHostName = 'mcp';
 const _subagentName = 'general-purpose';
+const _sideName = 'dsh-side';
 
 /// The workspace tools the sub-agent is allowed: everything read-only. A
 /// sub-agent's approval interrupt cannot reach the UI — the delegation
@@ -194,6 +209,45 @@ class _StopGatePlugin extends GenkitPlugin {
   ];
 }
 
+/// The side chat's turn source: a thin adapter over the side agent's chat.
+///
+/// No store — the side thread is one-shot asides, so nothing persists. Each
+/// [send] starts a fresh exchange on the same chat, which keeps the aside's
+/// own context without ever touching the main thread's transcript.
+class SideChatSource implements SideTurnSource {
+  SideChatSource(this._agent);
+
+  final Agent<dynamic> _agent;
+  AgentChat<dynamic>? _chat;
+
+  /// Sends [text] and yields the answer as text deltas, ending with a
+  /// [TurnFinished]. Same single-subscription contract as the main thread.
+  @override
+  Stream<TurnEvent> send(String text) async* {
+    final chat = _chat ??= _agent.chat();
+    final turn = chat.sendStream(text: text);
+    try {
+      await for (final chunk in turn.stream) {
+        if (chunk.text.isNotEmpty) {
+          yield TextDelta(text: chunk.text, messageIndex: 0);
+        }
+      }
+      await turn.response;
+      yield const TurnFinished(outcome: TurnOutcome.completed);
+    } catch (e) {
+      yield TurnFinished(
+        outcome: TurnOutcome.failed,
+        errorMessage: '$e',
+      );
+    }
+  }
+
+  /// Stops nothing — one turn, no loop, no cancel token worth threading. The
+  /// in-flight request finishes; the UI goes quiet on its own.
+  @override
+  void reset() => _chat = null;
+}
+
 /// The application's whole interface to the agent.
 class AgentRuntime implements TurnSource {
   AgentRuntime._({
@@ -203,6 +257,8 @@ class AgentRuntime implements TurnSource {
     required PlanTools planTools,
     required mcp.GenkitMcpHost? host,
     required _StopFlag stop,
+    required ApprovalModeHolder approval,
+    required this.side,
     required this.settings,
     required this.sessionRoot,
   }) : _ai = ai,
@@ -210,7 +266,8 @@ class AgentRuntime implements TurnSource {
        _tools = tools,
        _planTools = planTools,
        _host = host,
-       _stop = stop;
+       _stop = stop,
+       _approval = approval;
 
   /// Builds a runtime for [settings], persisting snapshots under [sessionRoot]
   /// and defaulting the skills directory to `<support>/skills`.
@@ -227,6 +284,7 @@ class AgentRuntime implements TurnSource {
   }) {
     final model = settings.model;
     final stop = _StopFlag();
+    final approval = ApprovalModeHolder();
 
     // The provider branch. The OpenAI path declares its model explicitly
     // because capability sniffing by model name does not recognise DeepSeek's
@@ -301,7 +359,7 @@ class AgentRuntime implements TurnSource {
             ),
           );
 
-    final tools = WorkspaceTools(ai);
+    final tools = WorkspaceTools(ai, approval: approval);
     final planTools = PlanTools(ai);
     final workspaceToolList = tools.define();
 
@@ -329,6 +387,15 @@ class AgentRuntime implements TurnSource {
       ],
       use: [middlewareRef<Map<String, dynamic>>(name: _stopGateName)],
       maxTurns: _maxSubagentTurns,
+    );
+
+    // The side-chat agent: no tools, no store, one turn per ask. Registered
+    // like the delegation target so the runtime object can hold a chat on it.
+    final sideAgent = ai.defineAgent(
+      name: _sideName,
+      model: modelRef,
+      system: _sidePrompt,
+      maxTurns: 1,
     );
 
     final skillsDir = Directory(
@@ -370,6 +437,8 @@ class AgentRuntime implements TurnSource {
       planTools: planTools,
       host: host,
       stop: stop,
+      approval: approval,
+      side: SideChatSource(sideAgent),
       settings: settings,
       sessionRoot: sessionRoot,
     );
@@ -381,6 +450,10 @@ class AgentRuntime implements TurnSource {
   final PlanTools _planTools;
   final mcp.GenkitMcpHost? _host;
   final _StopFlag _stop;
+  final ApprovalModeHolder _approval;
+
+  /// The side-chat thread's turn source — see [SideChatSource].
+  final SideChatSource side;
 
   final AppSettings settings;
   final Directory sessionRoot;
@@ -395,6 +468,23 @@ class AgentRuntime implements TurnSource {
   set workspaceRoot(String? path) =>
       _tools.workspace = path == null ? null : Workspace.of(path);
 
+  /// How the gated tools decide, live. Held in a holder the tools read at call
+  /// time; this setter is the seam the conversation controller forwards to.
+  @override
+  set approvalMode(ApprovalMode mode) => _approval.value = mode;
+
+  /// The reference forms of every validated `@path` in [text] — empty when
+  /// there is no workspace or nothing validated. See `mention_expansion.dart`;
+  /// this is the send-time boundary the plugin's pre-step occupied.
+  List<String> _mentionsIn(String text) {
+    final workspace = _tools.workspace;
+    if (workspace == null) return const [];
+    return [
+      for (final mention in resolveMentions(text, workspace))
+        referenceForm(mention),
+    ];
+  }
+
   /// The task list and plan of record, for whatever surface shows them. Both
   /// live in the conversation itself (the tool output is the state), so these
   /// are read-only views onto `PlanTools`.
@@ -407,12 +497,13 @@ class AgentRuntime implements TurnSource {
 
   bool get isTurnActive => _turn != null;
 
-  /// Sends [text] and streams the turn.
+  /// Sends [text], with [images] riding the same message, and streams the
+  /// turn.
   ///
   /// The returned stream always ends with a [TurnFinished], including when it
   /// fails. Listen once: it drives a live turn, so it is not a broadcast stream.
   @override
-  Stream<TurnEvent> send(String text) {
+  Stream<TurnEvent> send(String text, {List<AttachedImage> images = const []}) {
     if (!settings.model.isConfigured) {
       return Stream.value(
         const TurnFinished(
@@ -423,7 +514,46 @@ class AgentRuntime implements TurnSource {
       );
     }
     final chat = _chat ??= _agent.chat();
-    return _drive((cancel) => chat.sendStream(text: text, cancel: cancel));
+    // dsh-at-file's pre-step, inline: every validated `@path` token in the
+    // user's own words becomes an existence-only reference part ahead of the
+    // body, so the model sees the pointer without the send being blocked on
+    // it. Invalid tokens stay prose.
+    final references = _mentionsIn(text);
+    // Images ride the message as media parts — the data-URI form genkit's
+    // `Media.url` carries inline images as. Text-only sends keep the plain
+    // string path, which is what a store round-trip preserves best.
+    if (images.isEmpty) {
+      if (references.isEmpty) {
+        return _drive((cancel) => chat.sendStream(text: text, cancel: cancel));
+      }
+      final message = Message(
+        role: Role.user,
+        content: [
+          for (final reference in references) TextPart(text: reference),
+          if (text.isNotEmpty) TextPart(text: text),
+        ],
+      );
+      return _drive(
+        (cancel) => chat.sendStream(message: message, cancel: cancel),
+      );
+    }
+    final message = Message(
+      role: Role.user,
+      content: [
+        for (final reference in references) TextPart(text: reference),
+        if (text.isNotEmpty) TextPart(text: text),
+        for (final image in images)
+          MediaPart(
+            media: Media(
+              contentType: image.mediaType,
+              url: image.dataUrl,
+            ),
+          ),
+      ],
+    );
+    return _drive(
+      (cancel) => chat.sendStream(message: message, cancel: cancel),
+    );
   }
 
   /// Answers a pending approval and streams the rest of the turn.
@@ -506,13 +636,23 @@ class AgentRuntime implements TurnSource {
     final asked = <String>{};
     var stopped = false;
 
+    // The stats line's clock: turn entry stamped here, first token stamped at
+    // the first projected delta. `Stopwatch` rather than wall DateTime so a
+    // suspended machine clock cannot produce a negative duration.
+    final watch = Stopwatch()..start();
+    int? ttftMs;
+
     try {
       await for (final chunk in turn.stream) {
         if (_stop.value) {
           stopped = true;
           break;
         }
-        yield* Stream.fromIterable(_project(chunk, announced, asked));
+        final events = _project(chunk, announced, asked);
+        if (ttftMs == null && events.isNotEmpty) {
+          ttftMs = watch.elapsedMilliseconds;
+        }
+        yield* Stream.fromIterable(events);
       }
 
       if (stopped) {
@@ -556,6 +696,10 @@ class AgentRuntime implements TurnSource {
         errorMessage: _outcomeOf(response.finishReason) == TurnOutcome.failed
             ? (response.finishMessage ?? 'The turn failed.')
             : null,
+        usage: TurnUsage(
+          wallMs: watch.elapsedMilliseconds,
+          ttftMs: ttftMs,
+        ),
       );
     } on AgentError catch (e) {
       yield TurnFinished(

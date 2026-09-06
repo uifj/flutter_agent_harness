@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter/scheduler.dart';
 
+import '../../l10n/locales.dart';
 import '../../model/conversation.dart';
 import '../../state/conversation_controller.dart';
 import '../../state/streaming_tail.dart';
@@ -300,7 +301,7 @@ class _TurnStatusState extends State<_TurnStatus>
               builder: (context, _) => ShaderMask(
                 blendMode: BlendMode.srcIn,
                 shaderCallback: (bounds) => _shader(bounds, still),
-                child: Text('Deep diving...', style: DswType.sStrong14),
+                child: Text(context.tr('deepDiving'), style: DswType.sStrong14),
               ),
             ),
             if (showClock)

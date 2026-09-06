@@ -33,8 +33,8 @@ import '../../../host/git.dart';
 import '../../../theme/dsw_alias.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
-import '../../model/sidebar_tab.dart';
-import '../../state/workbench_controller.dart';
+import '../../../model/sidebar_tab.dart';
+import '../../../state/workbench_controller.dart';
 import '../tab_registry.dart' show readsAsText;
 import 'git_tab.dart' show GitHost;
 

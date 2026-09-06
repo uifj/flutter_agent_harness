@@ -6,6 +6,8 @@
 
 import 'dart:async';
 
+import 'package:agent_harness/model/approval_mode.dart';
+import 'package:agent_harness/model/attached_image.dart';
 import 'package:agent_harness/model/conversation.dart';
 import 'package:agent_harness/model/turn_event.dart';
 import 'package:agent_harness/model/turn_source.dart';
@@ -13,6 +15,10 @@ import 'package:agent_harness/model/turn_source.dart';
 class FakeTurnSource implements TurnSource {
   final _turns = <StreamController<TurnEvent>>[];
   var stopCalls = 0;
+  ApprovalMode? lastApprovalMode;
+
+  /// How many turns were started — one `send` per entry.
+  int get turns => _turns.length;
 
   /// What a scan of the store finds. Settable so a test can stock the sidebar
   /// without going near a disk.
@@ -25,11 +31,17 @@ class FakeTurnSource implements TurnSource {
   Future<void> close() => current.close();
 
   @override
-  Stream<TurnEvent> send(String text) {
+  Stream<TurnEvent> send(
+    String text, {
+    List<AttachedImage> images = const [],
+  }) {
     final controller = StreamController<TurnEvent>();
     _turns.add(controller);
     return controller.stream;
   }
+
+  @override
+  set approvalMode(ApprovalMode mode) => lastApprovalMode = mode;
 
   @override
   Stream<TurnEvent> respondToApproval({

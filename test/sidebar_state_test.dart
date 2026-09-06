@@ -1,9 +1,9 @@
 // The state reducers: the gesture vocabulary of the workbench, driven as plain
 // values. Anything that needs a widget tree belongs in workbench_ui_test.dart.
 
-import 'package:agent_harness/sidebar/model/sidebar_state.dart';
-import 'package:agent_harness/sidebar/model/sidebar_tab.dart';
-import 'package:agent_harness/sidebar/model/split_node.dart';
+import 'package:agent_harness/model/sidebar_state.dart';
+import 'package:agent_harness/model/sidebar_tab.dart';
+import 'package:agent_harness/model/split_node.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
@@ -692,6 +692,186 @@ void main() {
       // Both panes keep their own tabs — the symptom of the collision was that
       // one open landed in both.
       expect(after.tabs.map((tab) => tab.id), ['a', 'b']);
+    });
+  });
+
+  group('mobile merge', () {
+    test('moves the bottom tabs into the right tree\'s first leaf', () {
+      final panels = _twoPanels();
+      final merged = panels.state.migrateBottomTabs();
+
+      expect(merged.bottomTabs, isEmpty);
+      expect(merged.tabs.map((tab) => tab.id), ['a', 'b']);
+      // The bottom tree keeps its structure — a re-widened desktop finds the
+      // welcome card there, not a collapsed layout.
+      expect(merged.bottomPanes, isNotEmpty);
+      expect(merged.activePane, panels.right);
+    });
+
+    test('a split bottom tree contributes its tabs in tree order', () {
+      final panels = _twoPanels();
+      final split = panels.state.moveTabToEdge(
+        panels.bottom,
+        'b',
+        panels.bottom,
+        DropZone.right,
+      );
+      final merged = split.migrateBottomTabs();
+      expect(merged.tabs.map((tab) => tab.id), ['a', 'b']);
+      expect(merged.bottomPanes.every((pane) => pane.tabs.isEmpty), isTrue);
+    });
+
+    test('a right split still lands the tabs in its leftmost leaf', () {
+      final panels = _twoPanels();
+      final split = panels.state.moveTabToEdge(
+        panels.right,
+        'a',
+        panels.right,
+        DropZone.right,
+      );
+      final merged = split.migrateBottomTabs();
+      expect(merged.panes.first.tabs.map((tab) => tab.id), ['a', 'b']);
+    });
+
+    test('is idempotent once the bottom is empty and unpointed', () {
+      final panels = _twoPanels();
+      final once = panels.state.migrateBottomTabs();
+      expect(identical(once.migrateBottomTabs(), once), isTrue);
+    });
+
+    test('a stale activePane in the bottom tree is re-pointed alone', () {
+      final panels = _twoPanels();
+      // Empty the bottom without migrating: point activePane at a bottom pane
+      // whose tabs have gone.
+      final emptied = panels.state.moveTab(panels.bottom, 'b', panels.right);
+      final stale = emptied.focusPane(panels.bottom);
+      final merged = stale.migrateBottomTabs();
+      expect(merged.activePane, merged.panes.first.id);
+      expect(merged.tabs.map((tab) => tab.id), ['a', 'b']);
+    });
+  });
+
+  group('free windows', () {
+    // A viewport the default window comfortably fits in.
+    const vw = 1200.0;
+    const vh = 800.0;
+
+    test('floatTab takes the tab out of its pane and centres a window', () {
+      final before = SidebarState.initial().openTab(_tab('a')).openTab(
+        _tab('b'),
+      );
+      final after = before.floatTab('a', 600, 400, vw, vh);
+
+      expect(after.tabs.map((tab) => tab.id), ['b']);
+      final float = after.floatWithTab('a')!;
+      expect(float.tab.id, 'a');
+      // Centred on the point, at the default size.
+      expect(float.x, 600 - float.w / 2);
+      expect(float.y, 400 - float.h / 2);
+      expect(float.w, floatDefaultW);
+    });
+
+    test('floatTab collapses a pane it empties', () {
+      final before = _twoPanes().state; // one tab per pane
+      final after = before.floatTab('a', 600, 400, vw, vh);
+      expect(after.panes.length, 1);
+      expect(after.tabs.map((tab) => tab.id), ['b']);
+    });
+
+    test('floatTab on an unknown or floating tab is a strict no-op', () {
+      final before = SidebarState.initial().openTab(_tab('a'));
+      expect(identical(before.floatTab('nope', 1, 1, vw, vh), before), isTrue);
+      final floated = before.floatTab('a', 600, 400, vw, vh);
+      expect(
+        identical(floated.floatTab('a', 50, 50, vw, vh), floated),
+        isTrue,
+      );
+    });
+
+    test('moveFloat clamps to the viewport', () {
+      final before = SidebarState.initial()
+          .openTab(_tab('a'))
+          .floatTab('a', 600, 400, vw, vh);
+      final float = before.floatWithTab('a')!;
+      final after = before.moveFloat(float.id, -500, 9999, vw, vh);
+      expect(after.floatWithTab('a')!.x, 0);
+      expect(
+        after.floatWithTab('a')!.y,
+        vh - after.floatWithTab('a')!.h,
+      );
+    });
+
+    test('resizeFloat anchors the top-left and floors the size', () {
+      final before = SidebarState.initial()
+          .openTab(_tab('a'))
+          .floatTab('a', 100, 100, vw, vh);
+      final float = before.floatWithTab('a')!;
+      final after = before.resizeFloat(float.id, 40, 40, vw, vh);
+      final resized = after.floatWithTab('a')!;
+      expect(resized.w, floatMinW);
+      expect(resized.h, floatMinH);
+      expect(resized.x, float.x);
+      expect(resized.y, float.y);
+    });
+
+    test('raiseFloat moves a window to the top; topmost is identity', () {
+      var state = SidebarState.initial().openTab(_tab('a')).openTab(_tab('b'));
+      state = state.floatTab('a', 100, 100, vw, vh);
+      state = state.floatTab('b', 200, 200, vw, vh);
+      expect(state.floats.map((float) => float.tab.id), ['a', 'b']);
+
+      final first = state.floatWithTab('a')!;
+      final raised = state.raiseFloat(first.id);
+      expect(raised.floats.map((float) => float.tab.id), ['b', 'a']);
+      expect(identical(raised.raiseFloat(first.id), raised), isTrue);
+    });
+
+    test('dockFloat returns the tab to a pane and activates it', () {
+      var state = SidebarState.initial().openTab(_tab('a'));
+      state = state.splitPane(SplitDirection.row);
+      state = state.floatTab('a', 600, 400, vw, vh);
+      expect(state.tabs, isEmpty);
+
+      final float = state.floatWithTab('a')!;
+      final docked = state.dockFloat(float.id);
+      expect(docked.floats, isEmpty);
+      final home = docked.paneOf('a')!;
+      expect(home.tabs.single.id, 'a');
+      expect(home.active, 'a');
+    });
+
+    test('openTab raises a floated tab instead of docking a second one', () {
+      var state = SidebarState.initial().openTab(_tab('a'));
+      state = state.floatTab('a', 600, 400, vw, vh);
+      final reopened = state.openTab(_tab('a'));
+      expect(reopened.tabs, isEmpty);
+      expect(reopened.floats.single.tab.id, 'a');
+    });
+
+    test('patchTab reaches a floated tab', () {
+      var state = SidebarState.initial().openTab(_tab('a'));
+      state = state.floatTab('a', 600, 400, vw, vh);
+      final patched = state.patchTab('a', title: 'Renamed');
+      expect(patched.floats.single.tab.title, 'Renamed');
+    });
+
+    test('floats persist, and the counter lifts past a restored window id', () {
+      final before = SidebarState.initial()
+          .openTab(_tab('a'))
+          .floatTab('a', 600, 400, vw, vh);
+      final after = SidebarState.fromJson(before.toJson());
+      expect(after.floats.single.tab.id, 'a');
+      expect(after.floats.single.x, before.floats.single.x);
+
+      // A mint right after restore cannot collide with the restored id.
+      final minted = after.floatTab('a', 1, 1, 1, 1); // no-op: already floating
+      expect(identical(minted, after), isTrue);
+      var fresh = after.dockFloat(after.floats.single.id);
+      fresh = fresh.floatTab('a', 600, 400, vw, vh);
+      expect(
+        fresh.floats.single.id,
+        isNot(after.floats.single.id),
+      );
     });
   });
 }

@@ -29,10 +29,11 @@ import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../host/git.dart';
+import '../../../l10n/locales.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
-import '../../model/sidebar_tab.dart';
-import '../../state/workbench_controller.dart';
+import '../../../model/sidebar_tab.dart';
+import '../../../state/workbench_controller.dart';
 
 // ---- The view vocabulary, ported from GitView.tsx --------------------------
 
@@ -125,11 +126,7 @@ String relativeTime(String iso, {DateTime Function()? now}) {
 /// what rides on the scope, because a repo is a function of the workspace root,
 /// which the tab re-resolves when it changes.
 class GitHost extends InheritedWidget {
-  const GitHost({
-    super.key,
-    required this.runner,
-    required super.child,
-  });
+  const GitHost({super.key, required this.runner, required super.child});
 
   final GitRunner runner;
 
@@ -342,7 +339,11 @@ class _GitTabState extends State<GitTab> {
       await _refresh();
     } on GitCommandError catch (error) {
       if (mounted) {
-        setState(() => _actionError = prefix == null ? error.message : '$prefix: ${error.message}');
+        setState(
+          () => _actionError = prefix == null
+              ? error.message
+              : '$prefix: ${error.message}',
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -372,7 +373,11 @@ class _GitTabState extends State<GitTab> {
       });
     } on GitCommandError catch (error) {
       if (mounted) {
-        setState(() => _actionError = 'Failed to load more history: ${error.message}');
+        setState(
+          () => _actionError = context.tr('historyLoadError', {
+            'message': error.message,
+          }),
+        );
       }
     } finally {
       if (mounted) setState(() => _logLoadingMore = false);
@@ -381,15 +386,11 @@ class _GitTabState extends State<GitTab> {
 
   Future<void> _stageEntry(GitStatusEntry entry, bool staged) => _run(
     null,
-    () => staged
-        ? _repo!.unstage(entry.path)
-        : _repo!.stage(entry.path),
+    () => staged ? _repo!.unstage(entry.path) : _repo!.stage(entry.path),
   );
 
-  Future<void> _stageAll(bool staged) => _run(
-    null,
-    () => staged ? _repo!.unstage(null) : _repo!.stage(null),
-  );
+  Future<void> _stageAll(bool staged) =>
+      _run(null, () => staged ? _repo!.unstage(null) : _repo!.stage(null));
 
   /// The pending destructive action's Cancel / Confirm, as a dialog.
   Future<bool> _confirm(
@@ -407,7 +408,7 @@ class _GitTabState extends State<GitTab> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
+              child: Text(context.tr('cancel')),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
@@ -432,7 +433,8 @@ class _GitTabState extends State<GitTab> {
     );
   }
 
-  Future<void> _copy(String text) => Clipboard.setData(ClipboardData(text: text));
+  Future<void> _copy(String text) =>
+      Clipboard.setData(ClipboardData(text: text));
 
   /// The diff tab for one changed file. Staged and unstaged are two different
   /// diffs of the same path and get two different tabs.
@@ -449,16 +451,27 @@ class _GitTabState extends State<GitTab> {
 
   /// The diff tab for one commit.
   void _openCommitDiff(GitLogEntry entry) {
-    widget.workbench.openDiff(CommitDiff(hashFull: entry.hashFull, subject: entry.subject));
+    widget.workbench.openDiff(
+      CommitDiff(hashFull: entry.hashFull, subject: entry.subject),
+    );
   }
 
-  Future<void> _fileMenu(TapDownDetails details, GitStatusEntry entry, bool staged) async {
+  Future<void> _fileMenu(
+    TapDownDetails details,
+    GitStatusEntry entry,
+    bool staged,
+  ) async {
     final root = _repo!.root;
     final absolute = p.join(root, entry.path);
     // A path outside the workspace fence cannot be opened in the editor: the
     // host guard rejects it. The menu hides the action for that checkout
     // rather than offering a no-op.
     final openable = widget.workbench.workspace?.tryResolve(absolute);
+    // Captured before the await: the confirm strings are used after the menu
+    // closes, and a context read across an async gap is exactly what the lint
+    // is about.
+    final discardTitle = context.tr('discardChanges');
+    final discardDesc = context.tr('discardDesc', {'path': entry.path});
     final result = await showMenu<String>(
       context: context,
       position: _menuAt(details.globalPosition),
@@ -469,28 +482,32 @@ class _GitTabState extends State<GitTab> {
         if (openable != null)
           PopupMenuItem(
             value: 'open',
-            child: _menuRow(LucideIcons.code, 'Open editor'),
+            child: _menuRow(LucideIcons.code, context.tr('openEditor')),
           ),
         PopupMenuItem(
           value: 'stage',
           child: _menuRow(
             staged ? LucideIcons.trash_2 : LucideIcons.git_branch,
-            staged ? 'Unstage' : 'Stage',
+            staged ? context.tr('unstage') : context.tr('stage'),
           ),
         ),
         if (!isUntracked(entry))
           PopupMenuItem(
             value: 'discard',
-            child: _menuRow(LucideIcons.trash_2, 'Discard changes', danger: true),
+            child: _menuRow(
+              LucideIcons.trash_2,
+              context.tr('discardChanges'),
+              danger: true,
+            ),
           ),
         const PopupMenuDivider(),
         PopupMenuItem(
           value: 'relative',
-          child: _menuRow(LucideIcons.copy, 'Copy relative path'),
+          child: _menuRow(LucideIcons.copy, context.tr('copyRelative')),
         ),
         PopupMenuItem(
           value: 'absolute',
-          child: _menuRow(LucideIcons.copy, 'Copy absolute path'),
+          child: _menuRow(LucideIcons.copy, context.tr('copyAbsolute')),
         ),
       ],
     );
@@ -500,11 +517,7 @@ class _GitTabState extends State<GitTab> {
     } else if (result == 'stage') {
       await _stageEntry(entry, staged);
     } else if (result == 'discard') {
-      if (await _confirm(
-        'Discard changes',
-        'This discards the worktree changes of "${entry.path}" (not recoverable).',
-        'Discard changes',
-      )) {
+      if (await _confirm(discardTitle, discardDesc, discardTitle)) {
         await _run(null, () => _repo!.discard(entry.path));
       }
     } else if (result == 'relative') {
@@ -515,32 +528,42 @@ class _GitTabState extends State<GitTab> {
   }
 
   Future<void> _historyMenu(TapDownDetails details, GitLogEntry entry) async {
+    // Captured before the await, as in `_fileMenu`.
+    final revertTitle = context.tr('revertCommit');
+    final revertDesc = context.tr('revertDesc', {'subject': entry.subject});
+    final cherryPickTitle = context.tr('cherryPickCommit');
+    final cherryPickDesc = context.tr('cherryPickDesc', {
+      'subject': entry.subject,
+    });
     final result = await showMenu<String>(
       context: context,
       position: _menuAt(details.globalPosition),
       constraints: const BoxConstraints(minWidth: 220),
       items: [
-        PopupMenuItem(value: 'view', child: _menuRow(null, 'View commit diff')),
+        PopupMenuItem(
+          value: 'view',
+          child: _menuRow(null, context.tr('viewCommitDiff')),
+        ),
         PopupMenuItem(
           value: 'copyShort',
-          child: _menuRow(LucideIcons.copy, 'Copy short hash'),
+          child: _menuRow(LucideIcons.copy, context.tr('copyShortHash')),
         ),
         PopupMenuItem(
           value: 'copyFull',
-          child: _menuRow(LucideIcons.copy, 'Copy full hash'),
+          child: _menuRow(LucideIcons.copy, context.tr('copyFullHash')),
         ),
         PopupMenuItem(
           value: 'copySubject',
-          child: _menuRow(LucideIcons.copy, 'Copy subject'),
+          child: _menuRow(LucideIcons.copy, context.tr('copySubject')),
         ),
         const PopupMenuDivider(),
         PopupMenuItem(
           value: 'revert',
-          child: _menuRow(null, 'Revert commit', danger: true),
+          child: _menuRow(null, context.tr('revertCommit'), danger: true),
         ),
         PopupMenuItem(
           value: 'cherryPick',
-          child: _menuRow(null, 'Cherry-pick commit', danger: true),
+          child: _menuRow(null, context.tr('cherryPickCommit'), danger: true),
         ),
       ],
     );
@@ -554,19 +577,11 @@ class _GitTabState extends State<GitTab> {
     } else if (result == 'copySubject') {
       await _copy(entry.subject);
     } else if (result == 'revert') {
-      if (await _confirm(
-        'Revert commit',
-        'Create a new commit on the current branch that reverts "${entry.subject}".',
-        'Revert commit',
-      )) {
+      if (await _confirm(revertTitle, revertDesc, revertTitle)) {
         await _run(null, () => _repo!.revert(entry.hashFull));
       }
     } else if (result == 'cherryPick') {
-      if (await _confirm(
-        'Cherry-pick commit',
-        'Apply the changes of "${entry.subject}" to the current branch.',
-        'Cherry-pick commit',
-      )) {
+      if (await _confirm(cherryPickTitle, cherryPickDesc, cherryPickTitle)) {
         await _run(null, () => _repo!.cherryPick(entry.hashFull));
       }
     }
@@ -594,43 +609,54 @@ class _GitTabState extends State<GitTab> {
   @override
   Widget build(BuildContext context) {
     if (widget.workbench.workspaceRoot == null) {
-      return const _Notice(
-        message: 'No workspace folder is set, so there is nothing to list.',
-      );
+      return _Notice(message: context.tr('noWorkspaceNothingToList'));
     }
     final status = _status;
     return CustomScrollView(
       primary: false,
       slivers: [
         SliverToBoxAdapter(child: _header(context)),
-        if (_loading) const SliverToBoxAdapter(child: _Notice(message: 'Loading…', center: true)),
+        if (_loading)
+          SliverToBoxAdapter(
+            child: _Notice(message: context.tr('loading'), center: true),
+          ),
         if (!_loading && _error != null)
           SliverToBoxAdapter(child: _ErrorBox(message: _error!)),
         if (!_loading && _error == null && _repo == null)
-          const SliverToBoxAdapter(
-            child: _Notice(message: 'This directory is not a git repository', center: true),
+          SliverToBoxAdapter(
+            child: _Notice(message: context.tr('gitNotARepo'), center: true),
           ),
         if (!_loading && _error == null && status != null && status.isRepo) ...[
           if (status.truncated)
-            const SliverToBoxAdapter(
-              child: _Notice(message: 'Too many changes; showing the first 2,000 entries'),
+            SliverToBoxAdapter(
+              child: _Notice(message: context.tr('gitTooManyChanges')),
             ),
           ..._section(
-            title: 'Staged (${status.entries.where(isStagedEntry).length})',
-            link: status.entries.any(isStagedEntry) ? ('Unstage all', () => _stageAll(true)) : null,
+            title: context.tr('stagedCount', {
+              'n': status.entries.where(isStagedEntry).length,
+            }),
+            link: status.entries.any(isStagedEntry)
+                ? (context.tr('unstageAll'), () => _stageAll(true))
+                : null,
             entries: status.entries.where(isStagedEntry).toList(),
             staged: true,
           ),
           ..._section(
-            title: 'Unstaged (${status.entries.where(isUnstagedEntry).length})',
-            link: status.entries.any(isUnstagedEntry) ? ('Stage all', () => _stageAll(false)) : null,
+            title: context.tr('unstagedCount', {
+              'n': status.entries.where(isUnstagedEntry).length,
+            }),
+            link: status.entries.any(isUnstagedEntry)
+                ? (context.tr('stageAll'), () => _stageAll(false))
+                : null,
             entries: status.entries.where(isUnstagedEntry).toList(),
             staged: false,
           ),
           SliverToBoxAdapter(child: _commitBox(context)),
           if (_actionError != null)
             SliverToBoxAdapter(child: _ErrorBox(message: _actionError!)),
-          const SliverToBoxAdapter(child: _SectionHeader(title: 'History')),
+          SliverToBoxAdapter(
+            child: _SectionHeader(title: context.tr('history')),
+          ),
           SliverList.builder(
             itemCount: _log.length,
             itemBuilder: (context, index) => _LogRow(
@@ -641,10 +667,7 @@ class _GitTabState extends State<GitTab> {
           ),
           if (!_logEnded)
             SliverToBoxAdapter(
-              child: _LoadMore(
-                loading: _logLoadingMore,
-                onTap: _loadMoreLog,
-              ),
+              child: _LoadMore(loading: _logLoadingMore, onTap: _loadMoreLog),
             ),
         ],
       ],
@@ -667,14 +690,17 @@ class _GitTabState extends State<GitTab> {
               enabled: !_busy && _status?.isRepo == true,
               onSelected: (branch) {
                 if (branch == current) return;
-                _run('Branch switch failed', () => _repo!.checkout(branch));
+                _run(
+                  context.tr('branchSwitchFailed'),
+                  () => _repo!.checkout(branch),
+                );
               },
             ),
           ),
           const SizedBox(width: 8),
           _RoundIconButton(
             icon: LucideIcons.refresh_cw,
-            tooltip: 'Refresh',
+            tooltip: context.tr('refresh'),
             onTap: _busy ? null : _refresh,
           ),
         ],
@@ -689,9 +715,11 @@ class _GitTabState extends State<GitTab> {
     (String, VoidCallback)? link,
   }) {
     return [
-      SliverToBoxAdapter(child: _SectionHeader(title: title, link: link)),
+      SliverToBoxAdapter(
+        child: _SectionHeader(title: title, link: link),
+      ),
       if (entries.isEmpty)
-        const SliverToBoxAdapter(child: _Notice(message: 'No changes'))
+        SliverToBoxAdapter(child: _Notice(message: context.tr('noChanges')))
       else
         SliverList.builder(
           itemCount: entries.length,
@@ -709,7 +737,8 @@ class _GitTabState extends State<GitTab> {
 
   Widget _commitBox(BuildContext context) {
     final color = context.dsw;
-    final canCommit = !_busy &&
+    final canCommit =
+        !_busy &&
         _commitMsg.text.trim().isNotEmpty &&
         (_status?.entries.where(isStagedEntry).isNotEmpty ?? false);
     return Container(
@@ -722,18 +751,23 @@ class _GitTabState extends State<GitTab> {
           Expanded(
             child: CallbackShortcuts(
               bindings: {
-                const SingleActivator(LogicalKeyboardKey.enter, control: true): _commit,
-                const SingleActivator(LogicalKeyboardKey.enter, meta: true): _commit,
+                const SingleActivator(LogicalKeyboardKey.enter, control: true):
+                    _commit,
+                const SingleActivator(LogicalKeyboardKey.enter, meta: true):
+                    _commit,
               },
               child: TextField(
                 controller: _commitMsg,
                 enabled: !_busy,
                 style: DswType.xs13.copyWith(color: color.labelPrimary),
                 decoration: InputDecoration(
-                  hintText: 'Commit message (Ctrl+Enter)',
+                  hintText: context.tr('commitPlaceholder'),
                   hintStyle: DswType.xs13.copyWith(color: color.labelCaption),
                   isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
                   filled: true,
                   fillColor: color.bgBase,
                   enabledBorder: OutlineInputBorder(
@@ -754,7 +788,11 @@ class _GitTabState extends State<GitTab> {
             ),
           ),
           const SizedBox(width: 6),
-          _CommitButton(label: 'Commit', enabled: canCommit, onTap: _commit),
+          _CommitButton(
+            label: context.tr('commit'),
+            enabled: canCommit,
+            onTap: _commit,
+          ),
         ],
       ),
     );
@@ -789,8 +827,7 @@ class _SectionHeader extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          if (link != null)
-            _LinkButton(label: link!.$1, onTap: link!.$2),
+          if (link != null) _LinkButton(label: link!.$1, onTap: link!.$2),
         ],
       ),
     );
@@ -905,7 +942,9 @@ class _FileRowState extends State<_FileRow> {
                       Expanded(
                         child: Text(
                           widget.entry.path,
-                          style: DswType.s14.copyWith(color: color.labelPrimary),
+                          style: DswType.s14.copyWith(
+                            color: color.labelPrimary,
+                          ),
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
                         ),
@@ -916,8 +955,12 @@ class _FileRowState extends State<_FileRow> {
               ),
               const SizedBox(width: 6),
               _RoundIconButton(
-                icon: widget.staged ? LucideIcons.trash_2 : LucideIcons.git_branch,
-                tooltip: widget.staged ? 'Unstage' : 'Stage',
+                icon: widget.staged
+                    ? LucideIcons.trash_2
+                    : LucideIcons.git_branch,
+                tooltip: widget.staged
+                    ? context.tr('unstage')
+                    : context.tr('stage'),
                 onTap: widget.busy ? null : widget.onStage,
               ),
             ],
@@ -930,7 +973,11 @@ class _FileRowState extends State<_FileRow> {
 
 /// One history row — `.gitLogRow`: hash + subject, then ref pills and meta.
 class _LogRow extends StatefulWidget {
-  const _LogRow({required this.entry, required this.onTap, required this.onMenu});
+  const _LogRow({
+    required this.entry,
+    required this.onTap,
+    required this.onMenu,
+  });
 
   final GitLogEntry entry;
   final VoidCallback onTap;
@@ -1010,7 +1057,9 @@ class _LogRowState extends State<_LogRow> {
                       ),
                     Text(
                       '${entry.author} · ${relativeTime(entry.date)}',
-                      style: DswType.xxxs11.copyWith(color: color.labelTertiary),
+                      style: DswType.xxxs11.copyWith(
+                        color: color.labelTertiary,
+                      ),
                     ),
                   ],
                 ),
@@ -1126,7 +1175,9 @@ class _RoundIconButtonState extends State<_RoundIconButton> {
             width: 28,
             height: 28,
             decoration: BoxDecoration(
-              color: _hovered && enabled ? color.interactiveBgHover : Colors.transparent,
+              color: _hovered && enabled
+                  ? color.interactiveBgHover
+                  : Colors.transparent,
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -1147,7 +1198,11 @@ class _RoundIconButtonState extends State<_RoundIconButton> {
 
 /// `.gitCommitButton` — the primary commit affordance.
 class _CommitButton extends StatefulWidget {
-  const _CommitButton({required this.label, required this.enabled, required this.onTap});
+  const _CommitButton({
+    required this.label,
+    required this.enabled,
+    required this.onTap,
+  });
 
   final String label;
   final bool enabled;
@@ -1164,7 +1219,9 @@ class _CommitButtonState extends State<_CommitButton> {
   Widget build(BuildContext context) {
     final color = context.dsw;
     return MouseRegion(
-      cursor: widget.enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      cursor: widget.enabled
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
@@ -1184,7 +1241,9 @@ class _CommitButtonState extends State<_CommitButton> {
             child: Center(
               child: Text(
                 widget.label,
-                style: DswType.xxsStrong12.copyWith(color: color.labelPrimaryInverted),
+                style: DswType.xxsStrong12.copyWith(
+                  color: color.labelPrimaryInverted,
+                ),
               ),
             ),
           ),
@@ -1223,7 +1282,9 @@ class _LoadMoreState extends State<_LoadMore> {
           margin: const EdgeInsets.fromLTRB(12, 4, 12, 8),
           padding: const EdgeInsets.symmetric(vertical: 6),
           decoration: BoxDecoration(
-            color: _hovered && enabled ? color.interactiveBgHover : Colors.transparent,
+            color: _hovered && enabled
+                ? color.interactiveBgHover
+                : Colors.transparent,
             border: Border.all(color: color.borderL2),
             borderRadius: BorderRadius.circular(6),
           ),
@@ -1231,9 +1292,11 @@ class _LoadMoreState extends State<_LoadMore> {
             child: Opacity(
               opacity: enabled ? 1 : 0.5,
               child: Text(
-                widget.loading ? 'Loading…' : 'Load more',
+                widget.loading ? context.tr('loading') : context.tr('loadMore'),
                 style: DswType.xxs12.copyWith(
-                  color: _hovered && enabled ? color.labelPrimary : color.labelSecondary,
+                  color: _hovered && enabled
+                      ? color.labelPrimary
+                      : color.labelSecondary,
                 ),
               ),
             ),
@@ -1258,7 +1321,9 @@ class _Notice extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = context.dsw;
     return Padding(
-      padding: center ? const EdgeInsets.all(16) : const EdgeInsets.fromLTRB(12, 4, 12, 8),
+      padding: center
+          ? const EdgeInsets.all(16)
+          : const EdgeInsets.fromLTRB(12, 4, 12, 8),
       child: Text(
         message,
         textAlign: center ? TextAlign.center : TextAlign.start,

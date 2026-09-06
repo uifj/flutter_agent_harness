@@ -13,7 +13,7 @@
 //     two more things to keep in sync with nothing reading them.
 //
 // [TabType] stays a bare string, as in the source, so the registry in
-// `lib/sidebar/ui/tab_registry.dart` remains open to types this file has never
+// `lib/ui/workbench/tab_registry.dart` remains open to types this file has never
 // heard of.
 
 import 'package:path/path.dart' as p;
@@ -33,6 +33,8 @@ abstract final class BuiltinTabType {
   static const git = 'git';
   static const diff = 'diff';
   static const subagent = 'subagent';
+  static const browser = 'browser';
+  static const sidechat = 'sidechat';
 }
 
 /// What a diff tab shows.
@@ -199,6 +201,32 @@ class SidebarTab {
     type: BuiltinTabType.subagent,
     title: 'Sub-agents',
   );
+
+  /// The single-instance side-chat tab.
+  static const sidechat = SidebarTab(
+    id: 'sidechat',
+    type: BuiltinTabType.sidechat,
+    title: 'Side Chat',
+  );
+
+  /// A browser tab at [url]. The id is derived from the url, so opening the
+  /// same address twice focuses rather than stacking — the same economy as the
+  /// editor's path-derived id.
+  factory SidebarTab.browser(String url) => SidebarTab(
+    id: 'browser:$url',
+    type: BuiltinTabType.browser,
+    title: _browserTitle(url),
+    // The path IS the address: it persists with the layout, so a restored
+    // browser tab reopens the page it was left on.
+    path: url,
+  );
+
+  /// A host when the url parses, the raw text otherwise — a title that cannot
+  /// be derived is shown verbatim rather than guessed at.
+  static String _browserTitle(String url) {
+    final match = RegExp(r'^https?://([^/:?#]+)').firstMatch(url);
+    return match?.group(1) ?? url;
+  }
 
   final String id;
   final TabType type;

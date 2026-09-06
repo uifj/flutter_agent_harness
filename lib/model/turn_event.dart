@@ -94,6 +94,7 @@ class TurnFinished extends TurnEvent {
     this.sessionId,
     this.snapshotId,
     this.errorMessage,
+    this.usage,
   });
 
   final TurnOutcome outcome;
@@ -105,4 +106,27 @@ class TurnFinished extends TurnEvent {
 
   /// Present when [outcome] is [TurnOutcome.failed].
   final String? errorMessage;
+
+  /// What this turn cost, when the runtime could measure it. Null when the
+  /// turn never reached a model — the stats line treats that as "no new
+  /// figures", not as zeros.
+  final TurnUsage? usage;
+}
+
+/// The measurable cost of one turn, dsh's `sessionStats` unit collapsed into
+/// the one payload this app's single-process runtime can fill. Wall time and
+/// TTFT are runtime-measured (dsh measures `step/start → assistant/message`
+/// the same way); token counts are absent because Genkit's `AgentOutput`
+/// does not surface the provider's `usage` block.
+class TurnUsage {
+  const TurnUsage({
+    required this.wallMs,
+    this.ttftMs,
+  });
+
+  /// Turn entry to finish, in milliseconds.
+  final int wallMs;
+
+  /// Send to first streamed token, when a token ever arrived.
+  final int? ttftMs;
 }

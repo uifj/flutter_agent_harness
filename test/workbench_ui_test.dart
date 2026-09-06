@@ -17,12 +17,15 @@
 import 'dart:io';
 
 import 'package:agent_harness/host/terminal_manager.dart';
-import 'package:agent_harness/sidebar/model/sidebar_tab.dart';
-import 'package:agent_harness/sidebar/state/workbench_controller.dart';
-import 'package:agent_harness/sidebar/state/workbench_store.dart';
-import 'package:agent_harness/sidebar/ui/workbench.dart';
-import 'package:agent_harness/sidebar/ui/workbench_tab_bar.dart';
+import 'package:agent_harness/model/workbench_prefs.dart';
+import 'package:agent_harness/model/sidebar_tab.dart';
+import 'package:agent_harness/state/workbench_controller.dart';
+import 'package:agent_harness/state/workbench_store.dart';
+import 'package:agent_harness/ui/workbench/workbench.dart';
+import 'package:agent_harness/ui/workbench/workbench_prefs_scope.dart';
+import 'package:agent_harness/ui/workbench/workbench_tab_bar.dart';
 import 'package:agent_harness/state/conversation_controller.dart';
+import 'package:agent_harness/state/fs_revision.dart';
 import 'package:agent_harness/state/streaming_tail.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
 import 'package:flutter/gestures.dart';
@@ -73,19 +76,25 @@ void main() {
   /// The workbench at the width its strips were made for: the workbench
   /// column's default plus the toggle cluster's reserve, so the tab chips,
   /// split controls, `+` and reserve all fit together.
-  Future<void> pump(WidgetTester tester, [WorkbenchController? controller]) =>
-      tester.pumpWidget(
+  Future<void> pump(
+    WidgetTester tester, [
+    WorkbenchController? controller,
+    WorkbenchPrefs prefs = const WorkbenchPrefs(),
+  ]) => tester.pumpWidget(
         MaterialApp(
           theme: dswThemeData(Brightness.light),
           home: Scaffold(
             body: SizedBox(
               width: 460,
               height: 600,
-              child: Workbench(
-                workbench: controller ?? workbench,
-                conversation: conversation,
-                terminals: pool,
-                onClose: () => closed++,
+              child: WorkbenchPrefsScope(
+                prefs: prefs,
+                child: Workbench(
+                  workbench: controller ?? workbench,
+                  conversation: conversation,
+                  terminals: pool,
+                  onClose: () => closed++,
+                ),
               ),
             ),
           ),
@@ -201,6 +210,32 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(workbench.state.tabs, isEmpty);
+    });
+
+    testWidgets('a switched-off type leaves the menu and the cards', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        null,
+        const WorkbenchPrefs(tabsEnabled: {'git': false, 'terminal': false}),
+      );
+
+      // The welcome cards dropped the disabled types; the enabled one stays.
+      expect(find.text('Terminal'), findsNothing);
+      expect(find.text('Source control'), findsNothing);
+      expect(find.text('Explorer'), findsOneWidget);
+
+      // And the + menu agrees — hidden, not greyed out.
+      await tester.tap(find.byTooltip('New tab'));
+      await tester.pumpAndSettle();
+      Finder menuRow(String label) => find.ancestor(
+        of: find.text(label),
+        matching: find.byWidgetPredicate((w) => w is PopupMenuItem),
+      );
+      expect(menuRow('Explorer'), findsOneWidget);
+      expect(menuRow('Terminal'), findsNothing);
+      expect(menuRow('Source control'), findsNothing);
     });
   });
 
@@ -411,6 +446,27 @@ void main() {
       // The editor names the file relative to the workspace, which is the whole
       // reason the guard's root is canonical.
       await pumpUntil(tester, find.text('lib/main.dart'));
+    });
+
+    testWidgets('an agent write refreshes the listing without a button', (
+      tester,
+    ) async {
+      resetFsRevisionForTest();
+      final root = workspace();
+      File('${root.path}/README.md').writeAsStringSync('# hi\n');
+
+      workbench.workspaceRoot = root.path;
+      workbench.openFolder(root.path);
+      await pump(tester);
+      await pumpUntil(tester, find.text('README.md'));
+
+      // The "agent" writes a new file behind the tree's back — the way the
+      // write tool does, announcement included.
+      File('${root.path}/notes.md').writeAsStringSync('# new\n');
+      bumpFsRevision();
+      await pumpUntil(tester, find.text('notes.md'));
+
+      expect(find.text('notes.md'), findsOneWidget);
     });
 
     testWidgets('says so when there is no workspace to list', (tester) async {

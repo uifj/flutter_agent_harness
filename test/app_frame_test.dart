@@ -57,6 +57,7 @@ void main() {
     Widget details = const SizedBox(),
     Widget workbench = const SizedBox(),
     Widget bottom = const SizedBox(),
+    Widget? center,
   }) async {
     tester.view.physicalSize = Size(width, 900);
     tester.view.devicePixelRatio = 1;
@@ -78,7 +79,8 @@ void main() {
               onToggleDetails: layout.toggleDetails,
               detailsOpen: layout.details != 0,
             ),
-            center: ConversationRoot(conversation: controller, tail: tail),
+            center:
+                center ?? ConversationRoot(conversation: controller, tail: tail),
             details: details,
             workbench: workbench,
             bottom: bottom,
@@ -261,13 +263,83 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('narrow hides the bottom toggle', (tester) async {
+  testWidgets('between the breakpoints the desktop pair of toggles stays', (
+    tester,
+  ) async {
     await pump(tester, width: 800);
     await cross(tester);
-    // Narrow viewports merge the two panels into one drawer, so the bottom
-    // panel's toggle is not offered (`Sidebar.tsx:1350-1355`).
+    // 800 sits between the merge (768) and the sidebar's auto-collapse (1024):
+    // a split-screen laptop keeps the two-panel desktop, toggles and all.
+    expect(find.byTooltip('Collapse workbench panel'), findsOneWidget);
+    expect(find.byTooltip('Open bottom panel'), findsOneWidget);
+  });
+
+  testWidgets('below the merge breakpoint the bottom toggle goes away', (
+    tester,
+  ) async {
+    await pump(tester, width: 700);
+    await cross(tester);
+    // One drawer, one toggle (`Sidebar.tsx:1350-1355`).
     expect(find.byTooltip('Collapse workbench panel'), findsOneWidget);
     expect(find.byTooltip('Open bottom panel'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the merged workbench is a full-width drawer over the centre', (
+    tester,
+  ) async {
+    // The centre's own width, captured from inside it: the merge's whole
+    // promise is that the floating drawer takes nothing from it.
+    final centerWidths = <double>[];
+    await pump(
+      tester,
+      width: 700,
+      workbench: const Text('the workbench column'),
+      bottom: const Text('the bottom panel'),
+      center: LayoutBuilder(
+        builder: (context, constraints) {
+          centerWidths.add(constraints.maxWidth);
+          return const SizedBox();
+        },
+      ),
+    );
+    await cross(tester);
+
+    // The drawer starts open and spans the whole viewport — the sidebar's rail
+    // and the centre sit underneath it, not beside it.
+    final drawer = tester.renderObject<RenderBox>(
+      find.text('the workbench column'),
+    );
+    expect(drawer.size.width, 700);
+    // Rail (56) + centre = the viewport; the centre paid for none of the
+    // drawer, whatever the workbench preference held.
+    expect(centerWidths, everyElement(700 - sidebarCollapsed));
+
+    // The bottom panel stays mounted (shells survive hiding) but never opens
+    // below the breakpoint, whatever the preference says.
+    layout.openBottom();
+    await cross(tester);
+    expect(
+      tester.renderObject<RenderBox>(find.text('the bottom panel')).size.height,
+      0,
+    );
+
+    // The drawer closes to zero width and back, without unmounting.
+    layout.closeWorkbench();
+    await cross(tester);
+    expect(
+      tester.renderObject<RenderBox>(find.text('the workbench column')).size
+          .width,
+      0,
+    );
+    layout.openWorkbench();
+    await cross(tester);
+    expect(
+      tester.renderObject<RenderBox>(find.text('the workbench column')).size
+          .width,
+      700,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('a turn runs through the squeezed frame', (tester) async {

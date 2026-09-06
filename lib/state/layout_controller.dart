@@ -38,6 +38,14 @@ class LayoutController extends ChangeNotifier {
   bool get narrow => _narrow;
   bool _narrow = false;
 
+  /// Mirrors the frame's mobile-merge reading (the 768 breakpoint, not
+  /// [_narrow]'s 1024): below it the workbench and bottom panels are one
+  /// full-width drawer. The app entry listens for its edges to run the tab
+  /// migration; the frame itself reads the viewport directly, as with
+  /// [_narrow].
+  bool get mobile => _mobile;
+  bool _mobile = false;
+
   /// The manual override that re-expands an auto-collapsed sidebar over the
   /// squeezed center, without rewriting the width preference.
   bool get narrowExpanded => _narrowExpanded;
@@ -97,6 +105,15 @@ class LayoutController extends ChangeNotifier {
     if (_narrow == value) return;
     _narrow = value;
     _narrowExpanded = false;
+    notifyListeners();
+  }
+
+  /// Fed by the frame on every viewport change, at its own breakpoint. No
+  /// override to drop — the merge has no manual form; the drawer it produces
+  /// opens and closes through the ordinary workbench toggle.
+  void setMobile(bool value) {
+    if (_mobile == value) return;
+    _mobile = value;
     notifyListeners();
   }
 

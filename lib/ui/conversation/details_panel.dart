@@ -16,6 +16,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
+import '../../l10n/locales.dart';
 import '../../model/conversation.dart';
 import '../../state/conversation_controller.dart';
 import '../../state/details_selection.dart';
@@ -23,17 +24,6 @@ import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../primitives/code_block.dart';
-
-/// `ui-conversation/src/client/locales.ts:255-261`, the `en` entries. This build
-/// has no dictionary — every other string in it is written where it is used — so
-/// the dictionary's own English is what lands here.
-const _title = 'Details';
-const _close = 'Close details';
-const _empty = 'Click a tool row in the message flow to view its details';
-const _notInWindow = 'This call is outside the current window';
-const _input = 'Input';
-const _output = 'Output';
-const _running = 'Running…';
 
 class DetailsPanel extends StatefulWidget {
   const DetailsPanel({
@@ -112,7 +102,7 @@ class _DetailsPanelState extends State<DetailsPanel> {
             // written by code that does not know the name. Here only the tool row
             // writes it, and the row knows its own display title, so the
             // selection is the single source and the two can never disagree.
-            widget.selection.toolName ?? _title,
+            widget.selection.toolName ?? context.tr('details'),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: DswType.s14.copyWith(
@@ -131,10 +121,14 @@ class _DetailsPanelState extends State<DetailsPanel> {
   /// `.body`: pad 12/16, scrolls.
   Widget _body(DswAlias color) {
     final callId = widget.selection.callId;
-    if (callId == null) return _padded(_message(color, _empty));
+    if (callId == null) {
+      return _padded(_message(color, context.tr('detailsEmpty')));
+    }
 
     final node = _find(callId);
-    if (node == null) return _padded(_message(color, _notInWindow));
+    if (node == null) {
+      return _padded(_message(color, context.tr('detailsNotInWindow')));
+    }
 
     return _padded(
       // dsh keys only the Output fragment, naming the reason: the body owns
@@ -148,7 +142,7 @@ class _DetailsPanelState extends State<DetailsPanel> {
           children: [
             // `argsRaw !== null`: a call always has an args blob, so this section
             // is always here — an empty one shows `{}`, as it does in dsh.
-            _sectionLabel(color, _input),
+            _sectionLabel(color, context.tr('input')),
             // 16, not the label's own 6: dsh's `CodeBlock` carries `margin: 16px
             // 0`, which collapses with the label's margin to the larger of the
             // two. The bare `<pre>` under Output carries none, which is why that
@@ -156,7 +150,7 @@ class _DetailsPanelState extends State<DetailsPanel> {
             const SizedBox(height: 16),
             CodeBlock(code: _pretty(node.arguments), lang: 'json'),
             const SizedBox(height: 16),
-            _sectionLabel(color, _output),
+            _sectionLabel(color, context.tr('output')),
             const SizedBox(height: 6),
             _outputBody(color, node),
             // `.section { margin-bottom: 16px }` on the last section too: it
@@ -180,7 +174,7 @@ class _DetailsPanelState extends State<DetailsPanel> {
     final settled =
         node.status != ToolStatus.running &&
         node.status != ToolStatus.awaitingApproval;
-    if (!settled) return _message(color, _running);
+    if (!settled) return _message(color, context.tr('running'));
     return _Pre(
       text: node.errorMessage ?? _format(node.output) ?? '',
       isError: node.errorMessage != null,
@@ -240,7 +234,7 @@ class _CloseButtonState extends State<_CloseButton> {
         onTap: widget.onTap,
         behavior: HitTestBehavior.opaque,
         child: Tooltip(
-          message: _close,
+          message: context.tr('closeDetails'),
           child: Container(
             width: 28,
             height: 28,

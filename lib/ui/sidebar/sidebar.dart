@@ -15,6 +15,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
+import '../../l10n/locales.dart';
 import '../../model/conversation.dart';
 import '../../state/session_index.dart';
 import '../../theme/dsw_alias.dart';
@@ -193,7 +194,9 @@ class _SidebarState extends State<Sidebar> {
           _IconButton(
             onTap: widget.onToggle,
             wide: wide,
-            tooltip: widget.collapsed ? 'Open sidebar' : 'Collapse sidebar',
+            tooltip: widget.collapsed
+                ? context.tr('openSidebar')
+                : context.tr('collapseSidebar'),
             // On the rail the toggle rests as the brand mark and reveals the
             // panel icon on hover — that swap *is* the expand affordance.
             builder: (hovered) => wide || hovered
@@ -251,7 +254,7 @@ class _SidebarState extends State<Sidebar> {
               if (wide) ...[
                 const SizedBox(width: 6),
                 Text(
-                  'New Session',
+                  context.tr('newSession'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: DswType.sStrong14.copyWith(color: color.labelPrimary),
@@ -273,7 +276,7 @@ class _SidebarState extends State<Sidebar> {
         child: _IconButton(
           onTap: widget.onToggle,
           wide: false,
-          tooltip: 'Sessions',
+          tooltip: context.tr('sessions'),
           builder: (_) => Icon(
             LucideIcons.message_square,
             size: 18,
@@ -291,7 +294,9 @@ class _SidebarState extends State<Sidebar> {
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Text(
-              widget.sessions.isLoading ? 'Loading…' : 'No sessions yet',
+              widget.sessions.isLoading
+                  ? context.tr('loading')
+                  : context.tr('noSessionsYet'),
               style: DswType.xxs12.copyWith(color: color.labelTertiary),
             ),
           );
@@ -332,7 +337,7 @@ class _SidebarState extends State<Sidebar> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Settings',
+                          context.tr('settings'),
                           style: DswType.s14.copyWith(
                             color: color.labelPrimary,
                           ),
@@ -350,7 +355,7 @@ class _SidebarState extends State<Sidebar> {
               _IconButton(
                 onTap: widget.onOpenSettings,
                 wide: false,
-                tooltip: 'Settings',
+                tooltip: context.tr('settings'),
                 builder: (_) => Icon(
                   LucideIcons.settings,
                   size: 18,
@@ -372,7 +377,9 @@ class _SidebarState extends State<Sidebar> {
   Widget _detailsToggle(DswAlias color, {required bool wide}) => _IconButton(
     onTap: widget.onToggleDetails,
     wide: wide,
-    tooltip: widget.detailsOpen ? 'Close details panel' : 'Open details panel',
+    tooltip: widget.detailsOpen
+        ? context.tr('closeDetailsPanel')
+        : context.tr('openDetailsPanel'),
     builder: (_) => Transform.flip(
       flipX: true,
       child: Icon(
@@ -414,7 +421,7 @@ class _SessionRow extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                session.title ?? 'Untitled',
+                session.title ?? context.tr('untitled'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: DswType.s14.copyWith(

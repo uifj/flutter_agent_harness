@@ -7,7 +7,7 @@
 // than a unit under test.
 
 import 'package:agent_harness/host/git.dart';
-import 'package:agent_harness/sidebar/ui/tabs/git_tab.dart';
+import 'package:agent_harness/ui/workbench/tabs/git_tab.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_git.dart';

@@ -13,10 +13,10 @@ import 'dart:io';
 
 import 'package:agent_harness/model/conversation.dart';
 import 'package:agent_harness/model/turn_event.dart';
-import 'package:agent_harness/sidebar/model/sidebar_tab.dart';
-import 'package:agent_harness/sidebar/state/workbench_controller.dart';
-import 'package:agent_harness/sidebar/state/workbench_store.dart';
-import 'package:agent_harness/sidebar/ui/tabs/subagent_tab.dart';
+import 'package:agent_harness/model/sidebar_tab.dart';
+import 'package:agent_harness/state/workbench_controller.dart';
+import 'package:agent_harness/state/workbench_store.dart';
+import 'package:agent_harness/ui/workbench/tabs/subagent_tab.dart';
 import 'package:agent_harness/state/conversation_controller.dart';
 import 'package:agent_harness/state/streaming_tail.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';

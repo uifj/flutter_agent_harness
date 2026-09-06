@@ -24,6 +24,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter/services.dart';
+import 'package:path/path.dart' as p;
 import 'package:re_editor/re_editor.dart';
 import 'package:re_highlight/languages/bash.dart';
 import 'package:re_highlight/languages/css.dart';
@@ -41,12 +42,14 @@ import 'package:re_highlight/languages/yaml.dart';
 import 'package:re_highlight/styles/atom-one-dark.dart';
 import 'package:re_highlight/styles/atom-one-light.dart';
 
+import '../../../l10n/locales.dart';
 import '../../../model/workspace.dart';
 import '../../../theme/dsw_alias.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
-import '../../model/sidebar_tab.dart';
-import '../../state/workbench_controller.dart';
+import '../../../ui/conversation/assistant_markdown.dart';
+import '../../../model/sidebar_tab.dart';
+import '../../../state/workbench_controller.dart';
 import '../tab_registry.dart';
 
 /// The language modes this build compiles in.
@@ -128,6 +131,29 @@ class _EditorTabState extends State<EditorTab> {
   bool _dirty = false;
   bool _saving = false;
 
+  /// Whether a markdown buffer shows the rendered pane instead of the source.
+  /// Source is the default because that is what a save edits.
+  bool _preview = false;
+
+  /// Translation that is safe before the first build. [_load] starts in
+  /// initState, where registering an inherited dependency is not allowed — so
+  /// this reads the locale scope without depending on it. English, as ever,
+  /// when no scope is mounted.
+  String _tr(String key, [Map<String, Object>? params]) => translate(
+    context.getInheritedWidgetOfExactType<AppLocaleScope>()?.locale ??
+        AppLocaleId.en,
+    key,
+    params,
+  );
+
+  /// Whether this tab's file is markdown, and so can be previewed.
+  bool get _isMarkdown {
+    final path = widget.tab.path;
+    if (path == null) return false;
+    final ext = p.extension(path).toLowerCase();
+    return ext == '.md' || ext == '.markdown';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -152,18 +178,18 @@ class _EditorTabState extends State<EditorTab> {
   }
 
   Future<void> _load() async {
+    // A refresh replaces the buffer wholesale, so the controller it is
+    // replacing has to go here rather than in dispose — the widget survives.
+    final previous = _content;
+    if (previous is _Text) previous.controller.dispose();
     final path = widget.tab.path;
     if (path == null) {
-      setState(() => _content = const _Failed('This tab has no file.'));
+      setState(() => _content = _Failed(_tr('tabHasNoFile')));
       return;
     }
     final workspace = widget.workbench.workspace;
     if (workspace == null) {
-      setState(
-        () => _content = const _Failed(
-          'No workspace folder is set, so no file can be read.',
-        ),
-      );
+      setState(() => _content = _Failed(_tr('noWorkspaceNoFile')));
       return;
     }
 
@@ -177,7 +203,7 @@ class _EditorTabState extends State<EditorTab> {
 
     final file = File(resolved);
     if (!file.existsSync()) {
-      setState(() => _content = const _Failed('This file no longer exists.'));
+      setState(() => _content = _Failed(_tr('fileNoLongerExists')));
       return;
     }
 
@@ -195,23 +221,20 @@ class _EditorTabState extends State<EditorTab> {
     final bytes = await file.readAsBytes();
     if (!mounted) return;
     if (!readsAsText(bytes)) {
-      setState(
-        () => _content = const _Failed(
-          'This looks like a binary file. Nothing here can show it.',
-        ),
-      );
+      setState(() => _content = _Failed(_tr('looksLikeBinary')));
       return;
     }
 
     final controller = CodeLineEditingController.fromText(
       const Utf8Decoder(allowMalformed: true).convert(bytes),
     );
-    controller.addListener(_onChanged);
     setState(() {
       _content = _Text(
         controller: controller,
         readOnlyReason: length > _maxEditableBytes
-            ? 'Read-only: this file is larger than ${_maxEditableBytes ~/ (1024 * 1024)} MB.'
+            ? _tr('readOnlyTooLarge', {
+                'mb': _maxEditableBytes ~/ (1024 * 1024),
+              })
             : null,
       );
       _dirty = false;
@@ -220,24 +243,51 @@ class _EditorTabState extends State<EditorTab> {
     if (line is int) _goToLine(line);
   }
 
-  void _onChanged() {
-    if (_dirty || _saving) return;
-    setState(() => _dirty = true);
-  }
-
   /// Puts the caret on [line] (1-based, as every tool and compiler counts).
   void _goToLine(int line) {
     final content = _content;
     if (content is! _Text) return;
-    final index = (line - 1).clamp(
-      0,
-      content.controller.codeLines.length - 1,
-    );
+    final index = (line - 1).clamp(0, content.controller.codeLines.length - 1);
     content.controller.selection = CodeLineSelection.collapsed(
       index: index,
       offset: 0,
     );
     content.controller.makeCursorCenterIfInvisible();
+  }
+
+  /// Reloads the file from disk. A dirty buffer is a possible loss of work, so
+  /// it is confirmed before the reload rather than after.
+  Future<void> _refresh() async {
+    if (_dirty) {
+      final title = _tr('reloadDirtyTitle');
+      final description = _tr('reloadDirtyDesc', {'path': _shownPath()});
+      final label = _tr('discardChanges');
+      final discard = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          final color = context.dsw;
+          return AlertDialog(
+            title: Text(title, style: DswType.sStrong14),
+            content: Text(description, style: DswType.xs13),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(context.tr('cancel')),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(
+                  label,
+                  style: DswType.xs13.copyWith(color: color.stateErrorPrimary),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+      if (discard != true) return;
+    }
+    await _load();
   }
 
   Future<void> _save() async {
@@ -268,7 +318,9 @@ class _EditorTabState extends State<EditorTab> {
   void _report(String message) {
     final messenger = ScaffoldMessenger.maybeOf(context);
     if (messenger == null) return;
-    messenger.showSnackBar(SnackBar(content: Text('Could not save: $message')));
+    messenger.showSnackBar(
+      SnackBar(content: Text(context.tr('couldNotSave', {'message': message}))),
+    );
   }
 
   @override
@@ -282,11 +334,12 @@ class _EditorTabState extends State<EditorTab> {
     );
   }
 
-  /// The path + save row. Present even when the file failed to load, since the
-  /// path is the only thing that explains which tab is complaining.
+  /// The path + actions row. Present even when the file failed to load, since
+  /// the path is the only thing that explains which tab is complaining.
   Widget _bar(DswAlias color) {
     final content = _content;
     final readOnly = content is _Text ? content.readOnlyReason : null;
+    final canPreview = _isMarkdown && content is _Text;
     return Container(
       height: 28,
       padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -304,6 +357,21 @@ class _EditorTabState extends State<EditorTab> {
               textAlign: TextAlign.left,
             ),
           ),
+          if (canPreview) ...[
+            _BarIcon(
+              icon: LucideIcons.eye,
+              tooltip: context.tr('preview'),
+              active: _preview,
+              onTap: () => setState(() => _preview = !_preview),
+            ),
+            const SizedBox(width: 6),
+          ],
+          _BarIcon(
+            icon: LucideIcons.refresh_cw,
+            tooltip: context.tr('reload'),
+            onTap: _refresh,
+          ),
+          const SizedBox(width: 6),
           if (readOnly != null)
             Tooltip(
               message: readOnly,
@@ -316,7 +384,7 @@ class _EditorTabState extends State<EditorTab> {
           if (content is _Text && readOnly == null) ...[
             if (_dirty)
               Text(
-                'unsaved',
+                context.tr('unsaved'),
                 style: DswType.xxxs11.copyWith(color: color.stateWarnPrimary),
               ),
             const SizedBox(width: 6),
@@ -351,11 +419,10 @@ class _EditorTabState extends State<EditorTab> {
         child: Center(child: Image.memory(bytes)),
       ),
     ),
-    _Text(:final controller, :final readOnlyReason) => _editor(
-      color,
-      controller,
-      readOnlyReason != null,
-    ),
+    _Text(:final controller, :final readOnlyReason) =>
+      _preview && _isMarkdown
+      ? _Preview(text: controller.text)
+      : _editor(color, controller, readOnlyReason != null),
   };
 
   Widget _editor(
@@ -374,7 +441,12 @@ class _EditorTabState extends State<EditorTab> {
         const SingleActivator(LogicalKeyboardKey.keyS, meta: true): _save,
         const SingleActivator(LogicalKeyboardKey.keyS, control: true): _save,
       },
-      child: CodeEditor(
+      // The dirty flag rides here rather than on a controller listener added
+      // in _load: see _DirtyBridge for why.
+      child: _DirtyBridge(
+        controller: controller,
+        onDirty: _onBufferEdited,
+        child: CodeEditor(
         controller: controller,
         readOnly: readOnly,
         wordWrap: false,
@@ -418,8 +490,15 @@ class _EditorTabState extends State<EditorTab> {
                 ),
               ],
             ),
+        ),
       ),
     );
+  }
+
+  /// A real edit arrived (not a mount — see [_DirtyBridge]).
+  void _onBufferEdited() {
+    if (_dirty || _saving) return;
+    setState(() => _dirty = true);
   }
 }
 
@@ -448,6 +527,108 @@ class _Notice extends StatelessWidget {
   }
 }
 
+/// Bridges the buffer's change notifications to the tab's dirty flag, one
+/// frame late.
+///
+/// re_editor assigns the controller's delegate in the editor's own initState,
+/// which notifies the controller from inside build. A listener attached before
+/// that moment would both false-positive the dirty flag on every open (and on
+/// every return from preview, which mounts a fresh editor over the same
+/// controller) and call setState mid-build, which asserts. Attaching after the
+/// frame means the only notifications that arrive are real edits, which always
+/// come from input events — outside build.
+class _DirtyBridge extends StatefulWidget {
+  const _DirtyBridge({
+    required this.controller,
+    required this.onDirty,
+    required this.child,
+  });
+
+  final CodeLineEditingController controller;
+  final VoidCallback onDirty;
+  final Widget child;
+
+  @override
+  State<_DirtyBridge> createState() => _DirtyBridgeState();
+}
+
+class _DirtyBridgeState extends State<_DirtyBridge> {
+  void _listen() => widget.onDirty();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.controller.addListener(_listen);
+    });
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_listen);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
+/// The rendered markdown pane. Reuses the transcript's renderer so a preview
+/// and a chat reply read identically — one markdown look per app, not per view.
+class _Preview extends StatelessWidget {
+  const _Preview({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.dsw;
+    return ColoredBox(
+      color: color.bgLayer2,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: AssistantMarkdown(text),
+      ),
+    );
+  }
+}
+
+/// A 20px square bar action. [active] tints the icon so a toggle's state is
+/// readable without hover — the bar has no room for a pressed look.
+class _BarIcon extends StatelessWidget {
+  const _BarIcon({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+    this.active = false,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.dsw;
+    final tint = active ? color.labelPrimary : color.labelTertiary;
+    return Tooltip(
+      message: tooltip,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: SizedBox.square(
+            dimension: 20,
+            child: Center(child: Icon(icon, size: 14, color: tint)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SaveButton extends StatelessWidget {
   const _SaveButton({
     required this.enabled,
@@ -464,11 +645,9 @@ class _SaveButton extends StatelessWidget {
     final color = context.dsw;
     final tint = enabled ? color.labelSecondary : color.labelTertiary;
     return Tooltip(
-      message: 'Save',
+      message: context.tr('save'),
       child: MouseRegion(
-        cursor: enabled
-            ? SystemMouseCursors.click
-            : SystemMouseCursors.basic,
+        cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
         child: GestureDetector(
           onTap: enabled ? onSave : null,
           behavior: HitTestBehavior.opaque,

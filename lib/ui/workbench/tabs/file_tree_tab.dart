@@ -10,11 +10,11 @@
 //   * A `showHidden` toggle. Dotfiles are shown, always. A tree that hides
 //     `.gitignore` in a repository view is hiding the file most likely to be
 //     the answer.
-//   * Filesystem watching. The source subscribes to host-side watch events; this
-//     has a refresh control instead. A `Directory.watch` per expanded folder is a
-//     real cost (one FSEvents stream each) for a panel whose staleness the user
-//     can see and fix, and getting invalidation subtly wrong is worse than a
-//     button.
+//   * Filesystem watching. The source subscribes to host-side watch events;
+//     this takes agent-side refresh (the `fsRevision` counter, bumped by the
+//     write/edit tools) plus a manual refresh control. A `Directory.watch`
+//     per expanded folder is a real cost (one FSEvents stream each), and
+//     getting invalidation subtly wrong is worse than a button.
 //
 // The expansion set lives in [SidebarState] rather than here, so it survives a
 // tab moving between panes and a session reload. The listing cache does not: it
@@ -24,16 +24,19 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:path/path.dart' as p;
 
+import '../../../l10n/locales.dart';
 import '../../../model/workspace.dart';
+import '../../../state/fs_revision.dart';
 import '../../../theme/dsw_alias.dart';
 import '../../../theme/dsw_motion.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
-import '../../model/sidebar_tab.dart';
-import '../../state/workbench_controller.dart';
+import '../../../model/sidebar_tab.dart';
+import '../../../state/workbench_controller.dart';
 
 /// Row height. 22px is the source's `--row-h`; it is also what fits a 13px label
 /// with the 4px hit-target padding a click needs.
@@ -72,18 +75,34 @@ class _FileTreeTabState extends State<FileTreeTab> {
   /// In-flight reads, so a rebuild while one is pending does not start a second.
   final _reading = <String>{};
 
+  /// The header search box's query. Empty means the unfiltered tree; non-empty
+  /// switches the flatten below to match-mode, where the expansion set is
+  /// ignored (a search that respected it could not find anything).
+  String _filter = '';
+
   @override
   void initState() {
     super.initState();
     widget.workbench.addListener(_onWorkbench);
+    // The agent's writes announce themselves through the revision counter
+    // (see `fsRevision`): the tree re-lists what is open, without a watcher
+    // and without the user pressing anything. This is the ONE refresh path
+    // that is not the user's — the header control stays for everything else
+    // the disk does behind the app's back.
+    fsRevision.addListener(_onFsRevision);
     _read(_root);
   }
 
   @override
   void dispose() {
     widget.workbench.removeListener(_onWorkbench);
+    fsRevision.removeListener(_onFsRevision);
     super.dispose();
   }
+
+  /// The agent wrote something: drop every listing and re-read what is open —
+  /// the same walk as the refresh control, arrived at from the other side.
+  void _onFsRevision() => _refresh();
 
   /// The folder this tab is rooted at, falling back to the workspace.
   String get _root => widget.tab.path ?? widget.workbench.workspaceRoot ?? '';
@@ -162,20 +181,50 @@ class _FileTreeTabState extends State<FileTreeTab> {
   /// through a single [ListView.builder] rather than nesting a scroll view per
   /// level.
   List<_Row> _flatten() {
-    final expanded = widget.workbench.state.expanded;
-    final rows = <_Row>[];
-    void walk(String directory, int depth) {
-      for (final row in _children[directory] ?? const <_Row>[]) {
-        rows.add(
-          _Row(path: row.path, isDirectory: row.isDirectory, depth: depth),
-        );
-        if (row.isDirectory && expanded.contains(row.path)) {
-          walk(row.path, depth + 1);
+    if (_filter.isEmpty) {
+      final expanded = widget.workbench.state.expanded;
+      final rows = <_Row>[];
+      void walk(String directory, int depth) {
+        for (final row in _children[directory] ?? const <_Row>[]) {
+          rows.add(
+            _Row(path: row.path, isDirectory: row.isDirectory, depth: depth),
+          );
+          if (row.isDirectory && expanded.contains(row.path)) {
+            walk(row.path, depth + 1);
+          }
         }
       }
+
+      walk(_root, 0);
+      return rows;
     }
 
-    walk(_root, 0);
+    // Match-mode: a file shows when its basename matches, a directory when it
+    // or any descendant does — ancestors of a match are the only way a deep
+    // match is reachable, so they ride along at their own depth. The expansion
+    // set is ignored, which is why directories in match-mode draw expanded.
+    return _matchRows(_root, 0, _filter.toLowerCase());
+  }
+
+  /// The matching rows under [directory] at [depth]: files whose basename
+  /// contains [query], directories that match or contain a match.
+  List<_Row> _matchRows(String directory, int depth, String query) {
+    final rows = <_Row>[];
+    for (final row in _children[directory] ?? const <_Row>[]) {
+      final name = p.basename(row.path).toLowerCase();
+      if (row.isDirectory) {
+        // Reads the folder even when it is collapsed: a match below a
+        // collapsed directory is the whole point of the search box.
+        _read(row.path);
+        final descendants = _matchRows(row.path, depth + 1, query);
+        if (name.contains(query) || descendants.isNotEmpty) {
+          rows.add(_Row(path: row.path, isDirectory: true, depth: depth));
+          rows.addAll(descendants);
+        }
+      } else if (name.contains(query)) {
+        rows.add(_Row(path: row.path, isDirectory: false, depth: depth));
+      }
+    }
     return rows;
   }
 
@@ -196,7 +245,7 @@ class _FileTreeTabState extends State<FileTreeTab> {
     final color = context.dsw;
     if (_root.isEmpty) {
       return _Empty(
-        message: 'No workspace folder is set, so there is nothing to list.',
+        message: context.tr('noWorkspaceNothingToList'),
       );
     }
     final rows = _flatten();
@@ -204,9 +253,17 @@ class _FileTreeTabState extends State<FileTreeTab> {
     return Column(
       children: [
         _header(color),
+        _searchBox(color),
         Expanded(
-          child: rows.isEmpty && _failed[_root] == null
-              ? _Empty(message: 'This folder is empty.')
+          child: rows.isEmpty
+              ? _Empty(
+                  message:
+                      _filter.isEmpty
+                          ? context.tr('folderEmpty')
+                          : context.tr('noMatches', {
+                              'query': _filter,
+                            }),
+                )
               : ListView.builder(
                   primary: false,
                   padding: const EdgeInsets.symmetric(vertical: 4),
@@ -214,16 +271,19 @@ class _FileTreeTabState extends State<FileTreeTab> {
                   itemCount: rows.length,
                   itemBuilder: (context, index) {
                     final row = rows[index];
+                    final filtering = _filter.isNotEmpty;
                     return _TreeRow(
                       row: row,
-                      expanded: widget.workbench.state.expanded.contains(
-                        row.path,
-                      ),
+                      expanded:
+                          filtering ||
+                          widget.workbench.state.expanded.contains(row.path),
                       selected: row.path == current,
                       error: _failed[row.path],
                       onTap: () => row.isDirectory
                           ? widget.workbench.toggleExpanded(row.path)
                           : widget.workbench.openFile(row.path),
+                      onSecondaryTap: (position) =>
+                          _showRowMenu(context, row, position),
                     );
                   },
                 ),
@@ -238,6 +298,149 @@ class _FileTreeTabState extends State<FileTreeTab> {
           ),
       ],
     );
+  }
+
+  /// The header search box. Filter-only: it never navigates, because a tree
+  /// that jumps while being filtered is a tree whose rows cannot be clicked
+  /// mid-thought.
+  Widget _searchBox(DswAlias color) => Container(
+    height: 30,
+    padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
+    decoration: BoxDecoration(
+      color: color.bgLayer1,
+      border: Border(bottom: BorderSide(color: color.borderL1)),
+    ),
+    child: Row(
+      children: [
+        Icon(LucideIcons.search, size: 12, color: color.labelTertiary),
+        const SizedBox(width: 6),
+        Expanded(
+          child: TextField(
+            onChanged: (value) => setState(() => _filter = value.trim()),
+            style: DswType.xs13.copyWith(color: color.labelPrimary),
+            decoration: InputDecoration(
+              isCollapsed: true,
+              border: InputBorder.none,
+              hintText: context.tr('searchFiles'),
+              hintStyle: DswType.xxs12.copyWith(color: color.labelCaption),
+            ),
+          ),
+        ),
+        if (_filter.isNotEmpty)
+          _IconButton(
+            icon: LucideIcons.x,
+            tooltip: context.tr('cancel'),
+            onTap: () => setState(() => _filter = ''),
+          ),
+      ],
+    ),
+  );
+
+  /// The row's right-click menu: open, copy paths, and — for a directory — a
+  /// tree tab rooted there. Menu position comes from the tap so the menu lands
+  /// under the cursor, not under the row's corner.
+  Future<void> _showRowMenu(
+    BuildContext context,
+    _Row row,
+    Offset position,
+  ) async {
+    final overlay = Overlay.of(context).context.findRenderObject()
+        as RenderBox;
+    final color = context.dsw;
+    final root = widget.workbench.workspaceRoot;
+    final relative = root != null && p.isWithin(root, row.path)
+        ? p.relative(row.path, from: root)
+        : row.path;
+    final choice = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        position.dx,
+        position.dy,
+        overlay.size.width - position.dx,
+        overlay.size.height - position.dy,
+      ),
+      color: color.bgLayer2,
+      items: [
+        PopupMenuItem(
+          value: 'open',
+          height: 34,
+          child: Row(
+            children: [
+              Icon(
+                row.isDirectory
+                    ? LucideIcons.chevron_right
+                    : LucideIcons.file,
+                size: 13,
+                color: color.labelSecondary,
+              ),
+              const SizedBox(width: 8),
+              Text(context.tr('open')),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'copyRelative',
+          height: 34,
+          child: Row(
+            children: [
+              Icon(
+                LucideIcons.copy,
+                size: 13,
+                color: color.labelSecondary,
+              ),
+              const SizedBox(width: 8),
+              Text(context.tr('copyRelative')),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'copyAbsolute',
+          height: 34,
+          child: Row(
+            children: [
+              Icon(
+                LucideIcons.file_symlink,
+                size: 13,
+                color: color.labelSecondary,
+              ),
+              const SizedBox(width: 8),
+              Text(context.tr('copyAbsolute')),
+            ],
+          ),
+        ),
+        if (row.isDirectory)
+          PopupMenuItem(
+            value: 'treeTab',
+            height: 34,
+            child: Row(
+              children: [
+                Icon(
+                  LucideIcons.list_tree,
+                  size: 13,
+                  color: color.labelSecondary,
+                ),
+                const SizedBox(width: 8),
+                Text(context.tr('openInTreeTab')),
+              ],
+            ),
+          ),
+      ],
+    );
+    if (choice == null) return;
+    switch (choice) {
+      case 'open':
+        if (row.isDirectory) {
+          widget.workbench.toggleExpanded(row.path);
+        } else {
+          widget.workbench.openFile(row.path);
+        }
+      case 'copyRelative':
+        await Clipboard.setData(ClipboardData(text: relative));
+      case 'copyAbsolute':
+        await Clipboard.setData(ClipboardData(text: row.path));
+      case 'treeTab':
+        widget.workbench.openFolder(row.path);
+    }
   }
 
   Widget _header(DswAlias color) => Container(
@@ -273,6 +476,7 @@ class _TreeRow extends StatefulWidget {
     required this.selected,
     required this.error,
     required this.onTap,
+    this.onSecondaryTap,
   });
 
   final _Row row;
@@ -284,6 +488,10 @@ class _TreeRow extends StatefulWidget {
   final String? error;
 
   final VoidCallback onTap;
+
+  /// Right-click. Null disables the menu — the plain builder rows pass it, the
+  /// tests stub it out.
+  final void Function(Offset position)? onSecondaryTap;
 
   @override
   State<_TreeRow> createState() => _TreeRowState();
@@ -351,6 +559,9 @@ class _TreeRowState extends State<_TreeRow> {
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
         onTap: widget.onTap,
+        onSecondaryTapDown: widget.onSecondaryTap == null
+            ? null
+            : (details) => widget.onSecondaryTap!(details.globalPosition),
         behavior: HitTestBehavior.opaque,
         child: Tooltip(
           // Only the failing rows and the truncated ones need a tooltip, but

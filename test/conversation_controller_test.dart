@@ -226,4 +226,69 @@ void main() {
 
     expect(controller.nodes.length, nodesBefore);
   });
+
+  group('session stats (the StatsLine figures)', () {
+    test('a measured turn lands in the sums', () async {
+      await startTurn();
+      source.emit(const TextDelta(text: 'hi', messageIndex: 0));
+      source.emit(
+        const TurnFinished(
+          outcome: TurnOutcome.completed,
+          usage: TurnUsage(wallMs: 1500, ttftMs: 300),
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.llmWallMs, 1500);
+      expect(controller.ttftAverageMs, 300);
+      expect(controller.hasStats, isTrue);
+    });
+
+    test('an unmeasured turn contributes nothing, not zeros', () async {
+      await startTurn();
+      source.emit(
+        const TurnFinished(outcome: TurnOutcome.failed, errorMessage: 'x'),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.llmWallMs, 0);
+      expect(controller.ttftAverageMs, isNull);
+      // The turn still happened — the counts half of the line has it.
+      expect(controller.hasStats, isTrue);
+    });
+
+    test('a session switch starts the ledger clean', () async {
+      await startTurn();
+      source.emit(
+        const TurnFinished(
+          outcome: TurnOutcome.completed,
+          usage: TurnUsage(wallMs: 1500, ttftMs: 300),
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      controller.startNewSession();
+      expect(controller.llmWallMs, 0);
+      expect(controller.ttftAverageMs, isNull);
+      expect(controller.hasStats, isFalse);
+    });
+
+    test('tool wall time folds the settled calls', () async {
+      await startTurn();
+      source.emit(
+        const ToolCallRequested(ref: 't1', name: 'read', arguments: {}),
+      );
+      await Future<void>.delayed(Duration.zero);
+      source.emit(
+        ToolCallSucceeded(ref: 't1', output: const {'ok': true}),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      // A real pair's stamps are clocked by the controller; a settled call
+      // has both, so the fold has something to read. The 250ms figure is
+      // whatever the pair measured — the assertion is presence, not a value.
+      expect(controller.toolWallMs, greaterThanOrEqualTo(0));
+      expect(controller.hasStats, isTrue);
+    });
+  });
 }

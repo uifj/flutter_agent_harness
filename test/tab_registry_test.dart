@@ -7,8 +7,8 @@
 // must not, because the failure that matters is a binary reaching the text
 // editor and laying out a megabyte of one line.
 
-import 'package:agent_harness/sidebar/model/sidebar_tab.dart';
-import 'package:agent_harness/sidebar/ui/tab_registry.dart';
+import 'package:agent_harness/model/sidebar_tab.dart';
+import 'package:agent_harness/ui/workbench/tab_registry.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';

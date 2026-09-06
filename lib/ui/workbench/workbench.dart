@@ -17,15 +17,18 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import '../../host/git.dart';
 import '../../host/terminal_manager.dart';
 import '../../state/conversation_controller.dart';
+import '../../state/side_chat_controller.dart';
 import '../../theme/dsw_theme.dart';
-import '../model/sidebar_tab.dart';
-import '../state/workbench_controller.dart';
+import '../../model/sidebar_tab.dart';
+import '../../state/workbench_controller.dart';
 import 'split_view.dart';
 import 'tab_registry.dart';
+import 'tabs/browser_tab.dart';
 import 'tabs/diff_tab.dart';
 import 'tabs/editor_tab.dart';
 import 'tabs/file_tree_tab.dart';
 import 'tabs/git_tab.dart';
+import 'tabs/sidechat_tab.dart';
 import 'tabs/subagent_tab.dart';
 import 'tabs/terminal_tab.dart';
 
@@ -88,6 +91,24 @@ void _registerBuiltinTabs() {
           SubagentTab(workbench: workbench, tab: tab),
     ),
   );
+  registerTab(
+    TabDescriptor(
+      type: BuiltinTabType.browser,
+      icon: LucideIcons.globe,
+      order: 70,
+      build: (context, workbench, tab) =>
+          BrowserTab(workbench: workbench, tab: tab),
+    ),
+  );
+  registerTab(
+    TabDescriptor(
+      type: BuiltinTabType.sidechat,
+      icon: LucideIcons.message_square_plus,
+      order: 80,
+      build: (context, workbench, tab) =>
+          SideChatTab(workbench: workbench, tab: tab),
+    ),
+  );
 }
 
 /// Which of the two panels a [Workbench] renders. Both panels share one
@@ -101,6 +122,11 @@ enum WorkbenchPanel { right, bottom }
 /// the same way, so the tabs genuinely yield space to the cluster.
 const _clusterReserve = 72.0;
 
+/// The side-chat controller a workbench with no app behind it falls back to —
+/// a test pumping a [Workbench] without passing one still gets a host, and a
+/// host-less side-chat tab would be a crash instead of an empty page.
+final _fallbackSideChat = SideChatController();
+
 class Workbench extends StatelessWidget {
   Workbench({
     super.key,
@@ -108,6 +134,7 @@ class Workbench extends StatelessWidget {
     required this.conversation,
     required this.onClose,
     this.panel = WorkbenchPanel.right,
+    this.sideChat,
     TerminalManager? terminals,
     GitRunner? git,
   }) : terminals = terminals ?? TerminalManager(),
@@ -121,6 +148,10 @@ class Workbench extends StatelessWidget {
   /// rather than captured by the tab builder for the reason [SubagentHost]
   /// spells out.
   final ConversationController conversation;
+
+  /// The side chat's controller, on the scope for the same reason. Null falls
+  /// back to a shared controller with no runner, whose tab says so.
+  final SideChatController? sideChat;
 
   /// Closes the whole column, the way the details panel's own header does.
   final VoidCallback onClose;
@@ -156,30 +187,36 @@ class Workbench extends StatelessWidget {
           manager: terminals,
           child: SubagentHost(
             conversation: conversation,
-            child: AnimatedBuilder(
-              animation: workbench,
-              builder: (context, _) {
-                final state = workbench.state;
-                final (node, alone) = switch (panel) {
-                  WorkbenchPanel.right => (state.tree, state.panes.length == 1),
-                  WorkbenchPanel.bottom => (
-                    state.bottomTree,
-                    state.bottomPanes.length == 1,
-                  ),
-                };
-                // The panel's top chrome is its first tab strip — there is no
-                // header row above it, so the strip's `+` menu is the only
-                // opener surface (`.panel` = resize strip + panelBody in the
-                // source).
-                return SplitView(
-                  workbench: workbench,
-                  node: node,
-                  alone: alone,
-                  reserveTrailing: panel == WorkbenchPanel.right
-                      ? _clusterReserve
-                      : 0,
-                );
-              },
+            child: SideChatHost(
+              chat: sideChat ?? _fallbackSideChat,
+              child: AnimatedBuilder(
+                animation: workbench,
+                builder: (context, _) {
+                  final state = workbench.state;
+                  final (node, alone) = switch (panel) {
+                    WorkbenchPanel.right => (
+                      state.tree,
+                      state.panes.length == 1,
+                    ),
+                    WorkbenchPanel.bottom => (
+                      state.bottomTree,
+                      state.bottomPanes.length == 1,
+                    ),
+                  };
+                  // The panel's top chrome is its first tab strip — there is no
+                  // header row above it, so the strip's `+` menu is the only
+                  // opener surface (`.panel` = resize strip + panelBody in the
+                  // source).
+                  return SplitView(
+                    workbench: workbench,
+                    node: node,
+                    alone: alone,
+                    reserveTrailing: panel == WorkbenchPanel.right
+                        ? _clusterReserve
+                        : 0,
+                  );
+                },
+              ),
             ),
           ),
         ),

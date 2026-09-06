@@ -55,6 +55,13 @@ class IdMinter {
   /// The value to persist, so the next reducer resumes where this one stopped.
   int get next => _next;
 
+  /// Raises the counter past [value] — for hydration paths that meet ids the
+  /// persisted counter never counted, so a restored one can never collide with
+  /// a freshly minted one.
+  void lift(int value) {
+    if (value > _next) _next = value;
+  }
+
   String mint(String prefix) => '$prefix:${_next++}';
 }
 

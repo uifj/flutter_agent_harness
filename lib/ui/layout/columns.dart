@@ -80,6 +80,17 @@ const sidebarCollapsed = 56.0;
 /// — see [effectiveSidebarPreference].
 const sidebarAutoCollapse = 1024.0;
 
+/// Viewport width below which the workbench and the bottom panel merge into
+/// one full-width drawer — better-sidebar's `NARROW_MAX_WIDTH`
+/// (`breakpoints.ts`).
+///
+/// Deliberately NOT [sidebarAutoCollapse]: a 900px window (small laptop,
+/// split screen) keeps the desktop two-panel layout, and only a
+/// phone/portrait-tablet width enters the mobile form. The two breakpoints
+/// answer different questions — "does the sidebar need the rail?" and "is
+/// there room for two panels?" — and only coincide by accident.
+const mobileMergeViewport = 768.0;
+
 /// Details drag clamp floor.
 const detailsMin = 300.0;
 

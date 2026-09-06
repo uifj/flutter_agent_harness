@@ -7,11 +7,11 @@ import 'dart:io';
 
 import 'package:agent_harness/model/workbench.dart';
 import 'package:agent_harness/model/workspace.dart';
-import 'package:agent_harness/sidebar/model/sidebar_state.dart';
-import 'package:agent_harness/sidebar/model/sidebar_tab.dart';
-import 'package:agent_harness/sidebar/model/split_node.dart';
-import 'package:agent_harness/sidebar/state/workbench_controller.dart';
-import 'package:agent_harness/sidebar/state/workbench_store.dart';
+import 'package:agent_harness/model/sidebar_state.dart';
+import 'package:agent_harness/model/sidebar_tab.dart';
+import 'package:agent_harness/model/split_node.dart';
+import 'package:agent_harness/state/workbench_controller.dart';
+import 'package:agent_harness/state/workbench_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Long enough for the store's debounce to have fired. Only used where the
@@ -195,6 +195,77 @@ void main() {
       controller.toggleExpanded('/w/lib');
       expect(controller.state.expanded, {'/w/lib'});
     });
+
+    test('a disabled type refuses its opens', () {
+      controller.setDisabledTabs({BuiltinTabType.terminal});
+      controller.openTerminal();
+      controller.openGit();
+      controller.openSubagents();
+      controller.openFolder('/w/lib');
+      // The disabled type refused; everything the user did not switch off
+      // still opens.
+      expect(controller.state.tabs.map((tab) => tab.type), containsAll([
+        BuiltinTabType.git,
+        BuiltinTabType.subagent,
+        BuiltinTabType.explorer,
+      ]));
+      expect(
+        controller.state.tabs.any((tab) => tab.type == BuiltinTabType.terminal),
+        isFalse,
+      );
+    });
+
+    test('openTerminalInBottom lands a terminal in the bottom panel', () {
+      controller.openTerminalInBottom();
+      final bottom = controller.state.bottomPanes;
+      expect(bottom, isNotEmpty);
+      final terminal = bottom.expand((pane) => pane.tabs).single;
+      expect(terminal.type, BuiltinTabType.terminal);
+      // And not a second one in the right column, where openTerminal would
+      // have put it.
+      expect(controller.state.panes.first.tabs, isEmpty);
+    });
+
+    test('the seed respects a disabled terminal type', () {
+      controller.setDisabledTabs({BuiltinTabType.terminal});
+      controller.openTerminalInBottom();
+      expect(controller.state.tabs, isEmpty);
+    });
+  });
+
+  group('mobile merge', () {
+    test('setMobileMerge folds the bottom tabs into the right tree', () {
+      controller.openGit();
+      controller.sendTabToOtherPanel(controller.state.panes.first.id, 'git');
+      expect(controller.state.bottomTabs, isNotEmpty);
+
+      controller.setMobileMerge(true);
+      expect(controller.state.bottomTabs, isEmpty);
+      expect(controller.state.tabs.map((tab) => tab.id), ['git']);
+      expect(controller.state.activePane, controller.state.panes.first.id);
+    });
+
+    test('bindSession migrates a restored layout while merged', () async {
+      var stored = SidebarState.initial().openTab(
+        const SidebarTab(id: 'tab:x', type: BuiltinTabType.editor, title: 'x'),
+      );
+      stored = stored.moveTabToOtherTree(stored.panes.single.id, 'tab:x');
+      store.save('s1', stored);
+      await store.flush();
+
+      controller.setMobileMerge(true);
+      await controller.bindSession('s1');
+      expect(controller.state.bottomTabs, isEmpty);
+      expect(controller.state.tabs.map((tab) => tab.id), ['tab:x']);
+    });
+
+    test('turning the merge off again changes nothing', () {
+      controller.openGit();
+      controller.setMobileMerge(true);
+      final merged = controller.state;
+      controller.setMobileMerge(false);
+      expect(controller.state, same(merged));
+    });
   });
 
   group('workspace', () {
@@ -244,14 +315,17 @@ void main() {
       expect(controller.state.tabs.single.type, BuiltinTabType.explorer);
     });
 
-    test('a url is refused with a reason, not an exception', () {
+    test('a url opens the browser tab, not an exception', () {
       final reason = controller.open(
         const OpenTarget(kind: OpenKind.url, target: 'https://example.com'),
       );
-      // The tool turns this into `{ok: false, error}`; throwing would make it a
-      // crash the model cannot act on.
-      expect(reason, isNotNull);
-      expect(controller.state.tabs, isEmpty);
+      // The tool turns a non-null reason into `{ok: false, error}`; throwing
+      // would make it a crash the model cannot act on. A url is not refused
+      // anymore — it is where the browser tab's address came from.
+      expect(reason, isNull);
+      final tab = controller.state.tabs.single;
+      expect(tab.type, BuiltinTabType.browser);
+      expect(tab.path, 'https://example.com');
     });
 
     test('reveal expands ancestors without opening anything', () {

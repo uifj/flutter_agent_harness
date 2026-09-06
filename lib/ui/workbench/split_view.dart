@@ -16,8 +16,8 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/dsw_theme.dart';
-import '../model/split_node.dart';
-import '../state/workbench_controller.dart';
+import '../../model/split_node.dart';
+import '../../state/workbench_controller.dart';
 import 'pane.dart';
 
 /// The divider's hit area. Wider than the 1px line it draws, because a 1px target

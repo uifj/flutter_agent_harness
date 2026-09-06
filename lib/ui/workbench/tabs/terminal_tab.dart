@@ -41,8 +41,9 @@ import 'package:xterm/xterm.dart';
 import '../../../host/terminal_manager.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
-import '../../model/sidebar_tab.dart';
-import '../../state/workbench_controller.dart';
+import '../../../model/sidebar_tab.dart';
+import '../../../state/workbench_controller.dart';
+import '../workbench_prefs_scope.dart';
 
 /// How much history the emulator keeps, matching the source's `scrollback:
 /// 4000`.
@@ -50,18 +51,27 @@ const _scrollbackLines = 4000;
 
 /// The glyphs at the code stack's own metrics, so a terminal line and an
 /// editor line are the same height in the same column.
-const _emulatorStyle = TerminalStyle(
-  fontSize: 12,
-  height: 20 / 12,
-  fontFamily: dswFontFamilyCode,
-  fontFamilyFallback: dswFontFamilyCodeFallback,
-);
+///
+/// The prefs override the family and the size (the source's terminal card,
+/// applied live); the line height follows the size at the source's own ratio
+/// so a bigger font is a bigger line, not a tighter one.
+TerminalStyle emulatorStyle(BuildContext context) {
+  final prefs = WorkbenchPrefsScope.of(context);
+  final family = prefs.terminalFontFamily.trim();
+  return TerminalStyle(
+    fontSize: prefs.terminalFontSize.toDouble(),
+    height: 20 / 13,
+    fontFamily: family.isEmpty ? dswFontFamilyCode : family,
+    fontFamilyFallback:
+        family.isEmpty ? dswFontFamilyCodeFallback : const <String>[],
+  );
+}
 
 /// The workbench's pty pool, in reach of tab bodies.
 ///
 /// An [InheritedWidget] rather than a constructor parameter on every tab
 /// because bodies are built by the global registry in
-/// `lib/sidebar/ui/tab_registry.dart`, whose builders cannot capture an
+/// `lib/ui/workbench/tab_registry.dart`, whose builders cannot capture an
 /// app-scoped object without pinning whichever instance registered first.
 /// The scope is looked up from each body's own context, so every [Workbench]
 /// — the app's, or a test's — hands its own pool to its own tabs.
@@ -262,7 +272,7 @@ class _TerminalTabState extends State<TerminalTab> {
           child: TerminalView(
             _terminal!,
             theme: _theme(context),
-            textStyle: _emulatorStyle,
+            textStyle: emulatorStyle(context),
             // A dead session has nothing to send keystrokes to; leaving the
             // emulator live would silently eat them.
             readOnly: !(session?.isAlive ?? false),

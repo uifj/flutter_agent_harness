@@ -17,6 +17,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/locales.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
@@ -117,16 +118,20 @@ String? statusText(int? exitCode, String? signal) {
 /// — the same status distinction [statusText] draws for the pill. A settled
 /// command whose exit status never reached the view counts as a clean settle: the
 /// view says it finished and says nothing went wrong.
-({StateDotState state, String label}) runState(
+///
+/// The returned key is a lookup into the dictionary ('running' / 'failed' /
+/// 'done'), not display copy: the label is localized at the use site, where a
+/// context exists.
+({StateDotState state, String key}) runState(
   bool running,
   int? exitCode,
   String? signal,
 ) {
-  if (running) return (state: StateDotState.ongoing, label: 'Running');
+  if (running) return (state: StateDotState.ongoing, key: 'running');
   if (statusText(exitCode, signal) != null) {
-    return (state: StateDotState.error, label: 'Failed');
+    return (state: StateDotState.error, key: 'failed');
   }
-  return (state: StateDotState.done, label: 'Done');
+  return (state: StateDotState.done, key: 'done');
 }
 
 /// The command's output split into the lines the card draws.
@@ -184,6 +189,11 @@ class _TerminalBlockState extends State<TerminalBlock> {
   }) {
     final status = statusText(widget.exitCode, widget.signal);
     final state = runState(widget.running, widget.exitCode, widget.signal);
+    final stateLabel = switch (state.key) {
+      'running' => context.tr('toolRunning'),
+      'failed' => context.tr('toolFailed'),
+      _ => context.tr('toolDone'),
+    };
     // A multi-line command gets one prompt row per line, so a two-command shell
     // snippet reads as the two commands it is instead of collapsing into one
     // ellipsized row. A trailing newline is a terminator, not an empty command.
@@ -210,7 +220,7 @@ class _TerminalBlockState extends State<TerminalBlock> {
           // visually hidden text label; here that label is the semantics of this
           // column.
           Semantics(
-            label: state.label,
+            label: stateLabel,
             child: SizedBox(
               width: _gutter,
               height: _lineHeight,

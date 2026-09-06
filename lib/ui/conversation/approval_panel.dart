@@ -13,6 +13,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/locales.dart';
 import '../../model/conversation.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_theme.dart';
@@ -107,7 +108,7 @@ class _ApprovalPanelState extends State<ApprovalPanel> {
         ),
         const SizedBox(width: 8),
         Text(
-          'Waiting for approval',
+          context.tr('waitingForApproval'),
           style: DswType.xs13.copyWith(
             // 13/18 here, not the token's 13/20: the strip is a band, not prose.
             height: 18 / 13,
@@ -130,7 +131,9 @@ class _ApprovalPanelState extends State<ApprovalPanel> {
           children: [
             // The headline is the panel's message, not a footnote.
             Text(
-              'Tool ${widget.request.toolName} requests privileged execution',
+              context.tr('approvalTitle', {
+                'name': widget.request.toolName,
+              }),
               style: DswType.s14.copyWith(
                 fontSize: 15,
                 height: 24 / 15,
@@ -173,7 +176,7 @@ class _ApprovalPanelState extends State<ApprovalPanel> {
       // every command, and the root is where a command runs unless it says
       // otherwise.
       return workdir is String && workdir.isNotEmpty && workdir != '.'
-          ? '$command  ·  in $workdir'
+          ? '$command  ·  ${context.tr('inWorkdir', {'dir': workdir})}'
           : command;
     }
 
@@ -182,11 +185,17 @@ class _ApprovalPanelState extends State<ApprovalPanel> {
     final parts = [path];
     final replacements = details['replacements'];
     if (replacements is num) {
-      parts.add(replacements == 1 ? '1 replacement' : '$replacements replacements');
+      parts.add(
+        replacements == 1
+            ? context.tr('oneReplacement')
+            : context.tr('nReplacements', {'n': replacements}),
+      );
     }
     final bytes = details['bytes'];
     if (bytes is num && replacements == null) parts.add('$bytes B');
-    if (details['exists'] == true) parts.add('overwrites an existing file');
+    if (details['exists'] == true) {
+      parts.add(context.tr('overwritesExistingFile'));
+    }
     return parts.join(' · ');
   }
 
@@ -198,14 +207,14 @@ class _ApprovalPanelState extends State<ApprovalPanel> {
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         CapsuleButton(
-          label: 'Reject',
+          label: context.tr('reject'),
           enabled: !_answered,
           danger: true,
           onTap: () => _answer(false),
         ),
         const SizedBox(width: 8),
         CapsuleButton(
-          label: 'Allow once',
+          label: context.tr('allowOnce'),
           enabled: !_answered,
           variant: CapsuleVariant.primary,
           onTap: () => _answer(true),

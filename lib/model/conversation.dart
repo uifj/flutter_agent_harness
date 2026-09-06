@@ -7,6 +7,8 @@
 //
 // A grep for `package:genkit` should only ever match `lib/genkit/`.
 
+import 'attached_image.dart';
+
 /// Where a tool call has got to.
 enum ToolStatus {
   /// The model asked for the call and it is executing.
@@ -68,9 +70,16 @@ sealed class ConversationNode {
 }
 
 class UserMessageNode extends ConversationNode {
-  const UserMessageNode({required super.id, required this.text});
+  const UserMessageNode({
+    required super.id,
+    required this.text,
+    this.images = const [],
+  });
 
   final String text;
+
+  /// The images riding this message, in pick order. Empty for text-only sends.
+  final List<AttachedImage> images;
 }
 
 class AssistantMessageNode extends ConversationNode {

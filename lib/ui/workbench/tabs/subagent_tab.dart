@@ -40,8 +40,8 @@ import '../../../state/conversation_controller.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
 import '../../../ui/primitives/state_dot.dart';
-import '../../model/sidebar_tab.dart';
-import '../../state/workbench_controller.dart';
+import '../../../model/sidebar_tab.dart';
+import '../../../state/workbench_controller.dart';
 
 // ---- The host --------------------------------------------------------------
 

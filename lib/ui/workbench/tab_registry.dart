@@ -19,8 +19,8 @@
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 
-import '../model/sidebar_tab.dart';
-import '../state/workbench_controller.dart';
+import '../../model/sidebar_tab.dart';
+import '../../state/workbench_controller.dart';
 
 /// Builds a tab's content.
 ///
