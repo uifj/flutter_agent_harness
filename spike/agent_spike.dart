@@ -74,6 +74,26 @@
 // 10. `defineAgent` without a `stateSchema` infers `State = dynamic`.
 //     `Genkit(promptDir: null)` avoids the prompt-directory lookup.
 //
+// 11. USAGE: `AgentOutput` carries no usage block (0.16.1). The providers fill
+//     `ModelResponse.usage` on the model seam, so any token accounting must be
+//     a `GenerateMiddleware.model` hook accumulating from `next(...).usage` —
+//     see `_UsageCapture` in agent_runtime.dart, and probe E below.
+//
+// 12. CUSTOM STATE: `defineAgent` with a `stateSchema` only emits `customPatch`
+//     chunks when the agent actively writes state (a scripted model never does,
+//     so probe F reports `sawCustom=false`). A planned sub-agent progress
+//     channel must therefore drive state from a tool or a custom agent fn, not
+//     from the model alone.
+//
+// 13. TOOL v2: genkit 0.16 made tools return `ToolResult<Output>` — `.response`,
+//     `.interrupt` — and deprecated the throwing `context.interrupt`. Bare-map
+//     returns no longer type-check. Migrated in tools.dart / plan_tools.dart.
+//
+// 14. RESTORE (0.16.1): `loadChat` hydrates the full snapshot history,
+//     [user, model, tool, model] — the tool turn survives. The restore bug
+//     recorded in the earlier report was fixed at the projection layer; see
+//     test/restore_projection_test.dart for the locked contract.
+//
 // ===========================================================================
 library;
 
@@ -228,7 +248,10 @@ Future<void> main() async {
     ),
     fn: (input, context) async {
       stdout.writeln('    [tool listDir] input=$input resumed=${context.resumed}');
-      return {'entries': ['a.txt', 'b.txt'], 'path': input['path']};
+      return ToolResult.response({
+        'entries': ['a.txt', 'b.txt'],
+        'path': input['path'],
+      });
     },
   );
 
@@ -248,12 +271,15 @@ Future<void> main() async {
       stdout.writeln('    [tool writeFile] input=$input resumed=$resumed');
       if (resumed == null) {
         // Pauses the whole generate loop and surfaces as an interrupt.
-        context.interrupt({'needsApproval': true, 'path': input['path']});
+        return ToolResult.interrupt({
+          'needsApproval': true,
+          'path': input['path'],
+        });
       }
       if (resumed is Map && resumed['approved'] != true) {
-        return {'ok': false, 'reason': 'denied by user'};
+        return ToolResult.response({'ok': false, 'reason': 'denied by user'});
       }
-      return {'ok': true, 'written': input['path']};
+      return ToolResult.response({'ok': true, 'written': input['path']});
     },
   );
 
@@ -412,6 +438,72 @@ Future<void> main() async {
     final size = f is File ? '${f.lengthSync()}B' : 'dir';
     stdout.writeln('    $rel ($size)');
   }
+
+  // =======================================================================
+  banner('E. usage block on ModelResponse (0.16 fill behaviour)');
+  // =======================================================================
+  // The agent surface (AgentOutput) carries no usage, so the runtime's usage
+  // middleware reads it off the model seam. This pins what a scripted model
+  // has to report for the middleware to accumulate — i.e. the contract the
+  // app's _UsageCapture counts on.
+  ai.defineModel(
+    name: 'metered',
+    fn: (request, ctx) async {
+      final response = modelText('metered');
+      return ModelResponse(
+        message: response.message,
+        finishReason: response.finishReason,
+        usage: GenerationUsage(
+          inputTokens: 21,
+          outputTokens: 7,
+          totalTokens: 28,
+          thoughtsTokens: 3,
+        ),
+      );
+    },
+  );
+  final usageAgent = ai.defineAgent(
+    name: 'usageAgent',
+    model: modelRef('metered'),
+    maxTurns: 2,
+    store: FileSessionStore(sessionDir.path),
+  );
+  final usageChat = usageAgent.chat();
+  final usageTurn = usageChat.sendStream(text: 'meter me');
+  await for (final _ in usageTurn.stream) {}
+  final usageResp = await usageTurn.response;
+  stdout.writeln(
+    '  AgentOutput has no usage (${usageResp.raw.toString().contains('usage') ? 'present!' : 'absent — read it at the model seam'}).',
+  );
+
+  // =======================================================================
+  banner('F. customPatch: typed custom state streams per chunk');
+  // =======================================================================
+  // The planned sub-agent progress channel rides `chunk.custom`; this confirms
+  // a defineAgent with a stateSchema + prompt can emit custom-state patches a
+  // runtime can subscribe to, and whether the first patch is a whole-document
+  // replace (the reported behaviour the projection must tolerate).
+  final patchAgent = ai.defineAgent<dynamic, dynamic, Map<String, dynamic>>(
+    name: 'patchAgent',
+    model: modelRef('loop'),
+    system: 'patch probe',
+    maxTurns: 2,
+    stateSchema: SchemanticType.from<Map<String, dynamic>>(
+      jsonSchema: {'type': 'object'},
+      parse: (json) => (json as Map).cast<String, dynamic>(),
+    ),
+    store: FileSessionStore(sessionDir.path),
+  );
+  final patchChat = patchAgent.chat();
+  final patchTurn = patchChat.sendStream(text: 'go');
+  var sawCustom = false;
+  await for (final chunk in patchTurn.stream) {
+    if (chunk.custom != null) {
+      sawCustom = true;
+      stdout.writeln('    chunk.custom=${chunk.custom}');
+    }
+  }
+  stdout.writeln('  sawCustom=$sawCustom');
 
   await ai.shutdown();
   sessionDir.deleteSync(recursive: true);

@@ -5,12 +5,40 @@
 // job is to be wrong differently on stripped-down machines and therefore
 // cannot be tested against the machine that develops it.
 
+import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:agent_harness/host/terminal_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_terminal_process.dart';
+
+/// A process whose output is a single-subscription stream, the way a real
+/// `flutter_pty` `Pty.output` (a `ReceivePort`) behaves. The fake above is
+/// broadcast, which is why the pane-move reattach bug never surfaced in tests.
+class _SingleSubProcess implements TerminalProcess {
+  final _output = StreamController<Uint8List>();
+  final _exit = Completer<int>();
+
+  @override
+  Stream<Uint8List> get output => _output.stream;
+
+  @override
+  Future<int> get exitCode => _exit.future;
+
+  @override
+  void write(Uint8List data) {}
+
+  @override
+  void resize(int rows, int cols) {}
+
+  @override
+  void kill() {
+    _output.close();
+    _exit.complete(0);
+  }
+}
 
 void main() {
   group('TerminalManager', () {
@@ -148,6 +176,32 @@ void main() {
       manager.rename('nothing', 'somewhere');
 
       expect(fake.spawned, isEmpty);
+    });
+
+    test('a single-subscription pty output is broadcast for a pane-move reattach',
+        () async {
+      // Real flutter_pty output is single-subscription; a tab moving between
+      // panes attaches a new body to the pooled session before the old body
+      // detaches, so the second listen must not throw.
+      final manager = TerminalManager(
+        spawner: ({
+          required executable,
+          required arguments,
+          required workingDirectory,
+          required columns,
+          required rows,
+        }) => _SingleSubProcess(),
+      );
+      final session = manager.open('t');
+
+      final first = <String>[];
+      final second = <String>[];
+      session.output.listen(
+        (bytes) => first.add(String.fromCharCodes(bytes)),
+      );
+      session.output.listen(
+        (bytes) => second.add(String.fromCharCodes(bytes)),
+      );
     });
   });
 

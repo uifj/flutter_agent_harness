@@ -126,10 +126,10 @@ class PlanTools {
           // The state the UI reads between turns; the copy in the tool output
           // is the one a restore replays, and they are the same list.
           todos = rows;
-          return {
+          return ToolResult.response({
             'ok': true,
             'todos': [for (final row in rows) row.toJson()],
-          };
+          });
         },
       );
 
@@ -156,7 +156,7 @@ class PlanTools {
     fn: (input, _) async {
       final text = input['plan'];
       plan = text is String ? text : null;
-      return {'ok': true, if (plan != null) 'plan': plan};
+      return ToolResult.response({'ok': true, if (plan != null) 'plan': plan});
     },
   );
 }

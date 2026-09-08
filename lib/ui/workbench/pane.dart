@@ -238,77 +238,89 @@ class _Welcome extends StatelessWidget {
     final color = context.dsw;
     final focused = workbench.state.activePane == paneId;
     final prefs = WorkbenchPrefsScope.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              focused
-                  ? context.tr('filesOpenHere')
-                  : context.tr('clickToOpenFiles'),
-              textAlign: TextAlign.center,
-              style: DswType.xs13.copyWith(color: color.labelTertiary),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                if (prefs.tabEnabled(BuiltinTabType.explorer))
-                  _WelcomeAction(
-                    label: context.tr('explorer'),
-                    icon: LucideIcons.folder_open,
-                    // Disabled rather than hidden when there is no workspace: the
-                    // action is the thing that explains what is missing.
-                    onTap: workbench.workspaceRoot == null
-                        ? null
-                        : () {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          // Centred while the pane is tall enough, scrollable the moment it
+          // is not: a short bottom panel must not clip the welcome's actions.
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 12,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    focused
+                        ? context.tr('filesOpenHere')
+                        : context.tr('clickToOpenFiles'),
+                    textAlign: TextAlign.center,
+                    style: DswType.xs13.copyWith(color: color.labelTertiary),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      if (prefs.tabEnabled(BuiltinTabType.explorer))
+                        _WelcomeAction(
+                          label: context.tr('explorer'),
+                          icon: LucideIcons.folder_open,
+                          // Disabled rather than hidden when there is no workspace:
+                          // the action is the thing that explains what is missing.
+                          onTap: workbench.workspaceRoot == null
+                              ? null
+                              : () {
+                                  workbench.focusPane(paneId);
+                                  workbench.openFolder(workbench.workspaceRoot!);
+                                },
+                        ),
+                      if (prefs.tabEnabled(BuiltinTabType.terminal))
+                        _WelcomeAction(
+                          label: context.tr('terminal'),
+                          icon: LucideIcons.terminal,
+                          onTap: () {
                             workbench.focusPane(paneId);
-                            workbench.openFolder(workbench.workspaceRoot!);
+                            workbench.openTerminal();
                           },
+                        ),
+                      if (prefs.tabEnabled(BuiltinTabType.git))
+                        _WelcomeAction(
+                          label: context.tr('git'),
+                          icon: LucideIcons.git_branch,
+                          onTap: () {
+                            workbench.focusPane(paneId);
+                            workbench.openGit();
+                          },
+                        ),
+                      if (prefs.tabEnabled(BuiltinTabType.browser))
+                        _WelcomeAction(
+                          label: context.tr('browser'),
+                          icon: LucideIcons.globe,
+                          onTap: () {
+                            workbench.focusPane(paneId);
+                            workbench.openBrowserUntitled();
+                          },
+                        ),
+                      if (prefs.tabEnabled(BuiltinTabType.sidechat))
+                        _WelcomeAction(
+                          label: context.tr('sidechat'),
+                          icon: LucideIcons.message_square_plus,
+                          onTap: () {
+                            workbench.focusPane(paneId);
+                            workbench.openSideChat();
+                          },
+                        ),
+                    ],
                   ),
-                if (prefs.tabEnabled(BuiltinTabType.terminal))
-                  _WelcomeAction(
-                    label: context.tr('terminal'),
-                    icon: LucideIcons.terminal,
-                    onTap: () {
-                      workbench.focusPane(paneId);
-                      workbench.openTerminal();
-                    },
-                  ),
-                if (prefs.tabEnabled(BuiltinTabType.git))
-                  _WelcomeAction(
-                    label: context.tr('git'),
-                    icon: LucideIcons.git_branch,
-                    onTap: () {
-                      workbench.focusPane(paneId);
-                      workbench.openGit();
-                    },
-                  ),
-                if (prefs.tabEnabled(BuiltinTabType.browser))
-                  _WelcomeAction(
-                    label: context.tr('browser'),
-                    icon: LucideIcons.globe,
-                    onTap: () {
-                      workbench.focusPane(paneId);
-                      workbench.openBrowserUntitled();
-                    },
-                  ),
-                if (prefs.tabEnabled(BuiltinTabType.sidechat))
-                  _WelcomeAction(
-                    label: context.tr('sidechat'),
-                    icon: LucideIcons.message_square_plus,
-                    onTap: () {
-                      workbench.focusPane(paneId);
-                      workbench.openSideChat();
-                    },
-                  ),
-              ],
+                ],
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );

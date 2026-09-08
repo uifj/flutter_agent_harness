@@ -209,6 +209,250 @@ class _StopGatePlugin extends GenkitPlugin {
   ];
 }
 
+const _usageName = 'dshUsageCapture';
+
+/// Per-turn accumulator for the providers' usage blocks.
+///
+/// The spike's fake models and the real plugins report usage on the
+/// `ModelResponse` the model call resolves with — genkit 0.16 fills it for
+/// streaming and non-streaming alike — but nothing above the model seam
+/// carries it, so the capture middleware adds each call's block into this
+/// ledger and the turn's `TurnFinished` reports the sums. The per-field seen
+/// bits keep a provider that reports no `thoughtsTokens` from turning its
+/// absence into a displayed zero.
+class _UsageLedger {
+  int inputTokens = 0;
+  int outputTokens = 0;
+  int thoughtsTokens = 0;
+  int totalTokens = 0;
+  int modelCalls = 0;
+  bool seen = false;
+  bool sawInput = false;
+  bool sawOutput = false;
+  bool sawThoughts = false;
+  bool sawTotal = false;
+
+  void reset() {
+    inputTokens = outputTokens = thoughtsTokens = totalTokens = 0;
+    modelCalls = 0;
+    seen = sawInput = sawOutput = sawThoughts = sawTotal = false;
+  }
+
+  void add(GenerationUsage? usage) {
+    if (usage == null) return;
+    seen = true;
+    modelCalls++;
+    final input = usage.inputTokens;
+    if (input != null) {
+      sawInput = true;
+      inputTokens += input.round();
+    }
+    final output = usage.outputTokens;
+    if (output != null) {
+      sawOutput = true;
+      outputTokens += output.round();
+    }
+    final thoughts = usage.thoughtsTokens;
+    if (thoughts != null) {
+      sawThoughts = true;
+      thoughtsTokens += thoughts.round();
+    }
+    final total = usage.totalTokens;
+    if (total != null) {
+      sawTotal = true;
+      totalTokens += total.round();
+    }
+  }
+}
+
+/// Reads the usage block off every settled model call. Runs after the stop
+/// gate in the `use` list, so a call the gate throws away costs no figures.
+class _UsageCapture extends GenerateMiddleware {
+  _UsageCapture(this._ledger);
+
+  final _UsageLedger _ledger;
+
+  @override
+  Future<ModelResponse> model(
+    ModelRequest request,
+    ActionFnArg<ModelResponseChunk, ModelRequest, void> ctx,
+    Future<ModelResponse> Function(
+      ModelRequest request,
+      ActionFnArg<ModelResponseChunk, ModelRequest, void> ctx,
+    )
+    next,
+  ) async {
+    final response = await next(request, ctx);
+    _ledger.add(response.usage);
+    return response;
+  }
+}
+
+/// The ledger is allocated before the `Genkit` instance (same reason as the
+/// stop flag) and travels as a plugin because middleware can only reach the
+/// registry through one.
+class _UsagePlugin extends GenkitPlugin {
+  _UsagePlugin(this._ledger);
+
+  final _UsageLedger _ledger;
+
+  @override
+  String get name => _usageName;
+
+  @override
+  List<GenerateMiddlewareDef> middleware() => [
+    defineMiddleware<Map<String, dynamic>>(
+      name: _usageName,
+      create: (config, ctx) => _UsageCapture(_ledger),
+    ),
+  ];
+}
+
+const _toolGateName = 'dshToolGate';
+
+/// What one tool call did, as the gate saw it — the audit trail dsh writes to
+/// its session log; here a bounded in-memory ring until that log exists.
+class ToolAuditRecord {
+  ToolAuditRecord({
+    required this.name,
+    required this.startedAt,
+    required this.durationMs,
+    required this.outcome,
+  });
+
+  final String name;
+  final DateTime startedAt;
+  final int durationMs;
+  final ToolAuditOutcome outcome;
+}
+
+enum ToolAuditOutcome { refused, interrupted, ok, failed }
+
+/// How far the audit ring keeps, in entries — enough for a session's worth of
+/// scrollback without growing without bound.
+const _toolAuditCapacity = 200;
+
+/// The single point every tool call passes through, dsh's tool pipeline
+/// collapsed to what this app needs it for.
+///
+/// The local tools carry their own workspace guard and approval gate inside
+/// their functions (see `tools.dart`), so for them the gate is observation
+/// only: timing and an audit entry. The MCP wildcard's tools have no such
+/// discipline — their schemas travel with the server — so here they meet the
+/// same two rules: plan mode refuses outright (a refusal the model can read,
+/// the firmer boundary), ask mode interrupts for the user's decision, exactly
+/// like a local write. A resumed call consults only its verdict: once the
+/// user has decided, the gate stays open for that call.
+class _ToolGate extends GenerateMiddleware {
+  _ToolGate(this._approval, this._audit);
+
+  final ApprovalModeHolder _approval;
+  final List<ToolAuditRecord> _audit;
+
+  @override
+  Future<ToolResponsePart> tool(
+    ToolRequestPart request,
+    ActionFnArg<void, dynamic, void> ctx,
+    Future<ToolResponsePart> Function(
+      ToolRequestPart request,
+      ActionFnArg<void, dynamic, void> ctx,
+    )
+    next,
+  ) async {
+    final name = request.toolRequest.name;
+    // The MCP host registers its tools as `<server>/<tool>`; every local tool
+    // and middleware-contributed tool is a bare name. A slash is the whole
+    // test.
+    final external = name.contains('/');
+    final resumed = request.metadata?['resumed'];
+    final approved = resumed is Map && resumed['approved'] == true;
+
+    if (external && !approved) {
+      if (_approval.value == ApprovalMode.plan) {
+        _record(name, 0, ToolAuditOutcome.refused);
+        return _refusal(
+          request,
+          'Plan mode is on: external tools are disabled until the user approves '
+          'the plan.',
+        );
+      }
+      if (_approval.value == ApprovalMode.ask) {
+        _record(name, 0, ToolAuditOutcome.interrupted);
+        throw ToolInterruptException({
+          'kind': 'mcp',
+          'server': name.substring(0, name.indexOf('/')),
+          'tool': name.substring(name.indexOf('/') + 1),
+        });
+      }
+      // Auto mode: straight through, below.
+    }
+
+    return _timed(request, ctx, next);
+  }
+
+  Future<ToolResponsePart> _timed(
+    ToolRequestPart request,
+    ActionFnArg<void, dynamic, void> ctx,
+    Future<ToolResponsePart> Function(
+      ToolRequestPart request,
+      ActionFnArg<void, dynamic, void> ctx,
+    )
+    next,
+  ) async {
+    final name = request.toolRequest.name;
+    final watch = Stopwatch()..start();
+    try {
+      final part = await next(request, ctx);
+      _record(name, watch.elapsedMilliseconds, ToolAuditOutcome.ok);
+      return part;
+    } catch (e) {
+      _record(name, watch.elapsedMilliseconds, ToolAuditOutcome.failed);
+      rethrow;
+    }
+  }
+
+  ToolResponsePart _refusal(ToolRequestPart request, String message) =>
+      ToolResponsePart(
+        toolResponse: ToolResponse(
+          ref: request.toolRequest.ref,
+          name: request.toolRequest.name,
+          output: {'ok': false, 'error': message},
+        ),
+      );
+
+  void _record(String name, int durationMs, ToolAuditOutcome outcome) {
+    if (_audit.length >= _toolAuditCapacity) {
+      _audit.removeAt(0);
+    }
+    _audit.add(
+      ToolAuditRecord(
+        name: name,
+        startedAt: DateTime.now(),
+        durationMs: durationMs,
+        outcome: outcome,
+      ),
+    );
+  }
+}
+
+class _ToolGatePlugin extends GenkitPlugin {
+  _ToolGatePlugin(this._approval, this._audit);
+
+  final ApprovalModeHolder _approval;
+  final List<ToolAuditRecord> _audit;
+
+  @override
+  String get name => _toolGateName;
+
+  @override
+  List<GenerateMiddlewareDef> middleware() => [
+    defineMiddleware<Map<String, dynamic>>(
+      name: _toolGateName,
+      create: (config, ctx) => _ToolGate(_approval, _audit),
+    ),
+  ];
+}
+
 /// The side chat's turn source: a thin adapter over the side agent's chat.
 ///
 /// No store — the side thread is one-shot asides, so nothing persists. Each
@@ -257,6 +501,8 @@ class AgentRuntime implements TurnSource {
     required PlanTools planTools,
     required mcp.GenkitMcpHost? host,
     required _StopFlag stop,
+    required _UsageLedger usage,
+    required List<ToolAuditRecord> toolAudit,
     required ApprovalModeHolder approval,
     required this.side,
     required this.settings,
@@ -267,6 +513,8 @@ class AgentRuntime implements TurnSource {
        _planTools = planTools,
        _host = host,
        _stop = stop,
+       _usage = usage,
+       _toolAudit = toolAudit,
        _approval = approval;
 
   /// Builds a runtime for [settings], persisting snapshots under [sessionRoot]
@@ -327,12 +575,16 @@ class AgentRuntime implements TurnSource {
     // `skills()` and `agents()` are name references resolved through the
     // registry at generate time, so their plugin definitions must be registered
     // up front or the reference would resolve to nothing.
+    final usage = _UsageLedger();
+    final toolAudit = <ToolAuditRecord>[];
     final ai = Genkit(
       // No `prompts/` directory in this app; skip the lookup entirely.
       promptDir: null,
       plugins: [
         providerPlugin,
         _StopGatePlugin(stop),
+        _UsagePlugin(usage),
+        _ToolGatePlugin(approval, toolAudit),
         AgentsPlugin(),
         SkillsPlugin(),
       ],
@@ -385,7 +637,9 @@ class AgentRuntime implements TurnSource {
         for (final tool in workspaceToolList)
           if (_subagentTools.contains(tool.name)) tool,
       ],
-      use: [middlewareRef<Map<String, dynamic>>(name: _stopGateName)],
+      use: [middlewareRef<Map<String, dynamic>>(name: _stopGateName),
+        middlewareRef<Map<String, dynamic>>(name: _usageName),
+        middlewareRef<Map<String, dynamic>>(name: _toolGateName)],
       maxTurns: _maxSubagentTurns,
     );
 
@@ -414,6 +668,8 @@ class AgentRuntime implements TurnSource {
       maxTurns: _maxTurns,
       use: [
         middlewareRef<Map<String, dynamic>>(name: _stopGateName),
+        middlewareRef<Map<String, dynamic>>(name: _usageName),
+        middlewareRef<Map<String, dynamic>>(name: _toolGateName),
         agents(
           agents: const [_subagentName],
           maxDelegations: _maxDelegations,
@@ -437,6 +693,8 @@ class AgentRuntime implements TurnSource {
       planTools: planTools,
       host: host,
       stop: stop,
+      usage: usage,
+      toolAudit: toolAudit,
       approval: approval,
       side: SideChatSource(sideAgent),
       settings: settings,
@@ -450,7 +708,15 @@ class AgentRuntime implements TurnSource {
   final PlanTools _planTools;
   final mcp.GenkitMcpHost? _host;
   final _StopFlag _stop;
+  final _UsageLedger _usage;
+  final List<ToolAuditRecord> _toolAudit;
   final ApprovalModeHolder _approval;
+
+  /// What the tool gate has seen, oldest first, capped at
+  /// [_toolAuditCapacity] entries. In memory only for now — the persisted
+  /// version is the session-log work this ring is the shape of.
+  List<ToolAuditRecord> get toolAudit =>
+      List.unmodifiable(_toolAudit);
 
   /// The side-chat thread's turn source — see [SideChatSource].
   final SideChatSource side;
@@ -625,6 +891,10 @@ class AgentRuntime implements TurnSource {
     }
 
     _stop.value = false;
+    // One turn owns the ledger at a time (`_turn` is null-checked above), so
+    // resetting here scopes every figure this turn reports to its own calls —
+    // a delegation's model calls land in the same turn's ledger.
+    _usage.reset();
     final cancel = CancellationToken();
     _cancel = cancel;
     final turn = start(cancel);
@@ -696,10 +966,7 @@ class AgentRuntime implements TurnSource {
         errorMessage: _outcomeOf(response.finishReason) == TurnOutcome.failed
             ? (response.finishMessage ?? 'The turn failed.')
             : null,
-        usage: TurnUsage(
-          wallMs: watch.elapsedMilliseconds,
-          ttftMs: ttftMs,
-        ),
+        usage: _usageOf(watch, ttftMs),
       );
     } on AgentError catch (e) {
       yield TurnFinished(
@@ -804,6 +1071,19 @@ class AgentRuntime implements TurnSource {
         _ => TurnOutcome.failed,
       };
 
+  /// The turn's cost figures: wall time and TTFT are always measured; the
+  /// token sums are present only when the provider reported usage at all, and
+  /// each field only when the provider split it out.
+  TurnUsage _usageOf(Stopwatch watch, int? ttftMs) => TurnUsage(
+    wallMs: watch.elapsedMilliseconds,
+    ttftMs: ttftMs,
+    inputTokens: _usage.sawInput ? _usage.inputTokens : null,
+    outputTokens: _usage.sawOutput ? _usage.outputTokens : null,
+    thoughtsTokens: _usage.sawThoughts ? _usage.thoughtsTokens : null,
+    totalTokens: _usage.sawTotal ? _usage.totalTokens : null,
+    modelCalls: _usage.seen ? _usage.modelCalls : null,
+  );
+
   static Map<String, dynamic> _asArguments(Object? raw) =>
       raw is Map ? raw.cast<String, dynamic>() : const {};
 
@@ -831,7 +1111,7 @@ class AgentRuntime implements TurnSource {
     _chat = chat;
     _pendingInterrupts.clear();
     _planTools.restoreFrom(chat.messages);
-    return _projectMessages(chat.messages);
+    return projectMessages(chat.messages);
   }
 
   /// The persisted conversations, newest first.
@@ -881,11 +1161,16 @@ class AgentRuntime implements TurnSource {
     return null;
   }
 
-  /// Rebuilds a transcript from a persisted message list.
+  /// Rebuilds a transcript from a persisted message list — the snapshot's own
+  /// `state.messages`, which unlike a live chat's list carries the tool turns
+  /// too (spike finding 8).
   ///
-  /// Ids are derived from positions so they are stable across reloads, which is
-  /// what lets scroll position survive a restore.
-  static List<ConversationNode> _projectMessages(List<Message> messages) {
+  /// Public and static so the restore contract — tool turns survive, results
+  /// pair with their calls by ref, reasoning rides along — can be regression-
+  /// tested without a store round trip. Ids are derived from positions so they
+  /// are stable across reloads, which is what lets scroll position survive a
+  /// restore.
+  static List<ConversationNode> projectMessages(List<Message> messages) {
     final nodes = <ConversationNode>[];
     final toolsByRef = <String, int>{};
 

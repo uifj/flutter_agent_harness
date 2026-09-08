@@ -123,6 +123,9 @@ class ConversationController extends ChangeNotifier {
   int _llmMs = 0;
   int _ttftMs = 0;
   int _ttftTurns = 0;
+  int _inputTokens = 0;
+  int _outputTokens = 0;
+  int _totalTokens = 0;
 
   /// Summed LLM wall time over measured turns — dsh's `stats.llm`.
   int get llmWallMs => _llmMs;
@@ -131,6 +134,13 @@ class ConversationController extends ChangeNotifier {
   /// `stats.ttftAverage`. Null when no turn did.
   double? get ttftAverageMs =>
       _ttftTurns == 0 ? null : _ttftMs / _ttftTurns;
+
+  /// Token sums over the turns whose provider reported usage — dsh folds the
+  /// same figures from its session log. A provider that reports nothing
+  /// contributes nothing, which is why these stay zero rather than null.
+  int get inputTokens => _inputTokens;
+  int get outputTokens => _outputTokens;
+  int get totalTokens => _totalTokens;
 
   /// Accumulated from [TurnFinished.usage] — see [_handle].
   void _absorb(TurnUsage? usage) {
@@ -141,12 +151,27 @@ class ConversationController extends ChangeNotifier {
       _ttftMs += ttft;
       _ttftTurns++;
     }
+    final input = usage.inputTokens;
+    if (input != null) _inputTokens += input;
+    final output = usage.outputTokens;
+    if (output != null) _outputTokens += output;
+    final total = usage.totalTokens;
+    if (total != null) {
+      _totalTokens += total;
+    } else if (input != null || output != null) {
+      // A provider that skips its own total still leaves a countable bill.
+      _totalTokens += (input ?? 0) + (output ?? 0);
+    }
   }
 
   /// Whether the stats line has anything to say — mounted by ConversationRoot
   /// to keep the row's seat rather than conditionally shifting the composer.
   bool get hasStats =>
-      _turnCount > 0 || _llmMs > 0 || toolWallMs > 0 || _ttftTurns > 0;
+      _turnCount > 0 ||
+      _llmMs > 0 ||
+      toolWallMs > 0 ||
+      _ttftTurns > 0 ||
+      _totalTokens > 0;
 
   // ---------------------------------------------------------------------------
   // Commands
@@ -423,6 +448,9 @@ class ConversationController extends ChangeNotifier {
     _llmMs = 0;
     _ttftMs = 0;
     _ttftTurns = 0;
+    _inputTokens = 0;
+    _outputTokens = 0;
+    _totalTokens = 0;
   }
 
   /// Ids are minted here rather than derived from content, so they stay stable

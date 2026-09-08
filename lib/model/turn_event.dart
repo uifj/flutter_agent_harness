@@ -116,12 +116,23 @@ class TurnFinished extends TurnEvent {
 /// The measurable cost of one turn, dsh's `sessionStats` unit collapsed into
 /// the one payload this app's single-process runtime can fill. Wall time and
 /// TTFT are runtime-measured (dsh measures `step/start → assistant/message`
-/// the same way); token counts are absent because Genkit's `AgentOutput`
-/// does not surface the provider's `usage` block.
+/// the same way); token counts come from the provider's usage block, which the
+/// runtime's model-call middleware reads off each `ModelResponse` — genkit
+/// 0.16 fills that block for streaming and non-streaming calls alike (its
+/// release notes, #373), but `AgentOutput` does not surface it, so the
+/// middleware is the only seam that sees it.
+///
+/// Every token field is null when the provider reported nothing — the stats
+/// line treats that as "no new figures", not as zeros.
 class TurnUsage {
   const TurnUsage({
     required this.wallMs,
     this.ttftMs,
+    this.inputTokens,
+    this.outputTokens,
+    this.thoughtsTokens,
+    this.totalTokens,
+    this.modelCalls,
   });
 
   /// Turn entry to finish, in milliseconds.
@@ -129,4 +140,19 @@ class TurnUsage {
 
   /// Send to first streamed token, when a token ever arrived.
   final int? ttftMs;
+
+  /// Prompt tokens across the turn's model calls.
+  final int? inputTokens;
+
+  /// Completion tokens across the turn's model calls, reasoning included.
+  final int? outputTokens;
+
+  /// The reasoning portion of [outputTokens], when the provider splits it out.
+  final int? thoughtsTokens;
+
+  /// The provider's own total, when reported.
+  final int? totalTokens;
+
+  /// How many model calls the turn made — one per trip around the tool loop.
+  final int? modelCalls;
 }

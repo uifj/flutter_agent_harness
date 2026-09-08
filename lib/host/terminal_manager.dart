@@ -122,12 +122,29 @@ List<String> shellSpawnArguments() =>
 /// banners over.
 class TerminalSession {
   TerminalSession._(this._process, this.error) {
-    _done = _process == null
-        ? Future<int?>.value()
-        : _process.exitCode.then((code) {
-            _exitCode = code;
-            return code;
-          });
+    final process = _process;
+    if (process == null) {
+      _done = Future<int?>.value();
+    } else {
+      // The pool hands one session back to any body that opens its tab, and a
+      // tab moving between panes attaches a new body before the old one is
+      // finalized (see `terminal_tab.dart`). `flutter_pty`'s `Pty.output` is a
+      // single-subscription stream (a `ReceivePort`), so a second listener
+      // would throw "already been listened to". Broadcasting here makes the
+      // reattach legal: a later listener sees output only from its own attach
+      // onward, which matches a fresh emulator's empty scrollback.
+      final controller = StreamController<Uint8List>.broadcast();
+      _output = controller;
+      process.output.listen(
+        controller.add,
+        onError: controller.addError,
+        onDone: controller.close,
+      );
+      _done = process.exitCode.then((code) {
+        _exitCode = code;
+        return code;
+      });
+    }
   }
 
   /// A session whose spawn failed: nothing to read, nothing to write, and an
@@ -145,8 +162,12 @@ class TerminalSession {
   late final Future<int?> _done;
   int? _exitCode;
 
-  /// Bytes the program has written, decoded by the view.
-  Stream<Uint8List> get output => _process?.output ?? const Stream.empty();
+  StreamController<Uint8List>? _output;
+
+  /// Bytes the program has written, decoded by the view. Broadcast so a tab
+  /// reattaching to this session (a pane move) can subscribe without colliding
+  /// with the body that is about to detach.
+  Stream<Uint8List> get output => _output?.stream ?? const Stream.empty();
 
   /// The exit code once the process has exited; null while it runs (and
   /// forever, for a spawn that never happened).

@@ -137,7 +137,8 @@ class WorkspaceTools {
       },
       required: ['file_path'],
     ),
-    fn: (input, context) async => _guard(() async {
+    fn: (input, context) async =>
+        ToolResult.response(await _guard(() async {
       final ws = _workspace;
       final path = ws.resolve(_string(input, 'file_path'));
       if (Directory(path).existsSync()) {
@@ -169,7 +170,7 @@ class WorkspaceTools {
         // card that renders this later shows the file, not the note about it.
         'note': readFooter(outcome),
       };
-    }),
+    })),
   );
 
   /// Approval-gated, like [_edit] and [_bash].
@@ -208,14 +209,14 @@ class WorkspaceTools {
         ws = _workspace;
         path = ws.resolve(_string(input, 'file_path'));
       } on WorkspaceDenied catch (e) {
-        return {'ok': false, 'error': e.message};
+        return ToolResult.response({'ok': false, 'error': e.message});
       }
 
       if (context.resumed == null) {
         final refusal = gateRefusal();
-        if (refusal != null) return refusal;
+        if (refusal != null) return ToolResult.response(refusal);
         if (shouldInterrupt) {
-          context.interrupt({
+          return ToolResult.interrupt({
             'kind': 'write',
             'path': ws.relative(path),
             'bytes': utf8.encode(content).length,
@@ -224,10 +225,14 @@ class WorkspaceTools {
         }
       }
       if (_declined(context.resumed)) {
-        return {'ok': false, 'error': 'The user declined this write.'};
+        return ToolResult.response({
+          'ok': false,
+          'error': 'The user declined this write.',
+        });
       }
 
-      return _guard(() async {
+      return ToolResult.response(
+        await _guard(() async {
         final file = File(path);
         file.parent.createSync(recursive: true);
         file.writeAsStringSync(content);
@@ -239,7 +244,7 @@ class WorkspaceTools {
           'path': ws.relative(path),
           'bytes': utf8.encode(content).length,
         };
-      });
+      }));
     },
   );
 
@@ -287,17 +292,17 @@ class WorkspaceTools {
         path = ws.resolve(_string(input, 'file_path'));
         final file = File(path);
         if (!file.existsSync()) {
-          return {
+          return ToolResult.response({
             'ok': false,
             'error':
                 'No such file: ${ws.relative(path)}. Use write to create it.',
-          };
+          });
         }
         before = file.readAsStringSync();
       } on WorkspaceDenied catch (e) {
-        return {'ok': false, 'error': e.message};
+        return ToolResult.response({'ok': false, 'error': e.message});
       } on FileSystemException catch (e) {
-        return {'ok': false, 'error': _fsMessage(e)};
+        return ToolResult.response({'ok': false, 'error': _fsMessage(e)});
       }
 
       // Validated before asking, for the same reason as `write`, and with one
@@ -312,14 +317,14 @@ class WorkspaceTools {
           replaceAll: replaceAll,
         );
       } on EditRejected catch (e) {
-        return {'ok': false, 'error': e.message};
+        return ToolResult.response({'ok': false, 'error': e.message});
       }
 
       if (context.resumed == null) {
         final refusal = gateRefusal();
-        if (refusal != null) return refusal;
+        if (refusal != null) return ToolResult.response(refusal);
         if (shouldInterrupt) {
-          context.interrupt({
+          return ToolResult.interrupt({
             'kind': 'edit',
             'path': ws.relative(path),
             'replacements': edited.replacements,
@@ -328,10 +333,14 @@ class WorkspaceTools {
         }
       }
       if (_declined(context.resumed)) {
-        return {'ok': false, 'error': 'The user declined this edit.'};
+        return ToolResult.response({
+          'ok': false,
+          'error': 'The user declined this edit.',
+        });
       }
 
-      return _guard(() async {
+      return ToolResult.response(
+        await _guard(() async {
         final file = File(path);
         // Re-read after the pause: the user may have edited the file themselves
         // while the prompt was up, and writing the content computed before that
@@ -354,7 +363,7 @@ class WorkspaceTools {
           'path': ws.relative(path),
           'replacements': outcome.replacements,
         };
-      });
+      }));
     },
   );
 
@@ -390,7 +399,8 @@ class WorkspaceTools {
       },
       required: ['pattern'],
     ),
-    fn: (input, context) async => _guard(() async {
+    fn: (input, context) async =>
+        ToolResult.response(await _guard(() async {
       final ws = _workspace;
       final root = Directory(ws.resolve(_pathArg(input) ?? '.'));
       if (!root.existsSync()) {
@@ -411,7 +421,7 @@ class WorkspaceTools {
               'matches. Narrow the pattern to see the rest.',
         if (outcome.timedOut) 'timedOut': true,
       };
-    }),
+    })),
   );
 
   Tool _grep() => _ai.defineTool<Map<String, dynamic>, Map<String, dynamic>>(
@@ -442,7 +452,8 @@ class WorkspaceTools {
       },
       required: ['pattern'],
     ),
-    fn: (input, context) async => _guard(() async {
+    fn: (input, context) async =>
+        ToolResult.response(await _guard(() async {
       final ws = _workspace;
       final raw = _pathArg(input) ?? '.';
       final resolved = ws.resolve(raw);
@@ -482,7 +493,7 @@ class WorkspaceTools {
               'matches. Narrow the pattern or pass include to see the rest.',
         if (outcome.timedOut) 'timedOut': true,
       };
-    }),
+    })),
   );
 
   /// Matches to `[{path, lines: [{line, text}]}]`, preserving discovery order.
@@ -548,7 +559,7 @@ class WorkspaceTools {
     fn: (input, context) async {
       final command = input['command'] as String? ?? '';
       if (command.trim().isEmpty) {
-        return {'ok': false, 'error': 'command is empty.'};
+        return ToolResult.response({'ok': false, 'error': 'command is empty.'});
       }
 
       final String workdir;
@@ -557,20 +568,20 @@ class WorkspaceTools {
         ws = _workspace;
         workdir = ws.resolve(input['workdir'] as String? ?? '.');
         if (!Directory(workdir).existsSync()) {
-          return {
+          return ToolResult.response({
             'ok': false,
             'error': 'No such directory: ${input['workdir']}',
-          };
+          });
         }
       } on WorkspaceDenied catch (e) {
-        return {'ok': false, 'error': e.message};
+        return ToolResult.response({'ok': false, 'error': e.message});
       }
 
       if (context.resumed == null) {
         final refusal = gateRefusal();
-        if (refusal != null) return refusal;
+        if (refusal != null) return ToolResult.response(refusal);
         if (shouldInterrupt) {
-          context.interrupt({
+          return ToolResult.interrupt({
             'kind': 'bash',
             'command': command,
             'description': input['description'],
@@ -579,7 +590,10 @@ class WorkspaceTools {
         }
       }
       if (_declined(context.resumed)) {
-        return {'ok': false, 'error': 'The user declined this command.'};
+        return ToolResult.response({
+          'ok': false,
+          'error': 'The user declined this command.',
+        });
       }
 
       final requested = _int(input['timeoutMs']);
@@ -597,17 +611,20 @@ class WorkspaceTools {
         // reason it matters is that the model has to be able to read a failing
         // command's output to fix it. `ok: false` would hide that behind an
         // error line.
-        return {
+        return ToolResult.response({
           'output': renderShellRun(run),
           'exitCode': run.exitCode,
           'workdir': ws.relative(workdir),
           if (run.signal != null) 'signal': run.signal,
           if (run.timedOut) 'timedOut': true,
-        };
+        });
       } on ProcessException catch (e) {
         // The shell itself could not start. That is infrastructure, not the
         // command's outcome, so it is a failure.
-        return {'ok': false, 'error': 'Could not run bash: ${e.message}'};
+        return ToolResult.response({
+          'ok': false,
+          'error': 'Could not run bash: ${e.message}',
+        });
       }
     },
   );

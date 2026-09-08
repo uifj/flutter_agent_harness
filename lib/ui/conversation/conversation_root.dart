@@ -41,6 +41,16 @@ String formatStatsDuration(int ms) {
   return '${whole ~/ 60}m${whole % 60}s';
 }
 
+/// The stats row's token figure, kept to the same compactness as the
+/// durations: exact under ten thousand, one-decimal k/M from there.
+String formatTokenCount(int tokens) {
+  if (tokens < 10000) return '$tokens';
+  if (tokens < 1000000) {
+    return '${(tokens / 1000 * 10).round() / 10}k';
+  }
+  return '${(tokens / 1000000 * 10).round() / 10}M';
+}
+
 /// `--dsh-chat-content-width`. The transcript column, and the axis every other
 /// card in this column is measured against.
 const chatContentWidth = 748.0;
@@ -230,6 +240,12 @@ class _ConversationRootState extends State<ConversationRoot> {
       if (ttft != null && ttft > 0) {
         groups.add(context.tr('statsTtft')
             .replaceAll('{duration}', formatStatsDuration(ttft.round())));
+      }
+
+      final tokens = conversation.totalTokens;
+      if (tokens > 0) {
+        groups.add(context.tr('statsTokens')
+            .replaceAll('{tokens}', formatTokenCount(tokens)));
       }
     }
 
