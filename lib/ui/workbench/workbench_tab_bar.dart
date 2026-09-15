@@ -38,6 +38,7 @@ import '../../model/split_node.dart';
 import '../../state/workbench_controller.dart';
 import 'tab_registry.dart';
 import 'workbench_prefs_scope.dart';
+import '../primitives/tappable.dart';
 
 /// Strip height — the source's 34px band (`sidebar.module.css:343`), tall
 /// enough that the 28px circular controls sit in it at top:3.
@@ -394,7 +395,7 @@ class _TabChipState extends State<_TabChip> {
             child: AnimatedOpacity(
               opacity: _hovered || widget.active ? 1 : 0,
               duration: DswMotion.respecting(context, DswMotion.fast),
-              child: _CloseButton(onTap: _close),
+              child: _CloseButton(onTap: _close, label: context.tr('close')),
             ),
           ),
         ],
@@ -627,41 +628,31 @@ class _Feedback extends StatelessWidget {
   );
 }
 
-class _CloseButton extends StatefulWidget {
-  const _CloseButton({required this.onTap});
+class _CloseButton extends StatelessWidget {
+  const _CloseButton({required this.onTap, required this.label});
 
   final VoidCallback onTap;
 
-  @override
-  State<_CloseButton> createState() => _CloseButtonState();
-}
-
-class _CloseButtonState extends State<_CloseButton> {
-  bool _hovered = false;
+  /// The accessible name; the X glyph alone says nothing to VoiceOver.
+  final String label;
 
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        // The chip's own tap would otherwise also fire and activate the tab this
-        // click is closing.
-        onTap: widget.onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          decoration: BoxDecoration(
-            color: _hovered ? color.interactiveBgActive : Colors.transparent,
-            borderRadius: BorderRadius.circular(3),
-          ),
-          child: Center(
-            child: Icon(
-              LucideIcons.x,
-              size: 11,
-              color: _hovered ? color.labelPrimary : color.labelTertiary,
-            ),
+    return DswHoverTap(
+      onTap: onTap,
+      semanticLabel: label,
+      excludeSemantics: true,
+      builder: (context, hovered, _) => Container(
+        decoration: BoxDecoration(
+          color: hovered ? color.interactiveBgActive : Colors.transparent,
+          borderRadius: BorderRadius.circular(3),
+        ),
+        child: Center(
+          child: Icon(
+            LucideIcons.x,
+            size: 11,
+            color: hovered ? color.labelPrimary : color.labelTertiary,
           ),
         ),
       ),
@@ -669,7 +660,7 @@ class _CloseButtonState extends State<_CloseButton> {
   }
 }
 
-class _StripButton extends StatefulWidget {
+class _StripButton extends StatelessWidget {
   const _StripButton({
     required this.icon,
     required this.tooltip,
@@ -687,40 +678,31 @@ class _StripButton extends StatefulWidget {
   final VoidCallback onTap;
 
   @override
-  State<_StripButton> createState() => _StripButtonState();
-}
-
-class _StripButtonState extends State<_StripButton> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    final glyph = Icon(
-      widget.icon,
-      size: 13,
-      color: _hovered ? color.labelSecondary : color.labelTertiary,
-    );
     return Tooltip(
-      message: widget.tooltip,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
-          onTap: widget.onTap,
-          behavior: HitTestBehavior.opaque,
-          child: Container(
+      message: tooltip,
+      child: DswHoverTap(
+        onTap: onTap,
+        semanticLabel: tooltip,
+        excludeSemantics: true,
+        builder: (context, hovered, _) {
+          final glyph = Icon(
+            icon,
+            size: 13,
+            color: hovered ? color.labelSecondary : color.labelTertiary,
+          );
+          return Container(
             width: 22,
             height: tabBarHeight,
-            color: _hovered ? color.interactiveBgHover : Colors.transparent,
+            color: hovered ? color.interactiveBgHover : Colors.transparent,
             child: Center(
-              child: widget.rotated
+              child: rotated
                   ? RotatedBox(quarterTurns: 1, child: glyph)
                   : glyph,
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
