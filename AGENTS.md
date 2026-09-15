@@ -25,8 +25,8 @@
 - **是什么**：`agent_harness` —— 用 **Flutter + Google Genkit** 从零实现的 **macOS 桌面端 AI Agent 工作台**：对话流 + 工具调用投影 + 分栏 workbench（文件树 / 编辑器 / 终端 / git / diff / 浏览器 / 子 agent / side chat）。pubspec 自述："A Flutter desktop agent harness: chat UI, tool-call projection via Genkit, and a split-pane workbench."
 - **不是什么**：不是移动端 App（只有 `macos/` 脚手架）；不是 dsh 的 fork（不吸收其代码，只取其设计思想重写）；不是发布物（`version: 0.0.1`，ad-hoc 签名，见 `build.md` §4）。
 - **规模**：`lib/` 95 个 Dart 文件 / ~29.5k 行，`test/` 39 个测试文件；`spike/` 2 个可执行证据脚本。
-- **技术栈**：Dart SDK `^3.11.5` / Flutter 3.41.9 stable；运行时 `genkit` 0.16.1 + `genkit_openai` / `genkit_anthropic` / `genkit_google_genai` / `genkit_mcp` / `genkit_middleware`（**全是 0.x**）；宿主能力 `flutter_pty` + `xterm`（终端）、`flutter_inappwebview`（浏览器 tab）、`file_picker` + `path_provider`（工作区）、`pasteboard`（剪贴板）、`gpt_markdown` + `re_editor` + `re_highlight`（渲染与编辑）、`schemantic`（工具运行时 schema）、`flutter_lucide`（图标）。lint 只有 `flutter_lints`。
-- **刻意不存在的机制**：没有 `build_runner` / 代码生成（工具输入保持 Map，schema 运行时构造）；没有 `intl` / `.arb` / `flutter_localizations`（i18n 自研，见 §3）；没有路由表（单窗口，界面靠 widget 组合与 scope 拼装）。
+- **技术栈**：Dart SDK `^3.11.5` / Flutter 3.41.9 stable；运行时 `genkit` 0.16.1 + `genkit_openai` / `genkit_anthropic` / `genkit_google_genai` / `genkit_mcp` / `genkit_middleware`（**全是 0.x**）；状态管理 `flutter_riverpod` 3.2.1 + `riverpod_annotation` 4.0.2（ADR-0002 修订 1：注解模式，`*.g.dart` 入库）；组件库 `shadcn_ui` 0.56.3（迁移中）；宿主能力 `flutter_pty` + `xterm`（终端）、`flutter_inappwebview`（浏览器 tab）、`file_picker` + `path_provider`（工作区）、`pasteboard`（剪贴板）、`gpt_markdown` + `re_editor` + `re_highlight`（渲染与编辑）、`schemantic`（工具运行时 schema）、`flutter_lucide`（图标）。lint 只有 `flutter_lints`（`riverpod_lint` 因 SDK meta 约束暂不可装，见 ADR-0002 修订 1）。
+- **刻意不存在的机制**：genkit 工具输入保持 Map、schema 运行时构造（codegen 仅限 riverpod 注解，见 ADR-0002 修订 1）；没有 `intl` / `.arb` / `flutter_localizations`（i18n 自研，见 §3）；没有路由表（单窗口，界面靠 widget 组合与 scope 拼装）。
 
 ## 2. 目录导航
 

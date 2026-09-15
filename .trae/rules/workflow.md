@@ -47,7 +47,7 @@
 | --- | --- | --- |
 | `flutter-setup-localization` | 本仓库有自研 i18n（`lib/l10n/locales.dart`）。按它引入 `flutter_localizations` + `intl` + `.arb` + 生成代码，会顶掉双字典与 `context.tr()`，并让 widget 测试失去"无 scope 即英文"的确定性 | 先立 ARC 类 ADR 论证替换自研方案 |
 | `flutter-setup-declarative-routing` | 没有命名路由表，也没有页面级 `Navigator.push` / `GoRouter` / `onGenerateRoute`：单窗口桌面壳，界面由 widget 组合与 scope 拼装（见 `lib/main.dart`）。现存仅有的 `Navigator` 用法是 4 处 `Navigator.pop(context, bool)`（`tabs/editor_tab.dart:274,278`、`tabs/git_tab.dart:410,414`），用途是对话框返回结果，不是要"迁移"的导航层 | 出现真正的多窗口/深链需求 |
-| `dart-generate-test-mocks` | mockito 依赖 `build_runner` 代码生成，而本仓库刻意不引入生成器（工具输入保持 Map）。替身一律手写 `test/fake_*.dart` | 决定接受代码生成 |
+| `dart-generate-test-mocks` | mockito 的生成路线与测试替身约定冲突：本仓库替身一律手写 `test/fake_*.dart`。codegen 在本仓库仅限 riverpod 注解（ADR-0002 修订 1），mockito 不在放行范围 | 同时立 ADR 接受 mockito 测试路线 |
 | `dart-use-ffigen` / `dart-setup-ffi-assets` | 无 C/C++ 资产；宿主能力（PTY、剪贴板、文件系统）全部走已装插件 | 真要接自研原生库 |
 | `dart-migrate-to-checks-package` | dev 依赖只有 `flutter_test`，没有 `test`/`checks`；"迁移"等于加依赖 | 同时接受引入 `checks` |
 | `flutter-add-integration-test` | 未配置 `integration_test`，且只有 macOS 目标（开发机是 Windows 就跑不了） | 有 macOS 验收机 + 立 ADR |

@@ -9,6 +9,8 @@
 // happen is the DARK theme or currently-passing pairs regressing.
 //
 // Run: dart tool/contrast_check.dart
+//
+// ignore_for_file: avoid_print — print is this CLI's output interface.
 library;
 
 import 'dart:io';

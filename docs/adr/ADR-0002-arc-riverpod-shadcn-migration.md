@@ -30,14 +30,24 @@
 
 在 `develop` 分支实施改造，要点如下（版本与主题两条为硬约束决策）：
 
-1. **riverpod 版本**：`flutter_riverpod ^3.3.2`（当前基线可用的最新稳定线）。升到 3.4.x 需先升 Dart SDK，那是独立决策（build.md §0 的版本基线条款），**不在本 ADR 范围内捆绑执行**；待 SDK 升级时另立 ADR。
-2. **无 codegen 路线**：手写 `Provider`/`Notifier`，不引入 `riverpod_generator`/`riverpod_annotation`/`build_runner`。守住现有红线。
+1. **riverpod 版本**：`flutter_riverpod ^3.2.1`（见修订 1——注解模式把整条家族线从 3.3.2 对齐到 3.2.1）。
+2. **注解模式（修订 1 取代原"无 codegen"决定）**：见下方修订 1。
 3. **shadcn_ui 版本**：`^0.56.3`。
 4. **主题路线 A**：`ShadThemeData.custom` 包裹现有 `DswAlias` 令牌——shadcn 出组件架构，dsw 出颜色与字体；dsh 视觉身份不变，118 个语义别名与 97 处 `labelTertiary` 等消费点不重映射。（备选 B"整体采纳 shadcn 调色板"被否：工作量大一档且丢失与上游 design-platform.css 的可 diff 性。）
 5. **组件替换范围**：capsule_button→ShadButton、pill→ShadBadge、对话框/菜单/输入/图标按钮/tooltip 按 [审计报告映射表](../design-audit-2026-09.md) 逐项替换；**11 个内容块 primitives（code/diff/read/search/terminal block、disclosure_row、state_dot、row_sweep、head_tail_cap、block_chrome、copy_button）保留自绘**，仅重刷表面令牌——它们是领域表面，shadcn 无对应物。
 6. **键盘/语义随迁**：组件替换必须同步消除 `GestureDetector` 交互层（A1 阻断项），shadcn 组件自带焦点与语义。
 7. **图标二选一**：shadcn_ui 传递依赖 `lucide_icons_flutter`，与现有直接依赖 `flutter_lucide` 重复——统一到一套（迁移期间可暂容忍并存，收尾前必须合并）。
 8. **亮色对比度**：随主题改造一并决策（接受内部工具豁免并书面记录，或引入 AA 修正版别名层）；不在各消费点就地调色。
+
+### 修订 1（2026-09-15，实施启动时）：改用注解模式
+
+用户决策：riverpod 采用**注解模式**（`riverpod_annotation` + `riverpod_generator` + `build_runner`），取代本 ADR 原第 2 条"手写 provider、不引入生成器"的红线遵守。据此产生三个版本事实（pub solver 全量推导，Dart 3.11.5 / Flutter 3.41.9 基线）：
+
+- **riverpod 家族必须整线对齐到 3.2.1**：`riverpod_generator ≥4.0.4-dev.1` 需要 analyzer ^12 → meta ^1.18，与 Flutter 3.41.9 SDK 钉死的 meta 1.17.0 冲突；`≥4.0.6` 需要 Dart ≥3.12；而 `riverpod_generator 4.0.3` 精确依赖 `riverpod_annotation 4.0.2`，后者又钉死 `riverpod 3.2.1`。因此最终解析为 **flutter_riverpod 3.2.1 / riverpod_annotation 4.0.2 / riverpod_generator 4.0.3 / build_runner 2.15.1**——这是 Dart 3.11.5 下唯一自洽的注解线。原决策的 `^3.3.2` 与注解模式互斥，3.3.x 手写线留作 SDK 升级后的重评对象。
+- **`riverpod_lint` 当前不可安装**（含指定的 3.1.4）：`≥3.1.6` 要求 Dart ≥3.12；`3.1.4–3.1.5` 要求 analyzer ^12（同上 meta 冲突）；更早版本钉死 riverpod 3.0.x/3.2.0/3.2.1 之外的精确版本。**推迟到 SDK 升级 ADR 落地时一并引入**（与 riverpod 3.4.x、`custom_lint` 同批）。
+- **生成文件入库**：`*.g.dart` 随源码提交；`analysis_options.yaml` 排除 `**/*.g.dart` 与 `packages/**`（vendored 副本首次进入 analyzer 视野时一并排除）。genkit 工具 schema 仍是运行时构造（`SchemanticType.from`），与本次 codegen 无关。
+
+该修订同时触发的首个副作用（已在实施提交中处理）：仓库首次通过 `flutter analyze` 门禁后暴露两处潜伏问题——`LucideIcons.trash_2` 在 flutter_lucide 1.45.0 中已更名 `trash`（此前该错误使 git_tab/workbench 两个测试文件**根本无法编译**），以及 13 个 Windows 平台性测试失败（`/bin/bash` 路径、POSIX 路径分隔符、temp 目录锁），均先于本迁移存在，登记于 debt-register。
 
 ## 后果（Consequences）
 

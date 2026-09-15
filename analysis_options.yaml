@@ -1,4 +1,13 @@
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  exclude:
+    # The vendored shadcn_ui reference clone (ADR-0001): not a dependency of
+    # this package, kept on disk only as a local source mirror. Its playground
+    # and example trees are not ours to lint.
+    - packages/**
+    # riverpod_generator output (ADR-0002 rev.1): generated, not hand-written.
+    - "**/*.g.dart"
+
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
