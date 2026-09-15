@@ -42,6 +42,7 @@ import '../../../theme/dsw_typography.dart';
 import '../../../ui/primitives/state_dot.dart';
 import '../../../model/sidebar_tab.dart';
 import '../../../state/workbench_controller.dart';
+import '../../primitives/tappable.dart';
 
 // ---- The host --------------------------------------------------------------
 
@@ -386,57 +387,48 @@ class _RootCard extends StatefulWidget {
 }
 
 class _RootCardState extends State<_RootCard> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
     final running = widget.conversation?.isBusy ?? false;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.onTap,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 50),
-          padding: const EdgeInsets.fromLTRB(11, 7, 8, 7),
-          decoration: BoxDecoration(
-            color: _hovered ? color.interactiveBgHover : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: StateDot(
-                  state: running ? StateDotState.ongoing : StateDotState.done,
-                ),
+    // The card's visible "Main agent" title is its accessible name.
+    return DswHoverTap(
+      onTap: widget.onTap,
+      builder: (context, hovered, _) => Container(
+        constraints: const BoxConstraints(minHeight: 50),
+        padding: const EdgeInsets.fromLTRB(11, 7, 8, 7),
+        decoration: BoxDecoration(
+          color: hovered ? color.interactiveBgHover : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: StateDot(
+                state: running ? StateDotState.ongoing : StateDotState.done,
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Main agent',
-                      style: DswType.s14.copyWith(color: color.labelPrimary),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      running ? 'Running' : 'Idle',
-                      style: DswType.xxxs11.copyWith(
-                        color: color.labelTertiary,
-                      ),
-                    ),
-                  ],
-                ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Main agent',
+                    style: DswType.s14.copyWith(color: color.labelPrimary),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    running ? 'Running' : 'Idle',
+                    style: DswType.xxxs11.copyWith(color: color.labelTertiary),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

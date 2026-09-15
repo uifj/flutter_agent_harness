@@ -375,34 +375,28 @@ class _HeaderButton extends StatefulWidget {
 }
 
 class _HeaderButtonState extends State<_HeaderButton> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
     return Tooltip(
       message: widget.tooltip,
       waitDuration: const Duration(milliseconds: 500),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: widget.onTap,
-          child: Container(
-            width: 24,
-            height: 24,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: _hovered ? color.interactiveBgHover : Colors.transparent,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Icon(
-              widget.icon,
-              size: 13,
-              color: _hovered ? color.labelPrimary : color.labelSecondary,
-            ),
+      child: DswHoverTap(
+        onTap: widget.onTap,
+        semanticLabel: widget.tooltip,
+        excludeSemantics: true,
+        builder: (context, hovered, _) => Container(
+          width: 24,
+          height: 24,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: hovered ? color.interactiveBgHover : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Icon(
+            widget.icon,
+            size: 13,
+            color: hovered ? color.labelPrimary : color.labelSecondary,
           ),
         ),
       ),
