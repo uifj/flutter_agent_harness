@@ -9,9 +9,11 @@
 
 dsw 令牌体系本身纪律良好（无越界 BoxShadow、无 Tailwind 式魔数泛滥、暗色对比度几乎全过），但三个问题足以让代码层判 Fail：
 
-1. 全应用 60 个交互元素全部基于 `GestureDetector`，`InkWell` 为 0——**键盘完全无法操作本应用**，屏幕阅读器语义覆盖约等于零。
+1. 全应用 59 个交互元素全部基于 `GestureDetector`（`lib/ui/` 内），`InkWell` 为 0——**键盘完全无法操作本应用**，屏幕阅读器语义覆盖约等于零。
 2. 亮色主题下 6 组正文级令牌对比度低于 WCAG AA（最低 1.26:1），其中两条位于关键路径（主输入框占位符、审批条警示文案）。
-3. 表单控件层完全没有 primitives 覆盖，39 处裸 Material 控件仅靠 `ColorScheme` 兜底。
+3. 图标按钮没有 primitive：`lib/ui/` 里散落 8 个私有手写件（`_IconButton`/`_RoundIconButton`/`_BarIconButton`，分布 4 文件），全部走 `GestureDetector`；另有约 21 处 Material 原生控件（TextField 6 / PopupMenuButton 7 / TextButton 4 / 对话框 4）仅靠 `ColorScheme` 兜底。
+
+> **勘误（2026-09-15，Stage 5 开工时复核）**：本报告初稿把 C1 记作"IconButton×17 等 39 处裸 Material 控件"，原因是 grep 未加词边界，把私有组件 `_IconButton(` 一起算成了 Material `IconButton`。加边界重跑：真实 Material `IconButton` 为 **0**，那 17 处实为 8 个私有手写图标按钮（属 A1 键盘债 + C3 重复模式，不是"绕过组件库"）。结论方向不变，计数以本段为准。
 
 第 3 条与已立项的 ADR-0002（riverpod + shadcn_ui 改造）方向一致；第 1、2 条**不被 ADR-0002 自动解决**，改造时若不同步处理会被 shadcn 组件直接继承。
 
@@ -32,6 +34,7 @@ dsw 令牌体系本身纪律良好（无越界 BoxShadow、无 Tailwind 式魔�
 - 影响：键盘用户与 VoiceOver 用户无法完成任何主流程；也堵死未来的集成测试路径（无 key 可敲）。
 - 建议：这不是逐点修补能解决的——需要把 60 处 `GestureDetector` 换成可聚焦语义控件。**与 ADR-0002 合并处理成本最低**（ShadButton/ShadIconButton 等自带焦点与语义），单独做则新建 `lib/ui/primitives/` 的 focusable wrapper。
 - 验证：`grep -c "GestureDetector(" lib/ui/` 趋零；macOS 上用 Full Keyboard Access 走通「发送消息 → 审批 → 打开终端」。
+- **执行状态（2026-09-15，ADR-0002 stage 5）**：新增 `primitives/tappable.dart` 的 `DswHoverTap`，把 `lib/ui` 的 `GestureDetector` **60 → 35**（含 4 块原语、4 私有图标按钮组、tab strip 关闭/分屏、settings 7 控件、git/sidechat/diff/editor 叶按钮、subagent 根卡），转换项全部可键盘聚焦并暴露 button/toggled 语义；`dsw_hover_tap_test.dart` 钉住"指针/键盘/语义"三性。期间还发现并修了一个真实缺陷：`FocusableActionDetector.onShowHoverHighlight` 受 `FocusManager.highlightMode` 门控、会偶发丢 hover，故 hover 改用普通 `MouseRegion`。剩余 26 个动作型（composer 主输入、右键菜单行、`_TabChip` 等复合控件）与 9 个合法拖拽件不再盲改，登记于 debt-register 的「A1 剩余」，待 macOS 交互签收。
 
 ## Major
 
@@ -56,7 +59,7 @@ dsw 令牌体系本身纪律良好（无越界 BoxShadow、无 Tailwind 式魔�
 ### C1. 表单控件层零 primitive 覆盖
 
 - 严重度：major
-- 证据：`IconButton(` ×17、`TextField(` ×6（含 `composer.dart` 主输入）、`TextButton` ×5、`PopupMenuButton` ×7、`showDialog`/`AlertDialog` ×4，合计 39 处，分布于 9 个文件（git_tab 最多）。`lib/ui/primitives/` 13 个自绘件全部是**内容块**（code/diff/read/search/terminal block、disclosure_row、pill、state_dot…），唯一按钮是 `capsule_button`（primary/outline/ghost × md/sm）。Material 控件仅靠 `dsw_theme.dart:138` 的 `ColorScheme` 兜底，无 per-widget 主题。
+- 证据（词边界重跑，见顶部勘误）：真实 Material 原生控件 `TextField(` ×6（含 `composer.dart` 主输入）、`PopupMenuButton` ×7、`TextButton` ×4、`showDialog`/`AlertDialog` ×4，合计约 21 处；`IconButton` 原生为 **0**——图标按钮实为散落在 `sidebar.dart`/`browser_tab.dart`/`file_tree_tab.dart`/`git_tab.dart` 的 8 个私有手写件（`_IconButton`/`_RoundIconButton`/`_BarIconButton`），全部 `GestureDetector` 驱动。`lib/ui/primitives/` 13 个自绘件全部是**内容块**（code/diff/read/search/terminal block、disclosure_row、pill、state_dot…），唯一按钮是 `capsule_button`。Material 控件仅靠 `dsw_theme.dart:138` 的 `ColorScheme` 兜底，无 per-widget 主题。
 - 观察：方法论判级为"缺失组件变体"而非"绕过"——不存在可绕的 primitive。但后果相同：同一意图的控件在不同 tab 里长出不同的边框/圆角/涟漪。
 - 建议：ADR-0002 的核心受益点，ShadButton/ShadIconButton/ShadInput/ShadSelect/ShadDialog/ShadPopover 直接补齐这一层。
 - 验证：改造后 `grep -rn "TextField(\|PopupMenuButton\|showDialog" lib/ui/`（排除 primitives/adapter 层）趋零。

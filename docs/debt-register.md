@@ -9,7 +9,29 @@
 | ADR-0001 | vendored `packages/flutter-shadcn-ui` 不进版本库 | DEP | P2 | RESOLVED @ d72ff4c | 2026-09-15 | [链接](adr/ADR-0001-dep-vendored-shadcn-ui.md) |
 | ADR-0002 | develop 分支改造为 riverpod + shadcn_ui | ARC | P1 | IN-PROGRESS（修订 1：注解模式，riverpod 家族 3.2.1） | 2026-09-15 | [链接](adr/ADR-0002-arc-riverpod-shadcn-migration.md) |
 
-> 2026-09-15 设计层审计（方法：design-review 插件手动审查模型）产出了完整证据链，见 [design-audit-2026-09.md](design-audit-2026-09.md)。其阻断级与 major 发现的处置归属：键盘/无障碍阻断（A1/A3）、表单控件缺口（C1）**并入 ADR-0002 实施**；以下两条留在观察表，与 ADR-0002 解耦。
+> 2026-09-15 设计层审计（方法：design-review 插件手动审查模型）产出了完整证据链，见 [design-audit-2026-09.md](design-audit-2026-09.md)。阻断级/ majors 的处置归属：键盘无障碍（A1/A3）与表单控件缺口（C1）并入 ADR-0002 实施；A2（对比度）与文本缩放留下方观察表。
+
+## ADR-0002 迁移进度（截至 2026-09-15）
+
+- **riverpod**：Stage 1-3 完成——boot stores 经 `ProviderContainer` override（38a9949）、`AppScope` keepAlive provider（5d5aa75）、9 个 per-controller provider + read seams、`main.dart` 转纯 Consumer 树（178f941）。riverpod import 仅限 `main.dart` + `state/app_providers.dart`。
+- **shadcn_ui**：Stage 4 主题桥 `theme/dsw_shad_bridge.dart`（DswAlias→ShadColorScheme，2511804）；Stage 5 CapsuleButton→ShadButton（45ddfb8）。
+- **A1 键盘可达**：新增 `primitives/tappable.dart` 的 `DswHoverTap`（`FocusableActionDetector` + `MouseRegion` + `Semantics(button,onTap)`，零绘制），已收编块原语 4 + 私有图标按钮组 4 + tab strip 关闭/分屏 + settings 控件 7 + git/sidechat/diff/editor 叶按钮 + subagent 根卡。**`lib/ui` `GestureDetector` 60 → 35**；转换项均 Tab 可聚焦 / Enter·Space 激活 / VoiceOver 读 button·toggled。
+
+## A1 剩余（26 个动作型，需 macOS 交互签收，勿在无真机时盲改）
+
+35 个里合法保留 9：`app_frame`3 + `split_view`1 + `pane`2 + `free_window`2（拖拽/改尺寸/移窗，非动作）、`tappable`1（`DswHoverTap` 内部）。待收 26 均为复合控件，无真机盲改风险高于收益：
+
+| 站点 | 数 | 为何留待 macOS 验 |
+| --- | --- | --- |
+| `conversation/composer.dart` | 5 | 主输入 `TextField`（本身可访问）+ mention chip + 模型座，触及输入/IME 路径 |
+| `tabs/subagent_tab.dart` | 4 | 子节点卡选择 + `Listener` kill 确认态 |
+| `settings/model_settings.dart` | 4 | provider/editor/server 卡内复合行 |
+| `tabs/git_tab.dart` | 3 | `_FileRow` 含右键 context menu（`onSecondaryTapDown`+定位） |
+| `tabs/diff_tab.dart` | 2 | `_GitDiffFile` 折叠行含右键 |
+| `workbench_tab_bar.dart` | 1 | `_TabChip`：Draggable+DragTarget+右键菜单，且该用 **tab 语义**不是 button |
+| file_tree / tool_card / details_panel / chat_view / hero / terminal / sidebar 各 1 | 7 | 行选择/展开，混滚动或次级手势 |
+
+> 收这批的正确姿势：macOS 上开着跑，边改边用 Full Keyboard Access + VoiceOver 验（尤其 tab 重排、右键菜单、composer 输入不回归）。`DswHoverTap` 届时再补 `onSecondaryTapDown`（本会话加了又因无消费者回退，避免死代码）。
 
 ## 待立 ADR 的观察
 
