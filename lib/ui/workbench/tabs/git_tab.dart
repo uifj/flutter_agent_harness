@@ -34,6 +34,7 @@ import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
 import '../../../model/sidebar_tab.dart';
 import '../../../state/workbench_controller.dart';
+import '../../primitives/tappable.dart';
 
 // ---- The view vocabulary, ported from GitView.tsx --------------------------
 
@@ -1138,7 +1139,7 @@ class _BranchSelect extends StatelessWidget {
 }
 
 /// `.iconButton` — the 28px round hover-tinted affordance.
-class _RoundIconButton extends StatefulWidget {
+class _RoundIconButton extends StatelessWidget {
   const _RoundIconButton({
     required this.icon,
     required this.tooltip,
@@ -1152,42 +1153,32 @@ class _RoundIconButton extends StatefulWidget {
   final VoidCallback? onTap;
 
   @override
-  State<_RoundIconButton> createState() => _RoundIconButtonState();
-}
-
-class _RoundIconButtonState extends State<_RoundIconButton> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    final enabled = widget.onTap != null;
+    final enabled = onTap != null;
     return Tooltip(
-      message: widget.tooltip,
-      child: MouseRegion(
-        cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
-          onTap: widget.onTap,
-          behavior: HitTestBehavior.opaque,
-          child: Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: _hovered && enabled
-                  ? color.interactiveBgHover
-                  : Colors.transparent,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Icon(
-                widget.icon,
-                size: 14,
-                color: enabled
-                    ? (_hovered ? color.labelPrimary : color.labelSecondary)
-                    : color.labelCaption,
-              ),
+      message: tooltip,
+      child: DswHoverTap(
+        onTap: onTap,
+        enabled: enabled,
+        semanticLabel: tooltip,
+        excludeSemantics: true,
+        builder: (context, hovered, _) => Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: hovered && enabled
+                ? color.interactiveBgHover
+                : Colors.transparent,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Icon(
+              icon,
+              size: 14,
+              color: enabled
+                  ? (hovered ? color.labelPrimary : color.labelSecondary)
+                  : color.labelCaption,
             ),
           ),
         ),

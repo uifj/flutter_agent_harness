@@ -37,6 +37,7 @@ import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
 import '../../../model/sidebar_tab.dart';
 import '../../../state/workbench_controller.dart';
+import '../../primitives/tappable.dart';
 
 /// Row height. 22px is the source's `--row-h`; it is also what fits a 13px label
 /// with the 4px hit-target padding a click needs.
@@ -594,7 +595,7 @@ class _Empty extends StatelessWidget {
 /// A 20px square icon affordance, hover-tinted. Small enough that the shared
 /// button primitives in `lib/ui/primitives/` would be more configuration than
 /// code.
-class _IconButton extends StatefulWidget {
+class _IconButton extends StatelessWidget {
   const _IconButton({
     required this.icon,
     required this.tooltip,
@@ -606,37 +607,26 @@ class _IconButton extends StatefulWidget {
   final VoidCallback onTap;
 
   @override
-  State<_IconButton> createState() => _IconButtonState();
-}
-
-class _IconButtonState extends State<_IconButton> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
     final color = context.dsw;
     return Tooltip(
-      message: widget.tooltip,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
-          onTap: widget.onTap,
-          behavior: HitTestBehavior.opaque,
-          child: Container(
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              color: _hovered ? color.interactiveBgHover : Colors.transparent,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Center(
-              child: Icon(
-                widget.icon,
-                size: 13,
-                color: _hovered ? color.labelSecondary : color.labelTertiary,
-              ),
+      message: tooltip,
+      child: DswHoverTap(
+        onTap: onTap,
+        semanticLabel: tooltip,
+        excludeSemantics: true,
+        builder: (context, hovered, _) => Container(
+          width: 20,
+          height: 20,
+          decoration: BoxDecoration(
+            color: hovered ? color.interactiveBgHover : Colors.transparent,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Center(
+            child: Icon(
+              icon,
+              size: 13,
+              color: hovered ? color.labelSecondary : color.labelTertiary,
             ),
           ),
         ),

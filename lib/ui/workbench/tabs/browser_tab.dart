@@ -30,6 +30,7 @@ import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
 import '../../../model/sidebar_tab.dart';
 import '../../../state/workbench_controller.dart';
+import '../../primitives/tappable.dart';
 
 // ---- The URL rules, pure and testable --------------------------------------
 
@@ -323,7 +324,7 @@ class _BrowserTabState extends State<BrowserTab> {
 
 /// One address-bar button — the source's `.iconButton`: 24x24, hover fill,
 /// dimmed rather than hidden when it has nothing to do.
-class _BarIconButton extends StatefulWidget {
+class _BarIconButton extends StatelessWidget {
   const _BarIconButton({
     required this.icon,
     required this.tooltip,
@@ -337,43 +338,33 @@ class _BarIconButton extends StatefulWidget {
   final bool enabled;
 
   @override
-  State<_BarIconButton> createState() => _BarIconButtonState();
-}
-
-class _BarIconButtonState extends State<_BarIconButton> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    final enabled = widget.enabled && widget.onTap != null;
+    final interactive = enabled && onTap != null;
     return Tooltip(
-      message: widget.tooltip,
+      message: tooltip,
       waitDuration: const Duration(milliseconds: 500),
-      child: MouseRegion(
-        cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: enabled ? widget.onTap : null,
-          child: Container(
-            width: 24,
-            height: 24,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: enabled && _hovered
-                  ? color.interactiveBgHover
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Icon(
-              widget.icon,
-              size: 14,
-              color: enabled
-                  ? (_hovered ? color.labelPrimary : color.labelSecondary)
-                  : color.labelCaption,
-            ),
+      child: DswHoverTap(
+        onTap: onTap,
+        enabled: interactive,
+        semanticLabel: tooltip,
+        excludeSemantics: true,
+        builder: (context, hovered, _) => Container(
+          width: 24,
+          height: 24,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: interactive && hovered
+                ? color.interactiveBgHover
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Icon(
+            icon,
+            size: 14,
+            color: enabled
+                ? (hovered ? color.labelPrimary : color.labelSecondary)
+                : color.labelCaption,
           ),
         ),
       ),

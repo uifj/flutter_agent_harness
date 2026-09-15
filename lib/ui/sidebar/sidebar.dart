@@ -22,6 +22,7 @@ import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
+import '../primitives/tappable.dart';
 import '../layout/columns.dart';
 
 /// Wide-content unmount delay; matches the 150ms wide-content fade-out.
@@ -513,7 +514,7 @@ class _PressableState extends State<_Pressable> {
 
 /// A round icon control: 28px expanded, 36px on the rail. The builder receives
 /// the hover state, which the rail toggle needs in order to swap its glyph.
-class _IconButton extends StatefulWidget {
+class _IconButton extends StatelessWidget {
   const _IconButton({
     required this.onTap,
     required this.wide,
@@ -527,37 +528,27 @@ class _IconButton extends StatefulWidget {
   final Widget Function(bool hovered) builder;
 
   @override
-  State<_IconButton> createState() => _IconButtonState();
-}
-
-class _IconButtonState extends State<_IconButton> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
-    final size = widget.wide ? 28.0 : 36.0;
-    // The rail toggle rests as the brand mark with no hover circle, matching
-    // `.collapsed .toggle`; every other state gets the wash.
-    final washed = _hovered;
+    final size = wide ? 28.0 : 36.0;
     return Tooltip(
-      message: widget.tooltip,
+      message: tooltip,
       waitDuration: const Duration(milliseconds: 500),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
-          onTap: widget.onTap,
-          behavior: HitTestBehavior.opaque,
-          child: Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: washed ? context.dsw.interactiveBgHover : null,
-            ),
-            child: Center(child: widget.builder(_hovered)),
+      child: DswHoverTap(
+        onTap: onTap,
+        // The tooltip is the button's name; the glyph inside says nothing to a
+        // screen reader, so exclude it.
+        semanticLabel: tooltip,
+        excludeSemantics: true,
+        builder: (context, hovered, _) => Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            // The rail toggle rests as the brand mark with no hover circle,
+            // matching `.collapsed .toggle`; every other state gets the wash.
+            color: hovered ? context.dsw.interactiveBgHover : null,
           ),
+          child: Center(child: builder(hovered)),
         ),
       ),
     );
