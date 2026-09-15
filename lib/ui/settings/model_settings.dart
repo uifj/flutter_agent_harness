@@ -35,6 +35,7 @@ import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
+import '../primitives/tappable.dart';
 import '../primitives/capsule_button.dart';
 
 /// Which section the rail is pointing at.
@@ -1276,107 +1277,97 @@ class _RecentRow extends StatefulWidget {
 }
 
 class _RecentRowState extends State<_RecentRow> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.missing ? null : widget.onAdopt,
-        child: Container(
-          height: 32,
-          padding: const EdgeInsets.only(left: 8, right: 4),
-          margin: const EdgeInsets.only(bottom: 2),
-          decoration: BoxDecoration(
-            color: widget.current
-                ? color.interactiveBgActive
-                : _hovered
-                ? color.interactiveBgHover
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                LucideIcons.folder,
-                size: 14,
-                // A dead folder keeps its seat but wears the caption tint: the
-                // row still explains where the user has been.
-                color: widget.missing
-                    ? color.labelCaption
-                    : color.labelSecondary,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  widget.path,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: DswType.xxs12.copyWith(
-                    color: widget.missing
-                        ? color.labelCaption
-                        : color.labelPrimary,
-                    fontFamily: dswFontFamilyCode,
-                    fontFamilyFallback: dswFontFamilyCodeFallback,
-                  ),
-                ),
-              ),
-              if (widget.missing)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: Text(
-                    context.tr('missing'),
-                    style: DswType.xxxs11.copyWith(color: color.stateWarnLabel),
-                  ),
-                ),
-              if (_hovered) _ForgetButton(onTap: widget.onForget),
-            ],
-          ),
-        ),
-      ),
+    // The row adopts the folder; its accessible name is the path itself, so the
+    // visible text is left as the label. The forget button is a nested action and
+    // is kept out of the row's name.
+    return DswHoverTap(
+      onTap: widget.missing ? null : widget.onAdopt,
+      toggled: widget.current ? true : null,
+      builder: (context, hovered, _) => _body(color, hovered),
     );
   }
+
+  Widget _body(DswAlias color, bool hovered) => Container(
+    height: 32,
+    padding: const EdgeInsets.only(left: 8, right: 4),
+    margin: const EdgeInsets.only(bottom: 2),
+    decoration: BoxDecoration(
+      color: widget.current
+          ? color.interactiveBgActive
+          : hovered
+          ? color.interactiveBgHover
+          : Colors.transparent,
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Row(
+      children: [
+        Icon(
+          LucideIcons.folder,
+          size: 14,
+          // A dead folder keeps its seat but wears the caption tint: the row
+          // still explains where the user has been.
+          color: widget.missing ? color.labelCaption : color.labelSecondary,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            widget.path,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: DswType.xxs12.copyWith(
+              color: widget.missing ? color.labelCaption : color.labelPrimary,
+              fontFamily: dswFontFamilyCode,
+              fontFamilyFallback: dswFontFamilyCodeFallback,
+            ),
+          ),
+        ),
+        if (widget.missing)
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Text(
+              context.tr('missing'),
+              style: DswType.xxxs11.copyWith(color: color.stateWarnLabel),
+            ),
+          ),
+        if (hovered)
+          _ForgetButton(onTap: widget.onForget, label: context.tr('forget')),
+      ],
+    ),
+  );
 }
 
 /// The recents' trailing forget button: 20px square, hover fill, subdued ink —
 /// a destructive-looking affordance for a non-destructive action.
-class _ForgetButton extends StatefulWidget {
-  const _ForgetButton({required this.onTap});
+class _ForgetButton extends StatelessWidget {
+  const _ForgetButton({required this.onTap, required this.label});
 
   final VoidCallback onTap;
 
-  @override
-  State<_ForgetButton> createState() => _ForgetButtonState();
-}
-
-class _ForgetButtonState extends State<_ForgetButton> {
-  bool _hovered = false;
+  /// The X glyph alone is unnamed to a screen reader; the row passes
+  /// `t('forget')` in.
+  final String label;
 
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.onTap,
-        child: Container(
-          width: 20,
-          height: 20,
-          decoration: BoxDecoration(
-            color: _hovered ? color.interactiveBgHover : Colors.transparent,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Icon(
-            LucideIcons.x,
-            size: 11,
-            color: _hovered ? color.labelPrimary : color.labelTertiary,
-          ),
+    return DswHoverTap(
+      onTap: onTap,
+      semanticLabel: label,
+      excludeSemantics: true,
+      builder: (context, hovered, _) => Container(
+        width: 20,
+        height: 20,
+        decoration: BoxDecoration(
+          color: hovered ? color.interactiveBgHover : Colors.transparent,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Icon(
+          LucideIcons.x,
+          size: 11,
+          color: hovered ? color.labelPrimary : color.labelTertiary,
         ),
       ),
     );
@@ -1403,44 +1394,39 @@ class _NavCell extends StatefulWidget {
 }
 
 class _NavCellState extends State<_NavCell> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: DswMotion.respecting(context, DswMotion.fast),
-          height: 40,
-          padding: const EdgeInsets.only(left: 12, right: 16),
-          decoration: BoxDecoration(
-            color: widget.active
-                ? color.sidebarNavItemActive
-                : _hovered
-                ? color.sidebarNavItemHover
-                : null,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Icon(widget.icon, size: 16, color: color.labelSecondary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  widget.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: DswType.s14.copyWith(color: color.labelPrimary),
-                ),
+    // The nav's visible label is its accessible name, so excludeSemantics stays
+    // off and the selected section is announced as a toggled state.
+    return DswHoverTap(
+      onTap: widget.onTap,
+      toggled: widget.active ? true : null,
+      builder: (context, hovered, _) => AnimatedContainer(
+        duration: DswMotion.respecting(context, DswMotion.fast),
+        height: 40,
+        padding: const EdgeInsets.only(left: 12, right: 16),
+        decoration: BoxDecoration(
+          color: widget.active
+              ? color.sidebarNavItemActive
+              : hovered
+              ? color.sidebarNavItemHover
+              : null,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(widget.icon, size: 16, color: color.labelSecondary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                widget.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: DswType.s14.copyWith(color: color.labelPrimary),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1458,30 +1444,25 @@ class _CloseButton extends StatefulWidget {
 }
 
 class _CloseButtonState extends State<_CloseButton> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
+    final label = context.tr('closeSettings');
     return Tooltip(
-      message: context.tr('closeSettings'),
+      message: label,
       waitDuration: const Duration(milliseconds: 500),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
-          onTap: widget.onTap,
-          behavior: HitTestBehavior.opaque,
-          child: Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: _hovered ? color.interactiveBgHover : null,
-            ),
-            child: Icon(LucideIcons.x, size: 14, color: color.labelPrimary),
+      child: DswHoverTap(
+        onTap: widget.onTap,
+        semanticLabel: label,
+        excludeSemantics: true,
+        builder: (context, hovered, _) => Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: hovered ? color.interactiveBgHover : null,
           ),
+          child: Icon(LucideIcons.x, size: 14, color: color.labelPrimary),
         ),
       ),
     );
@@ -1604,33 +1585,32 @@ class _SwitchRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () => onChanged(!value),
-        behavior: HitTestBehavior.opaque,
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: DswType.xxs12.copyWith(color: color.labelSecondary),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    description,
-                    style: DswType.xxxs11.copyWith(color: color.labelTertiary),
-                  ),
-                ],
-              ),
+    // The whole row is one on/off control; its visible label is the name and the
+    // switch state is announced via toggled.
+    return DswHoverTap(
+      onTap: () => onChanged(!value),
+      toggled: value,
+      builder: (context, _, _) => Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: DswType.xxs12.copyWith(color: color.labelSecondary),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  style: DswType.xxxs11.copyWith(color: color.labelTertiary),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            _Switch(value: value, onChanged: onChanged),
-          ],
-        ),
+          ),
+          const SizedBox(width: 12),
+          _Switch(value: value, onChanged: onChanged),
+        ],
       ),
     );
   }
@@ -1707,6 +1687,7 @@ class _Stepper extends StatelessWidget {
           children: [
             _StepButton(
               icon: LucideIcons.minus,
+              label: context.tr('decrease'),
               onTap: value > min ? () => onChanged(value - 1) : null,
             ),
             SizedBox(
@@ -1725,6 +1706,7 @@ class _Stepper extends StatelessWidget {
             ),
             _StepButton(
               icon: LucideIcons.plus,
+              label: context.tr('increase'),
               onTap: value < max ? () => onChanged(value + 1) : null,
             ),
           ],
@@ -1737,46 +1719,49 @@ class _Stepper extends StatelessWidget {
 /// One stepper side: 28px square, radius 6, subdued until hovered — the
 /// `_RevealButton` shape with the minus/plus glyphs the stepper asks for.
 class _StepButton extends StatefulWidget {
-  const _StepButton({required this.icon, required this.onTap});
+  const _StepButton({
+    required this.icon,
+    required this.onTap,
+    required this.label,
+  });
 
   final IconData icon;
 
   /// Null at the range's end — the cap is visible, not silent.
   final VoidCallback? onTap;
 
+  /// "Increase" / "Decrease" — the +/- glyph alone is unnamed.
+  final String label;
+
   @override
   State<_StepButton> createState() => _StepButtonState();
 }
 
 class _StepButtonState extends State<_StepButton> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    final enabled = widget.onTap != null;
-    return MouseRegion(
-      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: _hovered && enabled
-                ? color.interactiveBgHover
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: color.borderL2),
-          ),
-          child: Icon(
-            widget.icon,
-            size: 14,
-            color: enabled ? color.labelSecondary : color.labelCaption,
-          ),
+    return DswHoverTap(
+      onTap: widget.onTap,
+      enabled: widget.onTap != null,
+      semanticLabel: widget.label,
+      excludeSemantics: true,
+      builder: (context, hovered, _) => Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: hovered && widget.onTap != null
+              ? color.interactiveBgHover
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: color.borderL2),
+        ),
+        child: Icon(
+          widget.icon,
+          size: 14,
+          color: widget.onTap != null
+              ? color.labelSecondary
+              : color.labelCaption,
         ),
       ),
     );
@@ -1795,33 +1780,30 @@ class _RevealButton extends StatefulWidget {
 }
 
 class _RevealButtonState extends State<_RevealButton> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
+    final label = widget.revealed
+        ? context.tr('hideKey')
+        : context.tr('showKey');
     return Tooltip(
-      message: widget.revealed ? context.tr('hideKey') : context.tr('showKey'),
+      message: label,
       waitDuration: const Duration(milliseconds: 500),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
-          onTap: widget.onTap,
-          behavior: HitTestBehavior.opaque,
-          child: Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: _hovered ? color.interactiveBgHover : null,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Icon(
-              widget.revealed ? LucideIcons.eye_off : LucideIcons.eye,
-              size: 16,
-              color: _hovered ? color.labelPrimary : color.labelTertiary,
-            ),
+      child: DswHoverTap(
+        onTap: widget.onTap,
+        semanticLabel: label,
+        excludeSemantics: true,
+        builder: (context, hovered, _) => Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: hovered ? color.interactiveBgHover : null,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Icon(
+            widget.revealed ? LucideIcons.eye_off : LucideIcons.eye,
+            size: 16,
+            color: hovered ? color.labelPrimary : color.labelTertiary,
           ),
         ),
       ),

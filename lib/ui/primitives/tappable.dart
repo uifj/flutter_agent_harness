@@ -39,6 +39,7 @@ class DswHoverTap extends StatefulWidget {
     required this.builder,
     this.semanticLabel,
     this.expanded,
+    this.toggled,
     this.excludeSemantics = false,
     this.enabled = true,
     this.autofocus = false,
@@ -56,6 +57,10 @@ class DswHoverTap extends StatefulWidget {
 
   /// Set on an expand/collapse control so the state is announced.
   final bool? expanded;
+
+  /// Set on an on/off control (a switch row) so VoiceOver announces the state
+  /// ("on"/"off") rather than just "button".
+  final bool? toggled;
 
   /// Hides the descendant text from accessibility, so only [semanticLabel] is
   /// read. The block toggle sets this because its label text ("… 3 more lines")
@@ -79,6 +84,8 @@ class _DswHoverTapState extends State<DswHoverTap> {
   bool _hovered = false;
   bool _focused = false;
 
+  bool get _interactive => widget._interactive;
+
   void _activate() => widget.onTap?.call();
 
   @override
@@ -86,6 +93,7 @@ class _DswHoverTapState extends State<DswHoverTap> {
     button: true,
     enabled: widget.enabled,
     expanded: widget.expanded,
+    toggled: widget.toggled,
     label: widget.semanticLabel,
     // The tap action has to be declared here: a bare `Semantics(button: true)`
     // exposes no `SemanticsAction.tap`, so a screen reader's double-tap would
@@ -93,29 +101,41 @@ class _DswHoverTapState extends State<DswHoverTap> {
     // accessibility reach the same callback a pointer or Enter does.
     onTap: widget._interactive ? _activate : null,
     excludeSemantics: widget.excludeSemantics,
+    // Focus + keyboard + the button semantics come from the detector; it stays
+    // enabled even for a non-tappable control (a dead recent-workspace row has
+    // no adopt action but still reveals a nested forget button on hover, and
+    // hover lives in the MouseRegion below, not behind the detector's enabled
+    // flag).
     child: FocusableActionDetector(
-      enabled: widget._interactive,
       autofocus: widget.autofocus,
-      mouseCursor: widget._interactive
-          ? SystemMouseCursors.click
-          : SystemMouseCursors.basic,
-      onShowHoverHighlight: (hovering) => setState(() => _hovered = hovering),
       onFocusChange: (focused) => setState(() => _focused = focused),
       actions: <Type, Action<Intent>>{
         // Enter/Space (and a screen-reader's activate gesture) arrive here.
         ActivateIntent: CallbackAction<ActivateIntent>(
           onInvoke: (_) {
-            _activate();
+            if (_interactive) _activate();
             return null;
           },
         ),
       },
-      child: GestureDetector(
-        onTap: widget._interactive ? _activate : null,
-        behavior: HitTestBehavior.opaque,
-        child: Builder(
-          builder: (context) =>
-              widget.builder(context, _hovered || _focused, _focused),
+      // Hover is a plain MouseRegion on purpose. The detector's own
+      // `onShowHoverHighlight` is gated by `FocusManager.highlightMode`
+      // (`_canShowHighlight`), so it does not reliably fire — using it for the
+      // hover *visual* dropped the tint in both the widget test and (under some
+      // focus modes) the running app. MouseRegion.onEnter always fires.
+      child: MouseRegion(
+        cursor: _interactive
+            ? SystemMouseCursors.click
+            : SystemMouseCursors.basic,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: GestureDetector(
+          onTap: _interactive ? _activate : null,
+          behavior: HitTestBehavior.opaque,
+          child: Builder(
+            builder: (context) =>
+                widget.builder(context, _hovered || _focused, _focused),
+          ),
         ),
       ),
     ),

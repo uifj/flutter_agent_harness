@@ -345,6 +345,9 @@ const enStrings = <String, String>{
   'showKey': 'Show key',
   'hideKey': 'Hide key',
   'closeSettings': 'Close settings',
+  'forget': 'Forget',
+  'increase': 'Increase',
+  'decrease': 'Decrease',
   'removeServer': 'Remove server',
   'restartWarning':
       'Saving reconnects the agent. The open conversation is cleared; it '
@@ -648,6 +651,9 @@ const zhStrings = <String, String>{
   'showKey': '显示密钥',
   'hideKey': '隐藏密钥',
   'closeSettings': '关闭设置',
+  'forget': '移除',
+  'increase': '增大',
+  'decrease': '减小',
   'removeServer': '移除服务器',
   'restartWarning': '保存将重连代理。当前会话会被清空；它仍保留在磁盘上，可从侧边栏重新打开。',
 };
