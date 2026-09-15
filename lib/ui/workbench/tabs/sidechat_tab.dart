@@ -31,6 +31,7 @@ import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
 import '../../../model/sidebar_tab.dart';
 import '../../../state/workbench_controller.dart';
+import '../../primitives/tappable.dart';
 
 // ---- The host ----------------------------------------------------------------
 
@@ -332,33 +333,25 @@ class _SendButton extends StatefulWidget {
 }
 
 class _SendButtonState extends State<_SendButton> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.onTap,
-        child: Container(
-          width: 26,
-          height: 26,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: _hovered
-                ? color.interactiveBgHoverAccent
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Icon(
-            LucideIcons.send,
-            size: 14,
-            color: _hovered ? color.labelPrimary : color.labelSecondary,
-          ),
+    return DswHoverTap(
+      onTap: widget.onTap,
+      semanticLabel: context.tr('send'),
+      excludeSemantics: true,
+      builder: (context, hovered, _) => Container(
+        width: 26,
+        height: 26,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: hovered ? color.interactiveBgHoverAccent : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Icon(
+          LucideIcons.send,
+          size: 14,
+          color: hovered ? color.labelPrimary : color.labelSecondary,
         ),
       ),
     );

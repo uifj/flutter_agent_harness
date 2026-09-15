@@ -847,24 +847,17 @@ class _LinkButton extends StatefulWidget {
 }
 
 class _LinkButtonState extends State<_LinkButton> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Text(
-          widget.label,
-          style: DswType.xxxs11.copyWith(
-            color: color.brandPrimary,
-            decoration: _hovered ? TextDecoration.underline : null,
-          ),
+    // The visible label is the accessible name.
+    return DswHoverTap(
+      onTap: widget.onTap,
+      builder: (context, hovered, _) => Text(
+        widget.label,
+        style: DswType.xxxs11.copyWith(
+          color: color.brandPrimary,
+          decoration: hovered ? TextDecoration.underline : null,
         ),
       ),
     );
@@ -1256,39 +1249,32 @@ class _LoadMore extends StatefulWidget {
 }
 
 class _LoadMoreState extends State<_LoadMore> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
     final enabled = !widget.loading;
-    return MouseRegion(
-      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: enabled ? widget.onTap : null,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          decoration: BoxDecoration(
-            color: _hovered && enabled
-                ? color.interactiveBgHover
-                : Colors.transparent,
-            border: Border.all(color: color.borderL2),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Center(
-            child: Opacity(
-              opacity: enabled ? 1 : 0.5,
-              child: Text(
-                widget.loading ? context.tr('loading') : context.tr('loadMore'),
-                style: DswType.xxs12.copyWith(
-                  color: _hovered && enabled
-                      ? color.labelPrimary
-                      : color.labelSecondary,
-                ),
+    return DswHoverTap(
+      onTap: enabled ? widget.onTap : null,
+      enabled: enabled,
+      builder: (context, hovered, _) => Container(
+        margin: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        decoration: BoxDecoration(
+          color: hovered && enabled
+              ? color.interactiveBgHover
+              : Colors.transparent,
+          border: Border.all(color: color.borderL2),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Center(
+          child: Opacity(
+            opacity: enabled ? 1 : 0.5,
+            child: Text(
+              widget.loading ? context.tr('loading') : context.tr('loadMore'),
+              style: DswType.xxs12.copyWith(
+                color: hovered && enabled
+                    ? color.labelPrimary
+                    : color.labelSecondary,
               ),
             ),
           ),

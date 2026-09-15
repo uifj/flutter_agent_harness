@@ -30,11 +30,13 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../host/git.dart';
+import '../../../l10n/locales.dart';
 import '../../../theme/dsw_alias.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
 import '../../../model/sidebar_tab.dart';
 import '../../../state/workbench_controller.dart';
+import '../../primitives/tappable.dart';
 import '../tab_registry.dart' show readsAsText;
 import 'git_tab.dart' show GitHost;
 
@@ -742,33 +744,28 @@ class _RefreshButton extends StatefulWidget {
 }
 
 class _RefreshButtonState extends State<_RefreshButton> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
+    final label = context.tr('refresh');
     return Tooltip(
-      message: 'Refresh',
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
-          onTap: widget.onTap,
-          behavior: HitTestBehavior.opaque,
-          child: Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: _hovered ? color.interactiveBgHover : Colors.transparent,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Icon(
-                LucideIcons.refresh_cw,
-                size: 14,
-                color: _hovered ? color.labelPrimary : color.labelSecondary,
-              ),
+      message: label,
+      child: DswHoverTap(
+        onTap: widget.onTap,
+        semanticLabel: label,
+        excludeSemantics: true,
+        builder: (context, hovered, _) => Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: hovered ? color.interactiveBgHover : Colors.transparent,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Icon(
+              LucideIcons.refresh_cw,
+              size: 14,
+              color: hovered ? color.labelPrimary : color.labelSecondary,
             ),
           ),
         ),
