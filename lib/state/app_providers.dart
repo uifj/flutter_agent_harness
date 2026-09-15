@@ -19,13 +19,24 @@
 // The controllers and the runtime swap stay in `AppScope` until their own
 // stage; this file only moves what `main` already owned.
 
+import 'dart:io';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../model/workbench_prefs.dart';
+import 'app_scope.dart';
 import 'prefs_store.dart';
 import 'settings_store.dart';
 
 part 'app_providers.g.dart';
+
+/// Application Support, opened once by `main` and overridden into the
+/// container — same pattern as the two stores below. A provider rather than
+/// a constructor parameter, because [appScope] reads it through the
+/// container and the tree above never threads a `Directory` around.
+@Riverpod(keepAlive: true)
+Directory supportDirectory(Ref ref) =>
+    throw UnimplementedError('override supportDirectory in main or tests');
 
 /// The settings document. Opened before the first frame so the panel that
 /// fixes a missing key can already be up, and so the workspace bookmark is
@@ -57,4 +68,24 @@ WorkbenchPrefs workbenchPrefs(Ref ref) {
   store.addListener(listener);
   ref.onDispose(() => store.removeListener(listener));
   return store.value;
+}
+
+/// The composition root (ADR-0002 stage 2): the runtime, the nine
+/// controllers, and the runtime swap, now owned by the container instead of
+/// `_DshAppState`. The widget tree reads it through
+/// `ref.watch(appScopeProvider)`; nothing in the tree constructs it.
+///
+/// Lifetime: keepAlive, so the scope lives as long as the container — which
+/// lives as long as `main`. Disposal order is delegated to [AppScope.dispose]
+/// via `onDispose`; the container tears it down when `main` drops it, the
+/// same moment `_DshAppState.dispose` used to.
+@Riverpod(keepAlive: true)
+AppScope appScope(Ref ref) {
+  final scope = AppScope(
+    support: ref.watch(supportDirectoryProvider),
+    settings: ref.watch(settingsStoreProvider),
+    prefs: ref.watch(prefsStoreProvider),
+  );
+  ref.onDispose(scope.dispose);
+  return scope;
 }

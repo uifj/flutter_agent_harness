@@ -8,6 +8,61 @@ part of 'app_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+/// Application Support, opened once by `main` and overridden into the
+/// container — same pattern as the two stores below. A provider rather than
+/// a constructor parameter, because [appScope] reads it through the
+/// container and the tree above never threads a `Directory` around.
+
+@ProviderFor(supportDirectory)
+final supportDirectoryProvider = SupportDirectoryProvider._();
+
+/// Application Support, opened once by `main` and overridden into the
+/// container — same pattern as the two stores below. A provider rather than
+/// a constructor parameter, because [appScope] reads it through the
+/// container and the tree above never threads a `Directory` around.
+
+final class SupportDirectoryProvider
+    extends $FunctionalProvider<Directory, Directory, Directory>
+    with $Provider<Directory> {
+  /// Application Support, opened once by `main` and overridden into the
+  /// container — same pattern as the two stores below. A provider rather than
+  /// a constructor parameter, because [appScope] reads it through the
+  /// container and the tree above never threads a `Directory` around.
+  SupportDirectoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'supportDirectoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$supportDirectoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<Directory> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  Directory create(Ref ref) {
+    return supportDirectory(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Directory value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Directory>(value),
+    );
+  }
+}
+
+String _$supportDirectoryHash() => r'd5d0370265316686df899e097919c251eb287ecf';
+
 /// The settings document. Opened before the first frame so the panel that
 /// fixes a missing key can already be up, and so the workspace bookmark is
 /// in hand before anything tries to read under the root.
@@ -181,3 +236,73 @@ final class WorkbenchPrefsProvider
 }
 
 String _$workbenchPrefsHash() => r'4da5a752b757bb0f68c12d6233773bcee673a6f4';
+
+/// The composition root (ADR-0002 stage 2): the runtime, the nine
+/// controllers, and the runtime swap, now owned by the container instead of
+/// `_DshAppState`. The widget tree reads it through
+/// `ref.watch(appScopeProvider)`; nothing in the tree constructs it.
+///
+/// Lifetime: keepAlive, so the scope lives as long as the container — which
+/// lives as long as `main`. Disposal order is delegated to [AppScope.dispose]
+/// via `onDispose`; the container tears it down when `main` drops it, the
+/// same moment `_DshAppState.dispose` used to.
+
+@ProviderFor(appScope)
+final appScopeProvider = AppScopeProvider._();
+
+/// The composition root (ADR-0002 stage 2): the runtime, the nine
+/// controllers, and the runtime swap, now owned by the container instead of
+/// `_DshAppState`. The widget tree reads it through
+/// `ref.watch(appScopeProvider)`; nothing in the tree constructs it.
+///
+/// Lifetime: keepAlive, so the scope lives as long as the container — which
+/// lives as long as `main`. Disposal order is delegated to [AppScope.dispose]
+/// via `onDispose`; the container tears it down when `main` drops it, the
+/// same moment `_DshAppState.dispose` used to.
+
+final class AppScopeProvider
+    extends $FunctionalProvider<AppScope, AppScope, AppScope>
+    with $Provider<AppScope> {
+  /// The composition root (ADR-0002 stage 2): the runtime, the nine
+  /// controllers, and the runtime swap, now owned by the container instead of
+  /// `_DshAppState`. The widget tree reads it through
+  /// `ref.watch(appScopeProvider)`; nothing in the tree constructs it.
+  ///
+  /// Lifetime: keepAlive, so the scope lives as long as the container — which
+  /// lives as long as `main`. Disposal order is delegated to [AppScope.dispose]
+  /// via `onDispose`; the container tears it down when `main` drops it, the
+  /// same moment `_DshAppState.dispose` used to.
+  AppScopeProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'appScopeProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$appScopeHash();
+
+  @$internal
+  @override
+  $ProviderElement<AppScope> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  AppScope create(Ref ref) {
+    return appScope(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AppScope value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AppScope>(value),
+    );
+  }
+}
+
+String _$appScopeHash() => r'a2c0b3eccbef5ce40ab1f33025e4c2c564737b11';
