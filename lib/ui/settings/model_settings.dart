@@ -230,8 +230,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
     if (fetcher == null || _modelsLoading) return;
     final generation = ++_modelsFetchGeneration;
     final provider = _provider;
-    final baseUrl =
-        _baseUrl.text.trim().isEmpty ? defaultBaseUrlFor(_provider)
+    final baseUrl = _baseUrl.text.trim().isEmpty
+        ? defaultBaseUrlFor(_provider)
         : _baseUrl.text.trim();
     final apiKey = _key.text.trim();
     setState(() {
@@ -690,7 +690,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
                 // Toggling the one card the draft already edits: collapsing it
                 // hides the fields, it does not throw the draft away.
                 setState(
-                    () => _expanded = _expanded == provider ? null : provider);
+                  () => _expanded = _expanded == provider ? null : provider,
+                );
               },
             ),
           ],
@@ -2034,9 +2035,7 @@ class _ModelPickButton extends StatelessWidget {
         child: Container(
           width: 28,
           height: 28,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(6),
-          ),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(6)),
           child: Icon(
             LucideIcons.list,
             size: 16,

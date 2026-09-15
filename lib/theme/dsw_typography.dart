@@ -111,20 +111,12 @@ abstract final class DswType {
   static final markdownBase = _ui(16, 28, FontWeight.w400);
   static final markdownBaseStrong = _ui(16, 28, FontWeight.w600);
   static final markdownBaseItalic = _ui(16, 28, FontWeight.w400).italic;
-  static final markdownBaseStrongItalic = _ui(
-    16,
-    28,
-    FontWeight.w600,
-  ).italic;
+  static final markdownBaseStrongItalic = _ui(16, 28, FontWeight.w600).italic;
 
   static final markdownSmall = _ui(14, 24, FontWeight.w400);
   static final markdownSmallStrong = _ui(14, 24, FontWeight.w600);
   static final markdownSmallItalic = _ui(14, 24, FontWeight.w400).italic;
-  static final markdownSmallStrongItalic = _ui(
-    14,
-    24,
-    FontWeight.w600,
-  ).italic;
+  static final markdownSmallStrongItalic = _ui(14, 24, FontWeight.w600).italic;
 
   static final markdownTable = _ui(15, 25, FontWeight.w400);
   static final markdownTableHead = _ui(15, 25, FontWeight.w500);

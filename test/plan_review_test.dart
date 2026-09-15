@@ -128,7 +128,9 @@ void main() {
       return tester.pumpWidget(
         MaterialApp(
           theme: dswThemeData(Brightness.light),
-          home: Scaffold(body: ConversationRoot(conversation: controller, tail: tail)),
+          home: Scaffold(
+            body: ConversationRoot(conversation: controller, tail: tail),
+          ),
         ),
       );
     }
@@ -140,8 +142,12 @@ void main() {
       source.emit(
         const ToolCallRequested(ref: 'r1', name: 'plan', arguments: {}),
       );
-      source.emit(ToolCallSucceeded(ref: 'r1', output: {'ok': true, 'plan': plan}));
-      source.emit(const TurnFinished(outcome: TurnOutcome.completed, sessionId: 's1'));
+      source.emit(
+        ToolCallSucceeded(ref: 'r1', output: {'ok': true, 'plan': plan}),
+      );
+      source.emit(
+        const TurnFinished(outcome: TurnOutcome.completed, sessionId: 's1'),
+      );
       await source.close();
       await tester.pumpAndSettle();
     }
@@ -175,7 +181,9 @@ void main() {
       unawaited(controller.send('just talk'));
       await tester.pump();
       source.emit(const TextDelta(text: 'hi', messageIndex: 0));
-      source.emit(const TurnFinished(outcome: TurnOutcome.completed, sessionId: 's1'));
+      source.emit(
+        const TurnFinished(outcome: TurnOutcome.completed, sessionId: 's1'),
+      );
       await source.close();
       await tester.pumpAndSettle();
       expect(find.text('Plan review'), findsNothing);

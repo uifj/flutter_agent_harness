@@ -137,40 +137,41 @@ class WorkspaceTools {
       },
       required: ['file_path'],
     ),
-    fn: (input, context) async =>
-        ToolResult.response(await _guard(() async {
-      final ws = _workspace;
-      final path = ws.resolve(_string(input, 'file_path'));
-      if (Directory(path).existsSync()) {
-        throw WorkspaceDenied(
-          'That is a directory, not a file. Use glob with a pattern under it to '
-          'see what it holds.',
+    fn: (input, context) async => ToolResult.response(
+      await _guard(() async {
+        final ws = _workspace;
+        final path = ws.resolve(_string(input, 'file_path'));
+        if (Directory(path).existsSync()) {
+          throw WorkspaceDenied(
+            'That is a directory, not a file. Use glob with a pattern under it to '
+            'see what it holds.',
+          );
+        }
+        final file = File(path);
+        if (!file.existsSync()) {
+          throw WorkspaceDenied('No such file: ${ws.relative(path)}');
+        }
+        final requested = _int(input['limit']) ?? readLimit;
+        final outcome = await readWindowOf(
+          decodeLines(file.openRead()),
+          offset: _int(input['offset'])?.clamp(1, 1 << 40) ?? 1,
+          // The model may ask for more than the cap; the cap wins silently and the
+          // footer says where the window stopped, which is the same signal it gets
+          // from any other short window.
+          limit: requested < 1 ? readLimit : (requested.clamp(1, readLimit)),
         );
-      }
-      final file = File(path);
-      if (!file.existsSync()) {
-        throw WorkspaceDenied('No such file: ${ws.relative(path)}');
-      }
-      final requested = _int(input['limit']) ?? readLimit;
-      final outcome = await readWindowOf(
-        decodeLines(file.openRead()),
-        offset: _int(input['offset'])?.clamp(1, 1 << 40) ?? 1,
-        // The model may ask for more than the cap; the cap wins silently and the
-        // footer says where the window stopped, which is the same signal it gets
-        // from any other short window.
-        limit: requested < 1 ? readLimit : (requested.clamp(1, readLimit)),
-      );
-      return {
-        'path': ws.relative(path),
-        'startLine': outcome.offset,
-        'endLine': outcome.endLine,
-        'totalLines': outcome.totalLines,
-        'content': numberedLines(outcome),
-        // dsh's footer, in its own field rather than glued to the content: the
-        // card that renders this later shows the file, not the note about it.
-        'note': readFooter(outcome),
-      };
-    })),
+        return {
+          'path': ws.relative(path),
+          'startLine': outcome.offset,
+          'endLine': outcome.endLine,
+          'totalLines': outcome.totalLines,
+          'content': numberedLines(outcome),
+          // dsh's footer, in its own field rather than glued to the content: the
+          // card that renders this later shows the file, not the note about it.
+          'note': readFooter(outcome),
+        };
+      }),
+    ),
   );
 
   /// Approval-gated, like [_edit] and [_bash].
@@ -233,18 +234,19 @@ class WorkspaceTools {
 
       return ToolResult.response(
         await _guard(() async {
-        final file = File(path);
-        file.parent.createSync(recursive: true);
-        file.writeAsStringSync(content);
-        // The tree's revision: an agent write is the one change the panels
-        // cannot see on their own, so it is the one that announces itself.
-        bumpFsRevision();
-        return {
-          'ok': true,
-          'path': ws.relative(path),
-          'bytes': utf8.encode(content).length,
-        };
-      }));
+          final file = File(path);
+          file.parent.createSync(recursive: true);
+          file.writeAsStringSync(content);
+          // The tree's revision: an agent write is the one change the panels
+          // cannot see on their own, so it is the one that announces itself.
+          bumpFsRevision();
+          return {
+            'ok': true,
+            'path': ws.relative(path),
+            'bytes': utf8.encode(content).length,
+          };
+        }),
+      );
     },
   );
 
@@ -341,29 +343,30 @@ class WorkspaceTools {
 
       return ToolResult.response(
         await _guard(() async {
-        final file = File(path);
-        // Re-read after the pause: the user may have edited the file themselves
-        // while the prompt was up, and writing the content computed before that
-        // would silently revert them.
-        final current = file.readAsStringSync();
-        final outcome = current == before
-            ? edited
-            : applyLiteralEdit(
-                source: current,
-                oldString: oldString,
-                newString: newString,
-                replaceAll: replaceAll,
-              );
-        file.writeAsStringSync(outcome.content);
-        // Same announcement as a write: an edit changed the disk, and the
-        // tree that shows it should not wait for the user to notice.
-        bumpFsRevision();
-        return {
-          'ok': true,
-          'path': ws.relative(path),
-          'replacements': outcome.replacements,
-        };
-      }));
+          final file = File(path);
+          // Re-read after the pause: the user may have edited the file themselves
+          // while the prompt was up, and writing the content computed before that
+          // would silently revert them.
+          final current = file.readAsStringSync();
+          final outcome = current == before
+              ? edited
+              : applyLiteralEdit(
+                  source: current,
+                  oldString: oldString,
+                  newString: newString,
+                  replaceAll: replaceAll,
+                );
+          file.writeAsStringSync(outcome.content);
+          // Same announcement as a write: an edit changed the disk, and the
+          // tree that shows it should not wait for the user to notice.
+          bumpFsRevision();
+          return {
+            'ok': true,
+            'path': ws.relative(path),
+            'replacements': outcome.replacements,
+          };
+        }),
+      );
     },
   );
 
@@ -399,29 +402,30 @@ class WorkspaceTools {
       },
       required: ['pattern'],
     ),
-    fn: (input, context) async =>
-        ToolResult.response(await _guard(() async {
-      final ws = _workspace;
-      final root = Directory(ws.resolve(_pathArg(input) ?? '.'));
-      if (!root.existsSync()) {
-        throw WorkspaceDenied('No such directory: ${_pathArg(input) ?? '.'}');
-      }
-      final outcome = await globFiles(
-        root: root,
-        pattern: _string(input, 'pattern'),
-      );
-      return {
-        'path': ws.relative(root.path),
-        'pattern': input['pattern'],
-        'paths': outcome.hits.map((hit) => hit.path).toList(),
-        'total': outcome.total,
-        if (outcome.capped)
-          'note':
-              'Showing the newest ${outcome.hits.length} of ${outcome.total} '
-              'matches. Narrow the pattern to see the rest.',
-        if (outcome.timedOut) 'timedOut': true,
-      };
-    })),
+    fn: (input, context) async => ToolResult.response(
+      await _guard(() async {
+        final ws = _workspace;
+        final root = Directory(ws.resolve(_pathArg(input) ?? '.'));
+        if (!root.existsSync()) {
+          throw WorkspaceDenied('No such directory: ${_pathArg(input) ?? '.'}');
+        }
+        final outcome = await globFiles(
+          root: root,
+          pattern: _string(input, 'pattern'),
+        );
+        return {
+          'path': ws.relative(root.path),
+          'pattern': input['pattern'],
+          'paths': outcome.hits.map((hit) => hit.path).toList(),
+          'total': outcome.total,
+          if (outcome.capped)
+            'note':
+                'Showing the newest ${outcome.hits.length} of ${outcome.total} '
+                'matches. Narrow the pattern to see the rest.',
+          if (outcome.timedOut) 'timedOut': true,
+        };
+      }),
+    ),
   );
 
   Tool _grep() => _ai.defineTool<Map<String, dynamic>, Map<String, dynamic>>(
@@ -452,48 +456,49 @@ class WorkspaceTools {
       },
       required: ['pattern'],
     ),
-    fn: (input, context) async =>
-        ToolResult.response(await _guard(() async {
-      final ws = _workspace;
-      final raw = _pathArg(input) ?? '.';
-      final resolved = ws.resolve(raw);
-      final FileSystemEntity target = Directory(resolved).existsSync()
-          ? Directory(resolved)
-          : File(resolved);
-      if (!target.existsSync()) {
-        throw WorkspaceDenied('No such file or directory: $raw');
-      }
+    fn: (input, context) async => ToolResult.response(
+      await _guard(() async {
+        final ws = _workspace;
+        final raw = _pathArg(input) ?? '.';
+        final resolved = ws.resolve(raw);
+        final FileSystemEntity target = Directory(resolved).existsSync()
+            ? Directory(resolved)
+            : File(resolved);
+        if (!target.existsSync()) {
+          throw WorkspaceDenied('No such file or directory: $raw');
+        }
 
-      final RegExp pattern;
-      try {
-        pattern = RegExp(_string(input, 'pattern'));
-      } on FormatException catch (e) {
-        // The model's own mistake, and one it can fix: hand back the parse
-        // failure rather than a generic refusal.
-        throw WorkspaceDenied('Invalid regular expression: ${e.message}');
-      }
+        final RegExp pattern;
+        try {
+          pattern = RegExp(_string(input, 'pattern'));
+        } on FormatException catch (e) {
+          // The model's own mistake, and one it can fix: hand back the parse
+          // failure rather than a generic refusal.
+          throw WorkspaceDenied('Invalid regular expression: ${e.message}');
+        }
 
-      final outcome = await grepFiles(
-        target: target,
-        pattern: pattern,
-        include: input['include'] as String?,
-      );
-      return {
-        'path': ws.relative(resolved),
-        'pattern': input['pattern'],
-        // Grouped by file, in dsh's shape: one entry per file, its matches in
-        // line order. Flat matches would repeat the path on every line, which on
-        // a 250-match page is most of the payload.
-        'matches': _group(outcome.hits),
-        'total': outcome.total,
-        'files': outcome.files,
-        if (outcome.capped)
-          'note':
-              'Showing the first ${outcome.hits.length} of ${outcome.total} '
-              'matches. Narrow the pattern or pass include to see the rest.',
-        if (outcome.timedOut) 'timedOut': true,
-      };
-    })),
+        final outcome = await grepFiles(
+          target: target,
+          pattern: pattern,
+          include: input['include'] as String?,
+        );
+        return {
+          'path': ws.relative(resolved),
+          'pattern': input['pattern'],
+          // Grouped by file, in dsh's shape: one entry per file, its matches in
+          // line order. Flat matches would repeat the path on every line, which on
+          // a 250-match page is most of the payload.
+          'matches': _group(outcome.hits),
+          'total': outcome.total,
+          'files': outcome.files,
+          if (outcome.capped)
+            'note':
+                'Showing the first ${outcome.hits.length} of ${outcome.total} '
+                'matches. Narrow the pattern or pass include to see the rest.',
+          if (outcome.timedOut) 'timedOut': true,
+        };
+      }),
+    ),
   );
 
   /// Matches to `[{path, lines: [{line, text}]}]`, preserving discovery order.

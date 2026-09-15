@@ -44,7 +44,9 @@ void main() {
   ModelDirectory directoryWith(FakeFetcher fetcher) {
     final directory = ModelDirectory(current: connection, fetcher: fetcher);
     directory.adoptConnection(
-        baseUrl: connection.baseUrl, apiKey: connection.apiKey);
+      baseUrl: connection.baseUrl,
+      apiKey: connection.apiKey,
+    );
     return directory;
   }
 
@@ -57,34 +59,35 @@ void main() {
       expect(directory.selectedModel, selected);
     });
 
-    test('a refresh puts the fetched list after the default, deduped',
-        () async {
-      final fetcher = FakeFetcher(models: ['m-two', selected, 'm-one']);
-      final directory = directoryWith(fetcher);
+    test(
+      'a refresh puts the fetched list after the default, deduped',
+      () async {
+        final fetcher = FakeFetcher(models: ['m-two', selected, 'm-one']);
+        final directory = directoryWith(fetcher);
 
-      await directory.refresh();
+        await directory.refresh();
 
-      expect(
-        directory.models.map((m) => m.id),
-        [selected, 'm-two', 'm-one'],
-      );
-      // Only the fetched entries claim the "listed" mark.
-      expect(directory.models.first.fetched, isFalse);
-      expect(directory.models[1].fetched, isTrue);
-      expect(fetcher.calls, 1);
-    });
+        expect(directory.models.map((m) => m.id), [selected, 'm-two', 'm-one']);
+        // Only the fetched entries claim the "listed" mark.
+        expect(directory.models.first.fetched, isFalse);
+        expect(directory.models[1].fetched, isTrue);
+        expect(fetcher.calls, 1);
+      },
+    );
 
-    test('a failed refresh keeps the default and reports the failure',
-        () async {
-      final fetcher = FakeFetcher(error: const HttpException('HTTP 403'));
-      final directory = directoryWith(fetcher);
+    test(
+      'a failed refresh keeps the default and reports the failure',
+      () async {
+        final fetcher = FakeFetcher(error: const HttpException('HTTP 403'));
+        final directory = directoryWith(fetcher);
 
-      await directory.refresh();
+        await directory.refresh();
 
-      expect(directory.models, hasLength(1));
-      expect(directory.loadError, 'HTTP 403');
-      expect(directory.isLoading, isFalse);
-    });
+        expect(directory.models, hasLength(1));
+        expect(directory.loadError, 'HTTP 403');
+        expect(directory.isLoading, isFalse);
+      },
+    );
 
     test('no fetcher, no refresh — the default just stays', () async {
       final directory = ModelDirectory(current: connection);
@@ -119,8 +122,7 @@ void main() {
 
       expect(directory.provider, LlmProvider.anthropic);
       expect(directory.models.single.fetched, isFalse);
-      expect(directory.selectedModel,
-          defaultModelFor(LlmProvider.anthropic));
+      expect(directory.selectedModel, defaultModelFor(LlmProvider.anthropic));
     });
 
     test('a same-provider save keeps the fetched catalog', () async {

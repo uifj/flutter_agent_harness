@@ -192,9 +192,7 @@ class SidebarState {
   List<SidebarLeaf> get allPanes => [...panes, ...bottomPanes];
 
   /// The right column's open tabs, in tree order.
-  List<SidebarTab> get tabs => [
-    for (final pane in panes) ...pane.tabs,
-  ];
+  List<SidebarTab> get tabs => [for (final pane in panes) ...pane.tabs];
 
   /// The bottom panel's open tabs, in tree order.
   List<SidebarTab> get bottomTabs => [
@@ -341,9 +339,7 @@ class SidebarState {
       bottomTree: _isBottom(paneId)
           ? removeLeafAt(next.bottomTree, paneId)
           : next.bottomTree,
-      tree: _isBottom(paneId)
-          ? next.tree
-          : removeLeafAt(next.tree, paneId),
+      tree: _isBottom(paneId) ? next.tree : removeLeafAt(next.tree, paneId),
     );
   }
 
@@ -358,7 +354,10 @@ class SidebarState {
       final keep = leaf.tabs.where((tab) => tab.id == keepId).toList();
       if (keep.length == leaf.tabs.length) return leaf;
       emptied = keep.isEmpty;
-      return leaf.copyWith(tabs: keep, active: keep.isEmpty ? null : keep.last.id);
+      return leaf.copyWith(
+        tabs: keep,
+        active: keep.isEmpty ? null : keep.last.id,
+      );
     });
     if (identical(next, this) || !emptied) return next;
     return next._withTrees(
@@ -389,13 +388,12 @@ class SidebarState {
   }
 
   /// Makes [tabId] the visible tab of [paneId], and that pane active.
-  SidebarState activateTab(String paneId, String tabId) =>
-      _mapPane(
-        paneId,
-        (leaf) => leaf.tabs.any((tab) => tab.id == tabId)
-            ? leaf.copyWith(active: tabId)
-            : leaf,
-      ).copyWith(activePane: paneId);
+  SidebarState activateTab(String paneId, String tabId) => _mapPane(
+    paneId,
+    (leaf) => leaf.tabs.any((tab) => tab.id == tabId)
+        ? leaf.copyWith(active: tabId)
+        : leaf,
+  ).copyWith(activePane: paneId);
 
   /// Makes [paneId] the pane the next tab lands in.
   ///
@@ -404,8 +402,8 @@ class SidebarState {
   /// at it. An unknown pane is a no-op rather than a stale pointer.
   SidebarState focusPane(String paneId) =>
       allPanes.any((pane) => pane.id == paneId)
-          ? copyWith(activePane: paneId)
-          : this;
+      ? copyWith(activePane: paneId)
+      : this;
 
   /// Rewrites the display fields of one open tab without reopening it.
   ///
@@ -478,9 +476,7 @@ class SidebarState {
     final minter = IdMinter(nextId);
     final target = _target;
     return copyWith(
-      tree: _isBottom(target)
-          ? tree
-          : splitLeafAt(tree, target, dir, minter),
+      tree: _isBottom(target) ? tree : splitLeafAt(tree, target, dir, minter),
       bottomTree: _isBottom(target)
           ? splitLeafAt(bottomTree, target, dir, minter)
           : bottomTree,
@@ -610,7 +606,9 @@ class SidebarState {
   SidebarState moveTabToOtherTree(String fromPane, String tabId) {
     final source = paneOf(tabId);
     if (source == null || source.id != fromPane) return this;
-    final target = _isBottom(fromPane) ? firstLeaf(tree) : firstLeaf(bottomTree);
+    final target = _isBottom(fromPane)
+        ? firstLeaf(tree)
+        : firstLeaf(bottomTree);
     return moveTab(fromPane, tabId, target.id);
   }
 
@@ -649,7 +647,8 @@ class SidebarState {
   }
 
   /// Moves the divider at [index] of split [splitId] by [delta] fractions.
-  SidebarState resize(String splitId, int index, double delta) => _isBottom(splitId)
+  SidebarState resize(String splitId, int index, double delta) =>
+      _isBottom(splitId)
       ? copyWith(bottomTree: resizeSplit(bottomTree, splitId, index, delta))
       : copyWith(tree: resizeSplit(tree, splitId, index, delta));
 
@@ -736,7 +735,13 @@ class SidebarState {
   /// clamped to the viewport. A fresh window is born topmost — the array's end.
   ///
   /// An unknown tab id, or one already floating, is a strict no-op.
-  SidebarState floatTab(String tabId, double x, double y, double vw, double vh) {
+  SidebarState floatTab(
+    String tabId,
+    double x,
+    double y,
+    double vw,
+    double vh,
+  ) {
     final source = paneOf(tabId);
     if (source == null) return this;
     final tab = source.tabs.firstWhere((candidate) => candidate.id == tabId);
@@ -797,7 +802,13 @@ class SidebarState {
   }
 
   /// Moves a free window (clamped to the viewport); unknown ids are a no-op.
-  SidebarState moveFloat(String floatId, double x, double y, double vw, double vh) {
+  SidebarState moveFloat(
+    String floatId,
+    double x,
+    double y,
+    double vw,
+    double vh,
+  ) {
     final float = floatById(floatId);
     if (float == null) return this;
     final geo = _clampGeometry(x, y, float.w, float.h, vw, vh);
@@ -815,7 +826,13 @@ class SidebarState {
 
   /// Resizes a free window from its SE corner: the top-left stays anchored,
   /// sizes clamp to the floor and to the viewport's remaining room.
-  SidebarState resizeFloat(String floatId, double w, double h, double vw, double vh) {
+  SidebarState resizeFloat(
+    String floatId,
+    double w,
+    double h,
+    double vw,
+    double vh,
+  ) {
     final float = floatById(floatId);
     if (float == null) return this;
     final width = math.min(
@@ -866,7 +883,10 @@ class SidebarState {
       // An already-docked tab with the same id keeps its pane: the dock is a
       // move, not a duplicate.
       if (leaf.tabs.any((tab) => tab.id == float.tab.id)) return leaf;
-      return leaf.copyWith(tabs: [...leaf.tabs, float.tab], active: float.tab.id);
+      return leaf.copyWith(
+        tabs: [...leaf.tabs, float.tab],
+        active: float.tab.id,
+      );
     }).copyWith(
       floats: [
         for (final other in floats)
@@ -901,9 +921,7 @@ class SidebarState {
   /// which is what lets the caller run this on every breakpoint-crossing and
   /// session bind without converging loops.
   SidebarState migrateBottomTabs() {
-    final bottomTabs = [
-      for (final pane in bottomPanes) ...pane.tabs,
-    ];
+    final bottomTabs = [for (final pane in bottomPanes) ...pane.tabs];
     final activeInBottom = _isBottom(activePane);
     if (bottomTabs.isEmpty && !activeInBottom) return this;
 
@@ -937,7 +955,8 @@ class SidebarState {
     'nextTerminal': nextTerminal,
     'nextId': nextId,
     'nextBrowser': nextBrowser,
-    if (floats.isNotEmpty) 'floats': [for (final float in floats) float.toJson()],
+    if (floats.isNotEmpty)
+      'floats': [for (final float in floats) float.toJson()],
   };
 
   /// Reads a layout back, falling back to [SidebarState.initial] for anything

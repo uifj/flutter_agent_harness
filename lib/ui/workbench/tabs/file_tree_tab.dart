@@ -47,7 +47,11 @@ const _indent = 12.0;
 
 /// One visible row of the flattened tree.
 class _Row {
-  const _Row({required this.path, required this.isDirectory, required this.depth});
+  const _Row({
+    required this.path,
+    required this.isDirectory,
+    required this.depth,
+  });
 
   final String path;
   final bool isDirectory;
@@ -132,7 +136,9 @@ class _FileTreeTabState extends State<FileTreeTab> {
       final resolved = workspace == null
           ? directory
           : workspace.resolve(directory);
-      final entries = await Directory(resolved).list(followLinks: false).toList();
+      final entries = await Directory(
+        resolved,
+      ).list(followLinks: false).toList();
       final rows = <_Row>[
         for (final entry in entries)
           _Row(
@@ -150,7 +156,9 @@ class _FileTreeTabState extends State<FileTreeTab> {
       if (mounted) setState(() => _failed[directory] = denied.message);
     } on FileSystemException catch (error) {
       if (mounted) {
-        setState(() => _failed[directory] = error.osError?.message ?? 'unreadable');
+        setState(
+          () => _failed[directory] = error.osError?.message ?? 'unreadable',
+        );
       }
     } finally {
       _reading.remove(directory);
@@ -244,9 +252,7 @@ class _FileTreeTabState extends State<FileTreeTab> {
   Widget build(BuildContext context) {
     final color = context.dsw;
     if (_root.isEmpty) {
-      return _Empty(
-        message: context.tr('noWorkspaceNothingToList'),
-      );
+      return _Empty(message: context.tr('noWorkspaceNothingToList'));
     }
     final rows = _flatten();
     final current = _currentFile;
@@ -257,12 +263,9 @@ class _FileTreeTabState extends State<FileTreeTab> {
         Expanded(
           child: rows.isEmpty
               ? _Empty(
-                  message:
-                      _filter.isEmpty
-                          ? context.tr('folderEmpty')
-                          : context.tr('noMatches', {
-                              'query': _filter,
-                            }),
+                  message: _filter.isEmpty
+                      ? context.tr('folderEmpty')
+                      : context.tr('noMatches', {'query': _filter}),
                 )
               : ListView.builder(
                   primary: false,
@@ -344,8 +347,7 @@ class _FileTreeTabState extends State<FileTreeTab> {
     _Row row,
     Offset position,
   ) async {
-    final overlay = Overlay.of(context).context.findRenderObject()
-        as RenderBox;
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
     final color = context.dsw;
     final root = widget.workbench.workspaceRoot;
     final relative = root != null && p.isWithin(root, row.path)
@@ -367,9 +369,7 @@ class _FileTreeTabState extends State<FileTreeTab> {
           child: Row(
             children: [
               Icon(
-                row.isDirectory
-                    ? LucideIcons.chevron_right
-                    : LucideIcons.file,
+                row.isDirectory ? LucideIcons.chevron_right : LucideIcons.file,
                 size: 13,
                 color: color.labelSecondary,
               ),
@@ -383,11 +383,7 @@ class _FileTreeTabState extends State<FileTreeTab> {
           height: 34,
           child: Row(
             children: [
-              Icon(
-                LucideIcons.copy,
-                size: 13,
-                color: color.labelSecondary,
-              ),
+              Icon(LucideIcons.copy, size: 13, color: color.labelSecondary),
               const SizedBox(width: 8),
               Text(context.tr('copyRelative')),
             ],
@@ -527,11 +523,7 @@ class _TreeRowState extends State<_TreeRow> {
                       color: color.labelTertiary,
                     ),
                   )
-                : Icon(
-                    LucideIcons.file,
-                    size: 11,
-                    color: color.labelTertiary,
-                  ),
+                : Icon(LucideIcons.file, size: 11, color: color.labelTertiary),
           ),
         ),
         const SizedBox(width: 4),
@@ -636,9 +628,7 @@ class _IconButtonState extends State<_IconButton> {
             width: 20,
             height: 20,
             decoration: BoxDecoration(
-              color: _hovered
-                  ? color.interactiveBgHover
-                  : Colors.transparent,
+              color: _hovered ? color.interactiveBgHover : Colors.transparent,
               borderRadius: BorderRadius.circular(4),
             ),
             child: Center(

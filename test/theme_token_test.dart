@@ -18,7 +18,10 @@ void main() {
       // design-platform.css:27 — rgb(65, 118, 230)
       expect(DswStatic.deepseek500, const Color.fromARGB(255, 65, 118, 230));
       // :54 — rgb(15, 17, 21), the near-black that anchors light-theme text.
-      expect(DswStatic.neutralBluish1000, const Color.fromARGB(255, 15, 17, 21));
+      expect(
+        DswStatic.neutralBluish1000,
+        const Color.fromARGB(255, 15, 17, 21),
+      );
     });
 
     test('neutral-bluish-60 is the one entry that differs by theme', () {
@@ -42,10 +45,13 @@ void main() {
       expect(DswAlias.dark.bgBase, DswStatic.neutralBluish950);
     });
 
-    test('light collapses the three layers onto white; dark separates them', () {
-      expect(DswAlias.light.bgLayer1, DswAlias.light.bgLayer3);
-      expect(DswAlias.dark.bgLayer1, isNot(DswAlias.dark.bgLayer3));
-    });
+    test(
+      'light collapses the three layers onto white; dark separates them',
+      () {
+        expect(DswAlias.light.bgLayer1, DswAlias.light.bgLayer3);
+        expect(DswAlias.dark.bgLayer1, isNot(DswAlias.dark.bgLayer3));
+      },
+    );
 
     test('text inverts with the surface', () {
       expect(DswAlias.light.labelPrimary, DswStatic.neutralBluish1000);
@@ -62,7 +68,10 @@ void main() {
       // invisible in dark, where none of them reference it.
       expect(DswAlias.light.bgModulePlatform, DswStatic.neutralBluish60Light);
       expect(DswAlias.light.bgMultiSelect, DswStatic.neutralBluish60Light);
-      expect(DswAlias.light.markdownPlaceholder, DswStatic.neutralBluish60Light);
+      expect(
+        DswAlias.light.markdownPlaceholder,
+        DswStatic.neutralBluish60Light,
+      );
       expect(DswAlias.light.selector, DswStatic.neutralBluish60Light);
       expect(DswAlias.light.tip, DswStatic.neutralBluish60Light);
     });

@@ -189,9 +189,7 @@ void main() {
 
   group('closeAllTabs', () {
     test('empties a lone pane in place', () {
-      var state = SidebarState.initial()
-          .openTab(_tab('a'))
-          .openTab(_tab('b'));
+      var state = SidebarState.initial().openTab(_tab('a')).openTab(_tab('b'));
       state = state.closeAllTabs(state.activePane);
       expect(state.panes.length, 1);
       expect(state.panes.single.tabs, isEmpty);
@@ -378,15 +376,18 @@ void main() {
       expect(split.children.first.id, state.activePane);
     });
 
-    test('dragging a pane\'s last tab to that pane\'s edge changes nothing', () {
-      final state = SidebarState.initial().openTab(_tab('a'));
-      final pane = state.activePane;
-      // Removing the source pane would take the drop target with it.
-      expect(
-        identical(state.moveTabToEdge(pane, 'a', pane, DropZone.left), state),
-        isTrue,
-      );
-    });
+    test(
+      'dragging a pane\'s last tab to that pane\'s edge changes nothing',
+      () {
+        final state = SidebarState.initial().openTab(_tab('a'));
+        final pane = state.activePane;
+        // Removing the source pane would take the drop target with it.
+        expect(
+          identical(state.moveTabToEdge(pane, 'a', pane, DropZone.left), state),
+          isTrue,
+        );
+      },
+    );
 
     test('across panes: the source collapses and the target splits', () {
       final panes = _twoPanes();
@@ -406,11 +407,7 @@ void main() {
   group('cross-panel moves', () {
     test('moveTab crosses panels: the tab leaves its tree for the other', () {
       final panels = _twoPanels();
-      final state = panels.state.moveTab(
-        panels.right,
-        'a',
-        panels.bottom,
-      );
+      final state = panels.state.moveTab(panels.right, 'a', panels.bottom);
       expect(state.tabs, isEmpty);
       expect(state.bottomTabs.map((tab) => tab.id), ['b', 'a']);
       expect(state.panes.single.tabs, isEmpty);
@@ -420,11 +417,7 @@ void main() {
 
     test('moveTab back works the same way in reverse', () {
       final panels = _twoPanels();
-      final state = panels.state.moveTab(
-        panels.bottom,
-        'b',
-        panels.right,
-      );
+      final state = panels.state.moveTab(panels.bottom, 'b', panels.right);
       expect(state.bottomTabs, isEmpty);
       expect(state.tabs.map((tab) => tab.id), ['a', 'b']);
       expect(state.activePane, panels.right);
@@ -448,13 +441,16 @@ void main() {
       expect(state.bottomPanes.length, 2);
     });
 
-    test('the emptied source pane of a lone tree survives as an empty pane', () {
-      final panels = _twoPanels();
-      final state = panels.state.moveTab(panels.right, 'a', panels.bottom);
-      // A tree always keeps somewhere to put the next tab.
-      expect(state.panes.length, 1);
-      expect(state.panes.single.tabs, isEmpty);
-    });
+    test(
+      'the emptied source pane of a lone tree survives as an empty pane',
+      () {
+        final panels = _twoPanels();
+        final state = panels.state.moveTab(panels.right, 'a', panels.bottom);
+        // A tree always keeps somewhere to put the next tab.
+        expect(state.panes.length, 1);
+        expect(state.panes.single.tabs, isEmpty);
+      },
+    );
 
     test('an open lands in the bottom pane while it is the active one', () {
       final panels = _twoPanels();
@@ -463,12 +459,15 @@ void main() {
       expect(state.tabs.map((tab) => tab.id), ['a']);
     });
 
-    test('openTab dedupes across panels: the instance is focused, not copied', () {
-      final panels = _twoPanels();
-      final state = panels.state.openTab(_tab('b'));
-      expect(state.bottomTabs.map((tab) => tab.id), ['b']);
-      expect(state.activePane, panels.bottom);
-    });
+    test(
+      'openTab dedupes across panels: the instance is focused, not copied',
+      () {
+        final panels = _twoPanels();
+        final state = panels.state.openTab(_tab('b'));
+        expect(state.bottomTabs.map((tab) => tab.id), ['b']);
+        expect(state.activePane, panels.bottom);
+      },
+    );
 
     test('moveTabToOtherTree stacks into the other tree\'s first pane', () {
       final panels = _twoPanels();
@@ -478,23 +477,26 @@ void main() {
       expect(state.activePane, panels.bottom);
     });
 
-    test('closing the bottom pane the state points at re-points to the right column', () {
-      // A pane only leaves the tree when it has siblings — closing the last
-      // tab of a lone pane empties it in place, and the pointer stays valid.
-      final panels = _twoPanels();
-      var state = panels.state.focusPane(panels.bottom).splitPane(
-        SplitDirection.row,
-      );
-      final fresh = state.bottomPanes.last.id;
-      state = state.focusPane(fresh).openTab(_tab('c'));
-      expect(state.bottomPanes.length, 2);
+    test(
+      'closing the bottom pane the state points at re-points to the right column',
+      () {
+        // A pane only leaves the tree when it has siblings — closing the last
+        // tab of a lone pane empties it in place, and the pointer stays valid.
+        final panels = _twoPanels();
+        var state = panels.state
+            .focusPane(panels.bottom)
+            .splitPane(SplitDirection.row);
+        final fresh = state.bottomPanes.last.id;
+        state = state.focusPane(fresh).openTab(_tab('c'));
+        expect(state.bottomPanes.length, 2);
 
-      state = state.closeTab(fresh, 'c');
-      expect(state.bottomPanes.length, 1);
-      // The removed pane was the active one; the pointer falls back to the
-      // right column's first pane — the primary surface.
-      expect(state.activePane, panels.right);
-    });
+        state = state.closeTab(fresh, 'c');
+        expect(state.bottomPanes.length, 1);
+        // The removed pane was the active one; the pointer falls back to the
+        // right column's first pane — the primary surface.
+        expect(state.activePane, panels.right);
+      },
+    );
 
     test('the layout round-trips with its bottom tree', () {
       final panels = _twoPanels();
@@ -571,9 +573,10 @@ void main() {
       var state = SidebarState.initial().openTab(SidebarTab.git);
       final source = state.activePane;
       state = state.openDiffTab(source, change);
-      final after = state.openDiffTab(source, SidebarTab.diff(
-        const WorktreeDiff(path: '/w/one.dart', staged: false),
-      ));
+      final after = state.openDiffTab(
+        source,
+        SidebarTab.diff(const WorktreeDiff(path: '/w/one.dart', staged: false)),
+      );
       expect(after.tabs.where((tab) => tab.id == change.id).length, 1);
       expect(after.panes.length, 2);
     });
@@ -586,7 +589,10 @@ void main() {
         source,
         SidebarTab.diff(const WorktreeDiff(path: '/w/one.dart', staged: true)),
       );
-      expect(state.tabs.where((tab) => tab.type == BuiltinTabType.diff).length, 2);
+      expect(
+        state.tabs.where((tab) => tab.type == BuiltinTabType.diff).length,
+        2,
+      );
     });
 
     test('a stale source pane degrades to a plain open', () {
@@ -615,10 +621,9 @@ void main() {
     });
 
     test('reveal expands the ancestors of a file, not the file', () {
-      final state = SidebarState.initial().reveal(
-        '/w',
-        [p.join('/w', 'lib', 'sidebar', 'model', 'x.dart')],
-      );
+      final state = SidebarState.initial().reveal('/w', [
+        p.join('/w', 'lib', 'sidebar', 'model', 'x.dart'),
+      ]);
       expect(state.expanded, {
         '/w',
         '/w/lib',
@@ -757,9 +762,9 @@ void main() {
     const vh = 800.0;
 
     test('floatTab takes the tab out of its pane and centres a window', () {
-      final before = SidebarState.initial().openTab(_tab('a')).openTab(
-        _tab('b'),
-      );
+      final before = SidebarState.initial()
+          .openTab(_tab('a'))
+          .openTab(_tab('b'));
       final after = before.floatTab('a', 600, 400, vw, vh);
 
       expect(after.tabs.map((tab) => tab.id), ['b']);
@@ -782,10 +787,7 @@ void main() {
       final before = SidebarState.initial().openTab(_tab('a'));
       expect(identical(before.floatTab('nope', 1, 1, vw, vh), before), isTrue);
       final floated = before.floatTab('a', 600, 400, vw, vh);
-      expect(
-        identical(floated.floatTab('a', 50, 50, vw, vh), floated),
-        isTrue,
-      );
+      expect(identical(floated.floatTab('a', 50, 50, vw, vh), floated), isTrue);
     });
 
     test('moveFloat clamps to the viewport', () {
@@ -795,10 +797,7 @@ void main() {
       final float = before.floatWithTab('a')!;
       final after = before.moveFloat(float.id, -500, 9999, vw, vh);
       expect(after.floatWithTab('a')!.x, 0);
-      expect(
-        after.floatWithTab('a')!.y,
-        vh - after.floatWithTab('a')!.h,
-      );
+      expect(after.floatWithTab('a')!.y, vh - after.floatWithTab('a')!.h);
     });
 
     test('resizeFloat anchors the top-left and floors the size', () {
@@ -868,10 +867,7 @@ void main() {
       expect(identical(minted, after), isTrue);
       var fresh = after.dockFloat(after.floats.single.id);
       fresh = fresh.floatTab('a', 600, 400, vw, vh);
-      expect(
-        fresh.floats.single.id,
-        isNot(after.floats.single.id),
-      );
+      expect(fresh.floats.single.id, isNot(after.floats.single.id));
     });
   });
 }

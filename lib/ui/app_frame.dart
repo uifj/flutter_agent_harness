@@ -138,7 +138,9 @@ class _AppFrameState extends State<AppFrame> {
       layout.details,
       merge ? 0 : layout.workbench,
     );
-    final bottomHeight = merge ? 0.0 : computeBottom(layout.bottom, viewportHeight);
+    final bottomHeight = merge
+        ? 0.0
+        : computeBottom(layout.bottom, viewportHeight);
 
     // The solver lets the sidebar keep its width even when the viewport cannot
     // pay for it (it never concedes). Clamping here keeps that from becoming a
@@ -168,15 +170,9 @@ class _AppFrameState extends State<AppFrame> {
                 duration: duration,
                 decoration: BoxDecoration(
                   color: color.sidebarFill,
-                  border: Border(
-                    right: BorderSide(color: color.borderL1),
-                  ),
+                  border: Border(right: BorderSide(color: color.borderL1)),
                 ),
-                child: widget.sidebarBuilder(
-                  context,
-                  collapsed,
-                  sidebarWidth,
-                ),
+                child: widget.sidebarBuilder(context, collapsed, sidebarWidth),
               ),
               // The center column: the conversation above, the bottom panel
               // beneath it. The bottom panel squeezes ONLY this column — the
@@ -223,9 +219,7 @@ class _AppFrameState extends State<AppFrame> {
                     // would paint a 1px seam against the center.
                     border: detailsWidth == 0
                         ? null
-                        : Border(
-                            left: BorderSide(color: color.borderL2),
-                          ),
+                        : Border(left: BorderSide(color: color.borderL2)),
                   ),
                   child: widget.details,
                 ),
@@ -242,9 +236,7 @@ class _AppFrameState extends State<AppFrame> {
                     decoration: BoxDecoration(
                       border: workbenchWidth == 0
                           ? null
-                          : Border(
-                              left: BorderSide(color: color.borderL2),
-                            ),
+                          : Border(left: BorderSide(color: color.borderL2)),
                     ),
                     child: widget.workbench,
                   ),
@@ -272,16 +264,13 @@ class _AppFrameState extends State<AppFrame> {
                     // not paint its border as a 1px sliver over the centre.
                     border: layout.workbench == 0
                         ? null
-                        : Border(
-                            left: BorderSide(color: color.borderL2),
-                          ),
+                        : Border(left: BorderSide(color: color.borderL2)),
                   ),
                   child: widget.workbench,
                 ),
               ),
             ),
-          if (widget.overlay != null)
-            Positioned.fill(child: widget.overlay!),
+          if (widget.overlay != null) Positioned.fill(child: widget.overlay!),
           // The persistent panel toggles at the viewport's top-right corner:
           // the bottom panel's glyph left of the workbench's, always pinned
           // whether the panels are open or not — while the workbench is open
@@ -416,8 +405,7 @@ class _AppFrameState extends State<AppFrame> {
           // No throttling: Flutter coalesces the writes into one build per frame
           // on its own, which is what dsh's rAF wrapper is for.
           onHorizontalDragStart: (_) => _startDrag(region, cols, 0),
-          onHorizontalDragUpdate: (event) =>
-              _drag(region, event.delta.dx),
+          onHorizontalDragUpdate: (event) => _drag(region, event.delta.dx),
           onHorizontalDragEnd: (_) => _endDrag(),
           onHorizontalDragCancel: _endDrag,
           child: region == _Region.sidebar
@@ -538,7 +526,9 @@ class _ToggleCluster extends StatelessWidget {
       if (!narrow)
         _ToggleButton(
           icon: LucideIcons.panel_bottom,
-          tooltip: layout.bottom == 0 ? 'Open bottom panel' : 'Collapse bottom panel',
+          tooltip: layout.bottom == 0
+              ? 'Open bottom panel'
+              : 'Collapse bottom panel',
           onTap: layout.toggleBottom,
         ),
       _ToggleButton(

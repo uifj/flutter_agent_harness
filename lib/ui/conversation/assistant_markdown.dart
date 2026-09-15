@@ -117,9 +117,7 @@ GptMarkdownStyleSheet _styleSheet(DswAlias color) => GptMarkdownStyleSheet(
   list: ListStyle(
     indent: 18,
     bulletColor: color.labelSecondary,
-    markerTextStyle: DswType.markdownBase.copyWith(
-      color: color.labelSecondary,
-    ),
+    markerTextStyle: DswType.markdownBase.copyWith(color: color.labelSecondary),
   ),
   // `:225-243`: 10x16 cells, an l3 rule under the head and l2 between rows.
   table: TableStyle(

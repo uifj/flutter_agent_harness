@@ -119,7 +119,9 @@ class WorkbenchPrefs {
     bottomPanelAutoTerminal,
     terminalFontFamily,
     terminalFontSize,
-    Object.hashAllUnordered(tabsEnabled.entries.map((e) => Object.hash(e.key, e.value))),
+    Object.hashAllUnordered(
+      tabsEnabled.entries.map((e) => Object.hash(e.key, e.value)),
+    ),
   );
 
   static bool _mapEq(Map<String, bool> a, Map<String, bool> b) {
@@ -133,6 +135,5 @@ class WorkbenchPrefs {
 
 /// Clamps a font size into the contract range, as the source's
 /// `clampTerminalFontSize` does on every read.
-int clampTerminalFontSize(num value) => value
-    .round()
-    .clamp(terminalFontSizeMin, terminalFontSizeMax);
+int clampTerminalFontSize(num value) =>
+    value.round().clamp(terminalFontSizeMin, terminalFontSizeMax);

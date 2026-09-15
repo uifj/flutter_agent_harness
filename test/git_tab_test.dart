@@ -145,10 +145,12 @@ void main() {
     // row's own Container is the anchor — not a MouseRegion, because the
     // closest MouseRegion to the path text is its Tooltip's, which wraps only
     // the text half of the row.
-    final row = find.ancestor(
-      of: find.text('unstaged.txt'),
-      matching: find.byType(Container),
-    ).first;
+    final row = find
+        .ancestor(
+          of: find.text('unstaged.txt'),
+          matching: find.byType(Container),
+        )
+        .first;
     final button = find.descendant(
       of: row,
       matching: find.byIcon(LucideIcons.git_branch),
@@ -162,10 +164,7 @@ void main() {
     await pumpTab(tester);
     await settle(tester);
 
-    await tester.enterText(
-      find.byType(TextField),
-      'a committed message',
-    );
+    await tester.enterText(find.byType(TextField), 'a committed message');
     await settle(tester);
     await tester.tap(find.text('Commit'));
     await settle(tester);
@@ -192,7 +191,10 @@ void main() {
     await pumpTab(tester);
     await settle(tester);
 
-    expect(find.text('boom: status --porcelain=v1 -z --untracked-files=all'), findsOneWidget);
+    expect(
+      find.text('boom: status --porcelain=v1 -z --untracked-files=all'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('outside a work tree the panel says so', (tester) async {
@@ -210,10 +212,7 @@ void main() {
     // Right-click an unstaged row. The menu's entrance is a fade, and a
     // fully-transparent widget does not hit-test — the items only become
     // tappable once that animation has settled.
-    await tester.tap(
-      find.text('unstaged.txt'),
-      buttons: kSecondaryButton,
-    );
+    await tester.tap(find.text('unstaged.txt'), buttons: kSecondaryButton);
     await tester.pumpAndSettle();
 
     // The menu offers discard for tracked files. The item's tap only returns
@@ -228,10 +227,7 @@ void main() {
     expect(fake.commands, isNot(contains('checkout -- unstaged.txt')));
 
     // Again, confirming this time.
-    await tester.tap(
-      find.text('unstaged.txt'),
-      buttons: kSecondaryButton,
-    );
+    await tester.tap(find.text('unstaged.txt'), buttons: kSecondaryButton);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Discard changes'));
     await tester.pumpAndSettle();
@@ -247,10 +243,7 @@ void main() {
     await pumpTab(tester);
     await settle(tester);
 
-    await tester.tap(
-      find.text('staged.txt'),
-      buttons: kSecondaryButton,
-    );
+    await tester.tap(find.text('staged.txt'), buttons: kSecondaryButton);
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Copy relative path'));
@@ -264,7 +257,8 @@ void main() {
 
 /// The temp directory the workbench store writes to, and the fake repo root.
 class DirectoryFixture {
-  DirectoryFixture() : dir = Directory.systemTemp.createTempSync('dsh_git_tab_');
+  DirectoryFixture()
+    : dir = Directory.systemTemp.createTempSync('dsh_git_tab_');
 
   final Directory dir;
 

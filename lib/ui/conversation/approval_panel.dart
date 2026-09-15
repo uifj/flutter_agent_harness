@@ -131,9 +131,7 @@ class _ApprovalPanelState extends State<ApprovalPanel> {
           children: [
             // The headline is the panel's message, not a footnote.
             Text(
-              context.tr('approvalTitle', {
-                'name': widget.request.toolName,
-              }),
+              context.tr('approvalTitle', {'name': widget.request.toolName}),
               style: DswType.s14.copyWith(
                 fontSize: 15,
                 height: 24 / 15,

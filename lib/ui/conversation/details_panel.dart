@@ -81,7 +81,10 @@ class _DetailsPanelState extends State<DetailsPanel> {
         listenable: _sources,
         builder: (context, _) => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [_header(color), Expanded(child: _body(color))],
+          children: [
+            _header(color),
+            Expanded(child: _body(color)),
+          ],
         ),
       ),
     );

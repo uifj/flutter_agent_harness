@@ -209,10 +209,8 @@ void main() {
 
     test('a shell that cannot start is a thrown failure', () async {
       expect(
-        () => runBash(
-          command: 'echo hi',
-          workdir: p.join(workdir.path, 'gone'),
-        ),
+        () =>
+            runBash(command: 'echo hi', workdir: p.join(workdir.path, 'gone')),
         throwsA(isA<ProcessException>()),
       );
     });

@@ -165,13 +165,16 @@ void main() {
     });
 
     test('diffFileTag names the change shape', () {
-      UnifiedDiffFile file(String oldPath, String newPath, {bool binary = false}) =>
-          UnifiedDiffFile(
-            oldPath: oldPath,
-            newPath: newPath,
-            binary: binary,
-            hunks: const [],
-          );
+      UnifiedDiffFile file(
+        String oldPath,
+        String newPath, {
+        bool binary = false,
+      }) => UnifiedDiffFile(
+        oldPath: oldPath,
+        newPath: newPath,
+        binary: binary,
+        hunks: const [],
+      );
 
       expect(diffFileTag(file('/dev/null', 'b/new.rs')), 'Added');
       expect(diffFileTag(file('a/gone.rs', '/dev/null')), 'Deleted');
@@ -296,22 +299,29 @@ void main() {
       }
     }
 
-    testWidgets('a worktree ref renders the diff with gutters and tinted rows', (tester) async {
-      fake.responses['diff --no-ext-diff --no-color -U3 -- a.dart'] = _sampleDiff;
-      await pumpTab(tester, WorktreeDiff(path: abs('a.dart'), staged: false));
-      await settle(tester);
+    testWidgets(
+      'a worktree ref renders the diff with gutters and tinted rows',
+      (tester) async {
+        fake.responses['diff --no-ext-diff --no-color -U3 -- a.dart'] =
+            _sampleDiff;
+        await pumpTab(tester, WorktreeDiff(path: abs('a.dart'), staged: false));
+        await settle(tester);
 
-      // Header: the repo-relative path, not the absolute one.
-      expect(find.text('a.dart'), findsOneWidget);
-      // The first file's hunk header and its rows render.
-      expect(find.text('@@ -1,4 +1,5 @@'), findsOneWidget);
-      expect(find.text('context'), findsWidgets);
-      expect(find.text('-old line'.substring(1)), findsOneWidget); // 'old line'
-      expect(find.text('new line'), findsOneWidget);
-      // A .dart file starts expanded; the rename-only and binary sections in
-      // the same diff render their path rows with badges.
-      expect(find.text('Binary'), findsOneWidget);
-    });
+        // Header: the repo-relative path, not the absolute one.
+        expect(find.text('a.dart'), findsOneWidget);
+        // The first file's hunk header and its rows render.
+        expect(find.text('@@ -1,4 +1,5 @@'), findsOneWidget);
+        expect(find.text('context'), findsWidgets);
+        expect(
+          find.text('-old line'.substring(1)),
+          findsOneWidget,
+        ); // 'old line'
+        expect(find.text('new line'), findsOneWidget);
+        // A .dart file starts expanded; the rename-only and binary sections in
+        // the same diff render their path rows with badges.
+        expect(find.text('Binary'), findsOneWidget);
+      },
+    );
 
     testWidgets('a staged ref asks git for the cached side', (tester) async {
       fake.responses['diff --no-ext-diff --no-color -U3 --cached -- a.dart'] =
@@ -326,7 +336,9 @@ void main() {
       expect(find.text('a.dart'), findsOneWidget);
     });
 
-    testWidgets('an empty requested side falls back to the other side', (tester) async {
+    testWidgets('an empty requested side falls back to the other side', (
+      tester,
+    ) async {
       fake.responses['diff --no-ext-diff --no-color -U3 -- a.dart'] = '';
       fake.responses['diff --no-ext-diff --no-color -U3 --cached -- a.dart'] =
           _sampleDiff;
@@ -343,7 +355,9 @@ void main() {
       expect(find.text('old line'), findsOneWidget);
     });
 
-    testWidgets('an untracked file renders as a full-file addition', (tester) async {
+    testWidgets('an untracked file renders as a full-file addition', (
+      tester,
+    ) async {
       // A source file, so it starts expanded and its rows render without a
       // click: a .txt would faithfully fold, per defaultExpandedFiles.
       File(abs('new.dart')).writeAsStringSync('hello\nworld\n');
@@ -378,10 +392,12 @@ void main() {
     });
 
     testWidgets('a commit ref loads the commit patch', (tester) async {
-      fake.responses[
-              'show --no-ext-diff --no-color --format= -m --first-parent fullhash123'] =
+      fake.responses['show --no-ext-diff --no-color --format= -m --first-parent fullhash123'] =
           _sampleDiff;
-      await pumpTab(tester, const CommitDiff(hashFull: 'fullhash123', subject: 'fix it'));
+      await pumpTab(
+        tester,
+        const CommitDiff(hashFull: 'fullhash123', subject: 'fix it'),
+      );
       await settle(tester);
 
       expect(find.text('fullhas fix it'), findsOneWidget);
@@ -401,14 +417,12 @@ void main() {
       await pumpTab(tester, WorktreeDiff(path: abs('a.dart'), staged: false));
       await settle(tester);
 
-      expect(
-        find.textContaining('Failed to load diff: boom:'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('Failed to load diff: boom:'), findsOneWidget);
     });
 
     testWidgets('refresh re-runs the load', (tester) async {
-      fake.responses['diff --no-ext-diff --no-color -U3 -- a.dart'] = _sampleDiff;
+      fake.responses['diff --no-ext-diff --no-color -U3 -- a.dart'] =
+          _sampleDiff;
       await pumpTab(tester, WorktreeDiff(path: abs('a.dart'), staged: false));
       await settle(tester);
 
@@ -430,7 +444,10 @@ void main() {
           '@@ -1 +1 @@\n'
           '-old\n'
           '+new\n';
-      await pumpTab(tester, WorktreeDiff(path: abs('a.test.js'), staged: false));
+      await pumpTab(
+        tester,
+        WorktreeDiff(path: abs('a.test.js'), staged: false),
+      );
       await settle(tester);
 
       // A test file starts folded: the path row is there (the tab header
@@ -445,7 +462,9 @@ void main() {
       expect(find.text('new'), findsOneWidget);
     });
 
-    testWidgets('a non-repo says so instead of spinning forever', (tester) async {
+    testWidgets('a non-repo says so instead of spinning forever', (
+      tester,
+    ) async {
       fake.responses['rev-parse --show-toplevel'] = '';
       await pumpTab(tester, WorktreeDiff(path: abs('a.dart'), staged: false));
       await settle(tester);
@@ -460,7 +479,8 @@ void main() {
 
 /// The temp directory the workbench store writes to, and the fake repo root.
 class DirectoryFixture {
-  DirectoryFixture() : dir = Directory.systemTemp.createTempSync('dsh_diff_tab_');
+  DirectoryFixture()
+    : dir = Directory.systemTemp.createTempSync('dsh_diff_tab_');
 
   final Directory dir;
 

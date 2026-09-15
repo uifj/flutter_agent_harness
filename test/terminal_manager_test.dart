@@ -178,37 +178,43 @@ void main() {
       expect(fake.spawned, isEmpty);
     });
 
-    test('a single-subscription pty output is broadcast for a pane-move reattach',
-        () async {
-      // Real flutter_pty output is single-subscription; a tab moving between
-      // panes attaches a new body to the pooled session before the old body
-      // detaches, so the second listen must not throw.
-      final manager = TerminalManager(
-        spawner: ({
-          required executable,
-          required arguments,
-          required workingDirectory,
-          required columns,
-          required rows,
-        }) => _SingleSubProcess(),
-      );
-      final session = manager.open('t');
+    test(
+      'a single-subscription pty output is broadcast for a pane-move reattach',
+      () async {
+        // Real flutter_pty output is single-subscription; a tab moving between
+        // panes attaches a new body to the pooled session before the old body
+        // detaches, so the second listen must not throw.
+        final manager = TerminalManager(
+          spawner:
+              ({
+                required executable,
+                required arguments,
+                required workingDirectory,
+                required columns,
+                required rows,
+              }) => _SingleSubProcess(),
+        );
+        final session = manager.open('t');
 
-      final first = <String>[];
-      final second = <String>[];
-      session.output.listen(
-        (bytes) => first.add(String.fromCharCodes(bytes)),
-      );
-      session.output.listen(
-        (bytes) => second.add(String.fromCharCodes(bytes)),
-      );
-    });
+        final first = <String>[];
+        final second = <String>[];
+        session.output.listen(
+          (bytes) => first.add(String.fromCharCodes(bytes)),
+        );
+        session.output.listen(
+          (bytes) => second.add(String.fromCharCodes(bytes)),
+        );
+      },
+    );
   });
 
   group('resolveShell', () {
     test('SHELL wins when it is set to something', () {
       expect(
-        resolveShell(environment: {'SHELL': '/opt/bin/fish'}, exists: (_) => false),
+        resolveShell(
+          environment: {'SHELL': '/opt/bin/fish'},
+          exists: (_) => false,
+        ),
         '/opt/bin/fish',
       );
     });
@@ -238,7 +244,10 @@ void main() {
     });
 
     test('/bin/bash as the last resort, POSIX\'s promise', () {
-      expect(resolveShell(environment: const {}, exists: (_) => false), '/bin/bash');
+      expect(
+        resolveShell(environment: const {}, exists: (_) => false),
+        '/bin/bash',
+      );
     });
   });
 

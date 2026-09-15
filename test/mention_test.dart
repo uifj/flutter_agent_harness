@@ -24,7 +24,9 @@ void main() {
   group('scanMentions', () {
     test('extracts every @token, deduplicated in first-seen order', () {
       expect(
-        scanMentions('look at @src/main.dart and @pubspec.yaml then @src/main.dart again'),
+        scanMentions(
+          'look at @src/main.dart and @pubspec.yaml then @src/main.dart again',
+        ),
         ['src/main.dart', 'pubspec.yaml'],
       );
     });
@@ -61,28 +63,24 @@ void main() {
     tearDown(() => temp.deleteSync(recursive: true));
 
     test('a file mention resolves as a file', () {
-      expect(
-        resolveMentions('see @main.dart', workspace),
-        [const Mention(relative: 'main.dart', isDirectory: false)],
-      );
+      expect(resolveMentions('see @main.dart', workspace), [
+        const Mention(relative: 'main.dart', isDirectory: false),
+      ]);
     });
 
     test('a directory mention resolves as a directory, slash or not', () {
-      expect(
-        resolveMentions('see @src/ please', workspace),
-        [const Mention(relative: 'src', isDirectory: true)],
-      );
-      expect(
-        resolveMentions('see @src please', workspace),
-        [const Mention(relative: 'src', isDirectory: true)],
-      );
+      expect(resolveMentions('see @src/ please', workspace), [
+        const Mention(relative: 'src', isDirectory: true),
+      ]);
+      expect(resolveMentions('see @src please', workspace), [
+        const Mention(relative: 'src', isDirectory: true),
+      ]);
     });
 
     test('a nested path mentions fine', () {
-      expect(
-        resolveMentions('see @src/util.dart', workspace),
-        [const Mention(relative: 'src/util.dart', isDirectory: false)],
-      );
+      expect(resolveMentions('see @src/util.dart', workspace), [
+        const Mention(relative: 'src/util.dart', isDirectory: false),
+      ]);
     });
 
     test('an unknown path stays plain prose — no mention, no error', () {
@@ -100,7 +98,9 @@ void main() {
   group('referenceForm', () {
     test('a file reference carries path and kind', () {
       expect(
-        referenceForm(const Mention(relative: 'src/main.dart', isDirectory: false)),
+        referenceForm(
+          const Mention(relative: 'src/main.dart', isDirectory: false),
+        ),
         '<workspace-reference path="src/main.dart" kind="file" />',
       );
     });
@@ -144,11 +144,7 @@ void main() {
       final index = indexWorkspace(root.path);
 
       expect(index.truncated, isFalse);
-      expect(index.entries, [
-        file('a.txt'),
-        dir('src'),
-        file('src/main.dart'),
-      ]);
+      expect(index.entries, [file('a.txt'), dir('src'), file('src/main.dart')]);
     });
 
     test('skips the well-known ignore dirs and OS metadata files', () {
@@ -159,10 +155,7 @@ void main() {
 
       final index = indexWorkspace(root.path);
 
-      expect(
-        index.entries.map((e) => e.relative).toSet(),
-        {'kept.txt'},
-      );
+      expect(index.entries.map((e) => e.relative).toSet(), {'kept.txt'});
     });
 
     test('a cap past the tree is admitted by the truncated flag', () {
@@ -182,34 +175,42 @@ void main() {
       expect(index.truncated, isFalse);
     });
 
-    test('a symlinked file is indexed by its target kind', () {
-      write('real.txt');
-      Link(p.join(root.path, 'alias.txt'))
-          .createSync(p.join(root.path, 'real.txt'));
+    test(
+      'a symlinked file is indexed by its target kind',
+      () {
+        write('real.txt');
+        Link(
+          p.join(root.path, 'alias.txt'),
+        ).createSync(p.join(root.path, 'real.txt'));
 
-      final index = indexWorkspace(root.path);
+        final index = indexWorkspace(root.path);
 
-      expect(index.entries.map((e) => e.kind), everyElement('file'));
-      expect(
-        index.entries.map((e) => e.relative).toSet(),
-        {'alias.txt', 'real.txt'},
-      );
-    }, skip: Platform.isWindows ? 'symlinks need privileges on Windows' : null);
+        expect(index.entries.map((e) => e.kind), everyElement('file'));
+        expect(index.entries.map((e) => e.relative).toSet(), {
+          'alias.txt',
+          'real.txt',
+        });
+      },
+      skip: Platform.isWindows ? 'symlinks need privileges on Windows' : null,
+    );
 
-    test('a symlink cycle terminates', () {
-      write('src/main.dart');
-      // The classic loop: a link back to the root, inside the root.
-      Link(p.join(root.path, 'src', 'loop'))
-          .createSync(root.path);
+    test(
+      'a symlink cycle terminates',
+      () {
+        write('src/main.dart');
+        // The classic loop: a link back to the root, inside the root.
+        Link(p.join(root.path, 'src', 'loop')).createSync(root.path);
 
-      final index = indexWorkspace(root.path);
+        final index = indexWorkspace(root.path);
 
-      expect(index.truncated, isFalse);
-      expect(
-        index.entries.map((e) => e.relative),
-        containsAll(['src', 'src/main.dart', 'src/loop']),
-      );
-    }, skip: Platform.isWindows ? 'symlinks need privileges on Windows' : null);
+        expect(index.truncated, isFalse);
+        expect(
+          index.entries.map((e) => e.relative),
+          containsAll(['src', 'src/main.dart', 'src/loop']),
+        );
+      },
+      skip: Platform.isWindows ? 'symlinks need privileges on Windows' : null,
+    );
   });
 
   group('rankFiles', () {
@@ -222,13 +223,19 @@ void main() {
       file('lib/manuscript.tex'),
     ];
 
-    test('an empty query browses: shallow first, dirs before files, then name', () {
-      expect(
-        rankFiles(workspaceFiles, '', 50).map((e) => e.relative),
-        ['src', 'README.md', 'lib/main.dart', 'lib/manuscript.tex',
-         'src/main.dart', 'src/manager.dart'],
-      );
-    });
+    test(
+      'an empty query browses: shallow first, dirs before files, then name',
+      () {
+        expect(rankFiles(workspaceFiles, '', 50).map((e) => e.relative), [
+          'src',
+          'README.md',
+          'lib/main.dart',
+          'lib/manuscript.tex',
+          'src/main.dart',
+          'src/manager.dart',
+        ]);
+      },
+    );
 
     test('a plain query matches basenames only', () {
       // 'main' must not match 'src/manager.dart' via a path spread: the rule
@@ -238,7 +245,10 @@ void main() {
         ranked.map((e) => e.relative),
         containsAll(['src/main.dart', 'lib/main.dart']),
       );
-      expect(ranked.map((e) => e.relative), isNot(contains('src/manager.dart')));
+      expect(
+        ranked.map((e) => e.relative),
+        isNot(contains('src/manager.dart')),
+      );
     });
 
     test('an exact basename outranks a prefix which outranks a substring', () {
@@ -250,10 +260,11 @@ void main() {
       // 'src/man.dart' outranks 'manual.dart': the path query's penalty is
       // length alone, so a basename-exact hit deep in the tree still beats a
       // fuzzy hit at the root — the plugin's own arithmetic.
-      expect(
-        rankFiles(files, 'man.dart', 50).map((e) => e.relative),
-        ['man.dart', 'src/man.dart', 'manual.dart'],
-      );
+      expect(rankFiles(files, 'man.dart', 50).map((e) => e.relative), [
+        'man.dart',
+        'src/man.dart',
+        'manual.dart',
+      ]);
     });
 
     test('a query with separators matches ordered path segments', () {
@@ -263,7 +274,10 @@ void main() {
         containsAll(['src/main.dart', 'src/manager.dart']),
       );
       // A 'ma' basename in another directory is not a 'src/ma' match.
-      expect(ranked.map((e) => e.relative), isNot(contains('lib/manuscript.tex')));
+      expect(
+        ranked.map((e) => e.relative),
+        isNot(contains('lib/manuscript.tex')),
+      );
     });
 
     test('a trailing-slash query is a directory-prefix browse', () {
@@ -276,10 +290,9 @@ void main() {
     });
 
     test('matching is case-insensitive', () {
-      expect(
-        rankFiles(workspaceFiles, 'README', 50).map((e) => e.relative),
-        ['README.md'],
-      );
+      expect(rankFiles(workspaceFiles, 'README', 50).map((e) => e.relative), [
+        'README.md',
+      ]);
     });
 
     test('no match is empty, and the limit caps the list', () {

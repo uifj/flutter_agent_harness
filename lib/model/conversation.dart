@@ -182,11 +182,7 @@ class ErrorNode extends ConversationNode {
 /// files it writes; [title] is absent until the session has been opened once,
 /// because deriving it means reading the snapshot itself.
 class SessionSummary {
-  const SessionSummary({
-    required this.id,
-    required this.updatedAt,
-    this.title,
-  });
+  const SessionSummary({required this.id, required this.updatedAt, this.title});
 
   final String id;
   final DateTime updatedAt;

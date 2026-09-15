@@ -57,45 +57,49 @@ void main() {
 
   /// The tab pumped on its own, the way a unit harness would: no pane, no
   /// tab strip, just the body.
-  Future<void> pumpBody(WidgetTester tester, [WorkbenchController? withWorkbench]) =>
-      tester.pumpWidget(
-        MaterialApp(
-          theme: dswThemeData(Brightness.light),
-          home: Scaffold(
-            body: TerminalHost(
-              manager: manager,
-              child: TerminalTab(
-                workbench: withWorkbench ?? workbench,
-                tab: const SidebarTab(
-                  id: 'terminal:1',
-                  type: BuiltinTabType.terminal,
-                  title: 'Terminal 1',
-                ),
-              ),
+  Future<void> pumpBody(
+    WidgetTester tester, [
+    WorkbenchController? withWorkbench,
+  ]) => tester.pumpWidget(
+    MaterialApp(
+      theme: dswThemeData(Brightness.light),
+      home: Scaffold(
+        body: TerminalHost(
+          manager: manager,
+          child: TerminalTab(
+            workbench: withWorkbench ?? workbench,
+            tab: const SidebarTab(
+              id: 'terminal:1',
+              type: BuiltinTabType.terminal,
+              title: 'Terminal 1',
             ),
           ),
         ),
-      );
+      ),
+    ),
+  );
 
   /// The whole workbench column, at the width the layout was made for.
-  Future<void> pumpColumn(WidgetTester tester, [WorkbenchController? withWorkbench]) =>
-      tester.pumpWidget(
-        MaterialApp(
-          theme: dswThemeData(Brightness.light),
-          home: Scaffold(
-            body: SizedBox(
-              width: 360,
-              height: 600,
-              child: Workbench(
-                workbench: withWorkbench ?? workbench,
-                conversation: conversation,
-                terminals: manager,
-                onClose: () {},
-              ),
-            ),
+  Future<void> pumpColumn(
+    WidgetTester tester, [
+    WorkbenchController? withWorkbench,
+  ]) => tester.pumpWidget(
+    MaterialApp(
+      theme: dswThemeData(Brightness.light),
+      home: Scaffold(
+        body: SizedBox(
+          width: 360,
+          height: 600,
+          child: Workbench(
+            workbench: withWorkbench ?? workbench,
+            conversation: conversation,
+            terminals: manager,
+            onClose: () {},
           ),
         ),
-      );
+      ),
+    ),
+  );
 
   /// The emulator a pumped tab is showing.
   Terminal emulator(WidgetTester tester) =>
@@ -179,7 +183,9 @@ void main() {
       await pumpBody(tester);
       final process = fake.spawned.single;
 
-      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: SizedBox())));
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: SizedBox())),
+      );
 
       expect(process.killed, isTrue);
     });

@@ -208,11 +208,7 @@ void main() {
 
     testWidgets('selecting a model reports once', (tester) async {
       final selected = <String>[];
-      await pump(
-        tester,
-        directory: seeded(),
-        onModelSelected: selected.add,
-      );
+      await pump(tester, directory: seeded(), onModelSelected: selected.add);
 
       await tester.tap(find.byIcon(LucideIcons.cpu));
       await tester.pumpAndSettle();
@@ -387,11 +383,11 @@ void main() {
     /// A tiny workspace in memory — the menu's contract is the ranking and
     /// the insert, not the walk, so the lookup is a fixed list.
     Future<List<FileEntry>> lookup() async => [
-          const FileEntry(relative: 'README.md', kind: 'file'),
-          const FileEntry(relative: 'src', kind: 'dir'),
-          const FileEntry(relative: 'src/main.dart', kind: 'file'),
-          const FileEntry(relative: 'src/util.dart', kind: 'file'),
-        ];
+      const FileEntry(relative: 'README.md', kind: 'file'),
+      const FileEntry(relative: 'src', kind: 'dir'),
+      const FileEntry(relative: 'src/main.dart', kind: 'file'),
+      const FileEntry(relative: 'src/util.dart', kind: 'file'),
+    ];
 
     testWidgets('an @ token opens the files menu with ranked rows', (
       tester,

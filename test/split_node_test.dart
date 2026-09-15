@@ -28,7 +28,11 @@ void main() {
   group('mapLeaf', () {
     test('replaces the matching leaf', () {
       final tree = _leaf('pane:1', ['a']);
-      final next = mapLeaf(tree, 'pane:1', (leaf) => leaf.copyWith(active: 'a'));
+      final next = mapLeaf(
+        tree,
+        'pane:1',
+        (leaf) => leaf.copyWith(active: 'a'),
+      );
       expect((next as SidebarLeaf).active, 'a');
     });
 
@@ -37,7 +41,10 @@ void main() {
         id: 'split:1',
         dir: SplitDirection.row,
         sizes: const [0.5, 0.5],
-        children: [_leaf('pane:1', ['a']), _leaf('pane:2', ['b'])],
+        children: [
+          _leaf('pane:1', ['a']),
+          _leaf('pane:2', ['b']),
+        ],
       );
       expect(identical(mapLeaf(tree, 'pane:9', (leaf) => leaf), tree), isTrue);
     });
@@ -53,7 +60,10 @@ void main() {
             id: 'split:2',
             dir: SplitDirection.col,
             sizes: const [0.5, 0.5],
-            children: [_leaf('pane:2', ['b']), _leaf('pane:3', ['c'])],
+            children: [
+              _leaf('pane:2', ['b']),
+              _leaf('pane:3', ['c']),
+            ],
           ),
         ],
       );
@@ -66,10 +76,7 @@ void main() {
       // Untouched branches keep their identity, which is what lets the widget
       // layer skip rebuilding them.
       expect(
-        identical(
-          (next as SidebarSplit).children.first,
-          tree.children.first,
-        ),
+        identical((next as SidebarSplit).children.first, tree.children.first),
         isTrue,
       );
     });
@@ -102,7 +109,10 @@ void main() {
           id: 'split:2',
           dir: SplitDirection.row,
           sizes: const [0.5, 0.5],
-          children: [_leaf('pane:2', ['c']), _leaf('pane:3', [])],
+          children: [
+            _leaf('pane:2', ['c']),
+            _leaf('pane:3', []),
+          ],
         ),
       ],
     );
@@ -198,7 +208,10 @@ void main() {
         id: 'split:1',
         dir: SplitDirection.row,
         sizes: const [0.5, 0.5],
-        children: [_leaf('pane:1', ['a']), _leaf('pane:2', ['b'])],
+        children: [
+          _leaf('pane:1', ['a']),
+          _leaf('pane:2', ['b']),
+        ],
       );
       final next = removeLeafAt(tree, 'pane:2');
       expect(next, isA<SidebarLeaf>());
@@ -242,7 +255,10 @@ void main() {
             id: 'split:2',
             dir: SplitDirection.col,
             sizes: const [0.5, 0.5],
-            children: [_leaf('pane:2', ['b']), _leaf('pane:3', ['c'])],
+            children: [
+              _leaf('pane:2', ['b']),
+              _leaf('pane:3', ['c']),
+            ],
           ),
         ],
       );
@@ -256,7 +272,10 @@ void main() {
       id: 'split:1',
       dir: SplitDirection.row,
       sizes: const [0.5, 0.5],
-      children: [_leaf('pane:1', ['a']), _leaf('pane:2', ['b'])],
+      children: [
+        _leaf('pane:1', ['a']),
+        _leaf('pane:2', ['b']),
+      ],
     );
 
     test('moves the divider', () {
@@ -300,26 +319,30 @@ void main() {
     });
 
     test('repairs an active id that names no tab', () {
-      final leaf = splitNodeFromJson({
-        'kind': 'leaf',
-        'id': 'pane:1',
-        'tabs': [_tab('a').toJson()],
-        'active': 'gone',
-      }) as SidebarLeaf;
+      final leaf =
+          splitNodeFromJson({
+                'kind': 'leaf',
+                'id': 'pane:1',
+                'tabs': [_tab('a').toJson()],
+                'active': 'gone',
+              })
+              as SidebarLeaf;
       expect(leaf.active, 'a');
     });
 
     test('replaces a sizes list of the wrong length with equal fractions', () {
-      final split = splitNodeFromJson({
-        'kind': 'split',
-        'id': 'split:1',
-        'dir': 'row',
-        'sizes': [0.5],
-        'children': [
-          _leaf('pane:1', ['a']).toJson(),
-          _leaf('pane:2', ['b']).toJson(),
-        ],
-      }) as SidebarSplit;
+      final split =
+          splitNodeFromJson({
+                'kind': 'split',
+                'id': 'split:1',
+                'dir': 'row',
+                'sizes': [0.5],
+                'children': [
+                  _leaf('pane:1', ['a']).toJson(),
+                  _leaf('pane:2', ['b']).toJson(),
+                ],
+              })
+              as SidebarSplit;
       expect(split.sizes, [0.5, 0.5]);
     });
 
@@ -339,12 +362,14 @@ void main() {
     });
 
     test('drops a duplicated tab id inside one pane', () {
-      final leaf = splitNodeFromJson({
-        'kind': 'leaf',
-        'id': 'pane:1',
-        'tabs': [_tab('a').toJson(), _tab('a').toJson()],
-        'active': 'a',
-      }) as SidebarLeaf;
+      final leaf =
+          splitNodeFromJson({
+                'kind': 'leaf',
+                'id': 'pane:1',
+                'tabs': [_tab('a').toJson(), _tab('a').toJson()],
+                'active': 'a',
+              })
+              as SidebarLeaf;
       expect(leaf.tabs.length, 1);
     });
   });
@@ -355,7 +380,10 @@ void main() {
         id: 'split:7',
         dir: SplitDirection.row,
         sizes: const [0.5, 0.5],
-        children: [_leaf('pane:2', ['tab:11']), _leaf('pane:3', [])],
+        children: [
+          _leaf('pane:2', ['tab:11']),
+          _leaf('pane:3', []),
+        ],
       );
       expect(maxCounterSuffix(tree), 11);
     });
@@ -373,7 +401,10 @@ void main() {
         id: 'split:1',
         dir: SplitDirection.row,
         sizes: const [0.5, 0.5],
-        children: [_leaf('pane:1', ['a']), _leaf('pane:1', ['b'])],
+        children: [
+          _leaf('pane:1', ['a']),
+          _leaf('pane:1', ['b']),
+        ],
       );
       final minter = IdMinter(9);
       final next = mintTakenIds(tree, <String>{}, minter);
@@ -451,8 +482,13 @@ void main() {
     test('the source pane collapses when the tab was its last', () {
       final from = _leaf('pane:1', ['a']);
       final to = _leaf('pane:2', ['c']);
-      final (source, target) =
-          moveTabBetweenTrees(from, to, 'pane:1', 'a', 'pane:2')!;
+      final (source, target) = moveTabBetweenTrees(
+        from,
+        to,
+        'pane:1',
+        'a',
+        'pane:2',
+      )!;
       expect((source as SidebarLeaf).tabs, isEmpty);
       expect((target as SidebarLeaf).tabs.map((t) => t.id), ['c', 'a']);
     });

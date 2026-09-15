@@ -31,10 +31,7 @@ class FakeTurnSource implements TurnSource {
   Future<void> close() => current.close();
 
   @override
-  Stream<TurnEvent> send(
-    String text, {
-    List<AttachedImage> images = const [],
-  }) {
+  Stream<TurnEvent> send(String text, {List<AttachedImage> images = const []}) {
     final controller = StreamController<TurnEvent>();
     _turns.add(controller);
     return controller.stream;

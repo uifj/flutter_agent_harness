@@ -139,7 +139,7 @@ class PlanTools {
         'Record the plan of record for the current task: the approach and the '
         'steps, in order, that you intend to take. Update it whenever the '
         'approach changes. The user sees the current plan with the '
-    'conversation.',
+        'conversation.',
     inputSchema: SchemanticType.from<Map<String, dynamic>>(
       jsonSchema: {
         'type': 'object',

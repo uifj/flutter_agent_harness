@@ -28,7 +28,10 @@ void main() {
     });
 
     test('keeps an explicit scheme', () {
-      expect(normalizeBrowserUrl('http://example.com').url, 'http://example.com');
+      expect(
+        normalizeBrowserUrl('http://example.com').url,
+        'http://example.com',
+      );
       expect(
         normalizeBrowserUrl('https://example.com/a?b=c').url,
         'https://example.com/a?b=c',
@@ -194,9 +197,8 @@ void main() {
       support.deleteSync(recursive: true);
     });
 
-    List<SidebarTab> tabs() => workbench.state.panes
-        .expand((pane) => pane.tabs)
-        .toList();
+    List<SidebarTab> tabs() =>
+        workbench.state.panes.expand((pane) => pane.tabs).toList();
 
     test('opening the same url twice focuses the one tab', () {
       workbench.openBrowser('https://example.com');
@@ -206,10 +208,7 @@ void main() {
         tabs().where((tab) => tab.type == BuiltinTabType.browser),
         hasLength(1),
       );
-      expect(
-        workbench.state.panes.first.active,
-        'browser:https://example.com',
-      );
+      expect(workbench.state.panes.first.active, 'browser:https://example.com');
     });
 
     test('fresh tabs mint fresh ids', () {

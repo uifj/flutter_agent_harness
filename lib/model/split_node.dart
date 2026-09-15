@@ -78,7 +78,11 @@ sealed class SplitNode {
 
 /// A tab group: one tab bar and one visible tab.
 class SidebarLeaf extends SplitNode {
-  const SidebarLeaf({required super.id, required this.tabs, required this.active});
+  const SidebarLeaf({
+    required super.id,
+    required this.tabs,
+    required this.active,
+  });
 
   /// An empty pane. Legal, and reachable: closing the last tab of the only pane
   /// leaves one, and it shows the welcome content.
@@ -89,12 +93,15 @@ class SidebarLeaf extends SplitNode {
   /// Id of the visible tab, or null when [tabs] is empty.
   final String? active;
 
-  SidebarLeaf copyWith({List<SidebarTab>? tabs, String? active, bool clearActive = false}) =>
-      SidebarLeaf(
-        id: id,
-        tabs: tabs ?? this.tabs,
-        active: clearActive ? null : (active ?? this.active),
-      );
+  SidebarLeaf copyWith({
+    List<SidebarTab>? tabs,
+    String? active,
+    bool clearActive = false,
+  }) => SidebarLeaf(
+    id: id,
+    tabs: tabs ?? this.tabs,
+    active: clearActive ? null : (active ?? this.active),
+  );
 
   @override
   Map<String, Object?> toJson() => {
@@ -142,7 +149,8 @@ class SidebarSplit extends SplitNode {
   };
 
   @override
-  String toString() => 'SidebarSplit($id, ${dir.name}, ${children.length} children)';
+  String toString() =>
+      'SidebarSplit($id, ${dir.name}, ${children.length} children)';
 }
 
 /// Rebuilds [node] with the leaf identified by [paneId] replaced by
@@ -189,9 +197,7 @@ SidebarLeaf firstLeaf(SplitNode node) => switch (node) {
 /// Every pane, in tree order.
 List<SidebarLeaf> allLeaves(SplitNode node) => switch (node) {
   SidebarLeaf() => [node],
-  SidebarSplit() => [
-    for (final child in node.children) ...allLeaves(child),
-  ],
+  SidebarSplit() => [for (final child in node.children) ...allLeaves(child)],
 };
 
 /// The pane holding the tab with [tabId], or null.
@@ -309,12 +315,7 @@ SplitNode removeLeafAt(SplitNode node, String paneId) {
 ///
 /// [index] is the child on the leading side. Both neighbours are clamped, so a
 /// drag past the floor stops instead of pushing the deficit down the row.
-SplitNode resizeSplit(
-  SplitNode node,
-  String splitId,
-  int index,
-  double delta,
-) {
+SplitNode resizeSplit(SplitNode node, String splitId, int index, double delta) {
   switch (node) {
     case SidebarLeaf():
       return node;

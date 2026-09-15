@@ -158,18 +158,20 @@ class _ComposerState extends State<Composer> {
     if (lookup == null || _indexLoading || _fileIndex != null) return;
     final generation = ++_indexGeneration;
     _indexLoading = true;
-    lookup().then((entries) {
-      if (!mounted || generation != _indexGeneration) return;
-      setState(() {
-        _fileIndex = entries;
-        _indexLoading = false;
-      });
-    }).catchError((_) {
-      if (!mounted || generation != _indexGeneration) return;
-      // An index that cannot be read offers nothing; the `@` types as text
-      // rather than showing an error menu.
-      setState(() => _indexLoading = false);
-    });
+    lookup()
+        .then((entries) {
+          if (!mounted || generation != _indexGeneration) return;
+          setState(() {
+            _fileIndex = entries;
+            _indexLoading = false;
+          });
+        })
+        .catchError((_) {
+          if (!mounted || generation != _indexGeneration) return;
+          // An index that cannot be read offers nothing; the `@` types as text
+          // rather than showing an error menu.
+          setState(() => _indexLoading = false);
+        });
   }
 
   /// Inserts the picked entry: the token becomes the readable `@path` and the
@@ -546,7 +548,10 @@ class _ComposerState extends State<Composer> {
                 padding: const EdgeInsets.only(bottom: 4),
                 children: [
                   for (final entry in matches)
-                    _MentionRow(entry: entry, onPick: () => _insertMention(entry)),
+                    _MentionRow(
+                      entry: entry,
+                      onPick: () => _insertMention(entry),
+                    ),
                 ],
               ),
             ),
@@ -629,10 +634,9 @@ class _ComposerState extends State<Composer> {
               Flexible(
                 child: _ModeChip(
                   mode: widget.approvalMode,
-                  onSelect:
-                      widget.onApprovalMode == null
-                          ? null
-                          : (mode) => widget.onApprovalMode!(mode),
+                  onSelect: widget.onApprovalMode == null
+                      ? null
+                      : (mode) => widget.onApprovalMode!(mode),
                 ),
               ),
             ],
@@ -890,11 +894,7 @@ class _ImageChip extends StatelessWidget {
                   color: color.bgOverlay,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  LucideIcons.x,
-                  size: 11,
-                  color: color.labelPrimary,
-                ),
+                child: Icon(LucideIcons.x, size: 11, color: color.labelPrimary),
               ),
             ),
           ),
@@ -1067,8 +1067,7 @@ class _ModelChip extends StatelessWidget {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            directory.loadError ??
-                                context.tr('refreshModels'),
+                            directory.loadError ?? context.tr('refreshModels'),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: DswType.xxxs11.copyWith(
@@ -1170,8 +1169,18 @@ class _ModeChip extends StatelessWidget {
         enabled: onSelect != null,
         itemBuilder: (context) => [
           for (final entry in const [
-            (ApprovalMode.ask, LucideIcons.shield_question_mark, 'askEveryTime', 'askEveryTimeDesc'),
-            (ApprovalMode.plan, LucideIcons.clipboard_list, 'planFirst', 'planFirstDesc'),
+            (
+              ApprovalMode.ask,
+              LucideIcons.shield_question_mark,
+              'askEveryTime',
+              'askEveryTimeDesc',
+            ),
+            (
+              ApprovalMode.plan,
+              LucideIcons.clipboard_list,
+              'planFirst',
+              'planFirstDesc',
+            ),
             (ApprovalMode.auto, LucideIcons.zap, 'autoRun', 'autoRunDesc'),
           ])
             PopupMenuItem(

@@ -22,8 +22,7 @@ class FakeFolderOps implements ProjectFolderOps {
   final stopped = <String>[];
 
   @override
-  Future<({String path, String bookmark})?> pickDirectory() async =>
-      pickResult;
+  Future<({String path, String bookmark})?> pickDirectory() async => pickResult;
 
   @override
   Future<bool> startAccessing(String bookmark) async {
@@ -93,8 +92,9 @@ void main() {
     test('a stale bookmark reports no access rather than throwing', () async {
       final ops = FakeFolderOps(accessResult: false);
       expect(
-          await restoreWorkspaceAccess(bookmark: 'bm-stale', ops: ops),
-          isFalse);
+        await restoreWorkspaceAccess(bookmark: 'bm-stale', ops: ops),
+        isFalse,
+      );
     });
 
     test('a channel that throws is a failed restore, not a crash', () async {

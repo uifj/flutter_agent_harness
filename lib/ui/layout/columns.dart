@@ -162,7 +162,9 @@ Columns computeColumns(
   }
 
   // Step 2: shrink details toward its minimum.
-  final d1 = d0 == 0 ? 0.0 : math.max(detailsMin, viewport - s - w0 - centerMin);
+  final d1 = d0 == 0
+      ? 0.0
+      : math.max(detailsMin, viewport - s - w0 - centerMin);
   if (s + d1 + w0 + centerMin <= viewport) {
     return Columns(sidebar: s, center: centerMin, details: d1, workbench: w0);
   }
@@ -178,9 +180,7 @@ Columns computeColumns(
   }
 
   // Step 4: the workbench concedes last — shrink it toward its minimum.
-  final w1 = w0 == 0
-      ? 0.0
-      : math.max(workbenchMin, viewport - s - centerMin);
+  final w1 = w0 == 0 ? 0.0 : math.max(workbenchMin, viewport - s - centerMin);
   if (s + w1 + centerMin <= viewport) {
     return Columns(sidebar: s, center: centerMin, details: 0, workbench: w1);
   }

@@ -254,13 +254,12 @@ class GitRepo {
   /// Branch names, current first.
   Future<List<String>> branches() async {
     final current = await branch();
-    final raw = await _git(
-      const ['for-each-ref', '--format=%(refname:short)', 'refs/heads'],
-    );
-    final names = raw
-        .split('\n')
-        .where((line) => line.isNotEmpty)
-        .toList();
+    final raw = await _git(const [
+      'for-each-ref',
+      '--format=%(refname:short)',
+      'refs/heads',
+    ]);
+    final names = raw.split('\n').where((line) => line.isNotEmpty).toList();
     return names.contains(current) ? names : [current, ...names];
   }
 
@@ -269,9 +268,12 @@ class GitRepo {
 
   /// Working-tree status, untracked included, truncated past the cap.
   Future<GitStatusResult> status() async {
-    final raw = await _git(
-      const ['status', '--porcelain=v1', '-z', '--untracked-files=all'],
-    );
+    final raw = await _git(const [
+      'status',
+      '--porcelain=v1',
+      '-z',
+      '--untracked-files=all',
+    ]);
     final parsed = parsePorcelainZ(raw);
     final truncated = parsed.length > gitStatusLimit;
     String branch = 'HEAD';
@@ -299,14 +301,12 @@ class GitRepo {
   }
 
   /// Stage [path] (everything when null).
-  Future<void> stage(String? path) => _git(
-    path == null ? const ['add', '-A'] : ['add', '-A', '--', path],
-  );
+  Future<void> stage(String? path) =>
+      _git(path == null ? const ['add', '-A'] : ['add', '-A', '--', path]);
 
   /// Unstage [path] (everything when null).
-  Future<void> unstage(String? path) => _git(
-    path == null ? const ['reset', '-q'] : ['reset', '-q', '--', path],
-  );
+  Future<void> unstage(String? path) =>
+      _git(path == null ? const ['reset', '-q'] : ['reset', '-q', '--', path]);
 
   /// Commit the staged changes with [message]; the global identity untouched.
   Future<void> commit(String message) => _git(['commit', '-m', message]);
@@ -314,7 +314,12 @@ class GitRepo {
   /// Recent history, newest first, pageable via [skip].
   Future<List<GitLogEntry>> log({int count = 30, int skip = 0}) async {
     final raw = await _git([
-      'log', '-n', '$count', '--skip', '$skip', '--decorate=short',
+      'log',
+      '-n',
+      '$count',
+      '--skip',
+      '$skip',
+      '--decorate=short',
       '--pretty=format:%h\x1f%s\x1f%an\x1f%ai\x1f%H\x1f%D',
     ]);
     return parseLogLines(raw);
@@ -323,7 +328,12 @@ class GitRepo {
   /// Full patch of one commit. Merge commits diff against the first parent, so
   /// a history click always has content.
   Future<String> commitDiff(String hashFull) => _git([
-    'show', '--no-ext-diff', '--no-color', '--format=', '-m', '--first-parent',
+    'show',
+    '--no-ext-diff',
+    '--no-color',
+    '--format=',
+    '-m',
+    '--first-parent',
     hashFull,
   ]);
 

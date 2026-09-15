@@ -18,14 +18,15 @@ import 'package:agent_harness/model/todo_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:genkit/genkit.dart';
 
-Message _user(String text) =>
-    Message(role: Role.user, content: [TextPart(text: text)]);
+Message _user(String text) => Message(
+  role: Role.user,
+  content: [TextPart(text: text)],
+);
 
 Message _model(List<Part> content) =>
     Message(role: Role.model, content: content);
 
-Message _tool(List<Part> content) =>
-    Message(role: Role.tool, content: content);
+Message _tool(List<Part> content) => Message(role: Role.tool, content: content);
 
 Part _request(String ref, String name, Map<String, dynamic> input) =>
     ToolRequestPart(
@@ -41,11 +42,11 @@ void main() {
     final nodes = AgentRuntime.projectMessages([
       _user('read the config'),
       _model([
-        _request('r1', 'read', {
-          'file_path': 'pubspec.yaml',
-        }),
+        _request('r1', 'read', {'file_path': 'pubspec.yaml'}),
       ]),
-      _tool([_response('r1', 'read', {'path': 'pubspec.yaml', 'lines': 30})]),
+      _tool([
+        _response('r1', 'read', {'path': 'pubspec.yaml', 'lines': 30}),
+      ]),
       _model([
         ReasoningPart(reasoning: 'thinking it through'),
         TextPart(text: 'Here is what the config holds.'),
@@ -68,26 +69,29 @@ void main() {
     final nodes = AgentRuntime.projectMessages([
       _user('go'),
       _model([TextPart(text: 'Looking.')]),
-      _model([_request('r1', 'grep', {'pattern': 'x'})]),
-      _tool([_response('r1', 'grep', {'total': 0})]),
+      _model([
+        _request('r1', 'grep', {'pattern': 'x'}),
+      ]),
+      _tool([
+        _response('r1', 'grep', {'total': 0}),
+      ]),
       _model([TextPart(text: 'Nothing matched.')]),
     ]);
 
-    expect(
-      nodes.map((n) => n.runtimeType).toList(),
-      [
-        UserMessageNode,
-        AssistantMessageNode,
-        ToolCallNode,
-        AssistantMessageNode,
-      ],
-    );
+    expect(nodes.map((n) => n.runtimeType).toList(), [
+      UserMessageNode,
+      AssistantMessageNode,
+      ToolCallNode,
+      AssistantMessageNode,
+    ]);
   });
 
   test('a call persisted mid-flight comes back running, not invented', () {
     final nodes = AgentRuntime.projectMessages([
       _user('go'),
-      _model([_request('r1', 'write', {'file_path': 'a.txt'})]),
+      _model([
+        _request('r1', 'write', {'file_path': 'a.txt'}),
+      ]),
     ]);
 
     final call = nodes[1] as ToolCallNode;
@@ -98,7 +102,9 @@ void main() {
   test('an ok:false output settles the call as failed with its message', () {
     final nodes = AgentRuntime.projectMessages([
       _user('go'),
-      _model([_request('r1', 'edit', {'file_path': 'a.txt'})]),
+      _model([
+        _request('r1', 'edit', {'file_path': 'a.txt'}),
+      ]),
       _tool([
         _response('r1', 'edit', {'ok': false, 'error': 'not found once'}),
       ]),
@@ -112,7 +118,9 @@ void main() {
   test('a response with no matching request is dropped, not fatal', () {
     final nodes = AgentRuntime.projectMessages([
       _user('go'),
-      _tool([_response('orphan', 'read', {'lines': 1})]),
+      _tool([
+        _response('orphan', 'read', {'lines': 1}),
+      ]),
     ]);
 
     expect(nodes, hasLength(1));
@@ -148,10 +156,7 @@ void main() {
       ]),
       _model([_request('r2', 'plan', {})]),
       _tool([
-        _response('r2', 'plan', {
-          'ok': true,
-          'plan': '1. one\n2. two',
-        }),
+        _response('r2', 'plan', {'ok': true, 'plan': '1. one\n2. two'}),
       ]),
     ]);
 

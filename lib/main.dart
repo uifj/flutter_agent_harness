@@ -43,9 +43,7 @@ Future<void> main() async {
   // anything reads under the root — the file tree's first listing, the
   // session restore, the tools. A failure here is not an error: the hero
   // picker's own UI is the "ask again" path.
-  await restoreWorkspaceAccess(
-    bookmark: settings.value.workspaceBookmark,
-  );
+  await restoreWorkspaceAccess(bookmark: settings.value.workspaceBookmark);
   runApp(DshApp(support: support, settings: settings, prefs: prefs));
 }
 

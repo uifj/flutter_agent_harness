@@ -35,32 +35,40 @@ void main() {
       expect(outcome.totalLines, 4);
     });
 
-    test('keeps counting past the limit so the footer can say how far',
-        () async {
-      final outcome = await readWindowOf(
-        lines(['a', 'b', 'c', 'd', 'e']),
-        limit: 2,
-      );
+    test(
+      'keeps counting past the limit so the footer can say how far',
+      () async {
+        final outcome = await readWindowOf(
+          lines(['a', 'b', 'c', 'd', 'e']),
+          limit: 2,
+        );
 
-      expect(outcome.lines, hasLength(2));
-      expect(outcome.totalLines, 5, reason: 'the scan does not stop at the cap');
-      expect(outcome.hasMore, isTrue);
-      expect(
-        readFooter(outcome),
-        '(Showing lines 1-2 of 5. Use offset=3 to continue.)',
-      );
-    });
+        expect(outcome.lines, hasLength(2));
+        expect(
+          outcome.totalLines,
+          5,
+          reason: 'the scan does not stop at the cap',
+        );
+        expect(outcome.hasMore, isTrue);
+        expect(
+          readFooter(outcome),
+          '(Showing lines 1-2 of 5. Use offset=3 to continue.)',
+        );
+      },
+    );
 
-    test('an offset past the end returns nothing and admits the file is short',
-        () async {
-      final outcome = await readWindowOf(lines(['a', 'b']), offset: 9);
+    test(
+      'an offset past the end returns nothing and admits the file is short',
+      () async {
+        final outcome = await readWindowOf(lines(['a', 'b']), offset: 9);
 
-      expect(outcome.lines, isEmpty);
-      expect(outcome.totalLines, 2);
-      // Not "use offset=10 to continue": there is nothing to continue into, and
-      // saying so is what stops the model from paging forever.
-      expect(readFooter(outcome), '(End of file - total 2 lines)');
-    });
+        expect(outcome.lines, isEmpty);
+        expect(outcome.totalLines, 2);
+        // Not "use offset=10 to continue": there is nothing to continue into, and
+        // saying so is what stops the model from paging forever.
+        expect(readFooter(outcome), '(End of file - total 2 lines)');
+      },
+    );
   });
 
   group('the caps', () {
@@ -106,10 +114,7 @@ void main() {
     test('bytes are counted as bytes, not characters', () async {
       // Three characters, nine bytes: two such lines overrun a 10-byte budget
       // that six ASCII characters would sit well inside.
-      final outcome = await readWindowOf(
-        lines(['日本語', '日本語']),
-        maxBytes: 10,
-      );
+      final outcome = await readWindowOf(lines(['日本語', '日本語']), maxBytes: 10);
 
       expect(outcome.lines, hasLength(1));
       expect(outcome.truncatedByBytes, isTrue);

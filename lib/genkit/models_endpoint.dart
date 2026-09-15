@@ -73,10 +73,7 @@ final class HttpModelsEndpointFetcher implements ModelsEndpointFetcher {
         // 401/403 is the answer a mistyped key earns; anything else is the
         // endpoint's own complaint. Either way the status code is the most
         // useful sentence available.
-        throw HttpException(
-          'HTTP ${response.statusCode}',
-          uri: uri,
-        );
+        throw HttpException('HTTP ${response.statusCode}', uri: uri);
       }
       final body = await response
           .transform(utf8.decoder)

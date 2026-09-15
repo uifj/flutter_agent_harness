@@ -52,13 +52,19 @@ void main() {
       expect(settings.withoutWorkspace().workspaceRoot, isNull);
     });
 
-    test('any model change asks for a restart, since all three are baked in', () {
-      const base = ModelSettings(apiKey: 'a');
-      expect(base.requiresRestart(base), isFalse);
-      expect(base.copyWith(apiKey: 'b').requiresRestart(base), isTrue);
-      expect(base.copyWith(model: 'other').requiresRestart(base), isTrue);
-      expect(base.copyWith(baseUrl: 'https://x/v1').requiresRestart(base), isTrue);
-    });
+    test(
+      'any model change asks for a restart, since all three are baked in',
+      () {
+        const base = ModelSettings(apiKey: 'a');
+        expect(base.requiresRestart(base), isFalse);
+        expect(base.copyWith(apiKey: 'b').requiresRestart(base), isTrue);
+        expect(base.copyWith(model: 'other').requiresRestart(base), isTrue);
+        expect(
+          base.copyWith(baseUrl: 'https://x/v1').requiresRestart(base),
+          isTrue,
+        );
+      },
+    );
   });
 
   group('SettingsStore', () {
@@ -369,10 +375,10 @@ void main() {
       addTearDown(() => kept.deleteSync(recursive: true));
       await pump(
         tester,
-        settings: AppSettings(recentWorkspaces: [
-          '/tmp/gone',
-          kept.path,
-        ], workspaceRoot: kept.path),
+        settings: AppSettings(
+          recentWorkspaces: ['/tmp/gone', kept.path],
+          workspaceRoot: kept.path,
+        ),
         onSave: (next) async => saved = next,
       );
 

@@ -42,28 +42,27 @@ void main() {
   group('parseModelsResponse', () {
     test('the OpenAI-compatible shape: data[].id', () {
       const body = '{"data": [{"id": "gpt-4o"}, {"id": "o3-mini"}]}';
-      expect(
-        parseModelsResponse(LlmProvider.openai, body),
-        ['gpt-4o', 'o3-mini'],
-      );
+      expect(parseModelsResponse(LlmProvider.openai, body), [
+        'gpt-4o',
+        'o3-mini',
+      ]);
     });
 
     test('the Anthropic shape is the same one', () {
       const body = '{"data": [{"id": "claude-3-5-sonnet"}]}';
-      expect(
-        parseModelsResponse(LlmProvider.anthropic, body),
-        ['claude-3-5-sonnet'],
-      );
+      expect(parseModelsResponse(LlmProvider.anthropic, body), [
+        'claude-3-5-sonnet',
+      ]);
     });
 
     test('the Gemini shape: models[].name, prefix stripped', () {
       const body =
           '{"models": [{"name": "models/gemini-2.0-flash"},'
           ' {"name": "models/gemini-2.5-pro"}]}';
-      expect(
-        parseModelsResponse(LlmProvider.google, body),
-        ['gemini-2.0-flash', 'gemini-2.5-pro'],
-      );
+      expect(parseModelsResponse(LlmProvider.google, body), [
+        'gemini-2.0-flash',
+        'gemini-2.5-pro',
+      ]);
     });
 
     test('entries without an id are skipped, not fatal', () {
@@ -140,9 +139,7 @@ void main() {
     testWidgets('a failed probe reports the failure beside the button', (
       tester,
     ) async {
-      final fetcher = FakeModelsFetcher(
-        error: const HttpException('HTTP 401'),
-      );
+      final fetcher = FakeModelsFetcher(error: const HttpException('HTTP 401'));
       await pump(tester, fetcher: fetcher);
 
       await tester.tap(find.text('Models'));

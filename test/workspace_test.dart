@@ -116,10 +116,16 @@ void main() {
     });
   });
 
-  test('canonicalises the root once, so comparisons are against a real path', () {
-    // On macOS the temp directory itself lives behind a /var -> /private/var
-    // symlink, so an uncanonicalised root would fail every `isWithin` check.
-    expect(workspace.root, Directory(rootDir.path).resolveSymbolicLinksSync());
-    expect(p.isAbsolute(workspace.root), isTrue);
-  });
+  test(
+    'canonicalises the root once, so comparisons are against a real path',
+    () {
+      // On macOS the temp directory itself lives behind a /var -> /private/var
+      // symlink, so an uncanonicalised root would fail every `isWithin` check.
+      expect(
+        workspace.root,
+        Directory(rootDir.path).resolveSymbolicLinksSync(),
+      );
+      expect(p.isAbsolute(workspace.root), isTrue);
+    },
+  );
 }

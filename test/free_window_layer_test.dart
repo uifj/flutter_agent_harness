@@ -124,7 +124,13 @@ void main() {
     workbench.floatTab('git', 600, 400, 1200, 800);
     // A window at the default height (776 of 800) has no room to move
     // vertically — the clamp pins it. Resize first so both axes can travel.
-    workbench.resizeFloat(workbench.state.floats.single.id, 400, 300, 1200, 800);
+    workbench.resizeFloat(
+      workbench.state.floats.single.id,
+      400,
+      300,
+      1200,
+      800,
+    );
     await pump(tester);
 
     final before = workbench.state.floats.single;

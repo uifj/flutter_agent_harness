@@ -33,9 +33,7 @@ List<FileEntry> rankFiles(List<FileEntry> files, String query, int limit) {
     if (byLength != 0) return byLength;
     return a.$1.relative.compareTo(b.$1.relative);
   });
-  return [
-    for (final (file, _) in scored.take(limit)) file,
-  ];
+  return [for (final (file, _) in scored.take(limit)) file];
 }
 
 /// Browse order: shallow paths first, then directories before files, then
@@ -56,7 +54,10 @@ int _scorePath(String path, String q) {
   final lowerPath = path.toLowerCase();
   final pathSegments = lowerPath.split('/');
   final normalizedQuery = q.replaceAll('\\', '/');
-  final querySegments = normalizedQuery.split('/').where((s) => s.isNotEmpty).toList();
+  final querySegments = normalizedQuery
+      .split('/')
+      .where((s) => s.isNotEmpty)
+      .toList();
   if (!normalizedQuery.contains('/')) {
     return _scoreName(pathSegments.last, querySegments.first);
   }

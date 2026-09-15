@@ -178,11 +178,7 @@ class _HeroWorkspacePickerState extends State<HeroWorkspacePicker> {
           value: '\u0000pick',
           child: Row(
             children: [
-              Icon(
-                LucideIcons.plus,
-                size: 13,
-                color: color.labelSecondary,
-              ),
+              Icon(LucideIcons.plus, size: 13, color: color.labelSecondary),
               const SizedBox(width: 6),
               Text(
                 context.tr('chooseAFolder'),

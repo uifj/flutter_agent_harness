@@ -81,25 +81,25 @@ void main() {
     WorkbenchController? controller,
     WorkbenchPrefs prefs = const WorkbenchPrefs(),
   ]) => tester.pumpWidget(
-        MaterialApp(
-          theme: dswThemeData(Brightness.light),
-          home: Scaffold(
-            body: SizedBox(
-              width: 460,
-              height: 600,
-              child: WorkbenchPrefsScope(
-                prefs: prefs,
-                child: Workbench(
-                  workbench: controller ?? workbench,
-                  conversation: conversation,
-                  terminals: pool,
-                  onClose: () => closed++,
-                ),
-              ),
+    MaterialApp(
+      theme: dswThemeData(Brightness.light),
+      home: Scaffold(
+        body: SizedBox(
+          width: 460,
+          height: 600,
+          child: WorkbenchPrefsScope(
+            prefs: prefs,
+            child: Workbench(
+              workbench: controller ?? workbench,
+              conversation: conversation,
+              terminals: pool,
+              onClose: () => closed++,
             ),
           ),
         ),
-      );
+      ),
+    ),
+  );
 
   /// A canonical directory to use as a workspace. Resolved because the system
   /// temp directory is itself a symlink on macOS, and the guard canonicalises its
@@ -516,38 +516,42 @@ void main() {
       ),
     );
 
-    testWidgets('a tab opened in the right column crosses to the bottom panel', (
-      tester,
-    ) async {
-      await pumpBoth(tester);
-      workbench.openGit();
-      await tester.pump();
+    testWidgets(
+      'a tab opened in the right column crosses to the bottom panel',
+      (tester) async {
+        await pumpBoth(tester);
+        workbench.openGit();
+        await tester.pump();
 
-      // One tab strip per panel; the git tab lives in the right column's.
-      expect(workbench.state.tabs.single.type, BuiltinTabType.git);
-      expect(workbench.state.bottomTabs, isEmpty);
+        // One tab strip per panel; the git tab lives in the right column's.
+        expect(workbench.state.tabs.single.type, BuiltinTabType.git);
+        expect(workbench.state.bottomTabs, isEmpty);
 
-      workbench.sendTabToOtherPanel(
-        workbench.state.activePane,
-        workbench.state.tabs.single.id,
-      );
-      await tester.pump();
+        workbench.sendTabToOtherPanel(
+          workbench.state.activePane,
+          workbench.state.tabs.single.id,
+        );
+        await tester.pump();
 
-      // The tab crossed the trees: the right column's pane is empty, the
-      // bottom panel's strip holds the tab, and the bottom pane is now the
-      // active one.
-      expect(workbench.state.tabs, isEmpty);
-      expect(workbench.state.bottomTabs.single.type, BuiltinTabType.git);
-      expect(workbench.state.activePane, workbench.state.bottomPanes.single.id);
+        // The tab crossed the trees: the right column's pane is empty, the
+        // bottom panel's strip holds the tab, and the bottom pane is now the
+        // active one.
+        expect(workbench.state.tabs, isEmpty);
+        expect(workbench.state.bottomTabs.single.type, BuiltinTabType.git);
+        expect(
+          workbench.state.activePane,
+          workbench.state.bottomPanes.single.id,
+        );
 
-      // And the bottom panel's strip can send it back.
-      workbench.sendTabToOtherPanel(
-        workbench.state.activePane,
-        workbench.state.bottomTabs.single.id,
-      );
-      await tester.pump();
-      expect(workbench.state.bottomTabs, isEmpty);
-      expect(workbench.state.tabs.single.type, BuiltinTabType.git);
-    });
+        // And the bottom panel's strip can send it back.
+        workbench.sendTabToOtherPanel(
+          workbench.state.activePane,
+          workbench.state.bottomTabs.single.id,
+        );
+        await tester.pump();
+        expect(workbench.state.bottomTabs, isEmpty);
+        expect(workbench.state.tabs.single.type, BuiltinTabType.git);
+      },
+    );
   });
 }

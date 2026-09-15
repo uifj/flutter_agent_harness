@@ -23,7 +23,9 @@ void main() {
     test('collapses rename pairs to the new path', () {
       // `R  new\x00old\x00` — the row worth showing is the file as it exists
       // now; the origin is the trailing field the parser has to skip.
-      final entries = parsePorcelainZ('R  new.txt\x00old.txt\x00M  other.txt\x00');
+      final entries = parsePorcelainZ(
+        'R  new.txt\x00old.txt\x00M  other.txt\x00',
+      );
       expect(entries, hasLength(2));
       expect(entries.first.path, 'new.txt');
       expect(entries.first.xy, 'R ');
@@ -77,11 +79,23 @@ void main() {
     });
 
     test('isUnstagedEntry is the Y letter, untracked included', () {
-      expect(isUnstagedEntry(const GitStatusEntry(path: 'a', xy: ' M')), isTrue);
+      expect(
+        isUnstagedEntry(const GitStatusEntry(path: 'a', xy: ' M')),
+        isTrue,
+      );
       // 'MM' lands in BOTH sections — staged and unstaged are two diffs.
-      expect(isUnstagedEntry(const GitStatusEntry(path: 'a', xy: 'MM')), isTrue);
-      expect(isUnstagedEntry(const GitStatusEntry(path: 'a', xy: 'M ')), isFalse);
-      expect(isUnstagedEntry(const GitStatusEntry(path: 'a', xy: '??')), isTrue);
+      expect(
+        isUnstagedEntry(const GitStatusEntry(path: 'a', xy: 'MM')),
+        isTrue,
+      );
+      expect(
+        isUnstagedEntry(const GitStatusEntry(path: 'a', xy: 'M ')),
+        isFalse,
+      );
+      expect(
+        isUnstagedEntry(const GitStatusEntry(path: 'a', xy: '??')),
+        isTrue,
+      );
     });
 
     test('isUntracked is exactly ??', () {
@@ -92,10 +106,11 @@ void main() {
 
   group('refNames', () {
     test('resolves decorations to plain names, deduped', () {
-      expect(
-        refNames('HEAD -> main, origin/main, tag: v1.0'),
-        ['main', 'origin/main', 'v1.0'],
-      );
+      expect(refNames('HEAD -> main, origin/main, tag: v1.0'), [
+        'main',
+        'origin/main',
+        'v1.0',
+      ]);
       // `HEAD -> main` and a bare `main` are the same ref shown twice.
       expect(refNames('HEAD -> main, main'), ['main']);
       expect(refNames(''), isEmpty);
@@ -174,51 +189,59 @@ void main() {
       expect(status.truncated, isFalse);
     });
 
-    test('branches keeps local order, and prepends only a non-local HEAD', () async {
-      fake.responses['rev-parse --abbrev-ref HEAD'] = 'feature\n';
-      fake.responses['for-each-ref --format=%(refname:short) refs/heads'] =
-          'main\nfeature\nother\n';
-      // The source leaves the locals as git listed them when the current one
-      // is among them: the selector shows the current through its value, not
-      // through its position.
-      expect(
-        await GitRepo('/repo', runner: fake.runner).branches(),
-        ['main', 'feature', 'other'],
-      );
+    test(
+      'branches keeps local order, and prepends only a non-local HEAD',
+      () async {
+        fake.responses['rev-parse --abbrev-ref HEAD'] = 'feature\n';
+        fake.responses['for-each-ref --format=%(refname:short) refs/heads'] =
+            'main\nfeature\nother\n';
+        // The source leaves the locals as git listed them when the current one
+        // is among them: the selector shows the current through its value, not
+        // through its position.
+        expect(await GitRepo('/repo', runner: fake.runner).branches(), [
+          'main',
+          'feature',
+          'other',
+        ]);
 
-      // Detached HEAD is not a local, but must still be selectable.
-      fake.responses['rev-parse --abbrev-ref HEAD'] = 'HEAD\n';
-      expect(
-        await GitRepo('/repo', runner: fake.runner).branches(),
-        ['HEAD', 'main', 'feature', 'other'],
-      );
-    });
+        // Detached HEAD is not a local, but must still be selectable.
+        fake.responses['rev-parse --abbrev-ref HEAD'] = 'HEAD\n';
+        expect(await GitRepo('/repo', runner: fake.runner).branches(), [
+          'HEAD',
+          'main',
+          'feature',
+          'other',
+        ]);
+      },
+    );
 
-    test('stage, unstage, commit and the history verbs send their shapes',
-        () async {
-      final repo = GitRepo('/repo', runner: fake.runner);
-      await repo.stage('a.txt');
-      await repo.stage(null);
-      await repo.unstage('a.txt');
-      await repo.commit('a message');
-      await repo.discard('a.txt');
-      await repo.revert('fullhash');
-      await repo.cherryPick('fullhash');
-      expect(
-        fake.calls.map((call) => call.$2.join(' ')),
-        containsAllInOrder([
-          'add -A -- a.txt',
-          'add -A',
-          'reset -q -- a.txt',
-          'commit -m a message',
-          'checkout -- a.txt',
-          'revert --no-edit fullhash',
-          'cherry-pick fullhash',
-        ]),
-      );
-      // Every call is rooted at the repository, never the caller's cwd.
-      expect(fake.calls.map((call) => call.$1), everyElement('/repo'));
-    });
+    test(
+      'stage, unstage, commit and the history verbs send their shapes',
+      () async {
+        final repo = GitRepo('/repo', runner: fake.runner);
+        await repo.stage('a.txt');
+        await repo.stage(null);
+        await repo.unstage('a.txt');
+        await repo.commit('a message');
+        await repo.discard('a.txt');
+        await repo.revert('fullhash');
+        await repo.cherryPick('fullhash');
+        expect(
+          fake.calls.map((call) => call.$2.join(' ')),
+          containsAllInOrder([
+            'add -A -- a.txt',
+            'add -A',
+            'reset -q -- a.txt',
+            'commit -m a message',
+            'checkout -- a.txt',
+            'revert --no-edit fullhash',
+            'cherry-pick fullhash',
+          ]),
+        );
+        // Every call is rooted at the repository, never the caller's cwd.
+        expect(fake.calls.map((call) => call.$1), everyElement('/repo'));
+      },
+    );
 
     test('diff addresses one path on one side', () async {
       final repo = GitRepo('/repo', runner: fake.runner);

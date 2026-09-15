@@ -175,7 +175,9 @@ class _SearchBlockState extends State<SearchBlock> {
   /// card's `Showing X / Y lines`); when it was not capped it is a plain count of
   /// what the card holds. The unit trails the count either way.
   String get _summary {
-    final count = widget.truncated ? 'Showing $_shown / ${widget.total}' : '$_shown';
+    final count = widget.truncated
+        ? 'Showing $_shown / ${widget.total}'
+        : '$_shown';
     // The unit agrees with the number nearest it, which is the pre-cap total when
     // the clause carries one.
     final subject = widget.truncated ? widget.total : _shown;
@@ -276,7 +278,9 @@ class _SearchBlockState extends State<SearchBlock> {
   Widget _body(DswAlias color, List<_SearchRow> rows) {
     final cap = headTailCap(rows.length, widget.maxLines, _expanded);
     final head = cap.capped ? rows.head(cap.headLines) : rows;
-    final naturalTail = cap.capped ? rows.tail(cap.tailLines) : const <_SearchRow>[];
+    final naturalTail = cap.capped
+        ? rows.tail(cap.tailLines)
+        : const <_SearchRow>[];
 
     // When the tail slice begins inside a file's matches, its own header sits
     // above the cut and is not shown, so those rows could not be attributed to a

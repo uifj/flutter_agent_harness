@@ -78,9 +78,7 @@ void main() {
       source.emit(const TextDelta(text: 'file', messageIndex: 0));
       expect(chat.messages.last.text, 'a file');
 
-      source.emit(
-        const TurnFinished(outcome: TurnOutcome.completed),
-      );
+      source.emit(const TurnFinished(outcome: TurnOutcome.completed));
       await sending;
       expect(chat.busy, isFalse);
       expect(chat.messages, hasLength(2));
@@ -103,9 +101,7 @@ void main() {
 
     test('reset drops the exchange and the runner context', () async {
       final sending = chat.send('x');
-      source.emit(
-        const TurnFinished(outcome: TurnOutcome.completed),
-      );
+      source.emit(const TurnFinished(outcome: TurnOutcome.completed));
       await sending;
 
       chat.reset();
@@ -118,17 +114,12 @@ void main() {
       final first = chat.send('one');
       final second = chat.send('two');
 
-      source.emit(
-        const TurnFinished(outcome: TurnOutcome.completed),
-      );
+      source.emit(const TurnFinished(outcome: TurnOutcome.completed));
       await first;
       await second;
 
       expect(source.sends, ['one']);
-      expect(
-        chat.messages.map((message) => message.text),
-        ['one'],
-      );
+      expect(chat.messages.map((message) => message.text), ['one']);
     });
 
     test('a missing runner says so rather than dropping the aside', () async {
@@ -175,23 +166,21 @@ void main() {
       support.deleteSync(recursive: true);
     });
 
-    Future<void> pumpTab(
-      WidgetTester tester, {
-      SideChatController? withChat,
-    }) => tester.pumpWidget(
-      MaterialApp(
-        theme: dswThemeData(Brightness.light),
-        home: Scaffold(
-          body: SideChatHost(
-            chat: withChat ?? chat,
-            child: SideChatTab(
-              workbench: workbench,
-              tab: SidebarTab.sidechat,
+    Future<void> pumpTab(WidgetTester tester, {SideChatController? withChat}) =>
+        tester.pumpWidget(
+          MaterialApp(
+            theme: dswThemeData(Brightness.light),
+            home: Scaffold(
+              body: SideChatHost(
+                chat: withChat ?? chat,
+                child: SideChatTab(
+                  workbench: workbench,
+                  tab: SidebarTab.sidechat,
+                ),
+              ),
             ),
           ),
-        ),
-      ),
-    );
+        );
 
     testWidgets('without a runner the hero says to connect a model', (
       tester,
@@ -200,7 +189,10 @@ void main() {
       addTearDown(orphan.dispose);
       await pumpTab(tester, withChat: orphan);
 
-      expect(find.text('Connect a model in Settings to chat here.'), findsOneWidget);
+      expect(
+        find.text('Connect a model in Settings to chat here.'),
+        findsOneWidget,
+      );
       expect(find.text('Ask an aside…'), findsOneWidget);
     });
 
@@ -236,9 +228,7 @@ void main() {
       expect(find.widgetWithText(TextField, 'quick one'), findsNothing);
     });
 
-    testWidgets('the new-side-chat button resets the exchange', (
-      tester,
-    ) async {
+    testWidgets('the new-side-chat button resets the exchange', (tester) async {
       await pumpTab(tester);
       await tester.enterText(find.byType(TextField), 'quick one');
       await tester.tap(find.byIcon(LucideIcons.send));

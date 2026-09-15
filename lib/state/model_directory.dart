@@ -53,7 +53,7 @@ class ModelDirectory extends ChangeNotifier {
   ModelDirectory({
     required ModelSettings current,
     ModelsEndpointFetcher? fetcher,
-  })  : _selected = current.model,
+  }) : _selected = current.model,
        _provider = current.provider,
        _models = List.unmodifiable(_defaultsFor(current.provider)),
        _fetcher = fetcher;

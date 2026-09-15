@@ -39,7 +39,9 @@ void main() {
     });
 
     test('absent means enabled; only an explicit false disables', () {
-      const prefs = WorkbenchPrefs(tabsEnabled: {'git': false, 'subagent': true});
+      const prefs = WorkbenchPrefs(
+        tabsEnabled: {'git': false, 'subagent': true},
+      );
       expect(prefs.tabEnabled('explorer'), isTrue);
       expect(prefs.tabEnabled('subagent'), isTrue);
       expect(prefs.tabEnabled('git'), isFalse);
@@ -54,13 +56,11 @@ void main() {
     });
 
     test('the font size is clamped at every read', () {
-      final fromJson = WorkbenchPrefs.fromJson(
-        const {'terminalFontSize': 99},
-      );
+      final fromJson = WorkbenchPrefs.fromJson(const {'terminalFontSize': 99});
       expect(fromJson.terminalFontSize, terminalFontSizeMax);
-      final fromJsonLow = WorkbenchPrefs.fromJson(
-        const {'terminalFontSize': 1},
-      );
+      final fromJsonLow = WorkbenchPrefs.fromJson(const {
+        'terminalFontSize': 1,
+      });
       expect(fromJsonLow.terminalFontSize, terminalFontSizeMin);
     });
   });

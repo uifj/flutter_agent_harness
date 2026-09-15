@@ -90,14 +90,7 @@ enum FileViewer {
 
 /// Extensions Flutter's own decoders handle. Anything outside this list is not
 /// an image as far as this app is concerned, whatever the file really is.
-const _imageExtensions = {
-  '.png',
-  '.jpg',
-  '.jpeg',
-  '.gif',
-  '.webp',
-  '.bmp',
-};
+const _imageExtensions = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'};
 
 /// Extensions that are certainly not text. Not exhaustive — it cannot be — which
 /// is why [readsAsText] exists to check content as well.

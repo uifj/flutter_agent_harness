@@ -46,8 +46,7 @@ List<String> scanMentions(String text) {
   final out = <String>[];
   for (final match in _mentionPattern.allMatches(text)) {
     final raw = match.group(1)!;
-    final relative =
-        raw.endsWith('/') ? raw.substring(0, raw.length - 1) : raw;
+    final relative = raw.endsWith('/') ? raw.substring(0, raw.length - 1) : raw;
     if (relative.isEmpty || seen.contains(relative)) continue;
     seen.add(relative);
     out.add(relative);

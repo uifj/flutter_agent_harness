@@ -30,10 +30,7 @@ import 'fake_turn_source.dart';
 void main() {
   group('the vocabulary', () {
     test('agentNameOf strips the delegation prefix and keeps the rest', () {
-      expect(
-        agentNameOf('delegate_to_general-purpose'),
-        'general-purpose',
-      );
+      expect(agentNameOf('delegate_to_general-purpose'), 'general-purpose');
       expect(agentNameOf('glob'), 'glob');
     });
 
@@ -284,26 +281,27 @@ void main() {
       expect(find.text('In lib/.'), findsNothing);
     });
 
-    testWidgets('a running selection docks as thinking, a failure as its first line', (
-      tester,
-    ) async {
-      await pump(tester);
-      await startTurn(tester);
-      await delegate(tester);
+    testWidgets(
+      'a running selection docks as thinking, a failure as its first line',
+      (tester) async {
+        await pump(tester);
+        await startTurn(tester);
+        await delegate(tester);
 
-      await tester.tap(find.text('Find the tests'));
-      await tester.pump();
-      expect(find.text('Thinking…'), findsOneWidget);
+        await tester.tap(find.text('Find the tests'));
+        await tester.pump();
+        expect(find.text('Thinking…'), findsOneWidget);
 
-      source.emit(
-        const ToolCallFailed(ref: 'r1', message: 'boom\ntraceback'),
-      );
-      source.emit(const TurnFinished(outcome: TurnOutcome.failed));
-      await tester.idle();
-      await tester.pump();
-      expect(find.text('boom'), findsOneWidget);
-      expect(find.textContaining('Failed · '), findsOneWidget);
-    });
+        source.emit(
+          const ToolCallFailed(ref: 'r1', message: 'boom\ntraceback'),
+        );
+        source.emit(const TurnFinished(outcome: TurnOutcome.failed));
+        await tester.idle();
+        await tester.pump();
+        expect(find.text('boom'), findsOneWidget);
+        expect(find.textContaining('Failed · '), findsOneWidget);
+      },
+    );
 
     testWidgets('the kill takes two clicks and stops the turn', (tester) async {
       await pump(tester);

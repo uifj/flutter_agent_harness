@@ -421,8 +421,8 @@ class _EditorTabState extends State<EditorTab> {
     ),
     _Text(:final controller, :final readOnlyReason) =>
       _preview && _isMarkdown
-      ? _Preview(text: controller.text)
-      : _editor(color, controller, readOnlyReason != null),
+          ? _Preview(text: controller.text)
+          : _editor(color, controller, readOnlyReason != null),
   };
 
   Widget _editor(
@@ -447,49 +447,49 @@ class _EditorTabState extends State<EditorTab> {
         controller: controller,
         onDirty: _onBufferEdited,
         child: CodeEditor(
-        controller: controller,
-        readOnly: readOnly,
-        wordWrap: false,
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        style: CodeEditorStyle(
-          fontSize: 12,
-          fontHeight: 20 / 12,
-          fontFamily: dswFontFamilyCode,
-          fontFamilyFallback: dswFontFamilyCodeFallback,
-          textColor: color.labelPrimary,
-          backgroundColor: color.bgLayer2,
-          selectionColor: color.bubbleHighlight,
-          cursorColor: color.labelPrimary,
-          cursorLineColor: color.interactiveBgHover,
-          chunkIndicatorColor: color.labelTertiary,
-          codeTheme: mode == null
-              ? null
-              : CodeHighlightTheme(
-                  languages: {language!: CodeHighlightThemeMode(mode: mode)},
-                  theme: dark ? atomOneDarkTheme : atomOneLightTheme,
-                ),
-        ),
-        indicatorBuilder:
-            (context, editingController, chunkController, notifier) => Row(
-              children: [
-                DefaultCodeLineNumber(
-                  controller: editingController,
-                  notifier: notifier,
-                  textStyle: _gutter.copyWith(color: color.labelTertiary),
-                  focusedTextStyle: _gutter.copyWith(
-                    color: color.labelSecondary,
+          controller: controller,
+          readOnly: readOnly,
+          wordWrap: false,
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          style: CodeEditorStyle(
+            fontSize: 12,
+            fontHeight: 20 / 12,
+            fontFamily: dswFontFamilyCode,
+            fontFamilyFallback: dswFontFamilyCodeFallback,
+            textColor: color.labelPrimary,
+            backgroundColor: color.bgLayer2,
+            selectionColor: color.bubbleHighlight,
+            cursorColor: color.labelPrimary,
+            cursorLineColor: color.interactiveBgHover,
+            chunkIndicatorColor: color.labelTertiary,
+            codeTheme: mode == null
+                ? null
+                : CodeHighlightTheme(
+                    languages: {language!: CodeHighlightThemeMode(mode: mode)},
+                    theme: dark ? atomOneDarkTheme : atomOneLightTheme,
                   ),
-                ),
-                DefaultCodeChunkIndicator(
-                  width: 16,
-                  controller: chunkController,
-                  notifier: notifier,
-                  painter: DefaultCodeChunkIndicatorPainter(
-                    color: color.labelTertiary,
+          ),
+          indicatorBuilder:
+              (context, editingController, chunkController, notifier) => Row(
+                children: [
+                  DefaultCodeLineNumber(
+                    controller: editingController,
+                    notifier: notifier,
+                    textStyle: _gutter.copyWith(color: color.labelTertiary),
+                    focusedTextStyle: _gutter.copyWith(
+                      color: color.labelSecondary,
+                    ),
                   ),
-                ),
-              ],
-            ),
+                  DefaultCodeChunkIndicator(
+                    width: 16,
+                    controller: chunkController,
+                    notifier: notifier,
+                    painter: DefaultCodeChunkIndicatorPainter(
+                      color: color.labelTertiary,
+                    ),
+                  ),
+                ],
+              ),
         ),
       ),
     );

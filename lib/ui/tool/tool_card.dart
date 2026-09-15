@@ -57,29 +57,29 @@ class _ToolCardState extends State<ToolCard> {
   }
 
   Widget _row(DswAlias color, _ToolRowModel model, bool open) => DisclosureRow(
-      icon: _leading(color, model),
-      title: model.title,
-      // 400, like the reasoning row: the summary beside it is the content.
-      titleStyle: DswType.s14.copyWith(
-        height: 24 / 14,
-        fontWeight: FontWeight.w400,
-        color: color.labelSecondary,
-      ),
-      chevronColor: color.labelSecondary,
-      open: open,
-      expandable: model.expandable,
-      onToggle: () => setState(() => _expanded = !_expanded),
-      // Running keeps the tool icon and lets the sweep carry the in-flight
-      // signal; a settled row that went wrong swaps the icon for a state dot.
-      rowOverlay: model.state == _RowState.running
-          ? RowSweep(base: color.bgBase)
-          : null,
-      // The summary names which call this is, which stays worth knowing once
-      // the body is out.
-      keepCollapsedWhenOpen: true,
-      collapsed: model.summary.isEmpty ? null : _summary(color, model),
-      child: _body(color, model),
-    );
+    icon: _leading(color, model),
+    title: model.title,
+    // 400, like the reasoning row: the summary beside it is the content.
+    titleStyle: DswType.s14.copyWith(
+      height: 24 / 14,
+      fontWeight: FontWeight.w400,
+      color: color.labelSecondary,
+    ),
+    chevronColor: color.labelSecondary,
+    open: open,
+    expandable: model.expandable,
+    onToggle: () => setState(() => _expanded = !_expanded),
+    // Running keeps the tool icon and lets the sweep carry the in-flight
+    // signal; a settled row that went wrong swaps the icon for a state dot.
+    rowOverlay: model.state == _RowState.running
+        ? RowSweep(base: color.bgBase)
+        : null,
+    // The summary names which call this is, which stays worth knowing once
+    // the body is out.
+    keepCollapsedWhenOpen: true,
+    collapsed: model.summary.isEmpty ? null : _summary(color, model),
+    child: _body(color, model),
+  );
 
   /// The leading slot yields to the terminal state semantic: error is red,
   /// interrupted is an amber halo. Running keeps the tool icon — the sweep
@@ -135,10 +135,8 @@ class _ToolCardState extends State<ToolCard> {
         if (selection != null)
           _InspectPill(
             revealed: _hovered,
-            onTap: () => selection.select(
-              callId: widget.node.id,
-              toolName: model.title,
-            ),
+            onTap: () =>
+                selection.select(callId: widget.node.id, toolName: model.title),
           ),
       ],
     );

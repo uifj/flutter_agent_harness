@@ -89,7 +89,8 @@ Future<bool> restoreWorkspaceAccess({
   ProjectFolderOps? ops,
 }) async {
   if (bookmark == null || bookmark.isEmpty) return false;
-  final resolved = ops ??
+  final resolved =
+      ops ??
       (ProjectFolderChannelOps.isSupported
           ? const ProjectFolderChannelOps()
           : null);

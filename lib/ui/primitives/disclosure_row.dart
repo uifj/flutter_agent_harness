@@ -106,7 +106,10 @@ class _DisclosureRowState extends State<DisclosureRow> {
         ? row
         : ClipRect(
             child: Stack(
-              children: [row, Positioned.fill(child: overlay)],
+              children: [
+                row,
+                Positioned.fill(child: overlay),
+              ],
             ),
           );
 

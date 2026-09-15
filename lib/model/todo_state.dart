@@ -13,10 +13,8 @@ class TodoItem {
   final String content;
   final TodoStatus status;
 
-  TodoItem copyWith({String? content, TodoStatus? status}) => TodoItem(
-    content: content ?? this.content,
-    status: status ?? this.status,
-  );
+  TodoItem copyWith({String? content, TodoStatus? status}) =>
+      TodoItem(content: content ?? this.content, status: status ?? this.status);
 
   Map<String, Object?> toJson() => {'content': content, 'status': status.name};
 

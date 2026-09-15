@@ -125,7 +125,10 @@ class _TurnError extends StatelessWidget {
         // The 6px the source puts after the title, as a space that cannot be
         // wrapped away from it.
         TextSpan(text: '\u2002', style: body),
-        TextSpan(text: message, style: body.copyWith(color: color.labelSecondary)),
+        TextSpan(
+          text: message,
+          style: body.copyWith(color: color.labelSecondary),
+        ),
       ],
     ),
   );

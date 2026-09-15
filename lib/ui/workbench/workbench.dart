@@ -71,7 +71,8 @@ void _registerBuiltinTabs() {
       type: BuiltinTabType.git,
       icon: LucideIcons.git_branch,
       order: 40,
-      build: (context, workbench, tab) => GitTab(workbench: workbench, tab: tab),
+      build: (context, workbench, tab) =>
+          GitTab(workbench: workbench, tab: tab),
     ),
   );
   registerTab(
@@ -79,7 +80,8 @@ void _registerBuiltinTabs() {
       type: BuiltinTabType.diff,
       icon: LucideIcons.file_diff,
       order: 50,
-      build: (context, workbench, tab) => DiffTab(workbench: workbench, tab: tab),
+      build: (context, workbench, tab) =>
+          DiffTab(workbench: workbench, tab: tab),
     ),
   );
   registerTab(

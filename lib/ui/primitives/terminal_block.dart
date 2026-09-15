@@ -182,11 +182,7 @@ class _TerminalBlockState extends State<TerminalBlock> {
     );
   }
 
-  Widget _banner(
-    DswAlias color, {
-    required String text,
-    required bool empty,
-  }) {
+  Widget _banner(DswAlias color, {required String text, required bool empty}) {
     final status = statusText(widget.exitCode, widget.signal);
     final state = runState(widget.running, widget.exitCode, widget.signal);
     final stateLabel = switch (state.key) {
@@ -253,7 +249,11 @@ class _TerminalBlockState extends State<TerminalBlock> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     for (var index = 0; index < commandLines.length; index++)
-                      _promptLine(color, commandLines[index], first: index == 0),
+                      _promptLine(
+                        color,
+                        commandLines[index],
+                        first: index == 0,
+                      ),
                   ],
                 ),
               ),
@@ -294,9 +294,7 @@ class _TerminalBlockState extends State<TerminalBlock> {
         // nothing here knows. Later rows keep a bare `$` to stay aligned.
         Text(
           !first || cwd == null ? '\$' : promptLabel(cwd, widget.home),
-          style: DswType.markdownCodeBlock.copyWith(
-            color: color.labelTertiary,
-          ),
+          style: DswType.markdownCodeBlock.copyWith(color: color.labelTertiary),
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -317,7 +315,12 @@ class _TerminalBlockState extends State<TerminalBlock> {
   }
 
   Widget _empty(DswAlias color) => Padding(
-    padding: const EdgeInsets.only(left: _gutter, right: 14, top: 12, bottom: 12),
+    padding: const EdgeInsets.only(
+      left: _gutter,
+      right: 14,
+      top: 12,
+      bottom: 12,
+    ),
     child: Text(
       'No output',
       style: DswType.markdownCodeBlock.copyWith(color: color.labelTertiary),

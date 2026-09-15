@@ -62,8 +62,9 @@ TerminalStyle emulatorStyle(BuildContext context) {
     fontSize: prefs.terminalFontSize.toDouble(),
     height: 20 / 13,
     fontFamily: family.isEmpty ? dswFontFamilyCode : family,
-    fontFamilyFallback:
-        family.isEmpty ? dswFontFamilyCodeFallback : const <String>[],
+    fontFamilyFallback: family.isEmpty
+        ? dswFontFamilyCodeFallback
+        : const <String>[],
   );
 }
 
@@ -76,11 +77,7 @@ TerminalStyle emulatorStyle(BuildContext context) {
 /// The scope is looked up from each body's own context, so every [Workbench]
 /// — the app's, or a test's — hands its own pool to its own tabs.
 class TerminalHost extends InheritedWidget {
-  const TerminalHost({
-    super.key,
-    required this.manager,
-    required super.child,
-  });
+  const TerminalHost({super.key, required this.manager, required super.child});
 
   final TerminalManager manager;
 
@@ -410,10 +407,7 @@ class _BannerState extends State<_Banner> {
               onTap: widget.onTap,
               behavior: HitTestBehavior.opaque,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 3,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: _hovered
                       ? color.interactiveBgHover

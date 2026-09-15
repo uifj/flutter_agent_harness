@@ -132,8 +132,7 @@ class ConversationController extends ChangeNotifier {
 
   /// Mean first-token latency over turns that produced a token — dsh's
   /// `stats.ttftAverage`. Null when no turn did.
-  double? get ttftAverageMs =>
-      _ttftTurns == 0 ? null : _ttftMs / _ttftTurns;
+  double? get ttftAverageMs => _ttftTurns == 0 ? null : _ttftMs / _ttftTurns;
 
   /// Token sums over the turns whose provider reported usage — dsh folds the
   /// same figures from its session log. A provider that reports nothing
@@ -177,14 +176,15 @@ class ConversationController extends ChangeNotifier {
   // Commands
   // ---------------------------------------------------------------------------
 
-  Future<void> send(String text, {List<AttachedImage> images = const []}) async {
+  Future<void> send(
+    String text, {
+    List<AttachedImage> images = const [],
+  }) async {
     if (isInputBlocked) return;
     final trimmed = text.trim();
     if (trimmed.isEmpty && images.isEmpty) return;
 
-    _nodes.add(
-      UserMessageNode(id: _newId(), text: trimmed, images: images),
-    );
+    _nodes.add(UserMessageNode(id: _newId(), text: trimmed, images: images));
     _isBusy = true;
     notifyListeners();
 

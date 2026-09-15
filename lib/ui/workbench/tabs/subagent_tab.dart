@@ -412,9 +412,7 @@ class _RootCardState extends State<_RootCard> {
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: StateDot(
-                  state: running
-                      ? StateDotState.ongoing
-                      : StateDotState.done,
+                  state: running ? StateDotState.ongoing : StateDotState.done,
                 ),
               ),
               const SizedBox(width: 8),
@@ -502,7 +500,11 @@ class _ChildrenBlock extends StatelessWidget {
 /// top edge; that is fine inside the scroll view, which only clips at the
 /// viewport — the source's sticky dock aside, the effect is identical.
 class _Connector extends StatelessWidget {
-  const _Connector({required this.first, required this.last, required this.child});
+  const _Connector({
+    required this.first,
+    required this.last,
+    required this.child,
+  });
 
   final bool first;
   final bool last;
@@ -731,9 +733,7 @@ class _KillButtonState extends State<_KillButton> {
           margin: const EdgeInsets.only(right: 4),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: color.stateErrorPrimary.withValues(
-              alpha: 0.12,
-            ),
+            color: color.stateErrorPrimary.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Text(
@@ -765,9 +765,7 @@ class _KillButtonState extends State<_KillButton> {
           child: Icon(
             LucideIcons.square,
             size: 12,
-            color: _hovered
-                ? color.stateErrorPrimary
-                : color.labelSecondary,
+            color: _hovered ? color.stateErrorPrimary : color.labelSecondary,
           ),
         ),
       ),
@@ -816,8 +814,8 @@ class _OutputDock extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = context.dsw;
     final live = !node.status.isSettled;
-    final failed = node.status == ToolStatus.failed ||
-        node.status == ToolStatus.denied;
+    final failed =
+        node.status == ToolStatus.failed || node.status == ToolStatus.denied;
     final response = delegationResponseOf(node.output);
 
     return Container(
@@ -877,9 +875,7 @@ class _OutputDock extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               child: Text(
                 failureLineOf(node),
-                style: DswType.xxxs11.copyWith(
-                  color: color.stateErrorPrimary,
-                ),
+                style: DswType.xxxs11.copyWith(color: color.stateErrorPrimary),
               ),
             )
           else if (response == null || response.isEmpty)

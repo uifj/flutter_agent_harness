@@ -123,7 +123,10 @@ void main() {
         detailsDefault,
         workbenchDefault,
       );
-      expect(cols, const Columns(sidebar: 280, center: 520, details: 0, workbench: 0));
+      expect(
+        cols,
+        const Columns(sidebar: 280, center: 520, details: 0, workbench: 0),
+      );
       expect(cols.center, lessThan(centerMin));
     });
 
@@ -207,12 +210,7 @@ void main() {
     });
 
     test('a closed preference resolves to the rail, not to zero', () {
-      final cols = computeColumns(
-        1400,
-        0,
-        detailsDefault,
-        workbenchDefault,
-      );
+      final cols = computeColumns(1400, 0, detailsDefault, workbenchDefault);
       expect(cols.sidebar, sidebarCollapsed);
       // The rail frees 224px, but that is not enough for details at its
       // preference beside the open workbench, so details concedes to 304 and

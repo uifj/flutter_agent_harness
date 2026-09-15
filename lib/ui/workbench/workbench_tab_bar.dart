@@ -234,11 +234,7 @@ class _NewTabButton extends StatelessWidget {
         width: 30,
         height: tabBarHeight,
         color: Colors.transparent,
-        child: Icon(
-          LucideIcons.plus,
-          size: 14,
-          color: color.labelSecondary,
-        ),
+        child: Icon(LucideIcons.plus, size: 14, color: color.labelSecondary),
       ),
     );
   }

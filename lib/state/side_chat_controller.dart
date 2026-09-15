@@ -74,31 +74,39 @@ class SideChatController extends ChangeNotifier {
     notifyListeners();
 
     var answer = '';
-    _subscription = source.send(trimmed).listen(
-      (event) {
-        switch (event) {
-          case TextDelta(:final text):
-            answer += text;
-            _updateAnswer(answer);
-          case TurnFinished(outcome: TurnOutcome.failed, :final errorMessage):
+    _subscription = source
+        .send(trimmed)
+        .listen(
+          (event) {
+            switch (event) {
+              case TextDelta(:final text):
+                answer += text;
+                _updateAnswer(answer);
+              case TurnFinished(
+                outcome: TurnOutcome.failed,
+                :final errorMessage,
+              ):
+                _busy = false;
+                _messages.add(
+                  SideChatMessage(
+                    isUser: false,
+                    text: errorMessage ?? 'failed',
+                  ),
+                );
+                notifyListeners();
+              case TurnFinished():
+                _busy = false;
+                notifyListeners();
+              case _:
+                break;
+            }
+          },
+          onError: (Object error) {
             _busy = false;
-            _messages.add(
-              SideChatMessage(isUser: false, text: errorMessage ?? 'failed'),
-            );
+            _messages.add(SideChatMessage(isUser: false, text: '$error'));
             notifyListeners();
-          case TurnFinished():
-            _busy = false;
-            notifyListeners();
-          case _:
-            break;
-        }
-      },
-      onError: (Object error) {
-        _busy = false;
-        _messages.add(SideChatMessage(isUser: false, text: '$error'));
-        notifyListeners();
-      },
-    );
+          },
+        );
     try {
       await _subscription?.asFuture<void>();
     } catch (_) {

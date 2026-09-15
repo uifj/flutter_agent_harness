@@ -80,7 +80,8 @@ void main() {
               detailsOpen: layout.details != 0,
             ),
             center:
-                center ?? ConversationRoot(conversation: controller, tail: tail),
+                center ??
+                ConversationRoot(conversation: controller, tail: tail),
             details: details,
             workbench: workbench,
             bottom: bottom,
@@ -231,7 +232,9 @@ void main() {
     expect(sideHeights, everyElement(900.0));
     // And the bottom panel spans from the sidebar's right edge to the
     // workbench's left — not the whole viewport.
-    final bottom = tester.renderObject<RenderBox>(find.text('the bottom panel'));
+    final bottom = tester.renderObject<RenderBox>(
+      find.text('the bottom panel'),
+    );
     expect(bottom.size.height, bottomDefault);
     expect(bottom.size.width, 1400 - sidebarDefault - workbenchDefault);
     expect(tester.takeException(), isNull);
@@ -328,14 +331,18 @@ void main() {
     layout.closeWorkbench();
     await cross(tester);
     expect(
-      tester.renderObject<RenderBox>(find.text('the workbench column')).size
+      tester
+          .renderObject<RenderBox>(find.text('the workbench column'))
+          .size
           .width,
       0,
     );
     layout.openWorkbench();
     await cross(tester);
     expect(
-      tester.renderObject<RenderBox>(find.text('the workbench column')).size
+      tester
+          .renderObject<RenderBox>(find.text('the workbench column'))
+          .size
           .width,
       700,
     );

@@ -159,9 +159,7 @@ class _ReadBlockState extends State<ReadBlock> {
 
   Widget _body(DswAlias color) {
     final cap = headTailCap(widget.lines.length, widget.maxLines, _expanded);
-    final shown = cap.capped
-        ? widget.lines.head(cap.headLines)
-        : widget.lines;
+    final shown = cap.capped ? widget.lines.head(cap.headLines) : widget.lines;
     return Padding(
       // `padding: 12px 0` — the gutter is the body's left inset, so the rows own
       // the horizontal space.

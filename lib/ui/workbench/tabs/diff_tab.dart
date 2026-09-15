@@ -266,7 +266,9 @@ UnifiedDiffFile untrackedDiffFile(String path, String content) {
   if (body.isNotEmpty) {
     var num = 1;
     for (final line in body.split('\n')) {
-      lines.add(UnifiedDiffLine(kind: DiffLineKind.add, text: line, newNum: num));
+      lines.add(
+        UnifiedDiffLine(kind: DiffLineKind.add, text: line, newNum: num),
+      );
       num += 1;
     }
   }
@@ -274,7 +276,9 @@ UnifiedDiffFile untrackedDiffFile(String path, String content) {
     oldPath: '/dev/null',
     newPath: 'b/$path',
     binary: false,
-    hunks: [UnifiedDiffHunk(oldStart: 0, newStart: 1, header: '', lines: lines)],
+    hunks: [
+      UnifiedDiffHunk(oldStart: 0, newStart: 1, header: '', lines: lines),
+    ],
   );
 }
 
@@ -516,11 +520,9 @@ class _DiffTabState extends State<DiffTab> {
             final content = const Utf8Decoder(
               allowMalformed: true,
             ).convert(bytes);
-            _publish(
-              repo,
-              [untrackedDiffFile(relative, content)],
-              displayPath: relative,
-            );
+            _publish(repo, [
+              untrackedDiffFile(relative, content),
+            ], displayPath: relative);
             return;
           }
           _publish(repo, const [], rawEmpty: true, displayPath: relative);
@@ -575,7 +577,10 @@ class _DiffTabState extends State<DiffTab> {
   Widget build(BuildContext context) {
     final ref = widget.tab.diff;
     if (ref == null) {
-      return const _Notice(message: 'This tab has no diff to show.', center: true);
+      return const _Notice(
+        message: 'This tab has no diff to show.',
+        center: true,
+      );
     }
     if (widget.workbench.workspaceRoot == null) {
       return const _Notice(
@@ -598,9 +603,13 @@ class _DiffTabState extends State<DiffTab> {
           child: _Header(title: title, tooltip: tooltip, onRefresh: _refresh),
         ),
         if (_loading)
-          const SliverToBoxAdapter(child: _Notice(message: 'Loading…', center: true)),
+          const SliverToBoxAdapter(
+            child: _Notice(message: 'Loading…', center: true),
+          ),
         if (!_loading && _error != null)
-          SliverToBoxAdapter(child: _ErrorBox(message: 'Failed to load diff: $_error')),
+          SliverToBoxAdapter(
+            child: _ErrorBox(message: 'Failed to load diff: $_error'),
+          ),
         if (!_loading && _error == null) ..._bodySlivers(),
       ],
     );
@@ -612,7 +621,8 @@ class _DiffTabState extends State<DiffTab> {
         return const [
           SliverToBoxAdapter(
             child: _Notice(
-              message: 'This looks like a binary file. Nothing here can show it.',
+              message:
+                  'This looks like a binary file. Nothing here can show it.',
               center: true,
             ),
           ),
@@ -620,7 +630,9 @@ class _DiffTabState extends State<DiffTab> {
       }
       if (_rawEmpty) {
         return const [
-          SliverToBoxAdapter(child: _Notice(message: 'No text changes', center: true)),
+          SliverToBoxAdapter(
+            child: _Notice(message: 'No text changes', center: true),
+          ),
         ];
       }
       // A non-empty diff text that parsed to nothing (git noise this parser
@@ -633,7 +645,9 @@ class _DiffTabState extends State<DiffTab> {
     final headLines = (_maxDiffRows / 2).ceil();
     final tailLines = _maxDiffRows - headLines;
     final head = capped ? rows.sublist(0, headLines) : rows;
-    final tail = capped ? rows.sublist(rows.length - tailLines) : const <_Row>[];
+    final tail = capped
+        ? rows.sublist(rows.length - tailLines)
+        : const <_Row>[];
     return [
       SliverList.builder(
         itemCount: head.length,
@@ -678,7 +692,11 @@ class _DiffTabState extends State<DiffTab> {
 /// tab stays mounted while the git panel's staging/discard operations change
 /// the very content it shows, which is why the button exists at all.
 class _Header extends StatelessWidget {
-  const _Header({required this.title, required this.tooltip, required this.onRefresh});
+  const _Header({
+    required this.title,
+    required this.tooltip,
+    required this.onRefresh,
+  });
 
   final String title;
   final String tooltip;
@@ -808,7 +826,9 @@ class _FileHeaderState extends State<_FileHeader> {
             children: [
               if (expandable) ...[
                 Icon(
-                  widget.expanded ? LucideIcons.chevron_down : LucideIcons.chevron_right,
+                  widget.expanded
+                      ? LucideIcons.chevron_down
+                      : LucideIcons.chevron_right,
                   size: 14,
                   color: color.labelTertiary,
                 ),
@@ -817,7 +837,9 @@ class _FileHeaderState extends State<_FileHeader> {
               Expanded(
                 child: Text(
                   to,
-                  style: DswType.xxsStrong12.copyWith(color: color.labelPrimary),
+                  style: DswType.xxsStrong12.copyWith(
+                    color: color.labelPrimary,
+                  ),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
                 ),

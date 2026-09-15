@@ -40,8 +40,12 @@ void main() {
     // real ones. That has to be a replacement rather than a second entry, or the
     // pane would keep drawing whichever registration ran first.
     test('re-registering a type replaces it', () {
-      registerTab(descriptor(BuiltinTabType.terminal, icon: LucideIcons.aperture));
-      registerTab(descriptor(BuiltinTabType.terminal, icon: LucideIcons.anchor));
+      registerTab(
+        descriptor(BuiltinTabType.terminal, icon: LucideIcons.aperture),
+      );
+      registerTab(
+        descriptor(BuiltinTabType.terminal, icon: LucideIcons.anchor),
+      );
       expect(tabRegistry.length, 1);
       expect(descriptorFor(BuiltinTabType.terminal)?.icon, LucideIcons.anchor);
     });

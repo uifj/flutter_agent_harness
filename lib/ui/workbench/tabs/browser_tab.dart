@@ -127,9 +127,7 @@ class _BrowserTabState extends State<BrowserTab> {
     final path = widget.tab.path;
     _url = path;
     _input = TextEditingController(text: path ?? '');
-    _history = [
-      ?path,
-    ];
+    _history = [?path];
     _cursor = path != null ? 0 : -1;
   }
 

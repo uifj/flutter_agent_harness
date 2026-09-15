@@ -479,10 +479,7 @@ class SideChatSource implements SideTurnSource {
       await turn.response;
       yield const TurnFinished(outcome: TurnOutcome.completed);
     } catch (e) {
-      yield TurnFinished(
-        outcome: TurnOutcome.failed,
-        errorMessage: '$e',
-      );
+      yield TurnFinished(outcome: TurnOutcome.failed, errorMessage: '$e');
     }
   }
 
@@ -637,9 +634,11 @@ class AgentRuntime implements TurnSource {
         for (final tool in workspaceToolList)
           if (_subagentTools.contains(tool.name)) tool,
       ],
-      use: [middlewareRef<Map<String, dynamic>>(name: _stopGateName),
+      use: [
+        middlewareRef<Map<String, dynamic>>(name: _stopGateName),
         middlewareRef<Map<String, dynamic>>(name: _usageName),
-        middlewareRef<Map<String, dynamic>>(name: _toolGateName)],
+        middlewareRef<Map<String, dynamic>>(name: _toolGateName),
+      ],
       maxTurns: _maxSubagentTurns,
     );
 
@@ -670,10 +669,7 @@ class AgentRuntime implements TurnSource {
         middlewareRef<Map<String, dynamic>>(name: _stopGateName),
         middlewareRef<Map<String, dynamic>>(name: _usageName),
         middlewareRef<Map<String, dynamic>>(name: _toolGateName),
-        agents(
-          agents: const [_subagentName],
-          maxDelegations: _maxDelegations,
-        ),
+        agents(agents: const [_subagentName], maxDelegations: _maxDelegations),
         // The skills middleware contributes a `use_skill` tool even when its
         // scan finds nothing, so only attach it when there is something to
         // find. The `<skills>` system prompt section is likewise conditional —
@@ -715,8 +711,7 @@ class AgentRuntime implements TurnSource {
   /// What the tool gate has seen, oldest first, capped at
   /// [_toolAuditCapacity] entries. In memory only for now — the persisted
   /// version is the session-log work this ring is the shape of.
-  List<ToolAuditRecord> get toolAudit =>
-      List.unmodifiable(_toolAudit);
+  List<ToolAuditRecord> get toolAudit => List.unmodifiable(_toolAudit);
 
   /// The side-chat thread's turn source — see [SideChatSource].
   final SideChatSource side;
@@ -810,10 +805,7 @@ class AgentRuntime implements TurnSource {
         if (text.isNotEmpty) TextPart(text: text),
         for (final image in images)
           MediaPart(
-            media: Media(
-              contentType: image.mediaType,
-              url: image.dataUrl,
-            ),
+            media: Media(contentType: image.mediaType, url: image.dataUrl),
           ),
       ],
     );
@@ -846,7 +838,9 @@ class AgentRuntime implements TurnSource {
     return _drive(
       (cancel) => approved
           ? chat.resumeStream(
-              restart: [pending.restart({'approved': true})],
+              restart: [
+                pending.restart({'approved': true}),
+              ],
               cancel: cancel,
             )
           : chat.resumeStream(
@@ -1193,11 +1187,7 @@ class AgentRuntime implements TurnSource {
               .join();
           if (text.trim().isNotEmpty || reasoning.trim().isNotEmpty) {
             nodes.add(
-              AssistantMessageNode(
-                id: 'm$i',
-                text: text,
-                reasoning: reasoning,
-              ),
+              AssistantMessageNode(id: 'm$i', text: text, reasoning: reasoning),
             );
           }
           for (final part in message.content) {

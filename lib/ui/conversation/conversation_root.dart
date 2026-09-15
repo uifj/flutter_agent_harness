@@ -217,35 +217,53 @@ class _ConversationRootState extends State<ConversationRoot> {
 
     if (conversation.nodes.any((node) => node is UserMessageNode)) {
       final turns = conversation.nodes.whereType<UserMessageNode>().length;
-      final steps =
-          conversation.nodes.whereType<AssistantMessageNode>().length;
-      groups.add(context.tr('statsCounts')
-          .replaceAll('{turns}', '$turns')
-          .replaceAll('{steps}', '$steps'));
+      final steps = conversation.nodes.whereType<AssistantMessageNode>().length;
+      groups.add(
+        context
+            .tr('statsCounts')
+            .replaceAll('{turns}', '$turns')
+            .replaceAll('{steps}', '$steps'),
+      );
 
       final durations = <String>[];
       if (conversation.llmWallMs > 0) {
-        durations.add(context.tr('statsLlm')
-            .replaceAll('{duration}', formatStatsDuration(conversation
-                .llmWallMs)));
+        durations.add(
+          context
+              .tr('statsLlm')
+              .replaceAll(
+                '{duration}',
+                formatStatsDuration(conversation.llmWallMs),
+              ),
+        );
       }
       if (conversation.toolWallMs > 0) {
-        durations.add(context.tr('statsTool')
-            .replaceAll('{duration}', formatStatsDuration(conversation
-                .toolWallMs)));
+        durations.add(
+          context
+              .tr('statsTool')
+              .replaceAll(
+                '{duration}',
+                formatStatsDuration(conversation.toolWallMs),
+              ),
+        );
       }
       if (durations.isNotEmpty) groups.add(durations.join(' · '));
 
       final ttft = conversation.ttftAverageMs;
       if (ttft != null && ttft > 0) {
-        groups.add(context.tr('statsTtft')
-            .replaceAll('{duration}', formatStatsDuration(ttft.round())));
+        groups.add(
+          context
+              .tr('statsTtft')
+              .replaceAll('{duration}', formatStatsDuration(ttft.round())),
+        );
       }
 
       final tokens = conversation.totalTokens;
       if (tokens > 0) {
-        groups.add(context.tr('statsTokens')
-            .replaceAll('{tokens}', formatTokenCount(tokens)));
+        groups.add(
+          context
+              .tr('statsTokens')
+              .replaceAll('{tokens}', formatTokenCount(tokens)),
+        );
       }
     }
 
@@ -269,9 +287,7 @@ class _ConversationRootState extends State<ConversationRoot> {
                 // carried by the glyph itself.
                 TextSpan(
                   text: ' | ',
-                  style: DswType.xxs12.copyWith(
-                    color: color.borderL1,
-                  ),
+                  style: DswType.xxs12.copyWith(color: color.borderL1),
                 ),
               ],
               TextSpan(
@@ -295,35 +311,39 @@ class _ConversationRootState extends State<ConversationRoot> {
   Widget _stack({required bool hero}) {
     final approval = widget.conversation.pendingApproval;
     final card = switch (approval) {
-      null => _planReview() ??
-          Composer(
-            hero: hero,
-            busy: widget.conversation.isBusy,
-            blocked: widget.conversation.isInputBlocked,
-            approvalMode: widget.conversation.approvalMode,
-            onApprovalMode: (mode) => widget.conversation.approvalMode = mode,
-            onNewSession: widget.conversation.startNewSession,
-            modelDirectory: widget.modelDirectory,
-            onModelSelected: widget.onModelSelected,
-            onLookupFiles: widget.onLookupFiles,
-            onSubmit: (text, images) =>
-                widget.conversation.send(text, images: images),
-            onStop: widget.conversation.stop,
-          ),
+      null =>
+        _planReview() ??
+            Composer(
+              hero: hero,
+              busy: widget.conversation.isBusy,
+              blocked: widget.conversation.isInputBlocked,
+              approvalMode: widget.conversation.approvalMode,
+              onApprovalMode: (mode) => widget.conversation.approvalMode = mode,
+              onNewSession: widget.conversation.startNewSession,
+              modelDirectory: widget.modelDirectory,
+              onModelSelected: widget.onModelSelected,
+              onLookupFiles: widget.onLookupFiles,
+              onSubmit: (text, images) =>
+                  widget.conversation.send(text, images: images),
+              onStop: widget.conversation.stop,
+            ),
       _ => ApprovalPanel(
-          request: approval,
-          onRespond: widget.conversation.respondToApproval,
-        ),
+        request: approval,
+        onRespond: widget.conversation.respondToApproval,
+      ),
     };
 
-    final content = Column(mainAxisSize: MainAxisSize.min, children: [
-      // The stats row rides above whatever card is up — it describes the
-      // session, not the input, so an approval or review card does not
-      // displace it. HERO phase renders nothing: dsh's dock belongs to an
-      // active session, and an empty conversation has no figures anyway.
-      if (!hero) _statsLine(),
-      card,
-    ]);
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // The stats row rides above whatever card is up — it describes the
+        // session, not the input, so an approval or review card does not
+        // displace it. HERO phase renders nothing: dsh's dock belongs to an
+        // active session, and an empty conversation has no figures anyway.
+        if (!hero) _statsLine(),
+        card,
+      ],
+    );
     return hero ? content : _Masked(child: content);
   }
 
@@ -368,10 +388,8 @@ class _Masked extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => CustomPaint(
-    painter: _MaskPainter(context.dsw.bgBase),
-    child: child,
-  );
+  Widget build(BuildContext context) =>
+      CustomPaint(painter: _MaskPainter(context.dsw.bgBase), child: child);
 }
 
 class _MaskPainter extends CustomPainter {

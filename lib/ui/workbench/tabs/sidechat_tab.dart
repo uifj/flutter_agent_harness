@@ -38,11 +38,7 @@ import '../../../state/workbench_controller.dart';
 /// in subagent_tab.dart: the registry's builders cannot capture an
 /// app-scoped object without pinning whichever instance registered first.
 class SideChatHost extends InheritedWidget {
-  const SideChatHost({
-    super.key,
-    required this.chat,
-    required super.child,
-  });
+  const SideChatHost({super.key, required this.chat, required super.child});
 
   final SideChatController chat;
 
@@ -143,9 +139,8 @@ class _SideChatTabState extends State<SideChatTab> {
                     controller: _scroll,
                     padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                     itemCount: messages.length,
-                    itemBuilder: (context, index) => _Bubble(
-                      message: messages[index],
-                    ),
+                    itemBuilder: (context, index) =>
+                        _Bubble(message: messages[index]),
                   ),
           ),
           if (chat?.busy ?? false) _statusBar(context),
@@ -407,9 +402,7 @@ class _HeaderButtonState extends State<_HeaderButton> {
             height: 24,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: _hovered
-                  ? color.interactiveBgHover
-                  : Colors.transparent,
+              color: _hovered ? color.interactiveBgHover : Colors.transparent,
               borderRadius: BorderRadius.circular(6),
             ),
             child: Icon(

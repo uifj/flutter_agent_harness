@@ -54,16 +54,65 @@ class WorkspaceIndex {
 /// Directory basenames the walk skips — dsh-at-file's `DEFAULT_IGNORE_DIRS`:
 /// version control, IDE metadata, dependency trees, caches, build output.
 const defaultIgnoreDirs = <String>{
-  '.git', '.hg', '.svn', '.idea', '.vs', '.vscode', '.fleet', '.history',
-  '.metadata', '.settings', 'node_modules', 'bower_components', 'vendor',
-  'Pods', '.gradle', '.kotlin', '.cxx', '.externalNativeBuild', '.dart_tool',
-  '.swiftpm', '.build', '.cache', '.parcel-cache', '.turbo', '.nx',
-  '__pycache__', '.pytest_cache', '.mypy_cache', '.ruff_cache', '.tox',
-  '.venv', 'venv', '.next', '.nuxt', '.output', '.svelte-kit', '.angular',
-  'build', 'bin', 'dist', 'out', 'target', 'obj', 'coverage', 'DerivedData',
-  'xcuserdata', 'CMakeFiles', 'cmake-build-debug', 'cmake-build-release',
-  'cmake-build-relwithdebinfo', 'cmake-build-minsizerel', '_deps', '.godot',
-  'Library', 'Temp', 'Logs', 'Binaries', 'Intermediate', 'Saved',
+  '.git',
+  '.hg',
+  '.svn',
+  '.idea',
+  '.vs',
+  '.vscode',
+  '.fleet',
+  '.history',
+  '.metadata',
+  '.settings',
+  'node_modules',
+  'bower_components',
+  'vendor',
+  'Pods',
+  '.gradle',
+  '.kotlin',
+  '.cxx',
+  '.externalNativeBuild',
+  '.dart_tool',
+  '.swiftpm',
+  '.build',
+  '.cache',
+  '.parcel-cache',
+  '.turbo',
+  '.nx',
+  '__pycache__',
+  '.pytest_cache',
+  '.mypy_cache',
+  '.ruff_cache',
+  '.tox',
+  '.venv',
+  'venv',
+  '.next',
+  '.nuxt',
+  '.output',
+  '.svelte-kit',
+  '.angular',
+  'build',
+  'bin',
+  'dist',
+  'out',
+  'target',
+  'obj',
+  'coverage',
+  'DerivedData',
+  'xcuserdata',
+  'CMakeFiles',
+  'cmake-build-debug',
+  'cmake-build-release',
+  'cmake-build-relwithdebinfo',
+  'cmake-build-minsizerel',
+  '_deps',
+  '.godot',
+  'Library',
+  'Temp',
+  'Logs',
+  'Binaries',
+  'Intermediate',
+  'Saved',
   'DerivedDataCache',
 };
 
@@ -124,7 +173,8 @@ WorkspaceIndex indexWorkspace(
       final name = p.basename(entity.path);
       // With `followLinks: false` — the default resolves the link's TARGET,
       // which would hide every link from the branch below.
-      final isLink = FileSystemEntity.typeSync(entity.path, followLinks: false) ==
+      final isLink =
+          FileSystemEntity.typeSync(entity.path, followLinks: false) ==
           FileSystemEntityType.link;
 
       // A link's kind rides its target: a broken or inaccessible link is
@@ -150,10 +200,12 @@ WorkspaceIndex indexWorkspace(
             continue;
           }
           if (ignoreFiles.contains(name)) continue;
-          entries.add(FileEntry(
-            relative: _relativeTo(rootPath, entity.path),
-            kind: 'file',
-          ));
+          entries.add(
+            FileEntry(
+              relative: _relativeTo(rootPath, entity.path),
+              kind: 'file',
+            ),
+          );
           continue;
         } on FileSystemException {
           continue;
@@ -164,23 +216,17 @@ WorkspaceIndex indexWorkspace(
         if (ignoreDirs.contains(name)) continue;
         // Directories are indexed entries too, so the picker can reference
         // one path without inspecting its descendants at send time.
-        entries.add(FileEntry(
-          relative: _relativeTo(rootPath, entity.path),
-          kind: 'dir',
-        ));
-        queue.add((
-          entity.path,
-          entity.path,
-          childAncestors,
-        ));
+        entries.add(
+          FileEntry(relative: _relativeTo(rootPath, entity.path), kind: 'dir'),
+        );
+        queue.add((entity.path, entity.path, childAncestors));
         continue;
       }
       if (entity is File) {
         if (ignoreFiles.contains(name)) continue;
-        entries.add(FileEntry(
-          relative: _relativeTo(rootPath, entity.path),
-          kind: 'file',
-        ));
+        entries.add(
+          FileEntry(relative: _relativeTo(rootPath, entity.path), kind: 'file'),
+        );
       }
     }
     if (truncated) break;

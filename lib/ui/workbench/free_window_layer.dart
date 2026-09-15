@@ -175,7 +175,8 @@ class _FreeWindowState extends State<_FreeWindow> {
                   descriptor?.icon ?? LucideIcons.file_text,
                 ),
                 Expanded(
-                  child: descriptor?.build(context, widget.workbench, tab) ??
+                  child:
+                      descriptor?.build(context, widget.workbench, tab) ??
                       Center(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -224,11 +225,7 @@ class _FreeWindowState extends State<_FreeWindow> {
         width: 16,
         height: 16,
         child: Center(
-          child: Icon(
-            LucideIcons.grip,
-            size: 12,
-            color: color.labelTertiary,
-          ),
+          child: Icon(LucideIcons.grip, size: 12, color: color.labelTertiary),
         ),
       ),
     ),
@@ -275,17 +272,19 @@ class _FreeWindowState extends State<_FreeWindow> {
               Icon(icon, size: 12, color: color.labelSecondary),
               const SizedBox(width: 6),
               Expanded(
-              child: Text(
-                tab.title.isEmpty ? context.tr('untitled') : tab.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: DswType.xxs12.copyWith(color: color.labelPrimary),
+                child: Text(
+                  tab.title.isEmpty ? context.tr('untitled') : tab.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: DswType.xxs12.copyWith(color: color.labelPrimary),
+                ),
               ),
-            ),
               const SizedBox(width: 4),
-              _CloseButton(onTap: () {
-                widget.workbench.closeFloatByTab(widget.float.tab.id);
-              }),
+              _CloseButton(
+                onTap: () {
+                  widget.workbench.closeFloatByTab(widget.float.tab.id);
+                },
+              ),
             ],
           ),
         ),

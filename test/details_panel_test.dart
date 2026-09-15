@@ -92,21 +92,22 @@ void main() {
     expect(find.text('Input'), findsNothing);
   });
 
-  testWidgets('the close control reports up rather than clearing the selection', (
-    tester,
-  ) async {
-    await pumpPanel(tester);
-    selection.select(callId: 'n1', toolName: 'Read');
-    await tester.pump();
+  testWidgets(
+    'the close control reports up rather than clearing the selection',
+    (tester) async {
+      await pumpPanel(tester);
+      selection.select(callId: 'n1', toolName: 'Read');
+      await tester.pump();
 
-    await tester.tap(find.byIcon(LucideIcons.x));
-    await tester.pump();
+      await tester.tap(find.byIcon(LucideIcons.x));
+      await tester.pump();
 
-    expect(closed, 1);
-    // Closing is a layout write. The selection survives it, which is what lets
-    // the same pill reopen the column onto the same call.
-    expect(selection.callId, 'n1');
-  });
+      expect(closed, 1);
+      // Closing is a layout write. The selection survives it, which is what lets
+      // the same pill reopen the column onto the same call.
+      expect(selection.callId, 'n1');
+    },
+  );
 
   testWidgets('a call this transcript does not hold is named as such', (
     tester,
@@ -115,7 +116,10 @@ void main() {
     selection.select(callId: 'gone', toolName: 'Read');
     await tester.pump();
 
-    expect(find.text('This call is outside the current window'), findsOneWidget);
+    expect(
+      find.text('This call is outside the current window'),
+      findsOneWidget,
+    );
     // The header still has something to say: the name came with the selection.
     expect(find.text('Read'), findsOneWidget);
     expect(find.text('Output'), findsNothing);

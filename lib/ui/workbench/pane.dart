@@ -133,7 +133,9 @@ class _WorkbenchPaneState extends State<WorkbenchPane> {
           children: [
             Positioned.fill(child: content),
             if (_zone != null)
-              Positioned.fill(child: _ZoneOverlay(zone: _zone!, color: color)),
+              Positioned.fill(
+                child: _ZoneOverlay(zone: _zone!, color: color),
+              ),
           ],
         ),
       ),
@@ -157,11 +159,9 @@ class _WorkbenchPaneState extends State<WorkbenchPane> {
               // rebuilding two of them into each other's state.
               key: ValueKey(tab.id),
               child:
-                  descriptorFor(tab.type)?.build(
-                    context,
-                    widget.workbench,
-                    tab,
-                  ) ??
+                  descriptorFor(
+                    tab.type,
+                  )?.build(context, widget.workbench, tab) ??
                   _Unknown(type: tab.type),
             )
           else
@@ -246,10 +246,7 @@ class _Welcome extends StatelessWidget {
           constraints: BoxConstraints(minHeight: constraints.maxHeight),
           child: Center(
             child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 12,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -276,7 +273,9 @@ class _Welcome extends StatelessWidget {
                               ? null
                               : () {
                                   workbench.focusPane(paneId);
-                                  workbench.openFolder(workbench.workspaceRoot!);
+                                  workbench.openFolder(
+                                    workbench.workspaceRoot!,
+                                  );
                                 },
                         ),
                       if (prefs.tabEnabled(BuiltinTabType.terminal))

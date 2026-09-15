@@ -35,11 +35,7 @@ class _ReasoningRowState extends State<ReasoningRow> {
     final color = context.dsw;
     return DisclosureRow(
       // 14px think glyph, matching the source's IconThinkOutline14 seat.
-      icon: Icon(
-        LucideIcons.brain,
-        size: 14,
-        color: color.labelTertiary,
-      ),
+      icon: Icon(LucideIcons.brain, size: 14, color: color.labelTertiary),
       title: 'Think',
       // The title drops to weight 400 here: the summary beside it is the content
       // and the label is only a marker.

@@ -145,9 +145,7 @@ class _DividerState extends State<_Divider> {
     final line = SizedBox(
       width: widget.horizontal ? 1 : null,
       height: widget.horizontal ? null : 1,
-      child: ColoredBox(
-        color: _active ? color.brandPrimary : color.borderL1,
-      ),
+      child: ColoredBox(color: _active ? color.brandPrimary : color.borderL1),
     );
 
     return MouseRegion(

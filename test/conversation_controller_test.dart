@@ -153,11 +153,16 @@ void main() {
     await Future<void>.delayed(Duration.zero);
 
     expect(controller.pendingApproval?.ref, 'r1');
-    expect((controller.nodes[1] as ToolCallNode).status,
-        ToolStatus.awaitingApproval);
+    expect(
+      (controller.nodes[1] as ToolCallNode).status,
+      ToolStatus.awaitingApproval,
+    );
     expect(controller.isBusy, isFalse);
-    expect(controller.isInputBlocked, isTrue,
-        reason: 'a pending decision must block the composer');
+    expect(
+      controller.isInputBlocked,
+      isTrue,
+      reason: 'a pending decision must block the composer',
+    );
 
     controller.respondToApproval(false);
     await Future<void>.delayed(Duration.zero);
@@ -173,20 +178,23 @@ void main() {
     expect(controller.pendingApproval, isNull);
   });
 
-  test('stop goes quiet immediately, without waiting for the runtime', () async {
-    await startTurn();
-    source.emit(const TextDelta(text: 'partial', messageIndex: 0));
-    await Future<void>.delayed(Duration.zero);
+  test(
+    'stop goes quiet immediately, without waiting for the runtime',
+    () async {
+      await startTurn();
+      source.emit(const TextDelta(text: 'partial', messageIndex: 0));
+      await Future<void>.delayed(Duration.zero);
 
-    controller.stop();
+      controller.stop();
 
-    expect(source.stopCalls, 1);
-    expect(controller.isBusy, isFalse);
-    // Whatever was streamed is kept: a cancelled answer is still a record of
-    // what happened.
-    expect((controller.nodes.last as AssistantMessageNode).text, 'partial');
-    expect(tail.nodeId, isNull);
-  });
+      expect(source.stopCalls, 1);
+      expect(controller.isBusy, isFalse);
+      // Whatever was streamed is kept: a cancelled answer is still a record of
+      // what happened.
+      expect((controller.nodes.last as AssistantMessageNode).text, 'partial');
+      expect(tail.nodeId, isNull);
+    },
+  );
 
   test('a failed turn appends an error node', () async {
     await startTurn();
@@ -279,9 +287,7 @@ void main() {
         const ToolCallRequested(ref: 't1', name: 'read', arguments: {}),
       );
       await Future<void>.delayed(Duration.zero);
-      source.emit(
-        ToolCallSucceeded(ref: 't1', output: const {'ok': true}),
-      );
+      source.emit(ToolCallSucceeded(ref: 't1', output: const {'ok': true}));
       await Future<void>.delayed(Duration.zero);
 
       // A real pair's stamps are clocked by the controller; a settled call

@@ -18,8 +18,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// assertion is that something did *not* happen — a fixed sleep waiting for a
 /// real disk write is a flaky test on a loaded machine, so [_awaitWrite] is what
 /// the positive cases use.
-Future<void> _settle() =>
-    Future<void>.delayed(WorkbenchStore.debounce + const Duration(milliseconds: 60));
+Future<void> _settle() => Future<void>.delayed(
+  WorkbenchStore.debounce + const Duration(milliseconds: 60),
+);
 
 /// Waits for the debounced write to [file] to land.
 Future<void> _awaitWrite(File file) async {
@@ -191,7 +192,10 @@ void main() {
       expect(controller.state.panes.length, 2);
       final split = controller.state.tree as SidebarSplit;
       controller.resize(split.id, 0, 0.1);
-      expect((controller.state.tree as SidebarSplit).sizes.first, closeTo(0.6, 1e-9));
+      expect(
+        (controller.state.tree as SidebarSplit).sizes.first,
+        closeTo(0.6, 1e-9),
+      );
       controller.toggleExpanded('/w/lib');
       expect(controller.state.expanded, {'/w/lib'});
     });
@@ -204,11 +208,14 @@ void main() {
       controller.openFolder('/w/lib');
       // The disabled type refused; everything the user did not switch off
       // still opens.
-      expect(controller.state.tabs.map((tab) => tab.type), containsAll([
-        BuiltinTabType.git,
-        BuiltinTabType.subagent,
-        BuiltinTabType.explorer,
-      ]));
+      expect(
+        controller.state.tabs.map((tab) => tab.type),
+        containsAll([
+          BuiltinTabType.git,
+          BuiltinTabType.subagent,
+          BuiltinTabType.explorer,
+        ]),
+      );
       expect(
         controller.state.tabs.any((tab) => tab.type == BuiltinTabType.terminal),
         isFalse,
@@ -353,16 +360,20 @@ void main() {
       expect(store.load('s1')!.tabs.length, 1);
     });
 
-    test('binding to an id with a stored layout loads it, not the current one',
-        () async {
-      await controller.bindSession('s1');
-      controller.openFile('/w/one.dart');
-      await controller.bindSession('s2');
-      expect(controller.state.tabs, isEmpty);
-      controller.openFile('/w/two.dart');
-      await controller.bindSession('s1');
-      expect(controller.state.tabs.map((tab) => tab.id), ['editor:/w/one.dart']);
-    });
+    test(
+      'binding to an id with a stored layout loads it, not the current one',
+      () async {
+        await controller.bindSession('s1');
+        controller.openFile('/w/one.dart');
+        await controller.bindSession('s2');
+        expect(controller.state.tabs, isEmpty);
+        controller.openFile('/w/two.dart');
+        await controller.bindSession('s1');
+        expect(controller.state.tabs.map((tab) => tab.id), [
+          'editor:/w/one.dart',
+        ]);
+      },
+    );
 
     test('a layout survives a round trip through disk', () async {
       await controller.bindSession('s1');
@@ -395,25 +406,29 @@ void main() {
       expect(controller.state.tabs.length, 1);
     });
 
-    test('going back to the unsaved conversation shows an empty workbench',
-        () async {
-      await controller.bindSession('s1');
-      controller.openFile('/w/one.dart');
-      await controller.bindSession(null);
-      expect(controller.sessionId, isNull);
-      expect(controller.state.tabs, isEmpty);
-    });
+    test(
+      'going back to the unsaved conversation shows an empty workbench',
+      () async {
+        await controller.bindSession('s1');
+        controller.openFile('/w/one.dart');
+        await controller.bindSession(null);
+        expect(controller.sessionId, isNull);
+        expect(controller.state.tabs, isEmpty);
+      },
+    );
 
-    test('an adopted layout is not handed to the next new conversation',
-        () async {
-      controller.openFile('/w/a.dart');
-      await controller.bindSession('s1');
-      await controller.bindSession(null);
-      expect(controller.state.tabs, isEmpty);
-      await controller.bindSession('s2');
-      expect(controller.state.tabs, isEmpty);
-      expect(store.load('s1')!.tabs.length, 1);
-    });
+    test(
+      'an adopted layout is not handed to the next new conversation',
+      () async {
+        controller.openFile('/w/a.dart');
+        await controller.bindSession('s1');
+        await controller.bindSession(null);
+        expect(controller.state.tabs, isEmpty);
+        await controller.bindSession('s2');
+        expect(controller.state.tabs, isEmpty);
+        expect(store.load('s1')!.tabs.length, 1);
+      },
+    );
   });
 
   group('forgetSession', () {

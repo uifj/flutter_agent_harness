@@ -169,7 +169,11 @@ class _SidebarState extends State<Sidebar> {
                 onTap: widget.onNewSession,
                 child: Row(
                   children: [
-                    Icon(LucideIcons.droplet, size: 24, color: color.labelPrimary),
+                    Icon(
+                      LucideIcons.droplet,
+                      size: 24,
+                      color: color.labelPrimary,
+                    ),
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
@@ -205,7 +209,11 @@ class _SidebarState extends State<Sidebar> {
                     size: wide ? 16 : 18,
                     color: wide ? color.labelSecondary : color.labelPrimary,
                   )
-                : Icon(LucideIcons.droplet, size: 24, color: color.labelPrimary),
+                : Icon(
+                    LucideIcons.droplet,
+                    size: 24,
+                    color: color.labelPrimary,
+                  ),
           ),
         ],
       ),
@@ -221,9 +229,7 @@ class _SidebarState extends State<Sidebar> {
       alignment: AlignmentDirectional.topStart,
       child: _Pressable(
         onTap: widget.onNewSession,
-        hoverColor: wide
-            ? color.buttonFloatingHover
-            : color.interactiveBgHover,
+        hoverColor: wide ? color.buttonFloatingHover : color.interactiveBgHover,
         borderRadius: BorderRadius.circular(wide ? 12 : 999),
         // Deliberately not animated. The two forms differ in width, and the wide
         // one hugs its label, so the pair is a finite width against an unbounded

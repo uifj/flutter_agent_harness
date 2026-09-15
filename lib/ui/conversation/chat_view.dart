@@ -207,7 +207,9 @@ class _ChatViewState extends State<ChatView> {
             : const _TurnStatus();
         return Padding(
           padding: EdgeInsets.only(bottom: index == count - 1 ? 0 : 16),
-          child: Center(child: SizedBox(width: column, child: child)),
+          child: Center(
+            child: SizedBox(width: column, child: child),
+          ),
         );
       },
     );

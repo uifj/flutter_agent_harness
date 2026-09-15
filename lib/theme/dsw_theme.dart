@@ -60,14 +60,8 @@ abstract final class DswShadow {
   /// 0 12px 32px 0 rgba(0,0,0,.08)` — the hairline layer stands in for a border
   /// on floating surfaces, so it must survive the port.
   static final lv3 = <BoxShadow>[
-    BoxShadow(
-      blurRadius: _blur(1),
-      color: const Color.fromRGBO(0, 0, 0, 0.2),
-    ),
-    BoxShadow(
-      blurRadius: _blur(4),
-      color: const Color.fromRGBO(0, 0, 0, 0.02),
-    ),
+    BoxShadow(blurRadius: _blur(1), color: const Color.fromRGBO(0, 0, 0, 0.2)),
+    BoxShadow(blurRadius: _blur(4), color: const Color.fromRGBO(0, 0, 0, 0.02)),
     BoxShadow(
       offset: const Offset(0, 12),
       blurRadius: _blur(32),

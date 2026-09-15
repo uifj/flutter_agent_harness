@@ -143,7 +143,8 @@ class LayoutController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void toggleWorkbench() => _workbench == 0 ? openWorkbench() : closeWorkbench();
+  void toggleWorkbench() =>
+      _workbench == 0 ? openWorkbench() : closeWorkbench();
 
   void openBottom() {
     if (_bottom != 0) return;

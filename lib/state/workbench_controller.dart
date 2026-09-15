@@ -186,7 +186,9 @@ class WorkbenchController extends ChangeNotifier implements WorkbenchSink {
     var next = line == null
         ? _state
         : _state.patchTab(tab.id, meta: {'line': line});
-    next = next.openTab(line == null ? tab : tab.copyWith(meta: {'line': line}));
+    next = next.openTab(
+      line == null ? tab : tab.copyWith(meta: {'line': line}),
+    );
     _apply(next);
   }
 
@@ -305,8 +307,12 @@ class WorkbenchController extends ChangeNotifier implements WorkbenchSink {
 
   void splitPane(SplitDirection dir) => _apply(_state.splitPane(dir));
 
-  void moveTab(String fromPane, String tabId, String toPane, [int index = -1]) =>
-      _apply(_state.moveTab(fromPane, tabId, toPane, index));
+  void moveTab(
+    String fromPane,
+    String tabId,
+    String toPane, [
+    int index = -1,
+  ]) => _apply(_state.moveTab(fromPane, tabId, toPane, index));
 
   void moveTabToEdge(
     String fromPane,

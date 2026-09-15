@@ -166,9 +166,9 @@ class AppScope {
   /// The tab types [prefs] switches off — the controller's gate reads a set,
   /// the document keeps a map, and this is the only place they meet.
   static Set<String> _disabledTabsOf(WorkbenchPrefs prefs) => {
-        for (final entry in prefs.tabsEnabled.entries)
-          if (!entry.value) entry.key,
-      };
+    for (final entry in prefs.tabsEnabled.entries)
+      if (!entry.value) entry.key,
+  };
 
   /// Re-points the model seat at the saved document. Called on every save —
   /// a provider change and a model change both ride it, and the seat has to
@@ -179,10 +179,7 @@ class AppScope {
     final model = settings.model;
     _modelDirectory
       ..adopt(model)
-      ..adoptConnection(
-        baseUrl: model.baseUrl,
-        apiKey: model.apiKey,
-      );
+      ..adoptConnection(baseUrl: model.baseUrl, apiKey: model.apiKey);
   }
 
   /// The model seat's commit: the model field changes, the document saves,
@@ -206,8 +203,7 @@ class AppScope {
   /// Pushes a prefs write into the workbench's gate. No notify needed there:
   /// a disabled type refuses opens, and an open tab's rendering never
   /// consulted the gate in the first place.
-  void _onPrefs() =>
-      _workbench.setDisabledTabs(_disabledTabsOf(prefs.value));
+  void _onPrefs() => _workbench.setDisabledTabs(_disabledTabsOf(prefs.value));
 
   /// The bottom panel's closed-to-open edge: where the terminal seed fires.
   void _onLayoutEdge() {
@@ -245,10 +241,10 @@ class AppScope {
   }
 
   AgentRuntime _build(cfg.AppSettings settings) => AgentRuntime(
-        settings: settings,
-        sessionRoot: _sessionRoot,
-        support: _support,
-      )..workspaceRoot = settings.workspaceRoot;
+    settings: settings,
+    sessionRoot: _sessionRoot,
+    support: _support,
+  )..workspaceRoot = settings.workspaceRoot;
 
   /// Persists the edited settings, then brings the runtime in line with them.
   ///
@@ -301,10 +297,7 @@ class AppScope {
       const ops = ProjectFolderChannelOps();
       final picked = await ops.pickDirectory();
       if (picked == null) return null;
-      return current.withWorkspace(
-        picked.path,
-        bookmark: picked.bookmark,
-      );
+      return current.withWorkspace(picked.path, bookmark: picked.bookmark);
     }
     final result = await FilePicker.platform.getDirectoryPath();
     if (result == null) return null;

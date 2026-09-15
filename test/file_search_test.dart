@@ -88,10 +88,11 @@ void main() {
         final found = await globFiles(root: root, pattern: '*.txt');
 
         // "including hidden and ignored files", as the tool's description says.
-        expect(
-          found.hits.map((h) => h.path).toSet(),
-          {'a.txt', p.join('deep', 'b.txt'), '.hidden.txt'},
-        );
+        expect(found.hits.map((h) => h.path).toSet(), {
+          'a.txt',
+          p.join('deep', 'b.txt'),
+          '.hidden.txt',
+        });
         expect(found.capped, isFalse);
         expect(found.timedOut, isFalse);
       });
@@ -117,12 +118,9 @@ void main() {
       });
 
       test('orders newest first', () async {
-        write('old.txt', '')
-            .setLastModifiedSync(DateTime(2020, 1, 1));
-        write('new.txt', '')
-            .setLastModifiedSync(DateTime(2024, 1, 1));
-        write('middle.txt', '')
-            .setLastModifiedSync(DateTime(2022, 1, 1));
+        write('old.txt', '').setLastModifiedSync(DateTime(2020, 1, 1));
+        write('new.txt', '').setLastModifiedSync(DateTime(2024, 1, 1));
+        write('middle.txt', '').setLastModifiedSync(DateTime(2022, 1, 1));
 
         final found = await globFiles(root: root, pattern: '*.txt');
 
@@ -137,8 +135,11 @@ void main() {
         write('old.txt', '').setLastModifiedSync(DateTime(2020, 1, 1));
         write('new.txt', '').setLastModifiedSync(DateTime(2024, 1, 1));
 
-        final found =
-            await globFiles(root: root, pattern: '*.txt', maxResults: 1);
+        final found = await globFiles(
+          root: root,
+          pattern: '*.txt',
+          maxResults: 1,
+        );
 
         // The cap comes off the head, so what survives is the half the model
         // most likely wanted.
@@ -159,22 +160,25 @@ void main() {
     });
 
     group('grep', () {
-      test('reports path, line number and text, grouped across files', () async {
-        write('a.txt', 'nothing\nneedle here\n');
-        write('deep/b.txt', 'needle\n');
+      test(
+        'reports path, line number and text, grouped across files',
+        () async {
+          write('a.txt', 'nothing\nneedle here\n');
+          write('deep/b.txt', 'needle\n');
 
-        final found = await grepFiles(
-          target: root,
-          pattern: RegExp('needle'),
-        );
+          final found = await grepFiles(
+            target: root,
+            pattern: RegExp('needle'),
+          );
 
-        expect(found.total, 2);
-        expect(found.files, 2);
-        final byPath = {for (final hit in found.hits) hit.path: hit};
-        expect(byPath['a.txt']!.line, 2);
-        expect(byPath['a.txt']!.text, 'needle here');
-        expect(byPath[p.join('deep', 'b.txt')]!.line, 1);
-      });
+          expect(found.total, 2);
+          expect(found.files, 2);
+          final byPath = {for (final hit in found.hits) hit.path: hit};
+          expect(byPath['a.txt']!.line, 2);
+          expect(byPath['a.txt']!.text, 'needle here');
+          expect(byPath[p.join('deep', 'b.txt')]!.line, 1);
+        },
+      );
 
       test('the include filter narrows by glob', () async {
         write('a.dart', 'needle');
@@ -193,24 +197,19 @@ void main() {
         write('other.txt', 'needle');
         final one = write('one.txt', 'needle');
 
-        final found = await grepFiles(
-          target: one,
-          pattern: RegExp('needle'),
-        );
+        final found = await grepFiles(target: one, pattern: RegExp('needle'));
 
         expect(found.files, 1);
         expect(found.hits.single.path, 'one.txt');
       });
 
       test('a binary file contributes nothing at all', () async {
-        File(p.join(root.path, 'blob.bin'))
-            .writeAsBytesSync([0x6e, 0x65, 0x00, 0x65, 0x64, 0x6c, 0x65]);
+        File(
+          p.join(root.path, 'blob.bin'),
+        ).writeAsBytesSync([0x6e, 0x65, 0x00, 0x65, 0x64, 0x6c, 0x65]);
         write('text.txt', 'needle');
 
-        final found = await grepFiles(
-          target: root,
-          pattern: RegExp('ne'),
-        );
+        final found = await grepFiles(target: root, pattern: RegExp('ne'));
 
         // Not "nothing on the NUL line": a binary file's lines are arbitrary, so
         // its matches would be noise even where the regex hits.
