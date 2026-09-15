@@ -20,6 +20,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadTheme;
 
 import 'genkit/models_endpoint.dart';
 import 'host/project_folder_ops.dart';
@@ -29,6 +30,7 @@ import 'state/app_providers.dart';
 import 'state/details_selection.dart';
 import 'state/prefs_store.dart';
 import 'state/settings_store.dart';
+import 'theme/dsw_shad_bridge.dart';
 import 'theme/dsw_theme.dart';
 import 'ui/app_frame.dart';
 import 'ui/conversation/conversation_root.dart';
@@ -106,6 +108,15 @@ class _DshAppState extends ConsumerState<DshApp> {
       debugShowCheckedModeBanner: false,
       theme: dswThemeData(Brightness.light),
       darkTheme: dswThemeData(Brightness.dark),
+      // Every shad component asserts a ShadTheme ancestor; this builder sits
+      // above the Navigator, so pushed routes (dialogs, sheets) inherit it
+      // too. The colour scheme is dsw's own (ADR-0002 decision 4, route A):
+      // the bridge reads the resolved brightness back out of the Material
+      // theme, so one themeMode drives both systems.
+      builder: (context, child) => ShadTheme(
+        data: dswShadTheme(Theme.of(context).brightness),
+        child: child!,
+      ),
       // The mode the settings screen writes. `system` hands the decision to the
       // platform's own brightness, which MaterialApp reads through this same
       // parameter — there is nothing else to wire.
