@@ -16,6 +16,7 @@ import '../../theme/dsw_typography.dart';
 import 'block_chrome.dart';
 import 'copy_button.dart';
 import 'head_tail_cap.dart';
+import 'tappable.dart';
 
 /// Result rows shown before the height cap collapses the middle. Matches the
 /// terminal block's default so a search card and a terminal card cut a long
@@ -361,39 +362,34 @@ class _SearchBlockState extends State<SearchBlock> {
   );
 
   /// `.fileHeader`: a bold path label plus its match count, the whole row the
-  /// collapse control.
-  Widget _fileHeader(DswAlias color, _FileRow row) => Semantics(
-    button: true,
+  /// collapse control. No hover repaint here — the row's only affordance is the
+  /// chevron-less tap target — but `DswHoverTap` still gives it focus, keyboard
+  /// activation, and the button/expanded semantics.
+  Widget _fileHeader(DswAlias color, _FileRow row) => DswHoverTap(
+    onTap: () => _toggleFile(row.index),
     expanded: !row.collapsed,
-    child: MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () => _toggleFile(row.index),
-        behavior: HitTestBehavior.opaque,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                row.path,
-                softWrap: false,
-                style: DswType.markdownCodeBlock.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: color.labelPrimary,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '${row.count}',
-                style: DswType.markdownCodeBlock.copyWith(
-                  color: color.labelTertiary,
-                ),
-              ),
-            ],
+    builder: (context, _, _) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            row.path,
+            softWrap: false,
+            style: DswType.markdownCodeBlock.copyWith(
+              fontWeight: FontWeight.w600,
+              color: color.labelPrimary,
+            ),
           ),
-        ),
+          const SizedBox(width: 8),
+          Text(
+            '${row.count}',
+            style: DswType.markdownCodeBlock.copyWith(
+              color: color.labelTertiary,
+            ),
+          ),
+        ],
       ),
     ),
   );

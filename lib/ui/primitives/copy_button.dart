@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../theme/dsw_typography.dart';
+import 'tappable.dart';
 
 /// How long the control stays confirmed, from `use-copy-feedback.ts`'s
 /// `setTimeout(..., 1000)`.
@@ -52,7 +53,6 @@ class CopyButton extends StatefulWidget {
 
 class _CopyButtonState extends State<CopyButton> {
   bool _copied = false;
-  bool _hovered = false;
   Timer? _reset;
 
   @override
@@ -74,18 +74,12 @@ class _CopyButtonState extends State<CopyButton> {
   }
 
   @override
-  Widget build(BuildContext context) => MouseRegion(
-    cursor: SystemMouseCursors.click,
-    onEnter: (_) => setState(() => _hovered = true),
-    onExit: (_) => setState(() => _hovered = false),
-    child: GestureDetector(
-      onTap: _copy,
-      behavior: HitTestBehavior.opaque,
-      child: Text(
-        _copied ? widget.copiedLabel : widget.label,
-        style: DswType.xs13.copyWith(
-          color: _hovered ? widget.hoverColor : widget.idleColor,
-        ),
+  Widget build(BuildContext context) => DswHoverTap(
+    onTap: _copy,
+    builder: (context, hovered, _) => Text(
+      _copied ? widget.copiedLabel : widget.label,
+      style: DswType.xs13.copyWith(
+        color: hovered ? widget.hoverColor : widget.idleColor,
       ),
     ),
   );

@@ -11,8 +11,9 @@ import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
+import 'tappable.dart';
 
-class DisclosureRow extends StatefulWidget {
+class DisclosureRow extends StatelessWidget {
   const DisclosureRow({
     super.key,
     required this.icon,
@@ -58,96 +59,86 @@ class DisclosureRow extends StatefulWidget {
   final Widget? child;
 
   @override
-  State<DisclosureRow> createState() => _DisclosureRowState();
-}
-
-class _DisclosureRowState extends State<DisclosureRow> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     mainAxisSize: MainAxisSize.min,
-    children: [
-      _header(context),
-      if (widget.open && widget.child != null) widget.child!,
-    ],
+    children: [_header(context), if (open && child != null) child!],
   );
 
   Widget _header(BuildContext context) {
     final color = context.dsw;
-    final row = SizedBox(
-      height: 24,
-      child: Row(
-        children: [
-          SizedBox.square(dimension: 16, child: Center(child: _leading(color))),
-          const SizedBox(width: 6),
-          Text(
-            widget.title,
-            style:
-                widget.titleStyle ??
-                DswType.s14.copyWith(
-                  // dsh writes the header's leading literally rather than through
-                  // the 14/22 token, so the port does too.
-                  height: 24 / 14,
-                  color: color.labelSecondary,
-                ),
-          ),
-          if ((widget.keepCollapsedWhenOpen || !widget.open) &&
-              widget.collapsed != null)
-            Expanded(child: widget.collapsed!),
-        ],
-      ),
-    );
-
-    final overlay = widget.rowOverlay;
-    // `overflow: hidden` on the header: the sweep must not escape past the row.
-    final painted = overlay == null
-        ? row
-        : ClipRect(
-            child: Stack(
-              children: [
-                row,
-                Positioned.fill(child: overlay),
-              ],
+    // `hovered` drives only the leading cross-fade; a keyboard focus lights the
+    // same way through DswHoverTap's builder.
+    Widget painted(bool hovered) {
+      final row = SizedBox(
+        height: 24,
+        child: Row(
+          children: [
+            SizedBox.square(
+              dimension: 16,
+              child: Center(child: _leading(context, color, hovered)),
             ),
-          );
+            const SizedBox(width: 6),
+            Text(
+              title,
+              style:
+                  titleStyle ??
+                  DswType.s14.copyWith(
+                    // dsh writes the header's leading literally rather than through
+                    // the 14/22 token, so the port does too.
+                    height: 24 / 14,
+                    color: color.labelSecondary,
+                  ),
+            ),
+            if ((keepCollapsedWhenOpen || !open) && collapsed != null)
+              Expanded(child: collapsed!),
+          ],
+        ),
+      );
 
-    if (!widget.expandable) return painted;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onToggle,
-        behavior: HitTestBehavior.opaque,
-        child: painted,
-      ),
+      final overlay = rowOverlay;
+      // `overflow: hidden` on the header: the sweep must not escape past the row.
+      return overlay == null
+          ? row
+          : ClipRect(
+              child: Stack(
+                children: [
+                  row,
+                  Positioned.fill(child: overlay),
+                ],
+              ),
+            );
+    }
+
+    if (!expandable) return painted(false);
+    return DswHoverTap(
+      onTap: onToggle,
+      builder: (context, hovered, _) => painted(hovered),
     );
   }
 
   /// Open shows the chevron; closed cross-fades icon and chevron on hover, so
   /// the affordance appears without the row changing size.
-  Widget _leading(DswAlias color) {
+  Widget _leading(BuildContext context, DswAlias color, bool hovered) {
     final chevron = Icon(
       LucideIcons.chevron_down,
       size: 14,
-      color: widget.chevronColor ?? color.labelTertiary,
+      color: chevronColor ?? color.labelTertiary,
     );
-    if (widget.open) return chevron;
-    if (!widget.expandable) return widget.icon;
+    if (open) return chevron;
+    if (!expandable) return icon;
 
     final duration = DswMotion.respecting(context, DswMotion.fast);
     return Stack(
       alignment: Alignment.center,
       children: [
         AnimatedOpacity(
-          opacity: _hovered ? 0 : 1,
+          opacity: hovered ? 0 : 1,
           duration: duration,
-          child: widget.icon,
+          child: icon,
         ),
         AnimatedOpacity(
-          opacity: _hovered ? 1 : 0,
+          opacity: hovered ? 1 : 0,
           duration: duration,
           child: chevron,
         ),

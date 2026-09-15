@@ -9,6 +9,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/dsw_theme.dart';
+import 'tappable.dart';
 
 /// `overflow-x: auto` over a `white-space: pre` body.
 ///
@@ -87,38 +88,29 @@ class BlockExpandToggle extends StatefulWidget {
 }
 
 class _BlockExpandToggleState extends State<BlockExpandToggle> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    return Semantics(
-      button: true,
+    return DswHoverTap(
+      onTap: widget.onToggle,
       expanded: widget.expanded,
-      label: widget.expanded
+      // The visible label ("… 3 more lines") is a hint, not a name; the
+      // caller's expand/collapse strings are the accessible name.
+      semanticLabel: widget.expanded
           ? widget.collapseSemantics
           : widget.expandSemantics,
       excludeSemantics: true,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
-          onTap: widget.onToggle,
-          behavior: HitTestBehavior.opaque,
-          child: Padding(
-            padding: widget.padding,
-            child: Align(
-              // `display: block; width: 100%; text-align: left` — the row spans
-              // the body so the whole line is the target, and the label sits at
-              // the start of it.
-              alignment: Alignment.centerLeft,
-              child: Text(
-                widget.expanded ? 'Collapse' : '… ${widget.hidden} more lines',
-                style: widget.textStyle.copyWith(
-                  color: _hovered ? color.labelSecondary : color.labelTertiary,
-                ),
-              ),
+      builder: (context, hovered, _) => Padding(
+        padding: widget.padding,
+        child: Align(
+          // `display: block; width: 100%; text-align: left` — the row spans
+          // the body so the whole line is the target, and the label sits at
+          // the start of it.
+          alignment: Alignment.centerLeft,
+          child: Text(
+            widget.expanded ? 'Collapse' : '… ${widget.hidden} more lines',
+            style: widget.textStyle.copyWith(
+              color: hovered ? color.labelSecondary : color.labelTertiary,
             ),
           ),
         ),
