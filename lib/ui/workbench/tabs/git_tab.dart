@@ -487,7 +487,7 @@ class _GitTabState extends State<GitTab> {
         PopupMenuItem(
           value: 'stage',
           child: _menuRow(
-            staged ? LucideIcons.trash_2 : LucideIcons.git_branch,
+            staged ? LucideIcons.trash : LucideIcons.git_branch,
             staged ? context.tr('unstage') : context.tr('stage'),
           ),
         ),
@@ -495,7 +495,7 @@ class _GitTabState extends State<GitTab> {
           PopupMenuItem(
             value: 'discard',
             child: _menuRow(
-              LucideIcons.trash_2,
+              LucideIcons.trash,
               context.tr('discardChanges'),
               danger: true,
             ),
@@ -956,7 +956,7 @@ class _FileRowState extends State<_FileRow> {
               const SizedBox(width: 6),
               _RoundIconButton(
                 icon: widget.staged
-                    ? LucideIcons.trash_2
+                    ? LucideIcons.trash
                     : LucideIcons.git_branch,
                 tooltip: widget.staged
                     ? context.tr('unstage')
