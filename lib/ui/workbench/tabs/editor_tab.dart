@@ -50,6 +50,7 @@ import '../../../theme/dsw_typography.dart';
 import '../../../ui/conversation/assistant_markdown.dart';
 import '../../../model/sidebar_tab.dart';
 import '../../../state/workbench_controller.dart';
+import '../../primitives/tappable.dart';
 import '../tab_registry.dart';
 
 /// The language modes this build compiles in.
@@ -614,15 +615,13 @@ class _BarIcon extends StatelessWidget {
     final tint = active ? color.labelPrimary : color.labelTertiary;
     return Tooltip(
       message: tooltip,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: onTap,
-          behavior: HitTestBehavior.opaque,
-          child: SizedBox.square(
-            dimension: 20,
-            child: Center(child: Icon(icon, size: 14, color: tint)),
-          ),
+      child: DswHoverTap(
+        onTap: onTap,
+        semanticLabel: tooltip,
+        excludeSemantics: true,
+        builder: (context, _, _) => SizedBox.square(
+          dimension: 20,
+          child: Center(child: Icon(icon, size: 14, color: tint)),
         ),
       ),
     );
@@ -646,24 +645,23 @@ class _SaveButton extends StatelessWidget {
     final tint = enabled ? color.labelSecondary : color.labelTertiary;
     return Tooltip(
       message: context.tr('save'),
-      child: MouseRegion(
-        cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-        child: GestureDetector(
-          onTap: enabled ? onSave : null,
-          behavior: HitTestBehavior.opaque,
-          child: SizedBox.square(
-            dimension: 20,
-            child: Center(
-              child: busy
-                  ? SizedBox.square(
-                      dimension: 11,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 1.5,
-                        color: tint,
-                      ),
-                    )
-                  : Icon(LucideIcons.save, size: 14, color: tint),
-            ),
+      child: DswHoverTap(
+        onTap: enabled ? onSave : null,
+        enabled: enabled,
+        semanticLabel: context.tr('save'),
+        excludeSemantics: true,
+        builder: (context, _, _) => SizedBox.square(
+          dimension: 20,
+          child: Center(
+            child: busy
+                ? SizedBox.square(
+                    dimension: 11,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 1.5,
+                      color: tint,
+                    ),
+                  )
+                : Icon(LucideIcons.save, size: 14, color: tint),
           ),
         ),
       ),
