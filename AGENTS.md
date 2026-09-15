@@ -41,7 +41,7 @@
 | `lib/theme/` | 5 | 0.9k | `dsw_alias`（令牌）→ `dsw_theme`（挂到 `ThemeData` + `DswShadow` elevation ramp）→ `dsw_typography` / `dsw_motion` / `dsw_static` |
 | `lib/l10n/` | 1 | 0.7k | `locales.dart`：en/zh 双字典（各 251 键，当前键集完全对齐）+ `AppLocaleScope` + `context.tr()`，zh 逐键回退 en |
 | `spike/` | 2 | — | `agent_spike.dart`（genkit 真实形状的可执行证据，头部 FINDINGS）、`runtime_smoke.dart`（命令行驱动 runtime 的验收门） |
-| `packages/flutter-shadcn-ui/` | — | — | **vendored 参考副本，已被 `.gitignore` 排除**（ADR-0001）：不是 `pubspec.yaml` 依赖，`lib/` 一处没 import。查组件 API 用入库的 `.qoder/skills/shadcn-ui-flutter/`；要读实现按上游 `nank1ro/flutter-shadcn-ui` 取 `0.56.3` |
+| `packages/flutter-shadcn-ui/` | — | — | **vendored 源码镜像，`.gitignore` 排除**（ADR-0001）。`shadcn_ui` 0.56.3 已是 pubspec 依赖（ADR-0002 实施中），但配色仍走 `dsw_*`（经 `theme/dsw_shad_bridge.dart`）。查组件 API 用入库的 `.qoder/skills/shadcn-ui-flutter/`；读实现看此目录或上游 `nank1ro/flutter-shadcn-ui` `0.56.3` |
 | `docs/` | 4 | — | `README.md`（ADR 规范）+ `debt-register.md`（状态源）+ `adr/`（模板 + ADR-0001） |
 
 ## 3. 架构不变量（违反即错误，命令可自证）
@@ -89,7 +89,7 @@ flutter build macos --release            # 需 macOS + Xcode + CocoaPods；Windo
 - **Flutter**（7）：`flutter-apply-architecture-best-practices`、`flutter-build-responsive-layout`、`flutter-fix-layout-issues`、`flutter-add-widget-test`、`flutter-add-widget-preview`、`flutter-implement-json-serialization`、`flutter-use-http-package`。
 - **Dart**（10）：`dart-add-unit-test`、`dart-run-static-analysis`、`dart-collect-coverage`、`dart-resolve-package-conflicts`、`dart-fix-runtime-errors`、`dart-write-documentation`、`dart-use-pattern-matching`、`dart-use-primary-constructors`、`dart-build-cli-app`、`dart-use-doc-examples`。
 - **ponytail 系列**（6）：`ponytail`、`ponytail-review`、`ponytail-audit`、`ponytail-debt`、`ponytail-gain`、`ponytail-help`。
-- **需守卫的例外**（1）：`shadcn-ui-flutter` 保留是因为它同时充当 `packages/flutter-shadcn-ui` 那份 vendored 参考的组件文档；但 `shadcn_ui` **不是本项目的依赖**，日常 UI 一律走 `lib/ui/primitives/` + `flutter_lucide` + `lib/theme/dsw_*`。
+- **正当组件库**（ADR-0002 实施中）：`shadcn-ui-flutter` 是已引入的 `shadcn_ui` 0.56.3 的组件参考；配色仍走 `lib/theme/dsw_*`（见 `theme/dsw_shad_bridge.dart`），不要读 shad 的调色板来配色。新交互控件优先用 shad 组件或 `primitives/tappable.dart` 的 `DswHoverTap`（都自带键盘/语义），不要再手写 `MouseRegion + GestureDetector`。
 - **已移除 7 个**（与自研 i18n / 无路由表 / 不用代码生成器 / 仅 macOS 目标直接冲突）：`flutter-setup-localization`、`flutter-setup-declarative-routing`、`dart-generate-test-mocks`、`dart-use-ffigen`、`dart-setup-ffi-assets`、`dart-migrate-to-checks-package`、`flutter-add-integration-test`。逐条理由与"要用回来必须先满足的前提"在 workflow.md §2；不要偷偷重装。
 
 ## 7. 硬性红线

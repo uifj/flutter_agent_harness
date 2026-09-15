@@ -52,7 +52,7 @@
 | `dart-migrate-to-checks-package` | dev 依赖只有 `flutter_test`，没有 `test`/`checks`；"迁移"等于加依赖 | 同时接受引入 `checks` |
 | `flutter-add-integration-test` | 未配置 `integration_test`，且只有 macOS 目标（开发机是 Windows 就跑不了） | 有 macOS 验收机 + 立 ADR |
 
-**保留但仍是误用高发项**的只有一个：`shadcn-ui-flutter`。它是 `packages/flutter-shadcn-ui` 那份 vendored 参考副本自带的组件文档（repomix 也把它当该库的 API 参考留着），但 `shadcn_ui` 既不在 `pubspec.yaml` 的依赖里，`lib/` 也没有一处 `import 'package:shadcn_ui/...'`。**只有在明确决定接入该库时**才用；日常 UI 一律用 `lib/ui/primitives/` + `flutter_lucide` + `lib/theme/dsw_*`。
+**组件库现状（ADR-0002 实施中）**：`shadcn_ui` 0.56.3 已是 `pubspec.yaml` 的直接依赖，`lib/main.dart` 经 `theme/dsw_shad_bridge.dart` 挂载 `ShadTheme`（colour 仍全部来自 `DswAlias`），`capsule_button` 与块原语（`primitives/tappable.dart` 的 `DswHoverTap`）已用上 shad 的按钮/焦点/语义机制。`shadcn-ui-flutter` skill 从"守卫项"转为**正当的组件参考**。不变的约束：颜色/字号只从 `lib/theme/dsw_*` 取，不要 `import 'package:shadcn_ui/...'` 去读它的调色板配色——组件用 shad、配色用 dsw。`packages/flutter-shadcn-ui/` 仍是 gitignore 的本地源码镜像（ADR-0001）。
 
 ## 3. 本仓库特有工作流（skill 覆盖不到的部分）
 
