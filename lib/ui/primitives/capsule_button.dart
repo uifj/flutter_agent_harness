@@ -1,19 +1,29 @@
 // The capsule button.
 //
-// A port of `ui-primitives/src/Button.module.css` (figma 1:155): the two sizes
-// (`md` h36 / r18 / 14-22, `sm` h28 / r14 / 12-18) and the three fills the rest
-// of this build asks for. dsh reaches for this same control in the approval row
-// and all through the settings panel, so it lives in primitives rather than
-// being spelled twice.
+// A port of `ui-primitives/src/Button.module.css` (figma 1:155): the two
+// sizes (`md` h36 / r18 / 14-22, `sm` h28 / r14 / 12-18) and the three fills
+// the rest of this build asks for. dsh reaches for this same control in the
+// approval row and all through the settings panel, so it lives in primitives
+// rather than being spelled twice.
 //
-// Material's `TextButton` would bring a ripple, its own hover overlay, and its
-// own disabled tint; dsh washes the whole box with an alias token and drops the
-// box to 40% opacity instead, which is what this reproduces.
+// Since ADR-0002 stage 5 the *mechanics* are shad's `ShadButton` — focus
+// traversal, keyboard activation, the pressed/hover/disabled state machine,
+// and the `Semantics(button: true)` node that the hand-rolled
+// MouseRegion+GestureDetector pair never had. The *appearance* stays dsh's:
+// geometry and every colour are passed from the alias layer here, and the
+// public API (variants, sizes, danger) is unchanged, so no call site moved.
+//
+// Two deliberate deltas against the CSS port:
+//   * A focused control draws shad's focus ring; dsh (pointer-first web CSS)
+//     never specified one. That is the point of the swap — keyboard parity.
+//   * A danger `outline` hover keeps its stroke. shad varies background and
+//     foreground by state but not the border, and dropping the stroke was a
+//     cosmetic flourish the fill wash already carries.
 
 import 'package:flutter/material.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
-import '../../theme/dsw_alias.dart';
-import '../../theme/dsw_motion.dart';
+import '../../theme/dsw_shad_bridge.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 
@@ -24,7 +34,7 @@ enum CapsuleVariant { primary, outline, ghost }
 /// `md` is the default; `sm` is the dense row variant (`.sm`).
 enum CapsuleSize { md, sm }
 
-class CapsuleButton extends StatefulWidget {
+class CapsuleButton extends StatelessWidget {
   const CapsuleButton({
     super.key,
     required this.label,
@@ -41,105 +51,62 @@ class CapsuleButton extends StatefulWidget {
   final CapsuleVariant variant;
   final CapsuleSize size;
 
-  /// Rendered at 14px in the `md` size and 12px in `sm`, ahead of the label with
-  /// the 4px gap `.button` sets.
+  /// Rendered at 14px in the `md` size and 12px in `sm`, ahead of the label
+  /// with the 4px gap `.button` sets (shad's own leading gap).
   final IconData? icon;
 
   final bool enabled;
 
-  /// Turns the hover red and drops the stroke, as `.dangerButton` and the
-  /// approval row's reject override do. Ignored by [CapsuleVariant.primary],
-  /// which has no destructive form in the source.
+  /// Turns the hover red and washes red, as `.dangerButton` and the approval
+  /// row's reject override do. Ignored by [CapsuleVariant.primary], which has
+  /// no destructive form in the source.
   final bool danger;
 
-  @override
-  State<CapsuleButton> createState() => _CapsuleButtonState();
-}
-
-class _CapsuleButtonState extends State<CapsuleButton> {
-  bool _hovered = false;
-
-  bool get _dense => widget.size == CapsuleSize.sm;
+  bool get _dense => size == CapsuleSize.sm;
 
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    // A disabled control still receives pointer events, so the hover state has
-    // to be gated here rather than at the listener.
-    final hovered = _hovered && widget.enabled;
-    final label = _label(color, hovered);
-    return MouseRegion(
-      cursor: widget.enabled
-          ? SystemMouseCursors.click
-          : SystemMouseCursors.basic,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.enabled ? widget.onTap : null,
-        behavior: HitTestBehavior.opaque,
-        child: Opacity(
-          opacity: widget.enabled ? 1 : 0.4,
-          child: AnimatedContainer(
-            duration: DswMotion.respecting(context, DswMotion.fast),
-            height: _dense ? 28 : 36,
-            alignment: Alignment.center,
-            padding: EdgeInsets.symmetric(horizontal: _dense ? 10 : 14),
-            decoration: BoxDecoration(
-              color: _fill(color, hovered),
-              border: _border(color, hovered),
-              borderRadius: BorderRadius.circular(_dense ? 14 : 18),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (widget.icon != null) ...[
-                  Icon(widget.icon, size: _dense ? 12 : 14, color: label),
-                  const SizedBox(width: 4),
-                ],
-                Text(
-                  widget.label,
-                  style: (_dense ? DswType.xxs12 : DswType.s14).copyWith(
-                    color: label,
-                  ),
-                ),
-              ],
-            ),
-          ),
+    final isPrimary = variant == CapsuleVariant.primary;
+
+    return dswEnsureShadTheme(
+      context,
+      ShadButton(
+        onPressed: enabled ? onTap : null,
+        enabled: enabled,
+        // figma 1:155 geometry, per size.
+        height: _dense ? 28 : 36,
+        padding: EdgeInsets.symmetric(horizontal: _dense ? 10 : 14),
+        backgroundColor: isPrimary
+            ? color.buttonPrimaryFill
+            : Colors.transparent,
+        hoverBackgroundColor: isPrimary
+            ? color.buttonPrimaryHover
+            : danger
+            ? color.interactiveBgHoverDanger
+            : color.interactiveBgHover,
+        foregroundColor: isPrimary
+            ? color.labelPrimaryForeground
+            : color.labelPrimary,
+        // The danger tint is worn on hover by a control that shares a row
+        // with a safe default (the approval row's reject); at rest a
+        // standalone destructive control wears it via [labelColor] below.
+        hoverForegroundColor: isPrimary
+            ? color.labelPrimaryForeground
+            : danger
+            ? color.stateErrorPrimary
+            : color.labelPrimary,
+        decoration: ShadDecoration(
+          border: variant == CapsuleVariant.outline
+              ? ShadBorder.fromBorderSide(
+                  ShadBorderSide(color: color.borderL2, width: 1),
+                  radius: BorderRadius.circular(_dense ? 14 : 18),
+                )
+              : ShadBorder(radius: BorderRadius.circular(_dense ? 14 : 18)),
         ),
+        leading: icon == null ? null : Icon(icon, size: _dense ? 12 : 14),
+        child: Text(label, style: _dense ? DswType.xxs12 : DswType.s14),
       ),
     );
-  }
-
-  Color _fill(DswAlias color, bool hovered) {
-    if (widget.variant == CapsuleVariant.primary) {
-      return hovered ? color.buttonPrimaryHover : color.buttonPrimaryFill;
-    }
-    if (!hovered) return Colors.transparent;
-    // A solid danger wash would swallow the label, so the outline variant keeps
-    // the translucent token and shifts the text instead.
-    return widget.danger
-        ? color.interactiveBgHoverDanger
-        : color.interactiveBgHover;
-  }
-
-  /// The stroke drops on a danger hover, where the fill is carrying the state on
-  /// its own.
-  BoxBorder? _border(DswAlias color, bool hovered) {
-    if (widget.variant != CapsuleVariant.outline) return null;
-    if (widget.danger && hovered) return null;
-    return Border.all(color: color.borderL2);
-  }
-
-  Color _label(DswAlias color, bool hovered) {
-    if (widget.variant == CapsuleVariant.primary) {
-      return color.labelPrimaryForeground;
-    }
-    // The danger tint is worn at rest by a standalone destructive control
-    // (`.dangerButton`) and on hover by one that shares a row with a safe
-    // default (the approval row's reject).
-    if (widget.danger) {
-      return hovered ? color.stateErrorPrimary : color.labelPrimary;
-    }
-    return color.labelPrimary;
   }
 }

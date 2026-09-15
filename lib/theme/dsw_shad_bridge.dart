@@ -34,8 +34,24 @@ ShadThemeData dswShadTheme(Brightness brightness) {
   return ShadThemeData(
     brightness: brightness,
     colorScheme: dswShadColorScheme(c),
+    // dsh dims a disabled control to 40%, not shad's 50% default.
+    disabledOpacity: 0.4,
   );
 }
+
+/// Wraps [child] in a [ShadTheme] unless an ancestor already provides one.
+///
+/// The app mounts the theme once, in `main`'s `MaterialApp.builder`. A
+/// primitive that renders under a bare `MaterialApp` — a widget test, a
+/// preview — would otherwise trip shad's `debugCheckHasShadTheme` assert,
+/// and making every one of those pump trees mount the theme by hand is churn
+/// that adds no guarantee. The fallback is this same bridge's output, so
+/// there is exactly one palette either way and a self-contained primitive
+/// simply declares its own dependency.
+Widget dswEnsureShadTheme(BuildContext context, Widget child) =>
+    ShadTheme.maybeOf(context, listen: false) != null
+    ? child
+    : ShadTheme(data: dswShadTheme(Theme.of(context).brightness), child: child);
 
 /// The colour half of the bridge, exposed separately so a test can assert
 /// the mapping without a widget tree.
