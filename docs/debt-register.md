@@ -7,6 +7,9 @@
 | 编号 | 标题 | 分类 | 优先级 | 状态 | 日期 | ADR |
 | --- | --- | --- | --- | --- | --- | --- |
 | ADR-0001 | vendored `packages/flutter-shadcn-ui` 不进版本库 | DEP | P2 | RESOLVED @ d72ff4c | 2026-09-15 | [链接](adr/ADR-0001-dep-vendored-shadcn-ui.md) |
+| ADR-0002 | develop 分支改造为 riverpod + shadcn_ui | ARC | P1 | ACCEPTED（待实施） | 2026-09-15 | [链接](adr/ADR-0002-arc-riverpod-shadcn-migration.md) |
+
+> 2026-09-15 设计层审计（方法：design-review 插件手动审查模型）产出了完整证据链，见 [design-audit-2026-09.md](design-audit-2026-09.md)。其阻断级与 major 发现的处置归属：键盘/无障碍阻断（A1/A3）、表单控件缺口（C1）**并入 ADR-0002 实施**；以下两条留在观察表，与 ADR-0002 解耦。
 
 ## 待立 ADR 的观察
 
@@ -14,6 +17,8 @@
 
 | 现象 | 证据 | 建议分类 | 建议优先级 |
 | --- | --- | --- | --- |
+| 亮色主题 6 组正文令牌对比度低于 WCAG AA | 确定性计算（WCAG 相对亮度法，28 组配对）：`labelDimmed` 1.26:1（sidechat_tab:319、subagent_tab:798 时间戳）、`labelCaption` 2.13:1（composer.dart:581 主输入占位符）、`labelTertiary` 3.71:1（97 处消费）、`stateWarnLabel` 2.79:1、审批条 `stateWarnPrimary` 1.99:1（approval_panel.dart:104-118）、`stateSuccessPrimary` 2.28:1（diff_block.dart:246）。dsh 原版调色板固有，改值背离 1:1 移植事实 → 需设计决策（豁免或 AA 修正层），详见审计报告 A2 | CFG | P1 |
+| 无文本缩放适配 | `textScaler|textScaleFactor` 全仓库 0 处；disclosure_row 等自绘件固定高度（24px header），macOS 辅助功能放大文本时裁切 | DEF | P2 |
 | i18n 双语对齐无守卫 | `lib/l10n/locales.dart:11-13` 注释声称 en 会"在 test 时对照校验"，但 `grep -rn "enStrings\|zhStrings" test/` 零命中；当前键集恰好对齐（en/zh 各 251），纯靠手动维持 | TST | P2 |
 | `README.md` 仍是 Flutter 包模板 | 文件通篇 `TODO:`，无一句项目说明；新人和代理拿它当入口会拿到零信息 | DEBT | P2 |
 | macOS 分发缺口 | `CODE_SIGN_IDENTITY = "-"`、无 `DEVELOPMENT_TEAM`、未配 hardened runtime / `notarytool` 公证 → 产物只能本机运行；且 `.gitignore` 缺 `*.p12`/`*.cer`/`*.mobileprovision`，一旦有人放证书就会入库 | CFG | P1（若要对外发布） |
