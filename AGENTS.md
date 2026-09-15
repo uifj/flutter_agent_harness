@@ -35,7 +35,7 @@
 | `lib/main.dart` | 1 | ~240 | 纯装配：开 store → 恢复工作区授权 → 建 riverpod container（override stores）→ 挂树。**不做决策** |
 | `lib/genkit/` | 8 | 3.1k | Genkit 唯一的家：`agent_runtime`（投影 + 系统提示 + 审批回路）、`tools`（`WorkspaceTools`）、`shell_run` / `text_edit` / `read_window` / `plan_tools` / `file_search` / `models_endpoint` |
 | `lib/model/` | 18 | 3.7k | 纯 Dart 领域词汇：`conversation` / `turn_event` / `turn_source` / `approval_mode` / `sidebar_tab` / `split_node` / `workbench` / 各 settings。手写 `toJson`/`fromJson` |
-| `lib/state/` | 15 | 2.9k | 控制器与持久化：`app_providers`（riverpod 注解层：stores/scope，ADR-0002）、`app_scope`（运行时热替换）、`conversation_controller`、`workbench_controller` / `split_node` 布局、`layout_controller`、`settings_store` / `prefs_store`（原子写）、`streaming_tail` |
+| `lib/state/` | 15 | 3.1k | 控制器与持久化：`app_providers` + 生成件 `.g.dart`（riverpod 注解层：stores、read seams、9 个 per-controller provider，ADR-0002）、`app_scope`（组合根：runtime 热替换链仍在其中）、`conversation_controller`、`workbench_controller` / `split_node` 布局、`layout_controller`、`settings_store` / `prefs_store`（原子写）、`streaming_tail` |
 | `lib/host/` | 3 | 0.7k | 宿主能力：`git`、`terminal_manager`、`project_folder_ops`（security-scoped bookmark） |
 | `lib/ui/` | 46 | 18k | 界面：`workbench/`（16，含 `tabs/` 与 `tab_registry`）、`primitives/`（13，卡片/代码块/diff/终端等自绘件）、`conversation/`（12）、`layout/columns.dart`（约束求解）、`sidebar`、`tool/tool_card`、`settings` |
 | `lib/theme/` | 5 | 0.9k | `dsw_alias`（令牌）→ `dsw_theme`（挂到 `ThemeData` + `DswShadow` elevation ramp）→ `dsw_typography` / `dsw_motion` / `dsw_static` |
