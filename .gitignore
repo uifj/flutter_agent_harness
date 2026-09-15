@@ -35,3 +35,10 @@ migrate_working_dir/
 # Local tool state and generated source dumps
 .workbuddy/
 dart_sources.md
+repomix-output.*
+
+# Vendored third-party UI reference clone, intentionally untracked.
+# It is not a pubspec dependency and no code imports it; keep provenance and
+# pinned version in the ADR instead of 5.7 MB of upstream history.
+# See docs/adr/ADR-0001-dep-vendored-shadcn-ui.md before deleting or re-adding.
+/packages/flutter-shadcn-ui/

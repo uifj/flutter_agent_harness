@@ -1,0 +1,44 @@
+{
+  "$schema": "https://repomix.com/schemas/latest/schema.json",
+
+  "output": {
+    "filePath": "repomix-output.xml",
+    "style": "xml",
+    "parsableStyle": true,
+    "showLineNumbers": false,
+    "topFilesLength": 10,
+    "headerText": "Repo: agent_harness — Flutter 桌面端 AI Agent 工作台（pubspec 自述：chat UI, tool-call projection via Genkit, split-pane workbench）。\n\n布局导航：lib/main.dart 为入口；lib/genkit = agent 运行时与工具实现（agent_runtime、tools、shell_run、text_edit、read_window、plan_tools、file_search、models_endpoint）；lib/host = 宿主能力（git、terminal_manager、project_folder_ops）；lib/model = 状态/数据模型；lib/state = 控制器与持久化；lib/theme = dsw_* 主题令牌；lib/ui = 界面（conversation、workbench、sidebar、primitives、tool、settings、layout）；test = 单元与 widget 测试；spike = 一次性验证脚本；docs/adr = 决策记录与技术债登记（规范见 docs/README.md）；.qoder/rules = 编码与构建约定。\n\n依赖说明：packages/flutter-shadcn-ui 为 vendored 第三方 UI 库，其源码未打入本包（体积原因），仅保留其 README/pubspec 与 skills/shadcn-ui-flutter 组件文档作为 API 参考；需要读实现时直接到磁盘路径 packages/flutter-shadcn-ui/lib/ 查看。\n\n注意：本包为只读快照，改动请落到源文件；引用证据时请使用「文件路径:行号」。",
+    "git": {
+      "sortByChanges": true
+    }
+  },
+
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      "repomix-output.*",
+      ".trae/**",
+      ".qoder/skills/**",
+      "packages/flutter-shadcn-ui/lib/**",
+      "packages/flutter-shadcn-ui/docs/**",
+      "packages/flutter-shadcn-ui/example/**",
+      "packages/flutter-shadcn-ui/playground/**",
+      "packages/flutter-shadcn-ui/test/**",
+      "packages/flutter-shadcn-ui/cli/**",
+      "packages/flutter-shadcn-ui/scripts/**",
+      "packages/flutter-shadcn-ui/.github/**",
+      "packages/flutter-shadcn-ui/fonts/**",
+      "packages/flutter-shadcn-ui/CHANGELOG.md",
+      "packages/flutter-shadcn-ui/CONTRIBUTING.md"
+    ]
+  },
+
+  "security": {
+    "enableSecurityCheck": true
+  },
+
+  "tokenCount": {
+    "encoding": "o200k_base"
+  }
+}
