@@ -10,12 +10,14 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'genkit/models_endpoint.dart';
 import 'host/project_folder_ops.dart';
 import 'l10n/locales.dart';
 import 'model/app_settings.dart' as cfg;
+import 'state/app_providers.dart';
 import 'state/app_scope.dart';
 import 'state/details_selection.dart';
 import 'state/prefs_store.dart';
@@ -44,7 +46,23 @@ Future<void> main() async {
   // session restore, the tools. A failure here is not an error: the hero
   // picker's own UI is the "ask again" path.
   await restoreWorkspaceAccess(bookmark: settings.value.workspaceBookmark);
-  runApp(DshApp(support: support, settings: settings, prefs: prefs));
+  // The container owns the store providers (ADR-0002 stage 1): `main` opens
+  // the stores above — async bootstrap stays imperative, a first frame racing
+  // a FutureProvider for its own settings document is a bug, not a loading
+  // state — then overrides the providers with the opened instances. The tree
+  // reads them through the scope; nothing below `main` may open a store.
+  final container = ProviderContainer(
+    overrides: [
+      settingsStoreProvider.overrideWithValue(settings),
+      prefsStoreProvider.overrideWithValue(prefs),
+    ],
+  );
+  runApp(
+    UncontrolledProviderScope(
+      container: container,
+      child: DshApp(support: support, settings: settings, prefs: prefs),
+    ),
+  );
 }
 
 class DshApp extends StatefulWidget {
