@@ -93,10 +93,12 @@ void dumpTranscript(List<ConversationNode> nodes) {
 Future<void> main() async {
   final sessions = Directory.systemTemp.createTempSync('dsh_smoke_sessions_');
   final workspace = Directory.systemTemp.createTempSync('dsh_smoke_ws_');
-  File('${workspace.path}/hello.txt').writeAsStringSync(
-    'The passphrase is "ochre lantern".\n',
-  );
-  File('${workspace.path}/notes.md').writeAsStringSync('# Notes\n\nnothing yet\n');
+  File(
+    '${workspace.path}/hello.txt',
+  ).writeAsStringSync('The passphrase is "ochre lantern".\n');
+  File(
+    '${workspace.path}/notes.md',
+  ).writeAsStringSync('# Notes\n\nnothing yet\n');
   stdout.writeln('sessions: ${sessions.path}\nworkspace: ${workspace.path}');
 
   final key = Platform.environment['DEEPSEEK_API_KEY'];
@@ -109,8 +111,10 @@ Future<void> main() async {
     sessionRoot: sessions,
     support: Directory.systemTemp,
   );
-  stdout.writeln('  sessions in an empty store: '
-      '${(await unconfigured.listSessions()).length}');
+  stdout.writeln(
+    '  sessions in an empty store: '
+    '${(await unconfigured.listSessions()).length}',
+  );
   stdout.writeln('  sending without a key:');
   await drain(unconfigured.send('hello?'));
   await unconfigured.dispose();
@@ -156,15 +160,12 @@ Future<void> main() async {
     stdout.writeln('  !! expected an approval request; the gate did not fire');
   } else {
     stdout.writeln('  --> approving ${pending.ref}');
-    await drain(
-      runtime.respondToApproval(ref: pending.ref, approved: true),
-    );
+    await drain(runtime.respondToApproval(ref: pending.ref, approved: true));
     stdout.writeln('  notes.md is now:');
     stdout.writeln(
-      File('${workspace.path}/notes.md')
-          .readAsLinesSync()
-          .map((l) => '    $l')
-          .join('\n'),
+      File(
+        '${workspace.path}/notes.md',
+      ).readAsLinesSync().map((l) => '    $l').join('\n'),
     );
   }
 

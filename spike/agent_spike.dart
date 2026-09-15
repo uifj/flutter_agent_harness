@@ -213,24 +213,30 @@ Iterable<String> _slice(String s, int size) sync* {
 }
 
 ModelResponse modelText(String text) => ModelResponse(
-  message: Message(role: Role.model, content: [TextPart(text: text)]),
+  message: Message(
+    role: Role.model,
+    content: [TextPart(text: text)],
+  ),
   finishReason: FinishReason.stop,
 );
 
-ModelResponse modelToolCall(String tool, Map<String, dynamic> input,
-        {String? text, String ref = 'r1'}) =>
-    ModelResponse(
-      message: Message(
-        role: Role.model,
-        content: [
-          if (text != null) TextPart(text: text),
-          ToolRequestPart(
-            toolRequest: ToolRequest(name: tool, ref: ref, input: input),
-          ),
-        ],
+ModelResponse modelToolCall(
+  String tool,
+  Map<String, dynamic> input, {
+  String? text,
+  String ref = 'r1',
+}) => ModelResponse(
+  message: Message(
+    role: Role.model,
+    content: [
+      if (text != null) TextPart(text: text),
+      ToolRequestPart(
+        toolRequest: ToolRequest(name: tool, ref: ref, input: input),
       ),
-      finishReason: FinishReason.stop,
-    );
+    ],
+  ),
+  finishReason: FinishReason.stop,
+);
 
 Future<void> main() async {
   final sessionDir = Directory.systemTemp.createTempSync('dsh_spike_');
@@ -243,11 +249,15 @@ Future<void> main() async {
     name: 'listDir',
     description: 'List entries of a directory.',
     inputSchema: objectSchema(
-      {'path': {'type': 'string', 'description': 'Directory to list.'}},
+      {
+        'path': {'type': 'string', 'description': 'Directory to list.'},
+      },
       required: ['path'],
     ),
     fn: (input, context) async {
-      stdout.writeln('    [tool listDir] input=$input resumed=${context.resumed}');
+      stdout.writeln(
+        '    [tool listDir] input=$input resumed=${context.resumed}',
+      );
       return ToolResult.response({
         'entries': ['a.txt', 'b.txt'],
         'path': input['path'],
@@ -288,8 +298,11 @@ Future<void> main() async {
   // =======================================================================
   defineScriptedModel(ai, 'loop', (call, req) {
     return switch (call) {
-      0 => [modelToolCall('listDir', {'path': '/tmp'},
-          text: 'Let me look at that directory. ')],
+      0 => [
+        modelToolCall('listDir', {
+          'path': '/tmp',
+        }, text: 'Let me look at that directory. '),
+      ],
       _ => [modelText('There are 2 files: a.txt and b.txt.')],
     };
   });
@@ -322,9 +335,11 @@ Future<void> main() async {
   defineScriptedModel(ai, 'approval', (call, req) {
     return switch (call) {
       0 => [
-          modelToolCall('writeFile', {'path': '/tmp/x.txt', 'contents': 'hi'},
-              text: 'Writing that file. ')
-        ],
+        modelToolCall('writeFile', {
+          'path': '/tmp/x.txt',
+          'contents': 'hi',
+        }, text: 'Writing that file. '),
+      ],
       _ => [modelText('Done, the file is written.')],
     };
   });
@@ -351,7 +366,9 @@ Future<void> main() async {
     final interrupt = paused.interrupts.first;
     stdout.writeln('  --> approving interrupt "${interrupt.name}"');
     final t2 = approvalChat.resumeStream(
-      restart: [interrupt.restart({'approved': true})],
+      restart: [
+        interrupt.restart({'approved': true}),
+      ],
     );
     i = 0;
     await for (final chunk in t2.stream) {
@@ -359,8 +376,10 @@ Future<void> main() async {
     }
     dumpResponse('resumed', await t2.response);
   } else {
-    stdout.writeln('  !! expected an interrupt, got '
-        '${paused.finishReason.value} — approval path needs rework');
+    stdout.writeln(
+      '  !! expected an interrupt, got '
+      '${paused.finishReason.value} — approval path needs rework',
+    );
   }
 
   // =======================================================================
@@ -371,12 +390,16 @@ Future<void> main() async {
   ai.defineModel(
     name: 'slow',
     fn: (request, ctx) async {
-      stdout.writeln('    [model slow] start, '
-          'streamingRequested=${ctx.streamingRequested}');
+      stdout.writeln(
+        '    [model slow] start, '
+        'streamingRequested=${ctx.streamingRequested}',
+      );
       for (var n = 0; n < 30; n++) {
         await Future<void>.delayed(const Duration(milliseconds: 100));
         if (ctx.streamingRequested) {
-          ctx.sendChunk(ModelResponseChunk(content: [TextPart(text: 'tok$n ')]));
+          ctx.sendChunk(
+            ModelResponseChunk(content: [TextPart(text: 'tok$n ')]),
+          );
         }
       }
       stdout.writeln('    [model slow] finished all 30 slices (NOT aborted)');
@@ -405,14 +428,18 @@ Future<void> main() async {
     await for (final chunk in slowTurn.stream) {
       dumpChunk(i++, chunk);
     }
-    stdout.writeln('  stream closed after '
-        '${DateTime.now().difference(startedAt).inMilliseconds}ms, '
-        '$i chunks');
+    stdout.writeln(
+      '  stream closed after '
+      '${DateTime.now().difference(startedAt).inMilliseconds}ms, '
+      '$i chunks',
+    );
     dumpResponse('after cancel', await slowTurn.response);
   } catch (e) {
-    stdout.writeln('  stream/response threw after '
-        '${DateTime.now().difference(startedAt).inMilliseconds}ms: '
-        '${e.runtimeType}: $e');
+    stdout.writeln(
+      '  stream/response threw after '
+      '${DateTime.now().difference(startedAt).inMilliseconds}ms: '
+      '${e.runtimeType}: $e',
+    );
   }
   stdout.writeln('  token.isCancelled=${cancel.isCancelled}');
 
@@ -510,11 +537,13 @@ Future<void> main() async {
   stdout.writeln('\nspike done.');
 }
 
-String _describeMessage(Message m) => m.content.map((p) {
-  if (p.isText) return 'text("${p.text}")';
-  if (p.isToolRequest) return 'toolRequest(${p.toolRequest!.name})';
-  if (p.isToolResponse) {
-    return 'toolResponse(${p.toolResponse!.name} -> ${p.toolResponse!.output})';
-  }
-  return 'other(${p.toJson().keys.toList()})';
-}).join(', ');
+String _describeMessage(Message m) => m.content
+    .map((p) {
+      if (p.isText) return 'text("${p.text}")';
+      if (p.isToolRequest) return 'toolRequest(${p.toolRequest!.name})';
+      if (p.isToolResponse) {
+        return 'toolResponse(${p.toolResponse!.name} -> ${p.toolResponse!.output})';
+      }
+      return 'other(${p.toJson().keys.toList()})';
+    })
+    .join(', ');
