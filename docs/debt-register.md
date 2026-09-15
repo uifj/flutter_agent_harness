@@ -6,7 +6,7 @@
 
 | 编号 | 标题 | 分类 | 优先级 | 状态 | 日期 | ADR |
 | --- | --- | --- | --- | --- | --- | --- |
-| ADR-0001 | vendored `packages/flutter-shadcn-ui` 不进版本库 | DEP | P2 | ACCEPTED | 2026-09-15 | [链接](adr/ADR-0001-dep-vendored-shadcn-ui.md) |
+| ADR-0001 | vendored `packages/flutter-shadcn-ui` 不进版本库 | DEP | P2 | RESOLVED @ d72ff4c | 2026-09-15 | [链接](adr/ADR-0001-dep-vendored-shadcn-ui.md) |
 
 ## 待立 ADR 的观察
 

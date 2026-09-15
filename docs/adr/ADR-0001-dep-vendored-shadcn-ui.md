@@ -1,12 +1,12 @@
 # ADR-0001: vendored `packages/flutter-shadcn-ui` 不进版本库
 
-- **状态**: ACCEPTED
+- **状态**: RESOLVED
 - **分类**: DEP
 - **优先级**: P2
 - **影响维度**: 上下文膨胀（浪费 Token）· 认知障碍（难以理解）
 - **日期**: 2026-09-15
 - **来源**: AI 代理配置审计（重写 `.qoder/rules` 时核查依赖真实性）+ 用户决策
-- **修复 commit**: —（待回填）
+- **修复 commit**: d72ff4c（`.gitignore` 增加 `/packages/flutter-shadcn-ui/`）
 
 ## 背景（Context）
 

@@ -95,7 +95,7 @@
 
 ## 7. 技术债与缺陷记录（ADR）
 
-- 审计发现的缺陷、技术债、架构决策一律落盘 `docs/adr/ADR-NNNN-<分类小写>-<slug>.md`（模板 `docs/adr/ADR-0000-template.md`），并在 `docs/debt-register.md` 追加一行；规范见 `docs/README.md`。登记表已建（当前 1 条 ACCEPTED 的 ADR-0001 + 5 条待立 ADR 的观察），新增观察就写进它的"待立 ADR"表，不要另开一份清单。
+- 审计发现的缺陷、技术债、架构决策一律落盘 `docs/adr/ADR-NNNN-<分类小写>-<slug>.md`（模板 `docs/adr/ADR-0000-template.md`），并在 `docs/debt-register.md` 追加一行；规范见 `docs/README.md`。登记表是唯一状态源：新增观察写进它的"待立 ADR"表，闭环后回填状态与 commit hash，不要另开一份清单。
 - 分类：SEC 安全 / CFG 配置漂移 / DEF 缺陷 / ARC 架构 / DEP 依赖 / DEBT 技术债 / TST 测试。优先级 P0（安全红线或评估阻断）> P1（影响真实使用）> P2（债务与优化）。
 - 状态机：`PROPOSED → ACCEPTED → IN-PROGRESS → RESOLVED`（分支 DEFERRED / SUPERSEDED 须注明原因）。
 - 纪律：动手修复已登记问题前，对应 ADR 必须先置 ACCEPTED；修复合入后置 RESOLVED 并回填 commit hash；新审计发现先补 ADR 再改代码；「背景」必须带证据（`文件:行号`、grep/构建/测试输出），禁止无证据登记。
