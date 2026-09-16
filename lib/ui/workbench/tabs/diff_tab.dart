@@ -792,8 +792,6 @@ class _FileHeader extends StatefulWidget {
 }
 
 class _FileHeaderState extends State<_FileHeader> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
@@ -802,72 +800,67 @@ class _FileHeaderState extends State<_FileHeader> {
     final from = displayDiffPath(file.oldPath);
     final to = displayDiffPath(file.newPath);
     final expandable = !file.binary && file.hunks.isNotEmpty;
-    return MouseRegion(
-      cursor: expandable ? SystemMouseCursors.click : SystemMouseCursors.basic,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: expandable ? widget.onToggle : null,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(2, 8, 2, 2),
-          margin: const EdgeInsets.symmetric(horizontal: 8),
-          decoration: BoxDecoration(
-            color: _hovered && expandable
-                ? color.interactiveBgHover
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Row(
-            children: [
-              if (expandable) ...[
-                Icon(
-                  widget.expanded
-                      ? LucideIcons.chevron_down
-                      : LucideIcons.chevron_right,
-                  size: 14,
-                  color: color.labelTertiary,
+    return DswHoverTap(
+      onTap: expandable ? widget.onToggle : null,
+      enabled: expandable,
+      semanticLabel: to,
+      excludeSemantics: true,
+      builder: (context, hovered, _) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(2, 8, 2, 2),
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: hovered && expandable
+              ? color.interactiveBgHover
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Row(
+          children: [
+            if (expandable) ...[
+              Icon(
+                widget.expanded
+                    ? LucideIcons.chevron_down
+                    : LucideIcons.chevron_right,
+                size: 14,
+                color: color.labelTertiary,
+              ),
+              const SizedBox(width: 6),
+            ],
+            Expanded(
+              child: Text(
+                to,
+                style: DswType.xxsStrong12.copyWith(color: color.labelPrimary),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
+            if (from != to) ...[
+              const SizedBox(width: 6),
+              Text(
+                '← $from',
+                style: DswType.xxxs11.copyWith(color: color.labelTertiary),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ],
+            if (tag != null) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                decoration: BoxDecoration(
+                  border: Border.all(color: color.borderL2),
+                  borderRadius: BorderRadius.circular(999),
                 ),
-                const SizedBox(width: 6),
-              ],
-              Expanded(
                 child: Text(
-                  to,
-                  style: DswType.xxsStrong12.copyWith(
-                    color: color.labelPrimary,
+                  tag,
+                  style: DswType.xxxsStrong11.copyWith(
+                    color: color.labelSecondary,
                   ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
                 ),
               ),
-              if (from != to) ...[
-                const SizedBox(width: 6),
-                Text(
-                  '← $from',
-                  style: DswType.xxxs11.copyWith(color: color.labelTertiary),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                ),
-              ],
-              if (tag != null) ...[
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: color.borderL2),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    tag,
-                    style: DswType.xxxsStrong11.copyWith(
-                      color: color.labelSecondary,
-                    ),
-                  ),
-                ),
-              ],
             ],
-          ),
+          ],
         ),
       ),
     );
