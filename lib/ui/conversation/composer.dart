@@ -28,6 +28,7 @@ import '../../state/model_directory.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_theme.dart';
+import '../primitives/tappable.dart';
 import '../../theme/dsw_typography.dart';
 import 'conversation_root.dart';
 
@@ -702,79 +703,68 @@ class _ActiveMention {
 /// the label (with the parent directory appended when the name collides),
 /// the parent directory as the second line, and a kind glyph. A directory
 /// pick keeps the menu open (`@src/` continues); a file pick closes it.
-class _MentionRow extends StatefulWidget {
+class _MentionRow extends StatelessWidget {
   const _MentionRow({required this.entry, required this.onPick});
 
   final FileEntry entry;
   final VoidCallback onPick;
 
   @override
-  State<_MentionRow> createState() => _MentionRowState();
-}
-
-class _MentionRowState extends State<_MentionRow> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    final entry = widget.entry;
+    final entry = this.entry;
     final name = basenameOf(entry.relative);
     final directory = dirnameOf(entry.relative);
     final isDir = entry.kind == 'dir';
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onPick,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          color: _hovered ? color.interactiveBgHover : null,
-          child: Row(
-            children: [
-              Icon(
-                isDir ? LucideIcons.folder : LucideIcons.file,
-                size: 13,
-                color: color.labelSecondary,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+    // The row's own text is its accessible name; DswHoverTap makes the pick
+    // reachable by keyboard, not just a pointer tap.
+    return DswHoverTap(
+      onTap: onPick,
+      builder: (context, hovered, _) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        color: hovered ? color.interactiveBgHover : null,
+        child: Row(
+          children: [
+            Icon(
+              isDir ? LucideIcons.folder : LucideIcons.file,
+              size: 13,
+              color: color.labelSecondary,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    // The plugin's duplicate rule: a colliding basename
+                    // names its parent, so two `main.dart`s stay apart.
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: DswType.xs13.copyWith(color: color.labelPrimary),
+                  ),
+                  if (directory.isNotEmpty)
                     Text(
-                      // The plugin's duplicate rule: a colliding basename
-                      // names its parent, so two `main.dart`s stay apart.
-                      name,
+                      directory,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: DswType.xs13.copyWith(color: color.labelPrimary),
-                    ),
-                    if (directory.isNotEmpty)
-                      Text(
-                        directory,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: DswType.xxxs11.copyWith(
-                          color: color.labelTertiary,
-                          fontFamily: dswFontFamilyCode,
-                          fontFamilyFallback: dswFontFamilyCodeFallback,
-                        ),
+                      style: DswType.xxxs11.copyWith(
+                        color: color.labelTertiary,
+                        fontFamily: dswFontFamilyCode,
+                        fontFamilyFallback: dswFontFamilyCodeFallback,
                       ),
-                  ],
-                ),
+                    ),
+                ],
               ),
-              // A directory hints at the continuation a pick buys.
-              if (isDir)
-                Icon(
-                  LucideIcons.chevron_right,
-                  size: 13,
-                  color: color.labelTertiary,
-                ),
-            ],
-          ),
+            ),
+            // A directory hints at the continuation a pick buys.
+            if (isDir)
+              Icon(
+                LucideIcons.chevron_right,
+                size: 13,
+                color: color.labelTertiary,
+              ),
+          ],
         ),
       ),
     );

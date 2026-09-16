@@ -35,14 +35,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
+import '../../../l10n/locales.dart';
 import '../../../model/conversation.dart';
 import '../../../state/conversation_controller.dart';
 import '../../../theme/dsw_theme.dart';
+import '../../primitives/tappable.dart';
 import '../../../theme/dsw_typography.dart';
 import '../../../ui/primitives/state_dot.dart';
 import '../../../model/sidebar_tab.dart';
 import '../../../state/workbench_controller.dart';
-import '../../primitives/tappable.dart';
 
 // ---- The host --------------------------------------------------------------
 
@@ -710,16 +711,14 @@ class _KillButton extends StatefulWidget {
 }
 
 class _KillButtonState extends State<_KillButton> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
     if (widget.armed) {
-      return GestureDetector(
+      // Armed: a "Confirm" text button. The visible text is its name.
+      return DswHoverTap(
         onTap: widget.onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
+        builder: (context, _, _) => Container(
           height: 20,
           padding: const EdgeInsets.symmetric(horizontal: 8),
           margin: const EdgeInsets.only(right: 4),
@@ -737,28 +736,25 @@ class _KillButtonState extends State<_KillButton> {
         ),
       );
     }
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          width: 22,
-          height: 22,
-          margin: const EdgeInsets.only(right: 4),
-          decoration: BoxDecoration(
-            color: _hovered
-                ? color.stateErrorPrimary.withValues(alpha: 0.12)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Icon(
-            LucideIcons.square,
-            size: 12,
-            color: _hovered ? color.stateErrorPrimary : color.labelSecondary,
-          ),
+    // Un-armed: a stop-square glyph; named for assistive tech.
+    return DswHoverTap(
+      onTap: widget.onTap,
+      semanticLabel: context.tr('stop'),
+      excludeSemantics: true,
+      builder: (context, hovered, _) => Container(
+        width: 22,
+        height: 22,
+        margin: const EdgeInsets.only(right: 4),
+        decoration: BoxDecoration(
+          color: hovered
+              ? color.stateErrorPrimary.withValues(alpha: 0.12)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Icon(
+          LucideIcons.square,
+          size: 12,
+          color: hovered ? color.stateErrorPrimary : color.labelSecondary,
         ),
       ),
     );
