@@ -25,10 +25,12 @@ import 'dart:io';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../model/app_settings.dart';
+import '../model/user_profile.dart';
 import '../model/workbench_prefs.dart';
 import 'app_scope.dart';
 import 'conversation_controller.dart';
 import 'details_selection.dart';
+import '../host/profile_repository.dart';
 import '../host/terminal_manager.dart';
 import 'layout_controller.dart';
 import 'model_directory.dart';
@@ -167,3 +169,23 @@ SessionIndex sessions(Ref ref) => ref.watch(appScopeProvider).sessions;
 @Riverpod(keepAlive: true)
 DetailsSelection detailsSelection(Ref ref) =>
     ref.watch(appScopeProvider).selection;
+
+// ---- Profile (ADR-0006) ---------------------------------------------------
+//
+// The identity the sidebar avatar and footer quick-menu show. Fetched, not
+// persisted (see `model/user_profile.dart`). `main` reads [userProfile] and
+// passes the resolved value down as a constructor argument — the same shape the
+// other per-controller providers use to keep riverpod out of the widget tree.
+
+/// The identity source. The mock is the live path today; `main` overrides this
+/// with a Supabase-backed repository when that lands (the seam is documented in
+/// `host/profile_repository.dart`) — the only thing the rest of the app sees is
+/// a different [userProfile] value.
+@Riverpod(keepAlive: true)
+ProfileRepository profileRepository(Ref ref) => const MockProfileRepository();
+
+/// The current user's profile, or null while loading / when signed out — the
+/// avatar then falls back to an anonymous placeholder.
+@Riverpod(keepAlive: true)
+Future<UserProfile?> userProfile(Ref ref) =>
+    ref.watch(profileRepositoryProvider).fetchProfile();

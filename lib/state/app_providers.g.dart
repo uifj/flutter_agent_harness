@@ -784,3 +784,111 @@ final class DetailsSelectionProvider
 }
 
 String _$detailsSelectionHash() => r'ceb363300cfc0ed37b3145876bc34eb14814d3cf';
+
+/// The identity source. The mock is the live path today; `main` overrides this
+/// with a Supabase-backed repository when that lands (the seam is documented in
+/// `host/profile_repository.dart`) — the only thing the rest of the app sees is
+/// a different [userProfile] value.
+
+@ProviderFor(profileRepository)
+final profileRepositoryProvider = ProfileRepositoryProvider._();
+
+/// The identity source. The mock is the live path today; `main` overrides this
+/// with a Supabase-backed repository when that lands (the seam is documented in
+/// `host/profile_repository.dart`) — the only thing the rest of the app sees is
+/// a different [userProfile] value.
+
+final class ProfileRepositoryProvider
+    extends
+        $FunctionalProvider<
+          ProfileRepository,
+          ProfileRepository,
+          ProfileRepository
+        >
+    with $Provider<ProfileRepository> {
+  /// The identity source. The mock is the live path today; `main` overrides this
+  /// with a Supabase-backed repository when that lands (the seam is documented in
+  /// `host/profile_repository.dart`) — the only thing the rest of the app sees is
+  /// a different [userProfile] value.
+  ProfileRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'profileRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$profileRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<ProfileRepository> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  ProfileRepository create(Ref ref) {
+    return profileRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ProfileRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ProfileRepository>(value),
+    );
+  }
+}
+
+String _$profileRepositoryHash() => r'fcdda6eff68dc66e22df50c50607e025181b80ee';
+
+/// The current user's profile, or null while loading / when signed out — the
+/// avatar then falls back to an anonymous placeholder.
+
+@ProviderFor(userProfile)
+final userProfileProvider = UserProfileProvider._();
+
+/// The current user's profile, or null while loading / when signed out — the
+/// avatar then falls back to an anonymous placeholder.
+
+final class UserProfileProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<UserProfile?>,
+          UserProfile?,
+          FutureOr<UserProfile?>
+        >
+    with $FutureModifier<UserProfile?>, $FutureProvider<UserProfile?> {
+  /// The current user's profile, or null while loading / when signed out — the
+  /// avatar then falls back to an anonymous placeholder.
+  UserProfileProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'userProfileProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$userProfileHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<UserProfile?> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<UserProfile?> create(Ref ref) {
+    return userProfile(ref);
+  }
+}
+
+String _$userProfileHash() => r'ab7440c762ee3eb4089008c4f31a9ae7b8cbf82d';
