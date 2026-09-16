@@ -155,80 +155,85 @@ class _DshAppState extends ConsumerState<DshApp> {
             child: AppearanceScope(
               contentWidth: contentWidth,
               expandToolCalls: doc.expandToolCalls,
-              child: AppFrame(
-                layout: ref.watch(layoutProvider),
-                sidebarBuilder: (context, collapsed, width) => Sidebar(
-                  collapsed: collapsed,
-                  width: width,
-                  sessions: ref.watch(sessionsProvider),
-                  // The identity the footer avatar shows. `.value` — the
-                  // avatar renders a placeholder until the (mock, later Supabase)
-                  // source resolves; riverpod stays out of the widget tree.
-                  profile: ref.watch(userProfileProvider).value,
-                  // The footer quick-menu edits these live (theme/locale/width
-                  // never rebuild the runtime), so it needs the document and the
-                  // save path — the same `scope.save` the settings panel uses.
-                  settings: doc,
-                  onSettingsChanged: (next) => scope.save(next),
-                  onNewSession: scope.newSession,
-                  onToggle: ref.read(layoutProvider).toggleSidebar,
-                  onOpenSession: scope.openSession,
-                  onOpenSettings: () => setState(() => _settingsOpen = true),
-                  // The frame rebuilds the sidebar on every layout write, so the
-                  // open state read here is never stale.
-                  onToggleDetails: ref.read(layoutProvider).toggleDetails,
-                  detailsOpen: ref.watch(layoutProvider).details != 0,
-                ),
-                center: DetailsSelectionScope(
-                  selection: ref.watch(detailsSelectionProvider),
-                  // The hero's picker reads the saved document, not a form, so a
-                  // folder adopted anywhere (the hero itself, the settings panel)
-                  // shows here in the same write that recorded it — `doc` above.
-                  child: HeroWorkspaceScope(
-                    workspaceRoot: doc.workspaceRoot,
-                    recent: doc.recentWorkspaces,
-                    onPick: scope.pickFromHero,
-                    onAdopt: scope.adoptRecent,
-                    child: ConversationRoot(
-                      conversation: ref.watch(conversationProvider),
-                      tail: ref.watch(streamingTailProvider),
-                      modelDirectory: ref.watch(modelDirectoryProvider),
-                      // The seat offers; the host commits. The commit is a
-                      // plain model-field save — the scope's, so the runtime
-                      // follows the choice the way any model change does.
-                      onModelSelected: scope.selectModel,
-                      // dsh-at-file's Remote, in one process: the index
-                      // runs off the UI thread and lands as entries.
-                      onLookupFiles: scope.lookupWorkspaceFiles,
+              // ADR-0006 S4: settings is a full-screen view that replaces the
+              // body, not an overlay on top of it — a state swap, still no route.
+              child: _settingsOpen
+                  ? _settingsPage(doc)
+                  : AppFrame(
+                      layout: ref.watch(layoutProvider),
+                      sidebarBuilder: (context, collapsed, width) => Sidebar(
+                        collapsed: collapsed,
+                        width: width,
+                        sessions: ref.watch(sessionsProvider),
+                        // The identity the footer avatar shows. `.value` — the
+                        // avatar renders a placeholder until the (mock, later Supabase)
+                        // source resolves; riverpod stays out of the widget tree.
+                        profile: ref.watch(userProfileProvider).value,
+                        // The footer quick-menu edits these live (theme/locale/width
+                        // never rebuild the runtime), so it needs the document and the
+                        // save path — the same `scope.save` the settings panel uses.
+                        settings: doc,
+                        onSettingsChanged: (next) => scope.save(next),
+                        onNewSession: scope.newSession,
+                        onToggle: ref.read(layoutProvider).toggleSidebar,
+                        onOpenSession: scope.openSession,
+                        onOpenSettings: () =>
+                            setState(() => _settingsOpen = true),
+                        // The frame rebuilds the sidebar on every layout write, so the
+                        // open state read here is never stale.
+                        onToggleDetails: ref.read(layoutProvider).toggleDetails,
+                        detailsOpen: ref.watch(layoutProvider).details != 0,
+                      ),
+                      center: DetailsSelectionScope(
+                        selection: ref.watch(detailsSelectionProvider),
+                        // The hero's picker reads the saved document, not a form, so a
+                        // folder adopted anywhere (the hero itself, the settings panel)
+                        // shows here in the same write that recorded it — `doc` above.
+                        child: HeroWorkspaceScope(
+                          workspaceRoot: doc.workspaceRoot,
+                          recent: doc.recentWorkspaces,
+                          onPick: scope.pickFromHero,
+                          onAdopt: scope.adoptRecent,
+                          child: ConversationRoot(
+                            conversation: ref.watch(conversationProvider),
+                            tail: ref.watch(streamingTailProvider),
+                            modelDirectory: ref.watch(modelDirectoryProvider),
+                            // The seat offers; the host commits. The commit is a
+                            // plain model-field save — the scope's, so the runtime
+                            // follows the choice the way any model change does.
+                            onModelSelected: scope.selectModel,
+                            // dsh-at-file's Remote, in one process: the index
+                            // runs off the UI thread and lands as entries.
+                            onLookupFiles: scope.lookupWorkspaceFiles,
+                          ),
+                        ),
+                      ),
+                      details: DetailsPanel(
+                        conversation: ref.watch(conversationProvider),
+                        selection: ref.watch(detailsSelectionProvider),
+                        // Closing the column keeps the selection. dsh's `closeDetails`
+                        // does the same — it is a layout write and nothing else — which
+                        // is what lets the pill on the call already selected reopen the
+                        // panel onto it.
+                        onClose: ref.read(layoutProvider).closeDetails,
+                      ),
+                      workbench: Workbench(
+                        workbench: ref.watch(workbenchProvider),
+                        conversation: ref.watch(conversationProvider),
+                        sideChat: ref.watch(sideChatProvider),
+                        terminals: ref.watch(terminalsProvider),
+                        onClose: ref.read(layoutProvider).closeWorkbench,
+                      ),
+                      bottom: Workbench(
+                        workbench: ref.watch(workbenchProvider),
+                        conversation: ref.watch(conversationProvider),
+                        sideChat: ref.watch(sideChatProvider),
+                        terminals: ref.watch(terminalsProvider),
+                        onClose: ref.read(layoutProvider).closeBottom,
+                        panel: WorkbenchPanel.bottom,
+                      ),
+                      overlay: _floats(),
                     ),
-                  ),
-                ),
-                details: DetailsPanel(
-                  conversation: ref.watch(conversationProvider),
-                  selection: ref.watch(detailsSelectionProvider),
-                  // Closing the column keeps the selection. dsh's `closeDetails`
-                  // does the same — it is a layout write and nothing else — which
-                  // is what lets the pill on the call already selected reopen the
-                  // panel onto it.
-                  onClose: ref.read(layoutProvider).closeDetails,
-                ),
-                workbench: Workbench(
-                  workbench: ref.watch(workbenchProvider),
-                  conversation: ref.watch(conversationProvider),
-                  sideChat: ref.watch(sideChatProvider),
-                  terminals: ref.watch(terminalsProvider),
-                  onClose: ref.read(layoutProvider).closeWorkbench,
-                ),
-                bottom: Workbench(
-                  workbench: ref.watch(workbenchProvider),
-                  conversation: ref.watch(conversationProvider),
-                  sideChat: ref.watch(sideChatProvider),
-                  terminals: ref.watch(terminalsProvider),
-                  onClose: ref.read(layoutProvider).closeBottom,
-                  panel: WorkbenchPanel.bottom,
-                ),
-                overlay: _overlay(doc),
-              ),
             ),
           ),
         ),
@@ -236,34 +241,32 @@ class _DshAppState extends ConsumerState<DshApp> {
     );
   }
 
-  Widget _overlay(cfg.AppSettings doc) {
-    final scope = ref.watch(appScopeProvider);
-    // The free windows first: they float over everything, and the settings
-    // panel — when it is up — floats over them.
-    final floats = FreeWindowLayer(
+  /// The free-floating windows, layered over the frame's work areas.
+  Widget _floats() {
+    return FreeWindowLayer(
       workbench: ref.watch(workbenchProvider),
       conversation: ref.watch(conversationProvider),
       sideChat: ref.watch(sideChatProvider),
       terminals: ref.watch(terminalsProvider),
     );
-    if (!_settingsOpen) return floats;
-    // The panel reads the saved document, so it has to rebuild on save —
-    // that is what turns the credential dot green without closing anything.
-    return Stack(
-      children: [
-        floats,
-        SettingsPanel(
-          settings: doc,
-          onSave: scope.save,
-          onClose: () => setState(() => _settingsOpen = false),
-          onPickFolder: scope.pickFolder,
-          workbenchPrefs: ref.watch(workbenchPrefsProvider),
-          onPrefsChange: (next) => ref.read(prefsStoreProvider).save(next),
-          // The endpoint interrogation behind "Test connection" and the
-          // model quick-select: one HTTP fetcher, shared by both.
-          modelsFetcher: const HttpModelsEndpointFetcher(),
-        ),
-      ],
+  }
+
+  /// The full-screen settings view (ADR-0006 S4). It replaces the frame body
+  /// while open — not an overlay — and reads the saved document, so a save
+  /// rebuilds it in the same write (the credential dot goes green without
+  /// closing anything).
+  Widget _settingsPage(cfg.AppSettings doc) {
+    final scope = ref.watch(appScopeProvider);
+    return SettingsPanel(
+      settings: doc,
+      onSave: scope.save,
+      onClose: () => setState(() => _settingsOpen = false),
+      onPickFolder: scope.pickFolder,
+      workbenchPrefs: ref.watch(workbenchPrefsProvider),
+      onPrefsChange: (next) => ref.read(prefsStoreProvider).save(next),
+      // The endpoint interrogation behind "Test connection" and the model
+      // quick-select: one HTTP fetcher, shared by both.
+      modelsFetcher: const HttpModelsEndpointFetcher(),
     );
   }
 }

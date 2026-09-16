@@ -18,7 +18,6 @@
 
 import 'dart:async' show TimeoutException;
 import 'dart:io' show Directory, HttpException, SocketException;
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
@@ -429,22 +428,10 @@ class _SettingsPanelState extends State<SettingsPanel> {
       bindings: {const SingleActivator(LogicalKeyboardKey.escape): _close},
       child: FocusScope(
         autofocus: true,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            GestureDetector(
-              onTap: _close,
-              child: BackdropFilter(
-                filter: ImageFilter.blur(
-                  sigmaX: DswShadow.maskBlurSigma,
-                  sigmaY: DswShadow.maskBlurSigma,
-                ),
-                child: ColoredBox(color: color.bgMask1),
-              ),
-            ),
-            _panel(color),
-          ],
-        ),
+        // ADR-0006 S4: a full-screen view (main swaps the body to this), not a
+        // masked overlay — there is no scrim to tap through, so closing is
+        // Escape or the header's close button.
+        child: _panel(color),
       ),
     );
   }
@@ -457,17 +444,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
     widget.onClose();
   }
 
-  Widget _panel(DswAlias color) => LayoutBuilder(
-    builder: (context, constraints) => Container(
-      width: 800,
-      height: constraints.maxHeight.clamp(0.0, 800.0) - 48,
-      constraints: BoxConstraints(maxWidth: constraints.maxWidth - 48),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: color.bgLayer2,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: DswShadow.lv3,
-      ),
+  Widget _panel(DswAlias color) => ColoredBox(
+    color: color.bgLayer2,
+    child: SafeArea(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
