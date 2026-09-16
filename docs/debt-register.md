@@ -51,6 +51,7 @@
 | --- | --- | --- | --- | --- |
 | — | AI 代理配置（`.qoder`/`.trae`/`AGENTS.md`）内容全属另一项目 | CFG | 按本仓库事实重写三份规则与入口文档，并裁掉 7 个与现状冲突的 skill | 2026-09-15 |
 | — | 设置页切主题/中英文失效、首页选文件夹后状态不更新 | DEF | riverpod read-seam 误用 `ref.notifyListeners()`：函数式 provider 下它只重通知**旧缓存值**、不重跑 body，故 store 保存传不到读者。改 `ref.invalidateSelf()`（重跑 body 返回新值）。`state/app_providers.dart`。新增 `test/app_providers_test.dart` 用真 store 断言 store→provider 传播（正是能抓住此 bug 的守卫——旧的 widget 测试直接构造 controller、且没有 store→provider 传播断言，故漏网）。本机 `flutter run -d windows` 复验中 | 2026-09-16 |
+| — | ADR-0006 落地后追加审计 7 项发现（F1 快捷菜单键盘不可达 / F2 OverlayEntry 无属主泄漏 / F3 无 Escape / F4 触发器语义标签错 / F5 收起栏菜单不可达 / F6 全屏设置内容左贴 / F7 回调内 ref 惯例） | DEF·A11Y | 同批修复：菜单芯片/行全部 `DswHoverTap` 化（键盘激活 + `Semantics(button,toggled)` + hover 洗色）、菜单打开即 `requestFocus`（锚点节点）+ Escape 绑定关闭、entry 归 sidebar State 持有（dispose/打开设置前移除）、新 i18n 键 `quickPreferences`、rail 头像同触发器、设置内容列 `Center` 化、`ref.read` 惯例。测试 +2（键盘激活 / Escape）。逐项证据与修复对照见 [audit-adr-0006-followup.md](audit-adr-0006-followup.md) | 2026-09-16 |
 
 > riverpod 坑（记入 memory/规则）：把 `ChangeNotifier`/`Listenable` 桥成**函数式 provider** 时，值同步用 `ref.invalidateSelf()`，**不是** `ref.notifyListeners()`（后者不重跑函数式 body）。`main.dart` 迁纯 Consumer 树时删掉的 `ListenableBuilder(settings/prefs)` 靠这两个 read-seam 顶替，一旦用错 API 就静默失效、且不进运行日志（非异常），只能真机点出来。
 

@@ -91,6 +91,9 @@ class _SidebarState extends State<Sidebar> {
   /// Anchors the footer quick-menu to the profile row.
   final _menuLink = LayerLink();
 
+  /// The open quick-menu's overlay entry, owned by this state (audit F2).
+  OverlayEntry? _quickMenu;
+
   /// The last width the column had while expanded, held so the fading content
   /// keeps its expanded layout instead of reflowing into the rail.
   double _lastWideWidth = sidebarDefault;
@@ -118,6 +121,11 @@ class _SidebarState extends State<Sidebar> {
   @override
   void dispose() {
     _settleTimer?.cancel();
+    // The quick-menu overlay entry is owned here (audit F2): the sidebar going
+    // away — a body swap to the full settings view, most commonly — must take
+    // its popup with it, or the menu floats over the new surface.
+    if (_quickMenu != null && _quickMenu!.mounted) _quickMenu!.remove();
+    _quickMenu = null;
     super.dispose();
   }
 
@@ -354,7 +362,9 @@ class _SidebarState extends State<Sidebar> {
                 children: [
                   Expanded(
                     child: _Pressable(
-                      onTap: widget.onOpenSettings,
+                      // Through the safe wrapper: opening the full view with the
+                      // quick-menu up must take the popup along (audit F2).
+                      onTap: _openSettingsSafe,
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
                         height: 32,
@@ -385,10 +395,33 @@ class _SidebarState extends State<Sidebar> {
           )
         : Column(
             children: [
-              _UserAvatar(profile: widget.profile, color: color, size: 32),
+              // The rail avatar is the same quick-menu trigger as the wide
+              // profile row (audit F5) — collapsing the sidebar must not take
+              // the menu away.
+              CompositedTransformTarget(
+                link: _menuLink,
+                child: DswHoverTap(
+                  onTap: _canMenu ? _openQuickMenu : null,
+                  semanticLabel: context.tr('quickPreferences'),
+                  builder: (context, hovered, _) => Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: hovered && _canMenu
+                          ? color.interactiveBgHover
+                          : null,
+                    ),
+                    padding: const EdgeInsets.all(2),
+                    child: _UserAvatar(
+                      profile: widget.profile,
+                      color: color,
+                      size: 32,
+                    ),
+                  ),
+                ),
+              ),
               const SizedBox(height: 6),
               _IconButton(
-                onTap: widget.onOpenSettings,
+                onTap: _openSettingsSafe,
                 wide: false,
                 tooltip: context.tr('settings'),
                 builder: (_) => Icon(
@@ -403,28 +436,49 @@ class _SidebarState extends State<Sidebar> {
           ),
   );
 
+  /// Whether the quick-menu has everything it needs: a document and a save
+  /// path. False in tests that build a bare Sidebar — the trigger rests inert.
+  bool get _canMenu =>
+      widget.settings != null && widget.onSettingsChanged != null;
+
+  /// Opens (or re-opens) the footer quick-menu, owning its overlay entry
+  /// (audit F2): an existing entry is removed first, so the menu can never
+  /// stack on itself.
+  void _openQuickMenu() {
+    if (!_canMenu) return;
+    if (_quickMenu != null && _quickMenu!.mounted) _quickMenu!.remove();
+    _quickMenu = showSettingsQuickMenu(
+      context: context,
+      link: _menuLink,
+      initial: widget.settings!,
+      onChanged: widget.onSettingsChanged!,
+      onOpenSettings: _openSettingsSafe,
+    );
+  }
+
+  /// Opens the full settings view, closing the quick-menu first — the body
+  /// swap unmounts this sidebar, and a leftover entry would float over the new
+  /// surface (audit F2).
+  void _openSettingsSafe() {
+    if (_quickMenu != null && _quickMenu!.mounted) _quickMenu!.remove();
+    _quickMenu = null;
+    widget.onOpenSettings();
+  }
+
   /// The footer's identity line: the avatar, and beside it the display name and
   /// email. It is the quick-menu trigger (opens [showSettingsQuickMenu] when a
   /// document is wired); when the profile is still loading or absent it collapses
   /// to the avatar.
   Widget _profileRow(DswAlias color) {
     final profile = widget.profile;
-    final canMenu = widget.settings != null && widget.onSettingsChanged != null;
+    final canMenu = _canMenu;
     return CompositedTransformTarget(
       link: _menuLink,
       child: DswHoverTap(
         // The whole identity line is the quick-menu trigger; with no document
         // wired (tests) it is inert.
-        onTap: canMenu
-            ? () => showSettingsQuickMenu(
-                context: context,
-                link: _menuLink,
-                initial: widget.settings!,
-                onChanged: widget.onSettingsChanged!,
-                onOpenSettings: widget.onOpenSettings,
-              )
-            : null,
-        semanticLabel: context.tr('settings'),
+        onTap: canMenu ? _openQuickMenu : null,
+        semanticLabel: context.tr('quickPreferences'),
         builder: (context, hovered, _) => Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: BoxDecoration(

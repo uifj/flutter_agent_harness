@@ -12,17 +12,32 @@
 // so a chip's selection moves on the same tap that calls [onChanged], without
 // waiting for the provider round-trip; the mirror and the document re-converge on
 // the next open.
+//
+// The caller OWNS the returned entry (2026-09-16 audit F2): it must remove it
+// when its own lifetime ends — the sidebar removes it on dispose and before
+// opening the full settings view — or a body swap would leave this menu floating
+// over the new surface.
+//
+// Accessibility (audit F1/F3): every option is a [DswHoverTap] — focusable,
+// Enter/Space-activatable, `Semantics(button:)` with the selected chip announcing
+// its state — and the menu closes on Escape, so opening it from the keyboard
+// never traps the user inside it.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show LogicalKeyboardKey;
 
 import '../../../l10n/locales.dart';
 import '../../../model/app_settings.dart' as settings;
 import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
+import '../../primitives/tappable.dart';
 
-/// Shows the quick-menu anchored above [link]. [onChanged] receives the updated
-/// document on every chip tap; [onOpenSettings] switches to the full view.
-void showSettingsQuickMenu({
+/// Shows the quick-menu anchored to [link] and returns its entry. The CALLER
+/// owns the entry: remove it on dispose / before any body swap.
+///
+/// [onChanged] receives the updated document on every chip tap; [onOpenSettings]
+/// switches to the full view (the entry is already removed when it runs).
+OverlayEntry showSettingsQuickMenu({
   required BuildContext context,
   required LayerLink link,
   required settings.AppSettings initial,
@@ -44,9 +59,14 @@ void showSettingsQuickMenu({
     ),
   );
   overlay.insert(entry);
+  return entry;
 }
 
-class _QuickMenuOverlay extends StatelessWidget {
+/// The overlay surface. A StatefulWidget so the menu can TAKE focus on open:
+/// key events are dispatched to the focused node and bubble up, and without an
+/// explicit request the focus stays wherever the trigger left it — Escape would
+/// never reach this subtree's bindings (that was audit F3's original failure).
+class _QuickMenuOverlay extends StatefulWidget {
   const _QuickMenuOverlay({
     required this.link,
     required this.initial,
@@ -62,6 +82,29 @@ class _QuickMenuOverlay extends StatelessWidget {
   final VoidCallback onDismiss;
 
   @override
+  State<_QuickMenuOverlay> createState() => _QuickMenuOverlayState();
+}
+
+class _QuickMenuOverlayState extends State<_QuickMenuOverlay> {
+  final _anchor = FocusNode(debugLabel: 'quickMenuAnchor');
+
+  @override
+  void initState() {
+    super.initState();
+    // After the first frame: requestFocus needs the node to be attached, and
+    // autofocus alone does not steal focus from an already-focused node.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _anchor.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _anchor.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final color = context.dsw;
     return Stack(
@@ -70,32 +113,45 @@ class _QuickMenuOverlay extends StatelessWidget {
         Positioned.fill(
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: onDismiss,
+            onTap: widget.onDismiss,
           ),
         ),
         Positioned(
           child: CompositedTransformFollower(
-            link: link,
+            link: widget.link,
             // Menu sits above the footer trigger, left-aligned to it.
             targetAnchor: Alignment.topLeft,
             followerAnchor: Alignment.bottomLeft,
             offset: const Offset(0, -8),
-            child: Material(
-              elevation: 0,
-              color: Colors.transparent,
-              child: Container(
-                width: 264,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: color.bgLayer2,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: color.borderL2),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: _QuickMenu(
-                  initial: initial,
-                  onChanged: onChanged,
-                  onOpenSettings: onOpenSettings,
+            child: CallbackShortcuts(
+              // The keyboard path out of the menu (audit F3): Escape closes,
+              // matching the settings panel's own binding. The anchor node
+              // below is what routes key events up through this bindings map.
+              bindings: {
+                const SingleActivator(LogicalKeyboardKey.escape):
+                    widget.onDismiss,
+              },
+              child: Focus(
+                focusNode: _anchor,
+                skipTraversal: true,
+                child: Material(
+                  elevation: 0,
+                  color: Colors.transparent,
+                  child: Container(
+                    width: 264,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: color.bgLayer2,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: color.borderL2),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: _QuickMenu(
+                      initial: widget.initial,
+                      onChanged: widget.onChanged,
+                      onOpenSettings: widget.onOpenSettings,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -228,6 +284,9 @@ class _Group<T> extends StatelessWidget {
   }
 }
 
+/// One choice chip. A [DswHoverTap], not a bare GestureDetector (audit F1):
+/// keyboard-activatable, announces as a button with its selected state, and the
+/// unselected hover wash matches every other hoverable in the app.
 class _Chip extends StatelessWidget {
   const _Chip({
     required this.label,
@@ -242,12 +301,19 @@ class _Chip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    return GestureDetector(
+    return DswHoverTap(
       onTap: onTap,
-      child: Container(
+      toggled: selected,
+      builder: (context, hovered, _) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: selected ? color.brandPrimary : color.bgLayer3,
+          // Selected holds the brand fill; unselected takes the standard hover
+          // wash, the same tint every other hover affordance in the app uses.
+          color: selected
+              ? color.brandPrimary
+              : hovered
+              ? color.interactiveBgHover
+              : color.bgLayer3,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: selected ? color.brandPrimary : color.borderL2,
@@ -264,6 +330,8 @@ class _Chip extends StatelessWidget {
   }
 }
 
+/// The hand-off row to the full settings view. Same [DswHoverTap] treatment as
+/// the chips (audit F1) — a keyboard user can Tab here and press Enter.
 class _OpenSettingsRow extends StatelessWidget {
   const _OpenSettingsRow({required this.onTap});
 
@@ -272,11 +340,13 @@ class _OpenSettingsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return DswHoverTap(
       onTap: onTap,
-      child: Padding(
+      builder: (context, hovered, _) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: hovered ? color.interactiveBgHover : null,
+        ),
         child: Text(
           context.tr('openSettings'),
           style: DswType.s14.copyWith(color: color.labelPrimary),

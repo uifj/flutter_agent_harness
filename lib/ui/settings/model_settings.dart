@@ -577,22 +577,28 @@ class _SettingsPanelState extends State<SettingsPanel> {
       Expanded(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-          child: ConstrainedBox(
-            // `.section` caps at 720 so a 32px field never stretches to a width
-            // no value in it would ever reach.
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                ...switch (_section) {
-                  _Section.general => _general(color),
-                  _Section.appearance => _appearanceSection(color),
-                  _Section.models => _models(color),
-                  _Section.workspace => _workspaceSection(color),
-                  _Section.workbench => _workbenchSection(color),
-                  _Section.extensions => _extensionsSection(color),
-                },
-              ],
+          // Centered (2026-09-16 audit F6): in the 800px overlay era a
+          // stretch-aligned 720 column was fine, but on a full-screen surface
+          // it hugged the left edge and left the whole right half empty.
+          // Center keeps the readable line length without the lopsided look.
+          child: Center(
+            child: ConstrainedBox(
+              // `.section` caps at 720 so a 32px field never stretches to a width
+              // no value in it would ever reach.
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ...switch (_section) {
+                    _Section.general => _general(color),
+                    _Section.appearance => _appearanceSection(color),
+                    _Section.models => _models(color),
+                    _Section.workspace => _workspaceSection(color),
+                    _Section.workbench => _workbenchSection(color),
+                    _Section.extensions => _extensionsSection(color),
+                  },
+                ],
+              ),
             ),
           ),
         ),

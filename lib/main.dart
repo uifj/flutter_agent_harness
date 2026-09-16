@@ -172,8 +172,12 @@ class _DshAppState extends ConsumerState<DshApp> {
                         // The footer quick-menu edits these live (theme/locale/width
                         // never rebuild the runtime), so it needs the document and the
                         // save path — the same `scope.save` the settings panel uses.
+                        // `ref.read` in the callback (audit F7): the save path is an
+                        // action, not data, and keepAlive makes it identical either
+                        // way — this is the riverpod-lint-conventional spelling.
                         settings: doc,
-                        onSettingsChanged: (next) => scope.save(next),
+                        onSettingsChanged: (next) =>
+                            ref.read(appScopeProvider).save(next),
                         onNewSession: scope.newSession,
                         onToggle: ref.read(layoutProvider).toggleSidebar,
                         onOpenSession: scope.openSession,
