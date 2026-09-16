@@ -20,6 +20,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import '../../l10n/locales.dart';
 import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_theme.dart';
+import '../primitives/tappable.dart';
 import '../../theme/dsw_typography.dart';
 import '../primitives/capsule_button.dart';
 
@@ -70,15 +71,8 @@ class HeroWorkspaceScope extends InheritedWidget {
 /// projects between sessions. A scope that is absent hides the picker
 /// entirely: the host is the app's to mount, and a missing one means the app
 /// chose not to offer the seat.
-class HeroWorkspacePicker extends StatefulWidget {
+class HeroWorkspacePicker extends StatelessWidget {
   const HeroWorkspacePicker({super.key});
-
-  @override
-  State<HeroWorkspacePicker> createState() => _HeroWorkspacePickerState();
-}
-
-class _HeroWorkspacePickerState extends State<HeroWorkspacePicker> {
-  bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
@@ -95,50 +89,45 @@ class _HeroWorkspacePickerState extends State<HeroWorkspacePicker> {
       );
     }
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: (_) => _openMenu(context, scope),
-        child: AnimatedContainer(
-          duration: DswMotion.respecting(context, DswMotion.fast),
-          curve: DswMotion.easeInOut,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: _hovered ? color.interactiveBgHover : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: _hovered ? color.borderL2 : color.borderL1,
+    // The row opens the recents menu. Keyboard: Enter/Space activates the same
+    // menu (previously a tap-down-only gesture, unreachable by keyboard).
+    return DswHoverTap(
+      onTap: () => _openMenu(context, scope),
+      builder: (context, hovered, _) => AnimatedContainer(
+        duration: DswMotion.respecting(context, DswMotion.fast),
+        curve: DswMotion.easeInOut,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: hovered ? color.interactiveBgHover : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: hovered ? color.borderL2 : color.borderL1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              LucideIcons.folder_open,
+              size: 14,
+              color: color.labelSecondary,
             ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                LucideIcons.folder_open,
-                size: 14,
-                color: color.labelSecondary,
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                scope.workspaceRoot == null
+                    ? context.tr('chooseWorkspaceFolder')
+                    : scope.workspaceRoot!.split('/').last,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: DswType.xs13.copyWith(color: color.labelPrimary),
               ),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  scope.workspaceRoot == null
-                      ? context.tr('chooseWorkspaceFolder')
-                      : scope.workspaceRoot!.split('/').last,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: DswType.xs13.copyWith(color: color.labelPrimary),
-                ),
-              ),
-              const SizedBox(width: 6),
-              Icon(
-                LucideIcons.chevron_down,
-                size: 13,
-                color: color.labelTertiary,
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 6),
+            Icon(
+              LucideIcons.chevron_down,
+              size: 13,
+              color: color.labelTertiary,
+            ),
+          ],
         ),
       ),
     );

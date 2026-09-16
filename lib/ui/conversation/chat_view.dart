@@ -17,9 +17,9 @@ import '../../l10n/locales.dart';
 import '../../model/conversation.dart';
 import '../../state/conversation_controller.dart';
 import '../../state/streaming_tail.dart';
-import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_static.dart';
 import '../../theme/dsw_theme.dart';
+import '../primitives/tappable.dart';
 import '../../theme/dsw_typography.dart';
 import 'conversation_root.dart';
 import 'message_item.dart';
@@ -362,47 +362,41 @@ class _TurnStatusState extends State<_TurnStatus>
 
 /// `ChatView.module.css:178-197`: a floating 34px control that appears only once
 /// the reader has scrolled away from the tip.
-class _ToBottomButton extends StatefulWidget {
+class _ToBottomButton extends StatelessWidget {
   const _ToBottomButton({required this.onTap});
 
   final VoidCallback onTap;
 
   @override
-  State<_ToBottomButton> createState() => _ToBottomButtonState();
-}
-
-class _ToBottomButtonState extends State<_ToBottomButton> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
     final color = context.dsw;
+    const label = 'Back to bottom';
     return Tooltip(
-      message: 'Back to bottom',
+      message: label,
       waitDuration: const Duration(milliseconds: 500),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
-          onTap: widget.onTap,
-          behavior: HitTestBehavior.opaque,
-          child: _circle(color),
+      child: DswHoverTap(
+        onTap: onTap,
+        semanticLabel: label,
+        excludeSemantics: true,
+        builder: (context, hovered, _) => Container(
+          width: 34,
+          height: 34,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: hovered
+                ? color.buttonFloatingHover
+                : color.buttonFloatingFill,
+            border: Border.all(color: color.borderL2),
+            borderRadius: BorderRadius.circular(100),
+            boxShadow: DswShadow.lv2,
+          ),
+          child: Icon(
+            LucideIcons.arrow_down,
+            size: 16,
+            color: color.labelPrimary,
+          ),
         ),
       ),
     );
   }
-
-  Widget _circle(DswAlias color) => Container(
-    width: 34,
-    height: 34,
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      color: _hovered ? color.buttonFloatingHover : color.buttonFloatingFill,
-      border: Border.all(color: color.borderL2),
-      borderRadius: BorderRadius.circular(100),
-      boxShadow: DswShadow.lv2,
-    ),
-    child: Icon(LucideIcons.arrow_down, size: 16, color: color.labelPrimary),
-  );
 }

@@ -488,25 +488,17 @@ class _Pressable extends StatefulWidget {
 }
 
 class _PressableState extends State<_Pressable> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final wash = widget.hoverColor ?? context.dsw.interactiveBgHover;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        behavior: HitTestBehavior.opaque,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: _hovered ? wash : null,
-            borderRadius: widget.borderRadius,
-          ),
-          child: widget.child,
+    return DswHoverTap(
+      onTap: widget.onTap,
+      builder: (context, hovered, _) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: hovered ? wash : null,
+          borderRadius: widget.borderRadius,
         ),
+        child: widget.child,
       ),
     );
   }

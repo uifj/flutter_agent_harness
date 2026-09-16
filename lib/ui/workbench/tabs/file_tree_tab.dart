@@ -466,7 +466,7 @@ class _FileTreeTabState extends State<FileTreeTab> {
   );
 }
 
-class _TreeRow extends StatefulWidget {
+class _TreeRow extends StatelessWidget {
   const _TreeRow({
     required this.row,
     required this.expanded,
@@ -491,22 +491,8 @@ class _TreeRow extends StatefulWidget {
   final void Function(Offset position)? onSecondaryTap;
 
   @override
-  State<_TreeRow> createState() => _TreeRowState();
-}
-
-class _TreeRowState extends State<_TreeRow> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    final row = widget.row;
-    final fill = widget.selected
-        ? color.sidebarNavItemActive
-        : _hovered
-        ? color.sidebarNavItemHover
-        : Colors.transparent;
-
     final content = Row(
       children: [
         SizedBox(width: 6 + row.depth * _indent),
@@ -515,7 +501,7 @@ class _TreeRowState extends State<_TreeRow> {
           child: Center(
             child: row.isDirectory
                 ? AnimatedRotation(
-                    turns: widget.expanded ? 0.25 : 0,
+                    turns: expanded ? 0.25 : 0,
                     duration: DswMotion.respecting(context, DswMotion.fast),
                     curve: DswMotion.easeInOut,
                     child: Icon(
@@ -532,9 +518,9 @@ class _TreeRowState extends State<_TreeRow> {
           child: Text(
             p.basename(row.path),
             style: DswType.xs13.copyWith(
-              color: widget.error != null
+              color: error != null
                   ? color.stateErrorPrimary
-                  : widget.selected
+                  : selected
                   ? color.labelPrimary
                   : color.labelSecondary,
             ),
@@ -546,25 +532,26 @@ class _TreeRowState extends State<_TreeRow> {
       ],
     );
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        onSecondaryTapDown: widget.onSecondaryTap == null
-            ? null
-            : (details) => widget.onSecondaryTap!(details.globalPosition),
-        behavior: HitTestBehavior.opaque,
-        child: Tooltip(
-          // Only the failing rows and the truncated ones need a tooltip, but
-          // deciding which are truncated needs a layout pass; the full path is
-          // useful on every row anyway.
-          message: widget.error == null
-              ? row.path
-              : '${row.path}\n${widget.error}',
-          waitDuration: const Duration(milliseconds: 600),
-          child: ColoredBox(color: fill, child: content),
+    return DswHoverTap(
+      onTap: onTap,
+      onSecondaryTapDown: onSecondaryTap == null
+          ? null
+          : (details) => onSecondaryTap!(details.globalPosition),
+      semanticLabel: row.path,
+      excludeSemantics: true,
+      builder: (context, hovered, _) => Tooltip(
+        // Only the failing rows and the truncated ones need a tooltip, but
+        // deciding which are truncated needs a layout pass; the full path is
+        // useful on every row anyway.
+        message: error == null ? row.path : '${row.path}\n$error',
+        waitDuration: const Duration(milliseconds: 600),
+        child: ColoredBox(
+          color: selected
+              ? color.sidebarNavItemActive
+              : hovered
+              ? color.sidebarNavItemHover
+              : Colors.transparent,
+          child: content,
         ),
       ),
     );

@@ -21,6 +21,7 @@ import '../../state/details_selection.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_theme.dart';
+import '../primitives/tappable.dart';
 import '../../theme/dsw_typography.dart';
 import '../primitives/disclosure_row.dart';
 import '../primitives/row_sweep.dart';
@@ -227,18 +228,11 @@ class _ToolCardState extends State<ToolCard> {
 /// trajectory, so it points at the details column instead — the same gesture
 /// ("show me more about this call") landing on the richest view there is here,
 /// and the seat dsh's own `openDetails` was cut for.
-class _InspectPill extends StatefulWidget {
+class _InspectPill extends StatelessWidget {
   const _InspectPill({required this.revealed, required this.onTap});
 
   final bool revealed;
   final VoidCallback onTap;
-
-  @override
-  State<_InspectPill> createState() => _InspectPillState();
-}
-
-class _InspectPillState extends State<_InspectPill> {
-  bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
@@ -247,51 +241,42 @@ class _InspectPillState extends State<_InspectPill> {
       // `margin: 4px 0 2px 4px`.
       padding: const EdgeInsets.only(left: 4, top: 4, bottom: 2),
       child: AnimatedOpacity(
-        opacity: widget.revealed ? 1 : 0,
+        opacity: revealed ? 1 : 0,
         duration: DswMotion.respecting(context, DswMotion.fast),
         curve: DswMotion.easeInOut,
-        // Not wrapped in an `IgnorePointer` while hidden, matching CSS: an
-        // `opacity: 0` button still takes clicks, and the only way to reach this
-        // one is to hover the row, which reveals it.
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          onEnter: (_) => setState(() => _hovered = true),
-          onExit: (_) => setState(() => _hovered = false),
-          child: GestureDetector(
-            onTap: widget.onTap,
-            behavior: HitTestBehavior.opaque,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                // Base, not the overlay token: the overlay is a raised surface
-                // and reads too heavy for a quiet in-flow affordance.
-                color: _hovered ? color.interactiveBgHoverSolid : color.bgBase,
-                border: Border.all(color: color.borderL2),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    // `IconInspectOutline12` is the `</>` glyph: two chevrons
-                    // around a slash.
-                    LucideIcons.code,
-                    size: 12,
-                    color: _hovered ? color.labelPrimary : color.labelSecondary,
+        child: DswHoverTap(
+          onTap: onTap,
+          semanticLabel: 'Inspect',
+          excludeSemantics: true,
+          builder: (context, hovered, _) => Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              // Base, not the overlay token: the overlay is a raised surface
+              // and reads too heavy for a quiet in-flow affordance.
+              color: hovered ? color.interactiveBgHoverSolid : color.bgBase,
+              border: Border.all(color: color.borderL2),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  // `IconInspectOutline12` is the `</>` glyph: two chevrons
+                  // around a slash.
+                  LucideIcons.code,
+                  size: 12,
+                  color: hovered ? color.labelPrimary : color.labelSecondary,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Inspect',
+                  style: DswType.xs13.copyWith(
+                    fontSize: 11,
+                    height: 16 / 11,
+                    color: hovered ? color.labelPrimary : color.labelSecondary,
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Inspect',
-                    style: DswType.xs13.copyWith(
-                      fontSize: 11,
-                      height: 16 / 11,
-                      color: _hovered
-                          ? color.labelPrimary
-                          : color.labelSecondary,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

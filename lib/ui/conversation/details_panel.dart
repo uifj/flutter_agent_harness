@@ -22,6 +22,7 @@ import '../../state/conversation_controller.dart';
 import '../../state/details_selection.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_theme.dart';
+import '../primitives/tappable.dart';
 import '../../theme/dsw_typography.dart';
 import '../primitives/code_block.dart';
 
@@ -213,41 +214,31 @@ class _DetailsPanelState extends State<DetailsPanel> {
 }
 
 /// `.close`: a 28px circle, hover-filled, holding the 14px cross the source draws
-/// as a two-stroke path.
-class _CloseButton extends StatefulWidget {
+/// as a two-stroke path. Named by the `closeDetails` tooltip for assistive tech.
+class _CloseButton extends StatelessWidget {
   const _CloseButton({required this.onTap});
 
   final VoidCallback onTap;
 
   @override
-  State<_CloseButton> createState() => _CloseButtonState();
-}
-
-class _CloseButtonState extends State<_CloseButton> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Tooltip(
-          message: context.tr('closeDetails'),
-          child: Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: _hovered ? color.interactiveBgHover : null,
-            ),
-            child: Center(
-              child: Icon(LucideIcons.x, size: 14, color: color.labelSecondary),
-            ),
+    final label = context.tr('closeDetails');
+    return Tooltip(
+      message: label,
+      child: DswHoverTap(
+        onTap: onTap,
+        semanticLabel: label,
+        excludeSemantics: true,
+        builder: (context, hovered, _) => Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: hovered ? color.interactiveBgHover : null,
+          ),
+          child: Center(
+            child: Icon(LucideIcons.x, size: 14, color: color.labelSecondary),
           ),
         ),
       ),
