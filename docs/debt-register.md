@@ -12,6 +12,7 @@
 | ADR-0004 | 亮色正文对比度 AA 修正层（A 新增 AA 别名 / B 显式豁免） | CFG | P1 | PROPOSED（待签收；回归门禁已先行落地） | 2026-09-16 | [链接](adr/ADR-0004-cfg-light-contrast-aa.md) |
 | ADR-0005 | 以 starkins 设置页为蓝本重建设置界面（重接本项目栈） | ARC | P1 | RESOLVED（S1–S5 落地，S5 真机走查通过；未接线的 previewMode/字体/皮肤见下方观察行） | 2026-09-16 | [链接](adr/ADR-0005-arc-starkins-settings-rebuild.md) |
 | ADR-0006 | 设置面重构：全屏设置视图 + 底部级联快捷菜单 + 用户 Profile（预留 Supabase） | ARC | P1 | RESOLVED（S1–S5 已落 develop，S5 Windows 真机走查通过；Supabase 仅预留接缝未接） | 2026-09-16 | [链接](adr/ADR-0006-arc-settings-fullscreen-profile.md) |
+| ADR-0007 | 工作区模式切换（企划/代理）+ 企划 Markdown 工作台 + 扩展面板（board_panel） | ARC | P1 | ACCEPTED（S1–S5 待实施；board_panel 入库为 ADR-0001 先例的记录在案例外） | 2026-09-16 | [链接](adr/ADR-0007-arc-workspace-modes-extensions.md) |
 
 > 2026-09-15 设计层审计（方法：design-review 插件手动审查模型）产出了完整证据链，见 [design-audit-2026-09.md](design-audit-2026-09.md)。阻断级/ majors 的处置归属：键盘无障碍（A1/A3）与表单控件缺口（C1）并入 ADR-0002 实施；A2（对比度）与文本缩放留下方观察表。
 
