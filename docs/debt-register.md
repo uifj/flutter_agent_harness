@@ -8,7 +8,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | ADR-0001 | vendored `packages/flutter-shadcn-ui` 不进版本库 | DEP | P2 | RESOLVED @ d72ff4c | 2026-09-15 | [链接](adr/ADR-0001-dep-vendored-shadcn-ui.md) |
 | ADR-0002 | develop 分支改造为 riverpod + shadcn_ui | ARC | P1 | IN-PROGRESS（修订 1：注解模式，riverpod 家族 3.2.1） | 2026-09-15 | [链接](adr/ADR-0002-arc-riverpod-shadcn-migration.md) |
-| ADR-0003 | 增加 Windows/Linux 桌面平台目标（本机可验证） | ARC | P2 | ACCEPTED（本机已跑通 Windows，待提交回填 commit） | 2026-09-16 | [链接](adr/ADR-0003-arc-windows-linux-platforms.md) |
+| ADR-0003 | 增加 Windows/Linux 桌面平台目标（本机可验证） | ARC | P2 | RESOLVED @ 54e75d7 | 2026-09-16 | [链接](adr/ADR-0003-arc-windows-linux-platforms.md) |
 | ADR-0004 | 亮色正文对比度 AA 修正层（A 新增 AA 别名 / B 显式豁免） | CFG | P1 | PROPOSED（待签收；回归门禁已先行落地） | 2026-09-16 | [链接](adr/ADR-0004-cfg-light-contrast-aa.md) |
 
 > 2026-09-15 设计层审计（方法：design-review 插件手动审查模型）产出了完整证据链，见 [design-audit-2026-09.md](design-audit-2026-09.md)。阻断级/ majors 的处置归属：键盘无障碍（A1/A3）与表单控件缺口（C1）并入 ADR-0002 实施；A2（对比度）与文本缩放留下方观察表。

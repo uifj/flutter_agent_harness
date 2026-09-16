@@ -1,12 +1,12 @@
 # ADR-0003: 增加 Windows（及 Linux）桌面平台目标
 
-- **状态**: ACCEPTED
+- **状态**: RESOLVED
 - **分类**: ARC
 - **优先级**: P2
 - **影响维度**: 生产功能（跨平台验证）· 认知障碍（规则与现实一致性）
 - **日期**: 2026-09-16
 - **来源**: 用户决策（用 `flutter create .` 增加平台目标并在当前 Windows 设备上真机运行；macOS 后续再验）
-- **修复 commit**: —（实施后回填）
+- **修复 commit**: 54e75d7（windows/linux 脚手架 + browser_tab 门控）；后续无障碍推进见 16bed63
 
 ## 背景（Context）
 
