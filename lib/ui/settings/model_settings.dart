@@ -1857,33 +1857,25 @@ class _RowEditButton extends StatefulWidget {
 }
 
 class _RowEditButtonState extends State<_RowEditButton> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: DswMotion.respecting(context, DswMotion.fast),
-          height: 28,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: BoxDecoration(
-            color: _hovered ? color.interactiveBgHoverSolid : null,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: color.borderL2),
-          ),
-          child: Center(
-            child: Text(
-              widget.expanded ? context.tr('close') : context.tr('edit'),
-              style: DswType.xxs12.copyWith(
-                color: _hovered ? color.labelPrimary : color.labelSecondary,
-              ),
+    return DswHoverTap(
+      onTap: widget.onTap,
+      builder: (context, hovered, _) => AnimatedContainer(
+        duration: DswMotion.respecting(context, DswMotion.fast),
+        height: 28,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: hovered ? color.interactiveBgHoverSolid : null,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.borderL2),
+        ),
+        child: Center(
+          child: Text(
+            widget.expanded ? context.tr('close') : context.tr('edit'),
+            style: DswType.xxs12.copyWith(
+              color: hovered ? color.labelPrimary : color.labelSecondary,
             ),
           ),
         ),
@@ -1913,8 +1905,6 @@ class _CustomizedDisclosure extends StatefulWidget {
 }
 
 class _CustomizedDisclosureState extends State<_CustomizedDisclosure> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
@@ -1926,43 +1916,35 @@ class _CustomizedDisclosureState extends State<_CustomizedDisclosure> {
           decoration: BoxDecoration(
             border: Border(top: BorderSide(color: color.borderL2)),
           ),
-          child: MouseRegion(
-            cursor: SystemMouseCursors.click,
-            onEnter: (_) => setState(() => _hovered = true),
-            onExit: (_) => setState(() => _hovered = false),
-            child: GestureDetector(
-              onTap: widget.onToggle,
-              behavior: HitTestBehavior.opaque,
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AnimatedRotation(
-                      turns: widget.open ? 0.25 : 0,
-                      duration: DswMotion.respecting(context, DswMotion.fast),
-                      child: Icon(
-                        LucideIcons.chevron_right,
-                        size: 14,
-                        color: _hovered
-                            ? color.labelPrimary
-                            : color.labelSecondary,
-                      ),
+          child: DswHoverTap(
+            onTap: widget.onToggle,
+            builder: (context, hovered, _) => Container(
+              padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(6)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AnimatedRotation(
+                    turns: widget.open ? 0.25 : 0,
+                    duration: DswMotion.respecting(context, DswMotion.fast),
+                    child: Icon(
+                      LucideIcons.chevron_right,
+                      size: 14,
+                      color: hovered
+                          ? color.labelPrimary
+                          : color.labelSecondary,
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      context.tr('customized'),
-                      style: DswType.xxsStrong12.copyWith(
-                        color: _hovered
-                            ? color.labelPrimary
-                            : color.labelSecondary,
-                      ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    context.tr('customized'),
+                    style: DswType.xxsStrong12.copyWith(
+                      color: hovered
+                          ? color.labelPrimary
+                          : color.labelSecondary,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -2144,33 +2126,27 @@ class _RemoveButton extends StatefulWidget {
 }
 
 class _RemoveButtonState extends State<_RemoveButton> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
     return Tooltip(
       message: context.tr('removeServer'),
       waitDuration: const Duration(milliseconds: 500),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
-          onTap: widget.onTap,
-          behavior: HitTestBehavior.opaque,
-          child: Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: _hovered ? color.interactiveBgHover : null,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Icon(
-              LucideIcons.x,
-              size: 16,
-              color: _hovered ? color.stateErrorPrimary : color.labelTertiary,
-            ),
+      child: DswHoverTap(
+        onTap: widget.onTap,
+        semanticLabel: context.tr('removeServer'),
+        excludeSemantics: true,
+        builder: (context, hovered, _) => Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: hovered ? color.interactiveBgHover : null,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Icon(
+            LucideIcons.x,
+            size: 16,
+            color: hovered ? color.stateErrorPrimary : color.labelTertiary,
           ),
         ),
       ),
