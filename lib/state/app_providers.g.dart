@@ -251,18 +251,36 @@ String _$appScopeHash() => r'a2c0b3eccbef5ce40ab1f33025e4c2c564737b11';
 
 /// The settings document's current value. Theme, locale, workspace, model
 /// fields — everything the tree renders straight out of the document.
+///
+/// `invalidateSelf`, NOT `notifyListeners`: on a functional provider
+/// `notifyListeners` re-notifies the *cached* value without re-running the body,
+/// so a store save never reaches readers — that was the theme/locale/workspace
+/// not-updating regression. `invalidateSelf` re-runs the body (fresh `value`);
+/// dependents rebuild only if it actually changed.
 
 @ProviderFor(settingsDocument)
 final settingsDocumentProvider = SettingsDocumentProvider._();
 
 /// The settings document's current value. Theme, locale, workspace, model
 /// fields — everything the tree renders straight out of the document.
+///
+/// `invalidateSelf`, NOT `notifyListeners`: on a functional provider
+/// `notifyListeners` re-notifies the *cached* value without re-running the body,
+/// so a store save never reaches readers — that was the theme/locale/workspace
+/// not-updating regression. `invalidateSelf` re-runs the body (fresh `value`);
+/// dependents rebuild only if it actually changed.
 
 final class SettingsDocumentProvider
     extends $FunctionalProvider<AppSettings, AppSettings, AppSettings>
     with $Provider<AppSettings> {
   /// The settings document's current value. Theme, locale, workspace, model
   /// fields — everything the tree renders straight out of the document.
+  ///
+  /// `invalidateSelf`, NOT `notifyListeners`: on a functional provider
+  /// `notifyListeners` re-notifies the *cached* value without re-running the body,
+  /// so a store save never reaches readers — that was the theme/locale/workspace
+  /// not-updating regression. `invalidateSelf` re-runs the body (fresh `value`);
+  /// dependents rebuild only if it actually changed.
   SettingsDocumentProvider._()
     : super(
         from: null,
@@ -296,19 +314,22 @@ final class SettingsDocumentProvider
   }
 }
 
-String _$settingsDocumentHash() => r'612c346fd31303b441d6949b8008ab1288304b77';
+String _$settingsDocumentHash() => r'6d830daa8b71a64caff549d0e5fdba89e29b9b3d';
 
-/// The workbench preferences' current value.
+/// The workbench preferences' current value. Same `invalidateSelf` reason as
+/// [settingsDocument].
 
 @ProviderFor(workbenchPrefs)
 final workbenchPrefsProvider = WorkbenchPrefsProvider._();
 
-/// The workbench preferences' current value.
+/// The workbench preferences' current value. Same `invalidateSelf` reason as
+/// [settingsDocument].
 
 final class WorkbenchPrefsProvider
     extends $FunctionalProvider<WorkbenchPrefs, WorkbenchPrefs, WorkbenchPrefs>
     with $Provider<WorkbenchPrefs> {
-  /// The workbench preferences' current value.
+  /// The workbench preferences' current value. Same `invalidateSelf` reason as
+  /// [settingsDocument].
   WorkbenchPrefsProvider._()
     : super(
         from: null,
@@ -342,7 +363,7 @@ final class WorkbenchPrefsProvider
   }
 }
 
-String _$workbenchPrefsHash() => r'4da5a752b757bb0f68c12d6233773bcee673a6f4';
+String _$workbenchPrefsHash() => r'f3c6344e70620ca42d5a0f9268276dcc1dd5a656';
 
 @ProviderFor(conversation)
 final conversationProvider = ConversationProvider._();

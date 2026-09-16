@@ -66,6 +66,8 @@
 
 **主题。** 颜色/字号/动效/阴影只从 `lib/theme/dsw_*` 取：别名令牌在 `dsw_alias.dart`，绑定与 elevation ramp 在 `dsw_theme.dart`，排版在 `dsw_typography.dart`。新增令牌加在 alias 层，让 widget 通过 `context` 拿。抄 dsh 的 CSS 阴影值必须换算——CSS blur 与 `BoxShadow.blurRadius` 不是一回事（见 `DswShadow._blur`）。
 
+**riverpod 读缝（bridge）。** 把 `ChangeNotifier`/store 桥成**函数式** provider 时，值变更用 `ref.invalidateSelf()`（重跑 body 取新值），**绝不用** `ref.notifyListeners()`——后者对函数式 provider 只重通知旧缓存、不重跑 body，会静默不刷新（且运行日志无异常，只有真机能发现；见 `state/app_providers.dart` 的 `settingsDocument`/`workbenchPrefs`）。
+
 **持久化。** 手写 `toJson`/`fromJson` + `dart:convert`（`lib/model/` 里那批 settings/state 模型即范例）。写盘沿用 `lib/state/settings_store.dart`、`prefs_store.dart` 的 tmp + rename 原子写。工作区访问靠 security-scoped bookmark，恢复必须发生在任何读文件之前（`main()` 里的 `restoreWorkspaceAccess`）。
 
 ## 4. 测试约定

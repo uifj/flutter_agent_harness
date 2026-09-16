@@ -94,20 +94,27 @@ AppScope appScope(Ref ref) {
 
 /// The settings document's current value. Theme, locale, workspace, model
 /// fields — everything the tree renders straight out of the document.
+///
+/// `invalidateSelf`, NOT `notifyListeners`: on a functional provider
+/// `notifyListeners` re-notifies the *cached* value without re-running the body,
+/// so a store save never reaches readers — that was the theme/locale/workspace
+/// not-updating regression. `invalidateSelf` re-runs the body (fresh `value`);
+/// dependents rebuild only if it actually changed.
 @Riverpod(keepAlive: true)
 AppSettings settingsDocument(Ref ref) {
   final store = ref.watch(settingsStoreProvider);
-  void listener() => ref.notifyListeners();
+  void listener() => ref.invalidateSelf();
   store.addListener(listener);
   ref.onDispose(() => store.removeListener(listener));
   return store.value;
 }
 
-/// The workbench preferences' current value.
+/// The workbench preferences' current value. Same `invalidateSelf` reason as
+/// [settingsDocument].
 @Riverpod(keepAlive: true)
 WorkbenchPrefs workbenchPrefs(Ref ref) {
   final store = ref.watch(prefsStoreProvider);
-  void listener() => ref.notifyListeners();
+  void listener() => ref.invalidateSelf();
   store.addListener(listener);
   ref.onDispose(() => store.removeListener(listener));
   return store.value;
