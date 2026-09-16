@@ -22,8 +22,9 @@
 | 5a | `CapsuleButton` 内部换 `ShadButton`（公开 API 不变） | `45ddfb8` |
 | 5b | 两处 Material 确认对话框（editor 重载丢弃 + git 破坏性操作）合并为一个 `primitives/confirm_dialog.dart` 的 `showConfirmDialog`，走 `ShadDialog.alert` + `ShadButton`（outline/destructive，destructive 填充经桥=stateErrorPrimary）；lib/ui 的 `showDialog/AlertDialog` 与 `TextButton` 归零。两个 tab 测试 harness 经 `MaterialApp.builder` 挂 `ShadTheme`（showShadDialog 读调用方 context 主题） | `1dadca0` |
 | 5c | settings `_Field`（所有设置文本框的唯一包装：API key/base URL/model/工作区/skills/终端字体）内部 Material `TextField` → `ShadInput`，弃手写 `InputDecoration` 改吃桥接色、`trailing` 归入 ShadInput 自带槽。settings 的 `TextField(` 归零。`settings_test`/`models_endpoint_test` 经 `MaterialApp.builder` 挂 `ShadTheme`，`find.byType(TextField)`→`ShadInput`（ShadInput 内部是 EditableText，非 TextField） | `7c1549b` |
+| 5d | git 提交框（带框输入，干净适配）`TextField` → `ShadInput`，吃桥接色盒子替代手写 `InputDecoration`；`git_tab_test` 的 commit finder 改指 `ShadInput` | `c013894` |
 
-> 剩余 C1 目标（composer 主输入 `TextField`、`PopupMenuButton`×7、`Tooltip`×25）刻意暂缓：它们与测试耦合更深（ShadInput 用 EditableText 会打断 `find.byType(TextField)`；shad 菜单/浮层与 `PopupMenuButton` 的打开/命中语义不同；25 处 Tooltip 会让一批裸 `MaterialApp` 测试补挂 ShadTheme），不是"低风险优先"该顺手做的。
+> **深层组件替换到此为止（逐条证据见 ADR-0002 修订 3）**：读完每个剩余 C1 站点后，"不回退"的非回退子集已用尽——只有 git 提交框（5d）是干净落点。其余都是手工贴合自定义 chrome：borderless 嵌入输入（composer 主输入/browser/file-tree/sidechat）换 ShadInput 会因自带内边距挤动紧凑行；紧凑 pill 值选择器（git 分支/composer 审批）换 ShadSelect 会顶高行；`Tooltip`×25 换 ShadTooltip 会破 hover（子件是 DswHoverTap 非 ShadGestureDetector）；`Pill` 自定义色/高 ShadBadge 复现不了。真正的独立控件（按钮/对话框/带框输入）已全部换完，其余刻意保留。
 
 ## 无障碍 A1（审计阻断项）— 已闭环
 

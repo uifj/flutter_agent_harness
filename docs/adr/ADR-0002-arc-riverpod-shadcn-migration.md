@@ -69,6 +69,17 @@ build new runtime → _conversation.adoptRuntime(new) → _sideChat.adoptSource(
 
 至此 ADR-0002 的 riverpod 迁移在本机可验证面上**实质完成**；剩余为 macOS 真机 VoiceOver/Full Keyboard 验收，以及刻意暂缓的深层组件替换（composer 主输入 `TextField`、`PopupMenuButton`×7、`Tooltip`×25——与测试耦合更深，见 migration-log 注记）。
 
+### 修订 3（2026-09-16）：shadcn 深层组件替换到此为止（逐条错配证据）
+
+Stage 5b（确认对话框→ShadDialog）、5c（设置带框字段→ShadInput）、5d（git 提交框→ShadInput）已落。逐条读完剩余 C1 站点后判定：**"不回退"的非回退子集已用尽**，其余控件都是手工贴合自定义 chrome 的，换 shad 会回退。证据：
+
+1. **borderless 嵌入输入**（composer 主输入、browser URL 栏、file-tree 搜索、sidechat）：都是 `border: InputBorder.none` 嵌在自定义 chrome 里（卡片/栏自带边框）。`ShadInput` 自带内边距/最小高（即便 `ShadDecoration.none` 也去不干净），塞进这些紧凑行会挤动布局。
+2. **紧凑 pill 值选择器**（git 分支 26px pill、composer 审批 pill）：`ShadSelect` 的触发框比 pill 高，会顶高 git 头栏 / composer 行。
+3. **Tooltip×25**：skill 明说 ShadTooltip 的 hover 只在子件是 `ShadGestureDetector`/`ShadButton` 时生效；这里每个 Tooltip 包的是 `DswHoverTap`（A1 键盘可达原语，故意用裸 `MouseRegion+FocusableActionDetector`），换 ShadTooltip 会静默破 hover，除非把 DswHoverTap 重接成 shad 手势模型（危及已闭环的 A1）。
+4. **Pill**：自定义文字色 + 22px 高的 chip；`ShadBadge` 的 variant/填充模型无法忠实复现。
+
+真正的独立控件（按钮、对话框、带框表单输入）都是 shad 的正当落点，且已全部换完。其余刻意保留为"正确自定义"。shadcn 迁移到此达**自然边界**——与用户"只换不回退"的口径一致。
+
 ## 后果（Consequences）
 
 - **正面**: 表单控件层获得焦点/语义/状态覆盖（解决审计 A1/A3/C1）；状态管理获得标准化的测试 override 与依赖注入；`shadcn-ui-flutter` skill 从"守卫项"转为正当地位。
