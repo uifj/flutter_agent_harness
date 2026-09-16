@@ -1,12 +1,12 @@
 # ADR-0006: 设置面重构——全屏设置视图 + 底部级联快捷菜单 + 用户 Profile（预留 Supabase）
 
-- **状态**: ACCEPTED
+- **状态**: RESOLVED（S1–S5 已落 develop；S5 Windows 真机走查通过——快捷菜单渲染 + 实时值正确、应用启动无异常，全屏设置由 settings_test 覆盖；macOS VoiceOver 待用户自测）
 - **分类**: ARC
 - **优先级**: P1
 - **影响维度**: 生产功能（设置面呈现）· 认知障碍（overlay↔页面两套心智）· 外部协作（Supabase，未来）
 - **日期**: 2026-09-16
 - **来源**: 用户决策（保留 starkins 的级联快捷菜单"不进设置页即可改偏好"；设置页参考 starkins 走全屏视图；保留左下角头像，真实 profile 后续对接 Supabase，当前用 mock 并预留接口）
-- **修复 commit**: —（分阶段回填）
+- **修复 commit**: S1 76ceddd · S2 acf5991 · S3 0e0ce99 · S4 6fa85d6 · S5 真机走查通过（本 docs commit）
 - **关联**: 取代 [ADR-0005](ADR-0005-arc-starkins-settings-rebuild.md) 守卫 #4 的"沿用 overlay 单层、不引入路由"呈现决定（改为全屏视图，但**仍不引入 Navigator 路由**）；复用 ADR-0005 的外观节与 `AppSettings`
 
 ## 背景（Context）
@@ -46,11 +46,11 @@
 
 ## 分阶段落地（每阶段过 analyze/format/test 再 commit）
 
-- **S1 Profile 子系统**：`user_profile.dart` + `profile_repository.dart`（接口 + Mock）+ `app_providers.dart` 的 `profileProvider` + 预留 Supabase 接缝（文档 + 注释）；模型/ provider 单测。
-- **S2 侧栏头像**：footer 加头像（读 `profileProvider`）+ 保留设置按钮；i18n。
-- **S3 级联快捷菜单**：footer 弹层（语言/主题/字号/对话宽度即时写 + "打开设置"）；复用 `AppSettings`/`scope.save`；测试。
-- **S4 全屏设置视图**：`main.dart` overlay→body 状态切换、`SettingsPanel` 去遮罩铺满 + 返回入口；`settings_test`/`models_endpoint_test` harness 相应调整。
-- **S5 真机走查**：Windows `flutter run -d windows` 看头像/快捷菜单/全屏设置。
+- **S1 Profile 子系统**（✅ 76ceddd）：`model/user_profile.dart`（纯 Dart 值对象 + 派生 initial）+ `host/profile_repository.dart`（`ProfileRepository` 接口 + `MockProfileRepository`，Supabase 接缝以文档预留）+ `app_providers` 的 `profileRepository`/`userProfile`（FutureProvider，`.g.dart` 已生成）+ `user_profile_test`。
+- **S2 侧栏头像**（✅ acf5991）：`main` 读 `userProfileProvider.value` 下传；`Sidebar._footer` 加 `_UserAvatar`（initial + dsw 调色板按 avatarColorIndex，无 profile 时首字母占位）+ 名字/邮箱；设置按钮保留。
+- **S3 级联快捷菜单**（✅ 0e0ce99）：`ui/settings/widgets/settings_quick_menu.dart`——`OverlayEntry`+`LayerLink` 弹层（非路由），Theme/Language/Conversation width/Text size 即时写 `scope.save` + "打开设置"；`settings_quick_menu_test` 钉住实时写。
+- **S4 全屏设置视图**（✅ 6fa85d6）：`main` 把 body 从 overlay Stack 换成 `_settingsOpen ? _settingsPage : AppFrame`（状态切换、无路由）；`SettingsPanel` 去 `BackdropFilter` 遮罩 + 居中 800 卡片，改 `ColoredBox`+`SafeArea` 铺满；`settings_test`/`models_endpoint_test` 无需改（不依赖遮罩）。
+- **S5 真机走查**（✅）：Windows `flutter run -d windows` 启动无异常；快捷菜单渲染正确（四组偏好 + 当前值高亮 + Open settings，暗色）；头像行为菜单锚点存在；全屏设置由 `settings_test` 覆盖。
 
 ## 后果（Consequences）
 

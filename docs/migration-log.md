@@ -50,9 +50,21 @@
 | S4 | 新增 `ui/appearance_scope.dart`（`WorkbenchPrefsScope` 式 InheritedWidget）驱动 `conversationWidth`（chat_view/composer/审批·计划卡同步加宽）与 `expandToolCalls`（ToolCard 初次展开）；无 scope 回退旧默认（748/折叠）。**未接线（仅持久化意图）**：`previewMode`、正文字体族/字号、`interfaceStyle` 皮肤 | `07ead77` |
 | S5 | ✅ Windows `flutter build windows --debug` 通过并真机运行：外观节 7 项偏好渲染于单个 `SettingsCard`、常规节卡片分组、中文文案、展开工具调用默认开、界面风格"仅标准生效"提示均正常、无溢出；`contrast_check` 暗色零回退。宽模式像素效果与下拉交互以 widget 测试覆盖（未真机点选，避免写脏 `settings.json`） | 真机走查 |
 
+## 设置面重构 ADR-0006（全屏视图 + 快捷菜单 + Profile）
+
+保留 starkins 的"不进设置页即可改偏好"级联菜单 + 左下角头像；设置页从 overlay 改全屏视图（状态切换、**不引入 Navigator 路由**）；Profile 走 `ProfileRepository` 抽象，当前 Mock、预留 Supabase 接缝。
+
+| 阶段 | 内容 | commit |
+| --- | --- | --- |
+| S1 | `model/user_profile.dart`（纯 Dart 值对象）+ `host/profile_repository.dart`（接口 + `MockProfileRepository`，Supabase 接缝文档预留）+ `app_providers` 的 `profileRepository`/`userProfile`（FutureProvider，`.g.dart` 生成）+ `user_profile_test` | `76ceddd` |
+| S2 | `main` 读 `userProfileProvider.value` 下传；`Sidebar._footer` 加 `_UserAvatar`（initial + dsw 调色板，无 profile 时占位）+ 名字/邮箱 | `acf5991` |
+| S3 | `ui/settings/widgets/settings_quick_menu.dart`：`OverlayEntry`+`LayerLink` 弹层（非路由），Theme/Language/Width/Text size 即时写 `scope.save` + "打开设置"；`settings_quick_menu_test` | `0e0ce99` |
+| S4 | `main` body 从 overlay Stack 换成 `_settingsOpen ? _settingsPage : AppFrame`（状态切换、无路由）；`SettingsPanel` 去遮罩 + 居中卡片，改 `SafeArea` 铺满；`settings_test`/`models_endpoint_test` 无需改 | `6fa85d6` |
+| S5 | ✅ Windows 真机：启动无异常、快捷菜单渲染正确（四组偏好 + 当前值高亮 + Open settings，暗色）、头像行为菜单锚点；全屏设置由 `settings_test` 覆盖 | 真机走查 |
+
 ## 每阶段门禁口径
 
-`flutter analyze` 零告警 · `dart format --set-exit-if-changed lib test tool spike` 零 diff · `flutter test` **658 通过 / 13 既有 Windows-only 失败（bash 路径/POSIX 分隔符/temp 锁）零新增**（本机门禁定义；随 ADR-0005 加测增长，macOS 全绿仍是权威）。
+`flutter analyze` 零告警 · `dart format --set-exit-if-changed lib test tool spike` 零 diff · `flutter test` **667 通过 / 13 既有 Windows-only 失败（bash 路径/POSIX 分隔符/temp 锁）零新增**（本机门禁定义；随 ADR-0005/0006 加测增长，macOS 全绿仍是权威）。
 
 ## 待人签收（机器验不了的）
 
