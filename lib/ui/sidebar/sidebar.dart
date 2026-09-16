@@ -17,6 +17,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../l10n/locales.dart';
 import '../../model/conversation.dart';
+import '../../model/user_profile.dart';
 import '../../state/session_index.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
@@ -34,6 +35,7 @@ class Sidebar extends StatefulWidget {
     required this.collapsed,
     required this.width,
     required this.sessions,
+    this.profile,
     required this.onNewSession,
     required this.onToggle,
     required this.onOpenSession,
@@ -49,6 +51,11 @@ class Sidebar extends StatefulWidget {
   final double width;
 
   final SessionIndex sessions;
+
+  /// The signed-in user, or null while the profile source is loading or when
+  /// there is none — the footer avatar then shows an anonymous placeholder.
+  final UserProfile? profile;
+
   final VoidCallback onNewSession;
   final VoidCallback onToggle;
   final void Function(String id) onOpenSession;
@@ -326,39 +333,48 @@ class _SidebarState extends State<Sidebar> {
         ? AlignmentDirectional.centerStart
         : AlignmentDirectional.center,
     child: wide
-        ? Row(
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: _Pressable(
-                  onTap: widget.onOpenSettings,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    height: 32,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Row(
-                      children: [
-                        Icon(
-                          LucideIcons.settings,
-                          size: 16,
-                          color: color.labelSecondary,
+              _profileRow(color),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Expanded(
+                    child: _Pressable(
+                      onTap: widget.onOpenSettings,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        height: 32,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Row(
+                          children: [
+                            Icon(
+                              LucideIcons.settings,
+                              size: 16,
+                              color: color.labelSecondary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              context.tr('settings'),
+                              style: DswType.s14.copyWith(
+                                color: color.labelPrimary,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          context.tr('settings'),
-                          style: DswType.s14.copyWith(
-                            color: color.labelPrimary,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                ),
+                  _detailsToggle(color, wide: true),
+                ],
               ),
-              _detailsToggle(color, wide: true),
             ],
           )
         : Column(
             children: [
+              _UserAvatar(profile: widget.profile, color: color, size: 32),
+              const SizedBox(height: 6),
               _IconButton(
                 onTap: widget.onOpenSettings,
                 wide: false,
@@ -374,6 +390,39 @@ class _SidebarState extends State<Sidebar> {
             ],
           ),
   );
+
+  /// The footer's identity line: the avatar, and beside it the display name and
+  /// email. Non-interactive for now (the quick-menu that hangs off it is S3);
+  /// when the profile is still loading or absent it collapses to the avatar.
+  Widget _profileRow(DswAlias color) {
+    final profile = widget.profile;
+    return Row(
+      children: [
+        _UserAvatar(profile: profile, color: color),
+        const SizedBox(width: 8),
+        if (profile != null)
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  profile.displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: DswType.s14.copyWith(color: color.labelPrimary),
+                ),
+                Text(
+                  profile.email,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: DswType.xxs12.copyWith(color: color.labelTertiary),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
 
   /// The right-column switch: the panel-right mirror of the header's
   /// panel-left toggle. Active tint while the column is open.
@@ -545,4 +594,61 @@ class _IconButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The footer identity avatar: a filled circle carrying the profile's initial,
+/// coloured from a dsw palette by `avatarColorIndex`. With no profile (loading
+/// or signed out) it rests as a muted user glyph — a placeholder, never a fake
+/// identity.
+class _UserAvatar extends StatelessWidget {
+  const _UserAvatar({
+    required this.profile,
+    required this.color,
+    this.size = 28,
+  });
+
+  final UserProfile? profile;
+  final DswAlias color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = this.profile;
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: profile == null
+            ? color.bgLayer3
+            : _avatarFill(color, profile.avatarColorIndex),
+      ),
+      child: profile == null
+          ? Icon(
+              LucideIcons.user,
+              size: size * 0.55,
+              color: color.labelTertiary,
+            )
+          : Text(
+              profile.initial,
+              style: DswType.xsStrong13.copyWith(
+                color: color.labelPrimaryForeground,
+              ),
+            ),
+    );
+  }
+}
+
+/// The avatar palette — accent fills that all carry `labelPrimaryForeground`.
+/// An index (from the profile) into a small fixed set, so the model can stay a
+/// plain int rather than a `Color`.
+Color _avatarFill(DswAlias c, int index) {
+  final palette = [
+    c.brandPrimary,
+    c.stateBusinessPrimary,
+    c.buttonInfoFill,
+    c.stateSuccessPrimary,
+  ];
+  return palette[index % palette.length];
 }

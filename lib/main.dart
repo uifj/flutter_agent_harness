@@ -161,6 +161,10 @@ class _DshAppState extends ConsumerState<DshApp> {
                   collapsed: collapsed,
                   width: width,
                   sessions: ref.watch(sessionsProvider),
+                  // The identity the footer avatar shows. `.value` — the
+                  // avatar renders a placeholder until the (mock, later Supabase)
+                  // source resolves; riverpod stays out of the widget tree.
+                  profile: ref.watch(userProfileProvider).value,
                   onNewSession: scope.newSession,
                   onToggle: ref.read(layoutProvider).toggleSidebar,
                   onOpenSession: scope.openSession,
