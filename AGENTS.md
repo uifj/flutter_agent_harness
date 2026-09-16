@@ -13,6 +13,7 @@
 | [docs/README.md](docs/README.md) | 文档体系规范：ADR 分类 / 优先级 / 状态机 / 新增流程 | 记录问题时 |
 | [docs/debt-register.md](docs/debt-register.md) | 技术债与缺陷登记表（唯一状态源）：当前 1 条已登记 ADR + 5 条待立 ADR 的观察 | 动手前 |
 | [docs/migration-log.md](docs/migration-log.md) | ADR-0002/0003/0004 迁移执行台账：阶段·commit·门禁·待人签收清单 | 接手迁移时 |
+| [docs/starkins-settings-migration-analysis.md](docs/starkins-settings-migration-analysis.md) | 从 starkins_app 迁移设置页的分析：逐项 可迁/改造/不迁 判定 + 不变量冲突（待拍板） | 做该迁移前 |
 | [repomix.config.json](repomix.config.json) | 全仓库打包配置（产物 `repomix-output.xml` 不入库；已排除 vendored UI 库实现） | 按需 |
 | `技术文档-agent_harness基于genkit-dart的可落地增强路线.md` | genkit-dart 0.16.1 逐文件审读：能借哪些能力、要绕哪些限制、该放弃哪些幻想 | 动运行时前 |
 | `对标技术文章-agent_harness与dsh生态横向对比.md` | 与 dsh / better-sidebar 的十维度对比与完成度评估 | 判断"该不该做"前 |
