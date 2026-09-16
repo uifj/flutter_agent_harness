@@ -283,6 +283,44 @@ void main() {
       expect(saved?.theme.name, 'system');
     });
 
+    testWidgets('the appearance section commits width and tool-call toggles', (
+      tester,
+    ) async {
+      AppSettings? saved;
+      await pump(
+        tester,
+        settings: const AppSettings(),
+        onSave: (next) async => saved = next,
+      );
+
+      await tester.tap(find.text('Appearance'));
+      await tester.pump();
+      // The panel opens the Appearance section with the document's defaults, so
+      // the width pill reads "Normal" and the tool-call switch is on.
+      final width = find.text('Normal');
+      await tester.ensureVisible(width);
+      await tester.tap(width);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Wide'));
+      await tester.pumpAndSettle();
+
+      final expand = find.text('Expand tool calls');
+      await tester.ensureVisible(expand);
+      await tester.tap(expand);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(saved?.conversationWidth.name, 'wide');
+      expect(saved?.expandToolCalls, isFalse);
+      // Untouched preferences keep their defaults rather than arriving null.
+      expect(saved?.fontSize.name, 'medium');
+      expect(saved?.previewMode.name, 'sidePanel');
+      // A pure appearance edit carries the model half through untouched.
+      expect(saved?.model.apiKey, '');
+    });
+
     testWidgets('the provider rows carry one editor at a time', (tester) async {
       AppSettings? saved;
       await pump(

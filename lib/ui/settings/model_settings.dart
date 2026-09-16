@@ -37,9 +37,10 @@ import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../primitives/tappable.dart';
 import '../primitives/capsule_button.dart';
+import 'widgets/settings_card.dart';
 
 /// Which section the rail is pointing at.
-enum _Section { general, models, workspace, workbench, extensions }
+enum _Section { general, appearance, models, workspace, workbench, extensions }
 
 class SettingsPanel extends StatefulWidget {
   const SettingsPanel({
@@ -137,6 +138,20 @@ class _SettingsPanelState extends State<SettingsPanel> {
   /// a live-following preview would repaint the panel mid-edit under the
   /// pointer.
   late settings.ThemeMode _theme = widget.settings.theme;
+
+  /// The appearance/behaviour preferences (ADR-0005). Held and committed like
+  /// the theme. None of them rebuilds the runtime — they ride Save purely to
+  /// persist — so they need no restart warning, only the same draft-to-document
+  /// flow the theme and language already use.
+  late settings.AppFontFamily _textFont = widget.settings.fontFamily;
+  late settings.AppFontSize _textSize = widget.settings.fontSize;
+  late settings.AppConversationWidth _conversationWidth =
+      widget.settings.conversationWidth;
+  late settings.AppInterfaceStyle _interfaceStyle =
+      widget.settings.interfaceStyle;
+  late settings.AppPreviewMode _previewMode = widget.settings.previewMode;
+  late bool _expandToolCalls = widget.settings.expandToolCalls;
+  late bool _promptSuggestions = widget.settings.promptSuggestions;
 
   /// The recents as the picker will edit them. Tracked here rather than derived
   /// from [widget.settings] so an "adopted" folder survives a later cancel: the
@@ -382,6 +397,13 @@ class _SettingsPanelState extends State<SettingsPanel> {
       theme: _theme,
       locale: _locale,
       recentWorkspaces: _recent,
+      fontFamily: _textFont,
+      fontSize: _textSize,
+      conversationWidth: _conversationWidth,
+      interfaceStyle: _interfaceStyle,
+      previewMode: _previewMode,
+      expandToolCalls: _expandToolCalls,
+      promptSuggestions: _promptSuggestions,
     );
   }
 
@@ -475,6 +497,13 @@ class _SettingsPanelState extends State<SettingsPanel> {
             icon: LucideIcons.settings,
             active: _section == _Section.general,
             onTap: () => setState(() => _section = _Section.general),
+          ),
+          const SizedBox(height: 4),
+          _NavCell(
+            label: context.tr('settingsAppearance'),
+            icon: LucideIcons.sparkles,
+            active: _section == _Section.appearance,
+            onTap: () => setState(() => _section = _Section.appearance),
           ),
           const SizedBox(height: 4),
           _NavCell(
@@ -577,6 +606,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
               children: [
                 ...switch (_section) {
                   _Section.general => _general(color),
+                  _Section.appearance => _appearanceSection(color),
                   _Section.models => _models(color),
                   _Section.workspace => _workspaceSection(color),
                   _Section.workbench => _workbenchSection(color),
@@ -603,28 +633,133 @@ class _SettingsPanelState extends State<SettingsPanel> {
       context.tr('settingsGeneralIntro'),
     ),
     const SizedBox(height: 12),
-    _SettingCellRow(
-      title: context.tr('theme'),
-      description: context.tr('themeDesc'),
-      labels: {
-        settings.ThemeMode.system: context.tr('followSystem'),
-        settings.ThemeMode.light: context.tr('light'),
-        settings.ThemeMode.dark: context.tr('dark'),
-      },
-      value: _theme,
-      onChanged: (mode) => setState(() => _theme = mode),
+    SettingsCard(
+      dividers: true,
+      children: [
+        _SettingCellRow(
+          title: context.tr('theme'),
+          description: context.tr('themeDesc'),
+          labels: {
+            settings.ThemeMode.system: context.tr('followSystem'),
+            settings.ThemeMode.light: context.tr('light'),
+            settings.ThemeMode.dark: context.tr('dark'),
+          },
+          value: _theme,
+          onChanged: (mode) => setState(() => _theme = mode),
+          last: true,
+        ),
+        _SettingCellRow(
+          title: context.tr('language'),
+          description: context.tr('languageDesc'),
+          labels: {
+            settings.LocaleMode.system: context.tr('followSystem'),
+            settings.LocaleMode.en: 'English',
+            settings.LocaleMode.zh: '中文',
+          },
+          value: _locale,
+          onChanged: (mode) => setState(() => _locale = mode),
+          last: true,
+        ),
+      ],
     ),
-    _SettingCellRow(
-      title: context.tr('language'),
-      description: context.tr('languageDesc'),
-      labels: {
-        settings.LocaleMode.system: context.tr('followSystem'),
-        settings.LocaleMode.en: 'English',
-        settings.LocaleMode.zh: '中文',
-      },
-      value: _locale,
-      onChanged: (mode) => setState(() => _locale = mode),
-      last: true,
+  ];
+
+  /// Appearance (ADR-0005): the starkins preference set ported onto this
+  /// panel's own controls — the selector pill for the enums, the switch for the
+  /// toggles, all grouped in one `SettingsCard`. Held as drafts and committed on
+  /// Save like the theme; none of them rebuilds the runtime, so the wiring that
+  /// makes width/preview/tool-expansion actually take effect is ADR-0005 S4.
+  List<Widget> _appearanceSection(DswAlias color) => [
+    _heading(
+      color,
+      context.tr('settingsAppearance'),
+      context.tr('settingsAppearanceIntro'),
+    ),
+    const SizedBox(height: 12),
+    SettingsCard(
+      dividers: true,
+      children: [
+        _SettingCellRow<settings.AppFontFamily>(
+          title: context.tr('appearanceTextFont'),
+          description: context.tr('appearanceTextFontDesc'),
+          labels: {
+            settings.AppFontFamily.sansSerif: context.tr('fontSansSerif'),
+            settings.AppFontFamily.serif: context.tr('fontSerif'),
+          },
+          value: _textFont,
+          onChanged: (v) => setState(() => _textFont = v),
+          last: true,
+        ),
+        _SettingCellRow<settings.AppFontSize>(
+          title: context.tr('appearanceTextSize'),
+          description: context.tr('appearanceTextSizeDesc'),
+          labels: {
+            settings.AppFontSize.small: context.tr('sizeSmall'),
+            settings.AppFontSize.medium: context.tr('sizeMedium'),
+            settings.AppFontSize.large: context.tr('sizeLarge'),
+          },
+          value: _textSize,
+          onChanged: (v) => setState(() => _textSize = v),
+          last: true,
+        ),
+        _SettingCellRow<settings.AppConversationWidth>(
+          title: context.tr('conversationWidth'),
+          description: context.tr('conversationWidthDesc'),
+          labels: {
+            settings.AppConversationWidth.normal: context.tr('widthNormal'),
+            settings.AppConversationWidth.wide: context.tr('widthWide'),
+          },
+          value: _conversationWidth,
+          onChanged: (v) => setState(() => _conversationWidth = v),
+          last: true,
+        ),
+        _SettingCellRow<settings.AppInterfaceStyle>(
+          title: context.tr('interfaceStyle'),
+          description: context.tr('interfaceStyleDesc'),
+          labels: {
+            settings.AppInterfaceStyle.standard: context.tr('styleStandard'),
+            settings.AppInterfaceStyle.glass: context.tr('styleGlass'),
+            settings.AppInterfaceStyle.classic: context.tr('styleClassic'),
+            settings.AppInterfaceStyle.parchment: context.tr('styleParchment'),
+          },
+          value: _interfaceStyle,
+          onChanged: (v) => setState(() => _interfaceStyle = v),
+          last: true,
+        ),
+        _SettingCellRow<settings.AppPreviewMode>(
+          title: context.tr('previewMode'),
+          description: context.tr('previewModeDesc'),
+          labels: {
+            settings.AppPreviewMode.newWindow: context.tr('previewNewWindow'),
+            settings.AppPreviewMode.sidePanel: context.tr('previewSidePanel'),
+            settings.AppPreviewMode.inline: context.tr('previewInline'),
+          },
+          value: _previewMode,
+          onChanged: (v) => setState(() => _previewMode = v),
+          last: true,
+        ),
+        // The two behaviour toggles. `_SwitchRow` is a bare row (the workbench
+        // section lays them out manually), so they get the same vertical padding
+        // the selector rows carry, and the card's hairlines separate them.
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: _SwitchRow(
+            label: context.tr('expandToolCalls'),
+            description: context.tr('expandToolCallsDesc'),
+            value: _expandToolCalls,
+            onChanged: (v) => setState(() => _expandToolCalls = v),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: _SwitchRow(
+            label: context.tr('promptSuggestions'),
+            description: context.tr('promptSuggestionsDesc'),
+            value: _promptSuggestions,
+            onChanged: (v) => setState(() => _promptSuggestions = v),
+          ),
+        ),
+      ],
     ),
   ];
 

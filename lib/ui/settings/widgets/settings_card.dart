@@ -15,9 +15,13 @@
 // `model_settings.dart` (`_providerRowCard`): border-only surface, radius 12,
 // `borderL2` — not starkins' filled `cs.card`.
 //
-// The reused rows draw their own separators, so the frame deliberately adds no
-// dividers of its own (that would double them). It only insets horizontally so a
-// row's text does not touch the side border; rows keep their own vertical padding.
+// The reused rows draw their own separators, so by default the frame adds none
+// (that would double them). It only insets horizontally so a row's text does not
+// touch the side border; rows keep their own vertical padding. When [dividers] is
+// set, the frame instead draws the hairline between rows itself — the choice for a
+// group that mixes the self-spacing selector rows with the bare `_SwitchRow`s. In
+// that mode pass `last: true` to every `_SettingCellRow` inside so it suppresses
+// its own bottom border and the card stays the single source of separation.
 
 import 'package:flutter/widgets.dart';
 
@@ -25,16 +29,22 @@ import '../../../theme/dsw_theme.dart';
 
 /// A rounded, hairline-bordered surface that stacks full-width setting rows into
 /// one visual group. The [children] are expected to be the panel's row widgets
-/// (`_SettingCellRow` / `_SwitchRow`), which supply their own vertical padding and
-/// the separators between them; the last row should suppress its trailing hairline.
+/// (`_SettingCellRow` / `_SwitchRow`), which supply their own vertical padding.
+/// With [dividers] off they also draw the separators between them (last row
+/// suppressing its own); with [dividers] on the card draws them instead.
 class SettingsCard extends StatelessWidget {
   const SettingsCard({
     super.key,
     required this.children,
+    this.dividers = false,
     this.padding = const EdgeInsets.symmetric(horizontal: 16),
   });
 
   final List<Widget> children;
+
+  /// Whether the frame draws a hairline between consecutive rows. Off by
+  /// default, leaving the rows to separate themselves.
+  final bool dividers;
 
   /// Horizontal inset for the row content. The rows carry their own vertical
   /// padding, so the frame adds none vertically.
@@ -43,6 +53,13 @@ class SettingsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
+    final rows = <Widget>[];
+    for (var i = 0; i < children.length; i++) {
+      if (dividers && i > 0) {
+        rows.add(SizedBox(height: 1, child: ColoredBox(color: color.borderL2)));
+      }
+      rows.add(children[i]);
+    }
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -53,7 +70,7 @@ class SettingsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
-        children: children,
+        children: rows,
       ),
     );
   }
