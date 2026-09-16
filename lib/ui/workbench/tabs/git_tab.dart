@@ -26,6 +26,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter/services.dart';
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadInput;
 import 'package:path/path.dart' as p;
 
 import '../../../host/git.dart';
@@ -740,32 +741,13 @@ class _GitTabState extends State<GitTab> {
                 const SingleActivator(LogicalKeyboardKey.enter, meta: true):
                     _commit,
               },
-              child: TextField(
+              child: ShadInput(
                 controller: _commitMsg,
                 enabled: !_busy,
                 style: DswType.xs13.copyWith(color: color.labelPrimary),
-                decoration: InputDecoration(
-                  hintText: context.tr('commitPlaceholder'),
-                  hintStyle: DswType.xs13.copyWith(color: color.labelCaption),
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 6,
-                  ),
-                  filled: true,
-                  fillColor: color.bgBase,
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(6),
-                    borderSide: BorderSide(color: color.borderL2),
-                  ),
-                  disabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(6),
-                    borderSide: BorderSide(color: color.borderL2),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(6),
-                    borderSide: BorderSide(color: color.brandPrimary),
-                  ),
+                placeholder: Text(
+                  context.tr('commitPlaceholder'),
+                  style: DswType.xs13.copyWith(color: color.labelCaption),
                 ),
                 onChanged: (_) => setState(() {}),
               ),

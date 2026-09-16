@@ -18,7 +18,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shadcn_ui/shadcn_ui.dart' show ShadTheme, ShadButton;
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadTheme, ShadButton, ShadInput;
 
 import 'clipboard_probe.dart';
 import 'fake_git.dart';
@@ -172,7 +172,7 @@ void main() {
     await pumpTab(tester);
     await settle(tester);
 
-    await tester.enterText(find.byType(TextField), 'a committed message');
+    await tester.enterText(find.byType(ShadInput), 'a committed message');
     await settle(tester);
     await tester.tap(find.text('Commit'));
     await settle(tester);
