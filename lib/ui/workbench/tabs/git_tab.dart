@@ -865,8 +865,10 @@ class _LinkButtonState extends State<_LinkButton> {
 }
 
 /// One changed file — `.gitRow`: badge + path, the stage/unstage affordance,
-/// a click opening the diff tab, a right-click opening the menu.
-class _FileRow extends StatefulWidget {
+/// a click opening the diff tab, a right-click opening the menu. The row is a
+/// DswHoverTap (keyboard-focusable, announced as a button whose name is the
+/// path); the nested stage button is its own focusable control.
+class _FileRow extends StatelessWidget {
   const _FileRow({
     required this.entry,
     required this.staged,
@@ -884,81 +886,64 @@ class _FileRow extends StatefulWidget {
   final VoidCallback onStage;
 
   @override
-  State<_FileRow> createState() => _FileRowState();
-}
-
-class _FileRowState extends State<_FileRow> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        onSecondaryTapDown: widget.onMenu,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 6),
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          constraints: const BoxConstraints(minHeight: 34),
-          decoration: BoxDecoration(
-            color: _hovered ? color.interactiveBgHover : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Tooltip(
-                  message: widget.entry.path,
-                  waitDuration: const Duration(milliseconds: 600),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 20,
-                        height: 16,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: color.interactiveBgHover,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          badgeOf(widget.entry),
-                          style: DswType.xxxsStrong11.copyWith(
-                            color: color.labelSecondary,
-                          ),
+    return DswHoverTap(
+      onTap: onTap,
+      onSecondaryTapDown: onMenu,
+      semanticLabel: entry.path,
+      excludeSemantics: true,
+      builder: (context, hovered, _) => Container(
+        margin: const EdgeInsets.symmetric(horizontal: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        constraints: const BoxConstraints(minHeight: 34),
+        decoration: BoxDecoration(
+          color: hovered ? color.interactiveBgHover : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Tooltip(
+                message: entry.path,
+                waitDuration: const Duration(milliseconds: 600),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 20,
+                      height: 16,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: color.interactiveBgHover,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        badgeOf(entry),
+                        style: DswType.xxxsStrong11.copyWith(
+                          color: color.labelSecondary,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          widget.entry.path,
-                          style: DswType.s14.copyWith(
-                            color: color.labelPrimary,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        entry.path,
+                        style: DswType.s14.copyWith(color: color.labelPrimary),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 6),
-              _RoundIconButton(
-                icon: widget.staged
-                    ? LucideIcons.trash
-                    : LucideIcons.git_branch,
-                tooltip: widget.staged
-                    ? context.tr('unstage')
-                    : context.tr('stage'),
-                onTap: widget.busy ? null : widget.onStage,
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 6),
+            _RoundIconButton(
+              icon: staged ? LucideIcons.trash : LucideIcons.git_branch,
+              tooltip: staged ? context.tr('unstage') : context.tr('stage'),
+              onTap: busy ? null : onStage,
+            ),
+          ],
         ),
       ),
     );
@@ -966,7 +951,9 @@ class _FileRowState extends State<_FileRow> {
 }
 
 /// One history row — `.gitLogRow`: hash + subject, then ref pills and meta.
-class _LogRow extends StatefulWidget {
+/// A keyboard-focusable row (opened diff on Enter); its accessible name is the
+/// commit subject, not the hash/pills/meta chatter.
+class _LogRow extends StatelessWidget {
   const _LogRow({
     required this.entry,
     required this.onTap,
@@ -978,87 +965,73 @@ class _LogRow extends StatefulWidget {
   final void Function(TapDownDetails) onMenu;
 
   @override
-  State<_LogRow> createState() => _LogRowState();
-}
-
-class _LogRowState extends State<_LogRow> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    final entry = widget.entry;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        onSecondaryTapDown: widget.onMenu,
-        behavior: HitTestBehavior.opaque,
-        child: Tooltip(
-          message: '${entry.author} · ${entry.date}\n${entry.hashFull}',
-          waitDuration: const Duration(milliseconds: 600),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-            decoration: BoxDecoration(
-              color: _hovered ? color.interactiveBgHover : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text(
-                      entry.hash,
-                      style: DswType.markdownCodeBlockSmall.copyWith(
-                        color: color.labelTertiary,
-                      ),
+    return DswHoverTap(
+      onTap: onTap,
+      onSecondaryTapDown: onMenu,
+      semanticLabel: entry.subject,
+      excludeSemantics: true,
+      builder: (context, hovered, _) => Tooltip(
+        message: '${entry.author} · ${entry.date}\n${entry.hashFull}',
+        waitDuration: const Duration(milliseconds: 600),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          decoration: BoxDecoration(
+            color: hovered ? color.interactiveBgHover : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    entry.hash,
+                    style: DswType.markdownCodeBlockSmall.copyWith(
+                      color: color.labelTertiary,
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      entry.subject,
+                      style: DswType.s14.copyWith(color: color.labelPrimary),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Wrap(
+                spacing: 6,
+                runSpacing: 2,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  for (final ref in refNames(entry.refs))
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: color.borderL2),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
                       child: Text(
-                        entry.subject,
-                        style: DswType.s14.copyWith(color: color.labelPrimary),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 2,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    for (final ref in refNames(entry.refs))
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: color.borderL2),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          ref,
-                          style: DswType.xxxsStrong11.copyWith(
-                            color: color.brandPrimary,
-                          ),
+                        ref,
+                        style: DswType.xxxsStrong11.copyWith(
+                          color: color.brandPrimary,
                         ),
                       ),
-                    Text(
-                      '${entry.author} · ${relativeTime(entry.date)}',
-                      style: DswType.xxxs11.copyWith(
-                        color: color.labelTertiary,
-                      ),
                     ),
-                  ],
-                ),
-              ],
-            ),
+                  Text(
+                    '${entry.author} · ${relativeTime(entry.date)}',
+                    style: DswType.xxxs11.copyWith(color: color.labelTertiary),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),

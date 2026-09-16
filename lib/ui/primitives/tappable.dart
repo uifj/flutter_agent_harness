@@ -40,6 +40,7 @@ class DswHoverTap extends StatefulWidget {
     this.semanticLabel,
     this.expanded,
     this.toggled,
+    this.onSecondaryTapDown,
     this.excludeSemantics = false,
     this.enabled = true,
     this.autofocus = false,
@@ -49,6 +50,12 @@ class DswHoverTap extends StatefulWidget {
   final VoidCallback? onTap;
 
   final DswHoverTapBuilder builder;
+
+  /// Right-click handler, for rows that open a context menu on top of their
+  /// primary tap (the git file/log rows). Keyboard users reach the menu through
+  /// a separate control, not this; the primary action still activates via
+  /// Enter/Space, so the row itself is no longer mouse-only.
+  final void Function(TapDownDetails)? onSecondaryTapDown;
 
   /// The button's accessible name. When null, the label comes from the
   /// rendered text subtree instead (fine for a "Copy" label, wrong for an
@@ -131,6 +138,7 @@ class _DswHoverTapState extends State<DswHoverTap> {
         onExit: (_) => setState(() => _hovered = false),
         child: GestureDetector(
           onTap: _interactive ? _activate : null,
+          onSecondaryTapDown: widget.onSecondaryTapDown,
           behavior: HitTestBehavior.opaque,
           child: Builder(
             builder: (context) =>

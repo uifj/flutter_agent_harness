@@ -15,6 +15,7 @@
 // #2 and #3 fail and this file says so — the whole point of the primitive.
 
 import 'package:agent_harness/ui/primitives/tappable.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -88,5 +89,32 @@ void main() {
       ),
     );
     handle.dispose();
+  });
+
+  testWidgets('a secondary (right) tap reaches onSecondaryTapDown', (
+    tester,
+  ) async {
+    var secondary = 0;
+    await tester.pumpWidget(
+      _host(
+        DswHoverTap(
+          onTap: () {},
+          onSecondaryTapDown: (_) => secondary++,
+          semanticLabel: 'Row',
+          excludeSemantics: true,
+          builder: (context, _, _) => const Text('Row'),
+        ),
+      ),
+    );
+    // The git file/log rows open a context menu on right-click; the primary
+    // action must not swallow it.
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.text('Row')),
+      kind: PointerDeviceKind.mouse,
+      buttons: kSecondaryButton,
+    );
+    await gesture.up();
+    await tester.pump();
+    expect(secondary, 1);
   });
 }
