@@ -44,7 +44,7 @@
 | 现象 | 证据 | 建议分类 | 建议优先级 |
 | --- | --- | --- | --- |
 | 测试套件不可在 Windows 移植（13/657 失败） | 2026-09-15 首次在本机跑全套：`shell_run_test` 8 个（写死 `/bin/bash`）、`editor_tab_test` 1 个（temp 目录删除遇 Windows 文件锁 errno 32）、`git_tab_test` 2 个与 `workbench_ui_test` 2 个（tab id / 断言用 POSIX 路径分隔符拼接 `support.path`）。全部先于 riverpod 迁移存在；其中 git_tab/workbench 4 个此前被 `trash_2` 编译错误掩盖（该错已修）。macOS 上的全绿仍是权威门禁；本机门禁为"相对基线零新增失败" | TST | P1 |
-| 亮色主题 6 组正文令牌对比度低于 WCAG AA | 确定性计算（`tool/contrast_check.dart` / `test/theme_contrast_test.dart`）：`labelDimmed` 1.26、`labelCaption` 2.13、`labelTertiary` 3.71（97 处）、`stateWarnLabel` 2.79、审批条 `stateWarnPrimary` 1.99（`approval_panel.dart:104-118`）、`stateSuccessPrimary` 2.28。dsh 原版调色板固有。**已升格为 [ADR-0004](adr/ADR-0004-cfg-light-contrast-aa.md)（PROPOSED，A 加 AA 别名 / B 显式豁免二选一）；回归门禁 `theme_contrast_test.dart` 已先行落地（非豁免的新跌破 AA 即 fail）** | CFG | P1 |
+| 亮色主题 6 组正文令牌对比度低于 WCAG AA | 确定性计算（`tool/contrast_check.dart` / `test/theme_contrast_test.dart`）：`labelDimmed` 1.26、`labelCaption` 2.13、`labelTertiary` 3.71（97 处）、`stateWarnLabel` 2.79、审批条 `stateWarnPrimary` 1.99（`approval_panel.dart:104-118`）、`stateSuccessPrimary` 2.28。dsh 原版调色板固有。**[ADR-0004](adr/ADR-0004-cfg-light-contrast-aa.md) 已决策：采纳 B 显式豁免（A 会抹平亮色三级文字层次，需设计肉眼权衡），palette 不改；回归门禁 `theme_contrast_test.dart` 已落地防恶化** | CFG | P1（已豁免） |
 | 无文本缩放适配 | `textScaler|textScaleFactor` 全仓库 0 处；disclosure_row 等自绘件固定高度（24px header），macOS 辅助功能放大文本时裁切 | DEF | P2 |
 | i18n 双语对齐无守卫 | `lib/l10n/locales.dart:11-13` 注释声称 en 会"在 test 时对照校验"，但 `grep -rn "enStrings\|zhStrings" test/` 零命中；当前键集恰好对齐（不写死条数，加键即失真故刻意省略），纯靠手动维持 | TST | P2 |
 | `README.md` 仍是 Flutter 包模板 | 文件通篇 `TODO:`，无一句项目说明；新人和代理拿它当入口会拿到零信息 | DEBT | P2 |
