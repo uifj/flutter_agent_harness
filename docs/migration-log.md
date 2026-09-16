@@ -20,6 +20,9 @@
 | 4 | `theme/dsw_shad_bridge.dart`：`DswAlias`→`ShadColorScheme`（20 字段），`ShadTheme` 经 `MaterialApp.builder` 挂载；组件用 shad、配色仍走 dsw | `2511804` |
 | 5a | `CapsuleButton` 内部换 `ShadButton`（公开 API 不变） | `45ddfb8` |
 | 5b | 两处 Material 确认对话框（editor 重载丢弃 + git 破坏性操作）合并为一个 `primitives/confirm_dialog.dart` 的 `showConfirmDialog`，走 `ShadDialog.alert` + `ShadButton`（outline/destructive，destructive 填充经桥=stateErrorPrimary）；lib/ui 的 `showDialog/AlertDialog` 与 `TextButton` 归零。两个 tab 测试 harness 经 `MaterialApp.builder` 挂 `ShadTheme`（showShadDialog 读调用方 context 主题） | `1dadca0` |
+| 5c | settings `_Field`（所有设置文本框的唯一包装：API key/base URL/model/工作区/skills/终端字体）内部 Material `TextField` → `ShadInput`，弃手写 `InputDecoration` 改吃桥接色、`trailing` 归入 ShadInput 自带槽。settings 的 `TextField(` 归零。`settings_test`/`models_endpoint_test` 经 `MaterialApp.builder` 挂 `ShadTheme`，`find.byType(TextField)`→`ShadInput`（ShadInput 内部是 EditableText，非 TextField） | `7c1549b` |
+
+> 剩余 C1 目标（composer 主输入 `TextField`、`PopupMenuButton`×7、`Tooltip`×25）刻意暂缓：它们与测试耦合更深（ShadInput 用 EditableText 会打断 `find.byType(TextField)`；shad 菜单/浮层与 `PopupMenuButton` 的打开/命中语义不同；25 处 Tooltip 会让一批裸 `MaterialApp` 测试补挂 ShadTheme），不是"低风险优先"该顺手做的。
 
 ## 无障碍 A1（审计阻断项）— 已闭环
 
