@@ -800,23 +800,16 @@ class _CommandRow extends StatefulWidget {
 }
 
 class _CommandRowState extends State<_CommandRow> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onRun,
-        behavior: HitTestBehavior.opaque,
-        child: ColoredBox(
-          color: _hovered ? color.interactiveBgHover : Colors.transparent,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-            child: Row(
+    return DswHoverTap(
+      onTap: widget.onRun,
+      builder: (context, hovered, _) => ColoredBox(
+        color: hovered ? color.interactiveBgHover : Colors.transparent,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          child: Row(
               children: [
                 Icon(widget.entry.icon, size: 13, color: color.labelSecondary),
                 const SizedBox(width: 8),
@@ -836,7 +829,6 @@ class _CommandRowState extends State<_CommandRow> {
                   ),
                 ),
               ],
-            ),
           ),
         ),
       ),
@@ -872,10 +864,11 @@ class _ImageChip extends StatelessWidget {
         Positioned(
           right: -6,
           top: -6,
-          child: GestureDetector(
+          child: DswHoverTap(
             onTap: onRemove,
-            behavior: HitTestBehavior.opaque,
-            child: Tooltip(
+            semanticLabel: context.tr('removeAttachment'),
+            excludeSemantics: true,
+            builder: (context, _, _) => Tooltip(
               message: context.tr('removeAttachment'),
               child: Container(
                 width: 18,
@@ -1273,37 +1266,28 @@ class _PrimaryButton extends StatefulWidget {
 }
 
 class _PrimaryButtonState extends State<_PrimaryButton> {
-  bool _hovered = false;
-
   @override
-  Widget build(BuildContext context) => MouseRegion(
-    cursor: widget.enabled
-        ? SystemMouseCursors.click
-        : SystemMouseCursors.basic,
-    onEnter: (_) => setState(() => _hovered = true),
-    onExit: (_) => setState(() => _hovered = false),
-    child: GestureDetector(
-      onTap: widget.onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Opacity(
-        opacity: widget.enabled ? 1 : 0.4,
-        // Opts out of the row's 2px downward shift: the send circle keeps its
-        // original seat while smaller chips sit lower.
-        child: Transform.translate(
-          offset: const Offset(0, -2),
-          child: AnimatedContainer(
-            duration: DswMotion.respecting(context, DswMotion.fast),
-            width: 34,
-            height: 34,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: _hovered && widget.enabled
-                  ? widget.color.buttonInfoHover
-                  : widget.color.buttonInfoFill,
-              shape: BoxShape.circle,
-            ),
-            child: widget.child,
+  Widget build(BuildContext context) => DswHoverTap(
+    onTap: widget.onTap,
+    enabled: widget.enabled,
+    builder: (context, hovered, _) => Opacity(
+      opacity: widget.enabled ? 1 : 0.4,
+      // Opts out of the row's 2px downward shift: the send circle keeps its
+      // original seat while smaller chips sit lower.
+      child: Transform.translate(
+        offset: const Offset(0, -2),
+        child: AnimatedContainer(
+          duration: DswMotion.respecting(context, DswMotion.fast),
+          width: 34,
+          height: 34,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: hovered && widget.enabled
+                ? widget.color.buttonInfoHover
+                : widget.color.buttonInfoFill,
+            shape: BoxShape.circle,
           ),
+          child: widget.child,
         ),
       ),
     ),
