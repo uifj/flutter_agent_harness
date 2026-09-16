@@ -989,7 +989,7 @@ class _DiffLineRow extends StatelessWidget {
 
 /// `.gitDiffExpand` — the brand-coloured toggle that reveals (or re-caps) the
 /// rows hidden between the head and tail slices.
-class _ExpandToggle extends StatefulWidget {
+class _ExpandToggle extends StatelessWidget {
   const _ExpandToggle({
     required this.hidden,
     required this.expanded,
@@ -1001,36 +1001,23 @@ class _ExpandToggle extends StatefulWidget {
   final VoidCallback onTap;
 
   @override
-  State<_ExpandToggle> createState() => _ExpandToggleState();
-}
-
-class _ExpandToggleState extends State<_ExpandToggle> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          width: double.infinity,
-          margin: const EdgeInsets.symmetric(vertical: 4),
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          decoration: BoxDecoration(
-            color: _hovered ? color.interactiveBgHover : Colors.transparent,
-          ),
-          child: Center(
-            child: Text(
-              widget.expanded
-                  ? 'Collapse'
-                  : 'Expand ${widget.hidden} more rows',
-              style: DswType.xxs12.copyWith(color: color.brandPrimary),
-            ),
+    return DswHoverTap(
+      onTap: onTap,
+      semanticLabel: expanded ? 'Collapse' : 'Expand $hidden more rows',
+      excludeSemantics: true,
+      builder: (context, hovered, _) => Container(
+        width: double.infinity,
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        decoration: BoxDecoration(
+          color: hovered ? color.interactiveBgHover : Colors.transparent,
+        ),
+        child: Center(
+          child: Text(
+            expanded ? 'Collapse' : 'Expand $hidden more rows',
+            style: DswType.xxs12.copyWith(color: color.brandPrimary),
           ),
         ),
       ),

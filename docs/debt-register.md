@@ -19,21 +19,23 @@
 - **shadcn_ui**：Stage 4 主题桥 `theme/dsw_shad_bridge.dart`（DswAlias→ShadColorScheme，2511804）；Stage 5 CapsuleButton→ShadButton（45ddfb8）。
 - **A1 键盘可达**：新增 `primitives/tappable.dart` 的 `DswHoverTap`（`FocusableActionDetector` + `MouseRegion` + `Semantics(button,onTap)`，零绘制），已收编块原语 4 + 私有图标按钮组 4 + tab strip 关闭/分屏 + settings 控件 7 + git/sidechat/diff/editor 叶按钮 + subagent 根卡。**`lib/ui` `GestureDetector` 60 → 35**；转换项均 Tab 可聚焦 / Enter·Space 激活 / VoiceOver 读 button·toggled。
 
-## A1 剩余（26 个动作型，需 macOS 交互签收，勿在无真机时盲改）
+## A1 键盘可达——进度与剩余（2026-09-16）
 
-35 个里合法保留 9：`app_frame`3 + `split_view`1 + `pane`2 + `free_window`2（拖拽/改尺寸/移窗，非动作）、`tappable`1（`DswHoverTap` 内部）。待收 26 均为复合控件，无真机盲改风险高于收益：
+`lib/ui` 手写 `MouseRegion+GestureDetector` 交互从 **60 降到 26**（`DswHoverTap` 内部那个不算，即 **25 处手写交互件已收**，全部 Tab 可聚焦 / Enter·Space 激活 / VoiceOver 读 button·toggled·selected）。已收：capsule、4 块原语、4 私有图标按钮组、tab strip 关闭/分屏、settings 7 控件、git/sidechat/diff/editor 叶按钮、subagent 根卡、file-tree 行、hero、back-to-bottom、panel close、inspect。`_TabChip` 用附加式 `FocusableActionDetector`+`Semantics(selected)` 加键盘与 tab 语义，内部拖拽/中键/右键菜单原样保留。
 
-| 站点 | 数 | 为何留待 macOS 验 |
-| --- | --- | --- |
-| `conversation/composer.dart` | 5 | 主输入 `TextField`（本身可访问）+ mention chip + 模型座，触及输入/IME 路径 |
-| `tabs/subagent_tab.dart` | 4 | 子节点卡选择 + `Listener` kill 确认态 |
-| `settings/model_settings.dart` | 4 | provider/editor/server 卡内复合行 |
-| `tabs/git_tab.dart` | 3 | `_FileRow` 含右键 context menu（`onSecondaryTapDown`+定位） |
-| `tabs/diff_tab.dart` | 2 | `_GitDiffFile` 折叠行含右键 |
-| `workbench_tab_bar.dart` | 1 | `_TabChip`：Draggable+DragTarget+右键菜单，且该用 **tab 语义**不是 button |
-| file_tree / tool_card / details_panel / chat_view / hero / terminal / sidebar 各 1 | 7 | 行选择/展开，混滚动或次级手势 |
+剩余分类（都不该在无交互验证下盲改）：
 
-> 收这批的正确姿势：macOS 上开着跑，边改边用 Full Keyboard Access + VoiceOver 验（尤其 tab 重排、右键菜单、composer 输入不回归）。`DswHoverTap` 届时再补 `onSecondaryTapDown`（本会话加了又因无消费者回退，避免死代码）。
+| 类别 | 站点 | 数 | 说明 |
+| --- | --- | --- | --- |
+| 合法保留（非按钮） | `app_frame`/`split_view`/`pane`/`free_window` | ~8 | 分隔条拖拽/面板改尺寸/自由窗移动，本就 pointer 拖拽 |
+| 输入相邻，需真机验 | `composer.dart` | 5 | 主输入 `TextField`（Material 本可访问）+ 模型座/mention，触及输入/IME |
+| 复合行 | `model_settings.dart` | 4 | provider/editor/server 卡内复合行 |
+| 复合行 | `subagent_tab.dart` | 3 | 子节点卡选择 + `Listener` kill 确认态 |
+| 右键菜单 | `diff_tab` `_FileHeader`、`git_tab` | 2 | 折叠行/行右键 context menu |
+| 终端 | `terminal_tab` | 1 | 终端聚焦/滚动，语义特殊 |
+| 已加键盘但保留 GD | `workbench_tab_bar` `_TabChip` | 1 | 见上 |
+
+> 收这批的前提已具备（App 现能本机 Windows 跑，ADR-0003）；正确姿势是边改边用 Full Keyboard Access + VoiceOver 在屏幕上验，需要人眼，故留作交互签收轮，非盲扫。
 
 ## 待立 ADR 的观察
 

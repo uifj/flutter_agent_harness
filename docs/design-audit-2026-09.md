@@ -34,7 +34,7 @@ dsw 令牌体系本身纪律良好（无越界 BoxShadow、无 Tailwind 式魔�
 - 影响：键盘用户与 VoiceOver 用户无法完成任何主流程；也堵死未来的集成测试路径（无 key 可敲）。
 - 建议：这不是逐点修补能解决的——需要把 60 处 `GestureDetector` 换成可聚焦语义控件。**与 ADR-0002 合并处理成本最低**（ShadButton/ShadIconButton 等自带焦点与语义），单独做则新建 `lib/ui/primitives/` 的 focusable wrapper。
 - 验证：`grep -c "GestureDetector(" lib/ui/` 趋零；macOS 上用 Full Keyboard Access 走通「发送消息 → 审批 → 打开终端」。
-- **执行状态（2026-09-15，ADR-0002 stage 5）**：新增 `primitives/tappable.dart` 的 `DswHoverTap`，把 `lib/ui` 的 `GestureDetector` **60 → 35**（含 4 块原语、4 私有图标按钮组、tab strip 关闭/分屏、settings 7 控件、git/sidechat/diff/editor 叶按钮、subagent 根卡），转换项全部可键盘聚焦并暴露 button/toggled 语义；`dsw_hover_tap_test.dart` 钉住"指针/键盘/语义"三性。期间还发现并修了一个真实缺陷：`FocusableActionDetector.onShowHoverHighlight` 受 `FocusManager.highlightMode` 门控、会偶发丢 hover，故 hover 改用普通 `MouseRegion`。剩余 26 个动作型（composer 主输入、右键菜单行、`_TabChip` 等复合控件）与 9 个合法拖拽件不再盲改，登记于 debt-register 的「A1 剩余」，待 macOS 交互签收。
+- **执行状态（2026-09-15，ADR-0002 stage 5）**：新增 `primitives/tappable.dart` 的 `DswHoverTap`，把 `lib/ui` 的 `GestureDetector` **60 → 35**（含 4 块原语、4 私有图标按钮组、tab strip 关闭/分屏、settings 7 控件、git/sidechat/diff/editor 叶按钮、subagent 根卡），转换项全部可键盘聚焦并暴露 button/toggled 语义；`dsw_hover_tap_test.dart` 钉住"指针/键盘/语义"三性。期间还发现并修了一个真实缺陷：`FocusableActionDetector.onShowHoverHighlight` 受 `FocusManager.highlightMode` 门控、会偶发丢 hover，故 hover 改用普通 `MouseRegion`。剩余 ~25 处：合法拖拽件（~8，非按钮）+ 需人眼交互签收的复合件（composer/模型输入、model_settings/subagent 复合行、diff/git 右键行、终端）不再盲改，登记于 debt-register 的「A1 剩余」，待 macOS 交互签收。
 
 ## Major
 

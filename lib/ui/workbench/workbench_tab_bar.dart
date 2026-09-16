@@ -284,6 +284,7 @@ class _TabChip extends StatefulWidget {
 
 class _TabChipState extends State<_TabChip> {
   bool _hovered = false;
+  bool _focused = false;
 
   /// True while a tab is hovering the left half of this chip, so the insertion
   /// point is visible before the drop rather than guessed.
@@ -340,7 +341,7 @@ class _TabChipState extends State<_TabChip> {
   Widget _chip(DswAlias color, IconData icon) {
     final fill = widget.active
         ? color.bgLayer2
-        : _hovered
+        : _hovered || _focused
         ? color.interactiveBgHover
         : Colors.transparent;
 
@@ -412,25 +413,45 @@ class _TabChipState extends State<_TabChip> {
       child: body,
     );
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: Listener(
-        // Middle-click to close: not a button Flutter's tap recognisers report,
-        // so the raw pointer event is the only way to see it.
-        onPointerDown: (event) {
-          if (event.buttons & kMiddleMouseButton != 0) _close();
-        },
-        child: GestureDetector(
-          onTap: () =>
-              widget.workbench.activateTab(widget.paneId, widget.tab.id),
-          onSecondaryTapDown: _menu,
-          behavior: HitTestBehavior.opaque,
-          child: Tooltip(
-            message: widget.tab.path ?? widget.tab.title,
-            waitDuration: const Duration(milliseconds: 600),
-            child: draggable,
+    // A tab is selected by click, middle-click-to-close, right-click menu and
+    // drag-reorder. Keyboard parity is added here without disturbing those:
+    // the FocusableActionDetector + Semantics wrap the existing tree, so Tab
+    // lands on the chip, Enter/Space activates it, and VoiceOver announces it
+    // as a selected tab. The inner Listener/GestureDetector/drag stay as-is.
+    return FocusableActionDetector(
+      onFocusChange: (focused) => setState(() => _focused = focused),
+      actions: <Type, Action<Intent>>{
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) {
+            widget.workbench.activateTab(widget.paneId, widget.tab.id);
+            return null;
+          },
+        ),
+      },
+      child: Semantics(
+        selected: widget.active,
+        label: widget.tab.path ?? widget.tab.title,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
+          child: Listener(
+            // Middle-click to close: not a button Flutter's tap recognisers
+            // report, so the raw pointer event is the only way to see it.
+            onPointerDown: (event) {
+              if (event.buttons & kMiddleMouseButton != 0) _close();
+            },
+            child: GestureDetector(
+              onTap: () =>
+                  widget.workbench.activateTab(widget.paneId, widget.tab.id),
+              onSecondaryTapDown: _menu,
+              behavior: HitTestBehavior.opaque,
+              child: Tooltip(
+                message: widget.tab.path ?? widget.tab.title,
+                waitDuration: const Duration(milliseconds: 600),
+                child: draggable,
+              ),
+            ),
           ),
         ),
       ),
