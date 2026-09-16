@@ -38,6 +38,29 @@ void main() {
       expect(decoded, settings);
     });
 
+    test('appearance preferences round-trip when off the defaults', () {
+      const settings = AppSettings(
+        fontFamily: AppFontFamily.serif,
+        fontSize: AppFontSize.large,
+        conversationWidth: AppConversationWidth.wide,
+        interfaceStyle: AppInterfaceStyle.parchment,
+        previewMode: AppPreviewMode.inline,
+        expandToolCalls: false,
+        promptSuggestions: true,
+      );
+      final json = settings.toJson();
+      expect(
+        AppSettings.fromJson(
+          jsonDecode(jsonEncode(json)) as Map<String, dynamic>,
+        ),
+        settings,
+      );
+      // Off-default-only persistence: every field is written because each is
+      // non-default, and a default document writes none of them.
+      expect(json.containsKey('fontFamily'), isTrue);
+      expect(const AppSettings().toJson().containsKey('fontFamily'), isFalse);
+    });
+
     test('reads an absent document as the defaults', () {
       final decoded = AppSettings.fromJson(const {});
       expect(decoded.model.baseUrl, defaultBaseUrl);

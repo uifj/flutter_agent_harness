@@ -7,9 +7,14 @@
 // new one, the workspace is a live setter — so they stay separate fields rather
 // than being flattened.
 //
-// Beside those sit the general preferences: the theme mode and the recent
-// workspaces. Neither needs a runtime rebuild, and neither is "saved" by the
-// settings screen — they apply on write.
+// Beside those sit the general/appearance preferences: theme, language, the
+// conversation font/width, preview mode, and the tool-call/prompt-suggestion
+// behaviour toggles (ADR-0005, ported from starkins_app's preferences). None
+// rebuilds the runtime, so none is "saved" the way the model fields are — they
+// apply on write and persist across launches.
+//
+// Persistence stays in ONE document (this), not a second in-memory preferences
+// model: the ADR's guard against two sources of truth.
 
 import 'mcp_settings.dart';
 import 'model_settings.dart';
@@ -54,6 +59,94 @@ enum LocaleMode {
   };
 }
 
+/// The conversation text face (starkins: sans-serif / serif).
+enum AppFontFamily {
+  sansSerif,
+  serif;
+
+  String get name => switch (this) {
+    sansSerif => 'sansSerif',
+    serif => 'serif',
+  };
+  static AppFontFamily fromName(String? raw) =>
+      raw == 'serif' ? serif : sansSerif;
+}
+
+/// The conversation text size.
+enum AppFontSize {
+  small,
+  medium,
+  large;
+
+  String get name => switch (this) {
+    small => 'small',
+    medium => 'medium',
+    large => 'large',
+  };
+  static AppFontSize fromName(String? raw) => switch (raw) {
+    'small' => small,
+    'large' => large,
+    _ => medium,
+  };
+}
+
+/// The conversation column's max width class. Wired into `LayoutController`
+/// at ADR-0005 S4; stored here so the choice persists.
+enum AppConversationWidth {
+  normal,
+  wide;
+
+  String get name => switch (this) {
+    normal => 'normal',
+    wide => 'wide',
+  };
+  static AppConversationWidth fromName(String? raw) =>
+      raw == 'wide' ? wide : normal;
+}
+
+/// The window skin. NOTE (ADR-0005 S4 guard): only `standard` has a real
+/// palette today; glass/classic/parchment need their own DswAlias set and a
+/// follow-up ADR — the field persists the intent but the renderer applies
+/// standard until that exists.
+enum AppInterfaceStyle {
+  standard,
+  glass,
+  classic,
+  parchment;
+
+  String get name => switch (this) {
+    standard => 'standard',
+    glass => 'glass',
+    classic => 'classic',
+    parchment => 'parchment',
+  };
+  static AppInterfaceStyle fromName(String? raw) => switch (raw) {
+    'glass' => glass,
+    'classic' => classic,
+    'parchment' => parchment,
+    _ => standard,
+  };
+}
+
+/// How generated files are previewed. Maps onto the existing editor/browser
+/// tabs at S4.
+enum AppPreviewMode {
+  newWindow,
+  sidePanel,
+  inline;
+
+  String get name => switch (this) {
+    newWindow => 'newWindow',
+    sidePanel => 'sidePanel',
+    inline => 'inline',
+  };
+  static AppPreviewMode fromName(String? raw) => switch (raw) {
+    'newWindow' => newWindow,
+    'inline' => inline,
+    _ => sidePanel,
+  };
+}
+
 class AppSettings {
   const AppSettings({
     this.model = const ModelSettings(),
@@ -64,6 +157,13 @@ class AppSettings {
     this.theme = ThemeMode.system,
     this.locale = LocaleMode.system,
     this.recentWorkspaces = const [],
+    this.fontFamily = AppFontFamily.sansSerif,
+    this.fontSize = AppFontSize.medium,
+    this.conversationWidth = AppConversationWidth.normal,
+    this.interfaceStyle = AppInterfaceStyle.standard,
+    this.previewMode = AppPreviewMode.sidePanel,
+    this.expandToolCalls = true,
+    this.promptSuggestions = false,
   });
 
   AppSettings.fromJson(Map<String, dynamic> json)
@@ -82,7 +182,18 @@ class AppSettings {
       recentWorkspaces = [
         for (final path in (json['recentWorkspaces'] as List? ?? const []))
           if (path is String) path,
-      ];
+      ],
+      fontFamily = AppFontFamily.fromName(json['fontFamily'] as String?),
+      fontSize = AppFontSize.fromName(json['fontSize'] as String?),
+      conversationWidth = AppConversationWidth.fromName(
+        json['conversationWidth'] as String?,
+      ),
+      interfaceStyle = AppInterfaceStyle.fromName(
+        json['interfaceStyle'] as String?,
+      ),
+      previewMode = AppPreviewMode.fromName(json['previewMode'] as String?),
+      expandToolCalls = json['expandToolCalls'] as bool? ?? true,
+      promptSuggestions = json['promptSuggestions'] as bool? ?? false;
 
   final ModelSettings model;
 
@@ -94,36 +205,38 @@ class AppSettings {
   final LocaleMode locale;
 
   /// The folder the file and shell tools are confined to. Null means they refuse
-  /// every call, which is the state a fresh install is in — there is
-  /// no defensible default, since the app cannot guess which folder the user
-  /// meant to expose.
+  /// every call, which is the state a fresh install is in.
   final String? workspaceRoot;
 
-  /// The security-scoped bookmark for [workspaceRoot], as handed back by the
-  /// native folder pick (see `ProjectFolderOps`). Resolved at launch to
-  /// restore access to the folder across restarts — the path alone is only a
-  /// name; the bookmark is the permission that travels with it. Null when the
-  /// root was adopted from a typed path or a recent entry rather than picked,
-  /// or on platforms without bookmarks; those cases live without the restore
-  /// step rather than without the workspace.
+  /// The security-scoped bookmark for [workspaceRoot], restored at launch (see
+  /// `ProjectFolderOps`). Null when the root came from a typed path/recent, or
+  /// on platforms without bookmarks.
   final String? workspaceBookmark;
 
   /// MCP servers the agent may call, namespaced `mcp/<name>:tool/<tool>`.
   final List<McpServerConfig> mcpServers;
 
-  /// Where `SKILL.md` skill folders live. Null means the default
-  /// `<support>/skills`, which is what the runtime is handed when the user has
-  /// not chosen one.
+  /// Where `SKILL.md` skill folders live. Null means `<support>/skills`.
   final String? skillsRoot;
 
-  /// Folders offered back in the picker, most recent first, deduped. A
-  /// workspace that no longer exists on disk keeps its seat — the picker shows
-  /// it as missing rather than silently forgetting a place the user knew.
+  /// Folders offered back in the picker, most recent first, deduped.
   final List<String> recentWorkspaces;
 
-  /// Moves [path] to the front of [recentWorkspaces], capped, deduped. The
-  /// picker's history is the record of where the user has been; a folder that
-  /// lost its seat on the way out would be a folder the picker forgets.
+  // ---- Appearance / behaviour preferences (ADR-0005) ---------------------
+
+  final AppFontFamily fontFamily;
+  final AppFontSize fontSize;
+  final AppConversationWidth conversationWidth;
+  final AppInterfaceStyle interfaceStyle;
+  final AppPreviewMode previewMode;
+
+  /// Whether a newly-shown tool block starts expanded (starkins default on).
+  final bool expandToolCalls;
+
+  /// Whether the agent offers follow-up prompt suggestions. Behaviour lands
+  /// with the composer subsystem; persisted now so the toggle survives.
+  final bool promptSuggestions;
+
   static List<String> _pushRecent(List<String> recent, String path) => [
     path,
     for (final other in recent)
@@ -139,6 +252,13 @@ class AppSettings {
     ThemeMode? theme,
     LocaleMode? locale,
     List<String>? recentWorkspaces,
+    AppFontFamily? fontFamily,
+    AppFontSize? fontSize,
+    AppConversationWidth? conversationWidth,
+    AppInterfaceStyle? interfaceStyle,
+    AppPreviewMode? previewMode,
+    bool? expandToolCalls,
+    bool? promptSuggestions,
   }) => AppSettings(
     model: model ?? this.model,
     workspaceRoot: workspaceRoot ?? this.workspaceRoot,
@@ -148,12 +268,17 @@ class AppSettings {
     theme: theme ?? this.theme,
     locale: locale ?? this.locale,
     recentWorkspaces: recentWorkspaces ?? this.recentWorkspaces,
+    fontFamily: fontFamily ?? this.fontFamily,
+    fontSize: fontSize ?? this.fontSize,
+    conversationWidth: conversationWidth ?? this.conversationWidth,
+    interfaceStyle: interfaceStyle ?? this.interfaceStyle,
+    previewMode: previewMode ?? this.previewMode,
+    expandToolCalls: expandToolCalls ?? this.expandToolCalls,
+    promptSuggestions: promptSuggestions ?? this.promptSuggestions,
   );
 
-  /// Explicit, because [copyWith] cannot express it: an empty path field means
-  /// "take the permission back", not "leave it alone". The bookmark goes with
-  /// it — a permission for a workspace that no longer exists is a lie the
-  /// restore step would have to catch anyway.
+  /// Explicit: an empty path field means "take the permission back". The
+  /// appearance prefs must survive, so every field is re-passed here.
   AppSettings withoutWorkspace() => AppSettings(
     model: model,
     mcpServers: mcpServers,
@@ -161,13 +286,17 @@ class AppSettings {
     theme: theme,
     locale: locale,
     recentWorkspaces: recentWorkspaces,
+    fontFamily: fontFamily,
+    fontSize: fontSize,
+    conversationWidth: conversationWidth,
+    interfaceStyle: interfaceStyle,
+    previewMode: previewMode,
+    expandToolCalls: expandToolCalls,
+    promptSuggestions: promptSuggestions,
   );
 
-  /// [path] adopted as the workspace — pointed at and moved to the front of
-  /// the recent list in one write, so the two can never disagree. The bookmark
-  /// is the pick's own; adopting a typed path or a recent entry (`bookmark`
-  /// null) clears any previous one: a stale bookmark for a folder that is no
-  /// longer the root would restore the wrong permission.
+  /// [path] adopted as the workspace, moved to the front of the recent list in
+  /// one write. The bookmark is the pick's own (null clears any previous).
   AppSettings withWorkspace(String path, {String? bookmark}) => AppSettings(
     model: model,
     workspaceRoot: path,
@@ -177,10 +306,15 @@ class AppSettings {
     theme: theme,
     locale: locale,
     recentWorkspaces: _pushRecent(recentWorkspaces, path),
+    fontFamily: fontFamily,
+    fontSize: fontSize,
+    conversationWidth: conversationWidth,
+    interfaceStyle: interfaceStyle,
+    previewMode: previewMode,
+    expandToolCalls: expandToolCalls,
+    promptSuggestions: promptSuggestions,
   );
 
-  /// Forgets [path] from the recent list only — the picker's business, not the
-  /// permission's.
   AppSettings forgetWorkspace(String path) => copyWith(
     recentWorkspaces: [
       for (final other in recentWorkspaces)
@@ -188,9 +322,9 @@ class AppSettings {
     ],
   );
 
-  /// Whether the runtime built from [previous] has to be torn down for these
-  /// settings: the model fields, the MCP server set, and the skills directory
-  /// are all baked in at construction.
+  /// Whether the runtime built from [previous] has to be torn down. The
+  /// appearance prefs never rebuild it — none of them touch the model, the MCP
+  /// set, or the skills directory.
   bool requiresRuntimeRestart(AppSettings previous) =>
       model.requiresRestart(previous.model) ||
       !_listEq(mcpServers, previous.mcpServers) ||
@@ -206,6 +340,18 @@ class AppSettings {
     if (theme != ThemeMode.system) 'theme': theme.name,
     if (locale != LocaleMode.system) 'locale': locale.name,
     if (recentWorkspaces.isNotEmpty) 'recentWorkspaces': recentWorkspaces,
+    // Persisted only when off the default, so a fresh document stays lean and
+    // absent keys mean "default" on the read side.
+    if (fontFamily != AppFontFamily.sansSerif) 'fontFamily': fontFamily.name,
+    if (fontSize != AppFontSize.medium) 'fontSize': fontSize.name,
+    if (conversationWidth != AppConversationWidth.normal)
+      'conversationWidth': conversationWidth.name,
+    if (interfaceStyle != AppInterfaceStyle.standard)
+      'interfaceStyle': interfaceStyle.name,
+    if (previewMode != AppPreviewMode.sidePanel)
+      'previewMode': previewMode.name,
+    if (!expandToolCalls) 'expandToolCalls': false,
+    if (promptSuggestions) 'promptSuggestions': true,
   };
 
   @override
@@ -218,7 +364,14 @@ class AppSettings {
       other.skillsRoot == skillsRoot &&
       other.theme == theme &&
       other.locale == locale &&
-      _listEq(other.recentWorkspaces, recentWorkspaces);
+      _listEq(other.recentWorkspaces, recentWorkspaces) &&
+      other.fontFamily == fontFamily &&
+      other.fontSize == fontSize &&
+      other.conversationWidth == conversationWidth &&
+      other.interfaceStyle == interfaceStyle &&
+      other.previewMode == previewMode &&
+      other.expandToolCalls == expandToolCalls &&
+      other.promptSuggestions == promptSuggestions;
 
   @override
   int get hashCode => Object.hash(
@@ -230,11 +383,15 @@ class AppSettings {
     theme,
     locale,
     Object.hashAll(recentWorkspaces),
+    fontFamily,
+    fontSize,
+    conversationWidth,
+    interfaceStyle,
+    previewMode,
+    expandToolCalls,
+    promptSuggestions,
   );
 
-  /// Lists have no deep `==` of their own — a fresh `[]` is not `const []` —
-  /// so equality here has to walk the elements. `McpServerConfig` itself has a
-  /// proper `==`, which is what makes the walk meaningful.
   static bool _listEq<T>(List<T> a, List<T> b) {
     if (a.length != b.length) return false;
     for (var i = 0; i < a.length; i++) {
