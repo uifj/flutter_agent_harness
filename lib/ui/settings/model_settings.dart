@@ -23,6 +23,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter/services.dart';
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadInput;
 
 import '../../genkit/models_endpoint.dart';
 import '../../l10n/locales.dart';
@@ -1638,10 +1639,6 @@ class _Field extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
-      borderSide: BorderSide(color: color.borderL2),
-    );
     var style = DswType.s14.copyWith(color: color.labelPrimary);
     if (code) {
       style = style.copyWith(
@@ -1657,42 +1654,26 @@ class _Field extends StatelessWidget {
           style: DswType.xxsStrong12.copyWith(color: color.labelSecondary),
         ),
         const SizedBox(height: 6),
-        Row(
-          children: [
-            Expanded(
-              child: SizedBox(
-                height: 32,
-                child: TextField(
-                  controller: controller,
-                  autofocus: autofocus,
-                  focusNode: focusNode,
-                  onSubmitted: onSubmitted,
-                  obscureText: obscured,
-                  // A key and a path are both single-line values that must not be
-                  // "helpfully" capitalised or corrected.
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  textAlignVertical: TextAlignVertical.center,
-                  style: style,
-                  cursorColor: color.labelPrimary,
-                  decoration: InputDecoration(
-                    isCollapsed: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                    filled: true,
-                    fillColor: color.bgLayer1,
-                    hintText: hint,
-                    hintStyle: style.copyWith(color: color.labelDimmed),
-                    border: border,
-                    enabledBorder: border,
-                    focusedBorder: border.copyWith(
-                      borderSide: BorderSide(color: color.brandPrimary),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            if (trailing != null) ...[const SizedBox(width: 6), trailing!],
-          ],
+        // ADR-0002 Stage 5c: the field box is shad's own input (coloured through
+        // the dsw bridge) rather than a hand-rolled Material decoration, and the
+        // trailing action rides ShadInput's own slot instead of a sibling in a
+        // Row.
+        ShadInput(
+          controller: controller,
+          autofocus: autofocus,
+          focusNode: focusNode,
+          onSubmitted: onSubmitted,
+          obscureText: obscured,
+          // A key and a path are both single-line values that must not be
+          // "helpfully" capitalised or corrected.
+          autocorrect: false,
+          enableSuggestions: false,
+          style: style,
+          placeholder: Text(
+            hint,
+            style: style.copyWith(color: color.labelDimmed),
+          ),
+          trailing: trailing,
         ),
       ],
     );

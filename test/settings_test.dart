@@ -14,12 +14,14 @@ import 'package:agent_harness/model/model_settings.dart';
 import 'package:agent_harness/model/workbench_prefs.dart';
 import 'package:agent_harness/state/settings_store.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
+import 'package:agent_harness/theme/dsw_shad_bridge.dart';
 import 'package:agent_harness/ui/settings/model_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadTheme, ShadInput;
 
 void main() {
   group('AppSettings', () {
@@ -142,6 +144,12 @@ void main() {
     }) => tester.pumpWidget(
       MaterialApp(
         theme: dswThemeData(Brightness.light),
+        // The panel's fields are ShadInputs, which read ShadTheme — mount the
+        // same ancestor main does, via MaterialApp.builder.
+        builder: (context, child) => ShadTheme(
+          data: dswShadTheme(Theme.of(context).brightness),
+          child: child!,
+        ),
         // The panel is a bare `Stack`; in the app it floats over the frame, which
         // sits in a `Scaffold`. The text fields need that Material ancestor, so
         // the harness supplies the same one rather than a lighter wrapper.
@@ -182,7 +190,7 @@ void main() {
       // The panel opens on General; the key lives in Models.
       await tester.tap(find.text('Models'));
       await tester.pump();
-      await tester.enterText(find.byType(TextField).first, '  sk-new\n');
+      await tester.enterText(find.byType(ShadInput).first, '  sk-new\n');
       await tester.pump();
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
@@ -208,7 +216,7 @@ void main() {
 
       await tester.tap(find.text('Workspace'));
       await tester.pump();
-      await tester.enterText(find.byType(TextField).first, '');
+      await tester.enterText(find.byType(ShadInput).first, '');
       await tester.pump();
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
@@ -230,7 +238,7 @@ void main() {
 
       await tester.tap(find.text('Models'));
       await tester.pump();
-      await tester.enterText(find.byType(TextField).first, 'sk-typed');
+      await tester.enterText(find.byType(ShadInput).first, 'sk-typed');
       await tester.pump();
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pump();
@@ -337,7 +345,7 @@ void main() {
       expect(find.text('OpenAI-compatible'), findsOneWidget);
       expect(find.text('Anthropic'), findsOneWidget);
       expect(find.text('Google'), findsOneWidget);
-      expect(find.byType(TextField), findsOneWidget);
+      expect(find.byType(ShadInput), findsOneWidget);
       expect(find.text('Customized'), findsOneWidget);
 
       // The advanced fields hide behind the disclosure until it is opened.
@@ -357,14 +365,14 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Edit').first);
       await tester.pump();
-      expect(find.byType(TextField), findsOneWidget);
+      expect(find.byType(ShadInput), findsOneWidget);
       expect(find.text('Customized'), findsOneWidget);
 
       // The moved card still carries the advanced fields behind its own
       // disclosure.
       await tester.tap(find.text('Customized'));
       await tester.pump();
-      expect(find.byType(TextField), findsNWidgets(3));
+      expect(find.byType(ShadInput), findsNWidgets(3));
 
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
@@ -520,7 +528,7 @@ void main() {
       // The family commits on submit — a half-typed font stack is not a
       // preference.
       await tester.enterText(
-        find.byType(TextField),
+        find.byType(ShadInput),
         "'JetBrains Mono', monospace",
       );
       await tester.testTextInput.receiveAction(TextInputAction.done);

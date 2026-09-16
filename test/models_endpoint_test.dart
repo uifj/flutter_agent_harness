@@ -12,10 +12,12 @@ import 'package:agent_harness/genkit/models_endpoint.dart';
 import 'package:agent_harness/model/app_settings.dart';
 import 'package:agent_harness/model/model_settings.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
+import 'package:agent_harness/theme/dsw_shad_bridge.dart';
 import 'package:agent_harness/ui/settings/model_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadTheme;
 
 /// Scripts the answer, or the failure; records every ask.
 class FakeModelsFetcher implements ModelsEndpointFetcher {
@@ -91,6 +93,10 @@ void main() {
     }) => tester.pumpWidget(
       MaterialApp(
         theme: dswThemeData(Brightness.light),
+        builder: (context, child) => ShadTheme(
+          data: dswShadTheme(Theme.of(context).brightness),
+          child: child!,
+        ),
         home: Scaffold(
           body: SettingsPanel(
             settings: const AppSettings(
@@ -156,6 +162,10 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: dswThemeData(Brightness.light),
+          builder: (context, child) => ShadTheme(
+            data: dswShadTheme(Theme.of(context).brightness),
+            child: child!,
+          ),
           home: Scaffold(
             body: SettingsPanel(
               settings: const AppSettings(),
