@@ -19,6 +19,7 @@
 | --- | --- | --- |
 | 4 | `theme/dsw_shad_bridge.dart`：`DswAlias`→`ShadColorScheme`（20 字段），`ShadTheme` 经 `MaterialApp.builder` 挂载；组件用 shad、配色仍走 dsw | `2511804` |
 | 5a | `CapsuleButton` 内部换 `ShadButton`（公开 API 不变） | `45ddfb8` |
+| 5b | 两处 Material 确认对话框（editor 重载丢弃 + git 破坏性操作）合并为一个 `primitives/confirm_dialog.dart` 的 `showConfirmDialog`，走 `ShadDialog.alert` + `ShadButton`（outline/destructive，destructive 填充经桥=stateErrorPrimary）；lib/ui 的 `showDialog/AlertDialog` 与 `TextButton` 归零。两个 tab 测试 harness 经 `MaterialApp.builder` 挂 `ShadTheme`（showShadDialog 读调用方 context 主题） | `1dadca0` |
 
 ## 无障碍 A1（审计阻断项）— 已闭环
 
