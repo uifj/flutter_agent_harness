@@ -46,6 +46,7 @@ const enStrings = <String, String>{
   'reloadDirtyDesc':
       'Reloading "{path}" from disk will discard your unsaved edits.',
   'settings': 'Settings',
+  'openSettings': 'Open settings',
   'untitled': 'Untitled',
   'loading': 'Loading…',
   'confirm': 'Confirm',
@@ -410,6 +411,7 @@ const zhStrings = <String, String>{
   'reloadDirtyTitle': '放弃未保存的编辑？',
   'reloadDirtyDesc': '从磁盘重新加载「{path}」将丢弃未保存的编辑。',
   'settings': '设置',
+  'openSettings': '打开设置',
   'untitled': '未命名',
   'loading': '加载中…',
   'confirm': '确认',

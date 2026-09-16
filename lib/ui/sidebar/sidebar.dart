@@ -16,6 +16,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../l10n/locales.dart';
+import '../../model/app_settings.dart' as appcfg;
 import '../../model/conversation.dart';
 import '../../model/user_profile.dart';
 import '../../state/session_index.dart';
@@ -24,6 +25,7 @@ import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../primitives/tappable.dart';
+import '../settings/widgets/settings_quick_menu.dart';
 import '../layout/columns.dart';
 
 /// Wide-content unmount delay; matches the 150ms wide-content fade-out.
@@ -36,6 +38,8 @@ class Sidebar extends StatefulWidget {
     required this.width,
     required this.sessions,
     this.profile,
+    this.settings,
+    this.onSettingsChanged,
     required this.onNewSession,
     required this.onToggle,
     required this.onOpenSession,
@@ -55,6 +59,11 @@ class Sidebar extends StatefulWidget {
   /// The signed-in user, or null while the profile source is loading or when
   /// there is none — the footer avatar then shows an anonymous placeholder.
   final UserProfile? profile;
+
+  /// The settings document the footer quick-menu edits, and the live-save path.
+  /// Both null (menu disabled) in tests that build a bare Sidebar.
+  final appcfg.AppSettings? settings;
+  final ValueChanged<appcfg.AppSettings>? onSettingsChanged;
 
   final VoidCallback onNewSession;
   final VoidCallback onToggle;
@@ -78,6 +87,9 @@ class _SidebarState extends State<Sidebar> {
   /// True once the collapse fade has finished and the rail layout may apply.
   bool _settled = false;
   Timer? _settleTimer;
+
+  /// Anchors the footer quick-menu to the profile row.
+  final _menuLink = LayerLink();
 
   /// The last width the column had while expanded, held so the fading content
   /// keeps its expanded layout instead of reflowing into the rail.
@@ -392,35 +404,63 @@ class _SidebarState extends State<Sidebar> {
   );
 
   /// The footer's identity line: the avatar, and beside it the display name and
-  /// email. Non-interactive for now (the quick-menu that hangs off it is S3);
-  /// when the profile is still loading or absent it collapses to the avatar.
+  /// email. It is the quick-menu trigger (opens [showSettingsQuickMenu] when a
+  /// document is wired); when the profile is still loading or absent it collapses
+  /// to the avatar.
   Widget _profileRow(DswAlias color) {
     final profile = widget.profile;
-    return Row(
-      children: [
-        _UserAvatar(profile: profile, color: color),
-        const SizedBox(width: 8),
-        if (profile != null)
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  profile.displayName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: DswType.s14.copyWith(color: color.labelPrimary),
-                ),
-                Text(
-                  profile.email,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: DswType.xxs12.copyWith(color: color.labelTertiary),
-                ),
-              ],
-            ),
+    final canMenu = widget.settings != null && widget.onSettingsChanged != null;
+    return CompositedTransformTarget(
+      link: _menuLink,
+      child: DswHoverTap(
+        // The whole identity line is the quick-menu trigger; with no document
+        // wired (tests) it is inert.
+        onTap: canMenu
+            ? () => showSettingsQuickMenu(
+                context: context,
+                link: _menuLink,
+                initial: widget.settings!,
+                onChanged: widget.onSettingsChanged!,
+                onOpenSettings: widget.onOpenSettings,
+              )
+            : null,
+        semanticLabel: context.tr('settings'),
+        builder: (context, hovered, _) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: BoxDecoration(
+            color: hovered && canMenu ? color.interactiveBgHover : null,
+            borderRadius: BorderRadius.circular(8),
           ),
-      ],
+          child: Row(
+            children: [
+              _UserAvatar(profile: profile, color: color),
+              const SizedBox(width: 8),
+              if (profile != null)
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        profile.displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: DswType.s14.copyWith(color: color.labelPrimary),
+                      ),
+                      Text(
+                        profile.email,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: DswType.xxs12.copyWith(
+                          color: color.labelTertiary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

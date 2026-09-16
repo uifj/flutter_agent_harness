@@ -165,6 +165,11 @@ class _DshAppState extends ConsumerState<DshApp> {
                   // avatar renders a placeholder until the (mock, later Supabase)
                   // source resolves; riverpod stays out of the widget tree.
                   profile: ref.watch(userProfileProvider).value,
+                  // The footer quick-menu edits these live (theme/locale/width
+                  // never rebuild the runtime), so it needs the document and the
+                  // save path — the same `scope.save` the settings panel uses.
+                  settings: doc,
+                  onSettingsChanged: (next) => scope.save(next),
                   onNewSession: scope.newSession,
                   onToggle: ref.read(layoutProvider).toggleSidebar,
                   onOpenSession: scope.openSession,
