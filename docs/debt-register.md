@@ -11,6 +11,7 @@
 | ADR-0003 | 增加 Windows/Linux 桌面平台目标（本机可验证） | ARC | P2 | RESOLVED @ 54e75d7 | 2026-09-16 | [链接](adr/ADR-0003-arc-windows-linux-platforms.md) |
 | ADR-0004 | 亮色正文对比度 AA 修正层（A 新增 AA 别名 / B 显式豁免） | CFG | P1 | PROPOSED（待签收；回归门禁已先行落地） | 2026-09-16 | [链接](adr/ADR-0004-cfg-light-contrast-aa.md) |
 | ADR-0005 | 以 starkins 设置页为蓝本重建设置界面（重接本项目栈） | ARC | P1 | RESOLVED（S1–S5 落地，S5 真机走查通过；未接线的 previewMode/字体/皮肤见下方观察行） | 2026-09-16 | [链接](adr/ADR-0005-arc-starkins-settings-rebuild.md) |
+| ADR-0006 | 设置面重构：全屏设置视图 + 底部级联快捷菜单 + 用户 Profile（预留 Supabase） | ARC | P1 | ACCEPTED（S1–S5 待实施；取代 ADR-0005 守卫 #4 的 overlay 呈现，但不引入 Navigator 路由） | 2026-09-16 | [链接](adr/ADR-0006-arc-settings-fullscreen-profile.md) |
 
 > 2026-09-15 设计层审计（方法：design-review 插件手动审查模型）产出了完整证据链，见 [design-audit-2026-09.md](design-audit-2026-09.md)。阻断级/ majors 的处置归属：键盘无障碍（A1/A3）与表单控件缺口（C1）并入 ADR-0002 实施；A2（对比度）与文本缩放留下方观察表。
 

@@ -22,7 +22,7 @@
 1. 取色：starkins 的 `ShadTheme.of(context).colorScheme.X` → 一律 `context.dsw.Y`（`foreground→labelPrimary`、`mutedForeground→labelTertiary/labelCaption`、`border→borderL2`、`card→bgLayer1`、`muted→sidebarFill` 等，与 `dsw_shad_bridge` 表一致）。**不得** `import` shad 读调色板。
 2. 字体/字号：starkins 的裸 `TextStyle(fontSize:..)` → 本项目 `DswType` 刻度（缺失档加进 alias 层，别散写数字）。
 3. 文案：starkins 硬编码中文 → `context.tr(key)`，`en/zh` 双字典同键新增（键数不写死，见 workflow §3）。
-4. 呈现面：不引入路由。starkins"全屏页"= 本项目现有 overlay `SettingsPanel` 的**放大版**（沿用 overlay/scope，不 `Navigator.push` 新页面）。starkins 的 quick-popup 与 全屏页**二选一保留 overlay 单层**（本项目已有一层）。
+4. 呈现面：不引入路由。starkins"全屏页"= 本项目现有 overlay `SettingsPanel` 的**放大版**（沿用 overlay/scope，不 `Navigator.push` 新页面）。starkins 的 quick-popup 与 全屏页**二选一保留 overlay 单层**（本项目已有一层）。**〔后续：本条的"overlay 单层"呈现被 [ADR-0006](ADR-0006-arc-settings-fullscreen-profile.md) 修订为「全屏视图」——但仍以状态切换 body 实现、不引入 `Navigator` 路由，"无路由"原则不变。〕**
 5. 状态/持久化：新偏好一律进 `AppSettings`（`SettingsStore` 原子落盘），read 走 `settingsDocument` provider；**不**新建 `Notifier<AppPreferences>` 内存态（与本项目持久化模型并存=第二个真值源）。
 6. 分区取舍：只保留本项目**有真实数据/行为可接**的节（外观偏好、模型、MCP/Skills、工作区、工作台、快捷键占位可留空但不编账号/语音/意识等无子系统支撑的节）。starkins 的"个人资料/更新/语音/意识/安全/实验"等 **不带入**（本项目无对应能力）。
 
