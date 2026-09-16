@@ -1,12 +1,12 @@
 # ADR-0005: 以 starkins 设置页为蓝本重建 agent_harness 设置界面（重接本项目栈）
 
-- **状态**: IN-PROGRESS（S1–S4 已落 develop；S5 真机走查待完成）
+- **状态**: RESOLVED（S1–S5 全部落地；S5 已在 Windows 真机走查通过。previewMode / 正文字体族·字号 / 界面皮肤三项"仅持久化未接线"另记债务登记表，不属本 ADR 的"设置页迁移"范围）
 - **分类**: ARC
 - **优先级**: P1
 - **影响维度**: 生产功能（设置面）· 认知障碍（两套设置并存风险）
 - **日期**: 2026-09-16
 - **来源**: 用户决策（照搬 starkins 设置页的布局/组件，融合本项目现有设置功能，用本项目 dsw 配色 + 自研 i18n，且符合现有架构；对话宽度入 `AppSettings`）
-- **修复 commit**: S1 c56bb02 · S2 a59bcdc · S3 f6c074c · S4 07ead77（S5 待补）
+- **修复 commit**: S1 c56bb02 · S2 a59bcdc · S3 f6c074c · S4 07ead77 · S5 真机走查通过（本 docs commit）
 
 ## 背景（Context）
 
@@ -32,7 +32,7 @@
 - **S2 控件层**（✅ a59bcdc）：审计后**塌缩为一个 `SettingsCard` 分组框**。本项目设置面已自带 starkins 控件的 dsw 重接版——`_SettingCellRow`（= SettingRow+SettingSelect 的下拉胶囊）、`_SwitchRow`/`_Switch`（= SettingToggle，走 `DswHoverTap` 已键盘可达）、`_heading`（= SettingsPageTitle）。重复实现即第二真值源（守卫 #6），故只补项目缺的那件：圆角描边卡片框（沿用 `_providerRowCard` 的 borderL2/radius12 描边语言，非 starkins 的填充卡）。
 - **S3 版面层**（✅ f6c074c）：nav 增「外观」节（5 下拉 + 2 开关，全用既有控件），并把「常规」节的主题/语言行包进 `SettingsCard`——starkins 的卡片分组"形"落地；en/zh 双字典同键补齐；仍 overlay 单层、无路由。默认节仍为「常规」，`find.text('Follow system')` 仍 2 个（既有测试不动）。
 - **S4 接线**（✅ 部分 07ead77）：`conversationWidth` + `expandToolCalls` 经新的 `AppearanceScope`（WorkbenchPrefsScope 式 InheritedWidget，避免 riverpod 渗入 UI）在 `main` 挂载并驱动 chat_view/composer/审批·计划卡同步加宽、以及 ToolCard 初次展开。**未接线（仅持久化意图，另立后续）**：`previewMode`（需"生成文件预览流"规格，且"新窗口"要多窗口支持）、正文字体族/字号、`interfaceStyle` 皮肤（需各自 DswAlias 调色板）。无 scope 时各消费方回退到旧默认（748、折叠），既有测试零扰动。
-- **S5 校验**（⏳）：Windows `flutter run -d windows` 人眼走查（外观节呈现、加宽生效、卡片分组观感）+ `contrast_check` 不因新色回退。
+- **S5 校验**（✅）：`flutter build windows --debug` 通过并在真机运行——外观节 7 项偏好渲染于单个 `SettingsCard`、常规节主题/语言已卡片分组、中文文案正常、展开工具调用开关呈默认开、界面风格"仅标准生效"提示可见、无溢出；`contrast_check` 暗色零回退。宽模式像素效果与下拉菜单交互以 widget 测试覆盖，未在真机点选（避免写入用户真实 `settings.json`）。
 
 ## 后果（Consequences）
 

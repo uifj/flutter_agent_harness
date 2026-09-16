@@ -42,7 +42,7 @@
 | S2 | 审计后**塌缩为一个 `SettingsCard` 分组框**——starkins 的 SettingRow/Select/Toggle/PageTitle 本项目已有 dsw 重接版（`_SettingCellRow`/`_SwitchRow`/`_heading`），不重复造 | `a59bcdc` |
 | S3 | nav 增「外观」节（5 下拉 + 2 开关）、「常规」节两行包进 `SettingsCard`、en/zh 补键；默认节与 `find.text('Follow system')` 计数不变，既有测试零改动 | `f6c074c` |
 | S4 | 新增 `ui/appearance_scope.dart`（`WorkbenchPrefsScope` 式 InheritedWidget）驱动 `conversationWidth`（chat_view/composer/审批·计划卡同步加宽）与 `expandToolCalls`（ToolCard 初次展开）；无 scope 回退旧默认（748/折叠）。**未接线（仅持久化意图）**：`previewMode`、正文字体族/字号、`interfaceStyle` 皮肤 | `07ead77` |
-| S5 | ⏳ Windows `flutter run -d windows` 人眼走查外观节 + 加宽生效 + 卡片观感；`contrast_check` 零回退 | — |
+| S5 | ✅ Windows `flutter build windows --debug` 通过并真机运行：外观节 7 项偏好渲染于单个 `SettingsCard`、常规节卡片分组、中文文案、展开工具调用默认开、界面风格"仅标准生效"提示均正常、无溢出；`contrast_check` 暗色零回退。宽模式像素效果与下拉交互以 widget 测试覆盖（未真机点选，避免写脏 `settings.json`） | 真机走查 |
 
 ## 每阶段门禁口径
 
