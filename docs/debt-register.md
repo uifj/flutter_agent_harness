@@ -10,6 +10,7 @@
 | ADR-0002 | develop 分支改造为 riverpod + shadcn_ui | ARC | P1 | IN-PROGRESS（修订 1：注解模式，riverpod 家族 3.2.1） | 2026-09-15 | [链接](adr/ADR-0002-arc-riverpod-shadcn-migration.md) |
 | ADR-0003 | 增加 Windows/Linux 桌面平台目标（本机可验证） | ARC | P2 | RESOLVED @ 54e75d7 | 2026-09-16 | [链接](adr/ADR-0003-arc-windows-linux-platforms.md) |
 | ADR-0004 | 亮色正文对比度 AA 修正层（A 新增 AA 别名 / B 显式豁免） | CFG | P1 | PROPOSED（待签收；回归门禁已先行落地） | 2026-09-16 | [链接](adr/ADR-0004-cfg-light-contrast-aa.md) |
+| ADR-0005 | 以 starkins 设置页为蓝本重建设置界面（重接本项目栈） | ARC | P1 | IN-PROGRESS（S1–S4 已落 develop，S5 真机走查待完成） | 2026-09-16 | [链接](adr/ADR-0005-arc-starkins-settings-rebuild.md) |
 
 > 2026-09-15 设计层审计（方法：design-review 插件手动审查模型）产出了完整证据链，见 [design-audit-2026-09.md](design-audit-2026-09.md)。阻断级/ majors 的处置归属：键盘无障碍（A1/A3）与表单控件缺口（C1）并入 ADR-0002 实施；A2（对比度）与文本缩放留下方观察表。
 
@@ -41,6 +42,7 @@
 | macOS 分发缺口 | `CODE_SIGN_IDENTITY = "-"`、无 `DEVELOPMENT_TEAM`、未配 hardened runtime / `notarytool` 公证 → 产物只能本机运行；且 `.gitignore` 缺 `*.p12`/`*.cer`/`*.mobileprovision`，一旦有人放证书就会入库 | CFG | P1（若要对外发布） |
 | 无 CI / 无版本推进 | 仓库无工作流文件，`pubspec.yaml` 仍 `version: 0.0.1`；analyze/format/test 全绿只靠人自觉 | DEBT | P2 |
 | workbench store 防抖测试负载下 flaky | `test/workbench_controller_test.dart` 的 "store collapses a burst into the last value" 在 `flutter test` 全套并发下偶发失败（2026-09-16 遇到一次，单跑 3/3 通过、重跑全套即消失）。debounce/计时对调度敏感，非确定性 | TST | P2 |
+| ADR-0005 S4 未接线的偏好（仅持久化意图） | `AppSettings` 已存 `previewMode`/`fontFamily`/`fontSize`/`interfaceStyle`，外观节也能改并落盘，但渲染端忽略：`conversationWidth`+`expandToolCalls` 已经 `ui/appearance_scope.dart` 生效，其余三项未接。`previewMode` 需先定"生成文件预览流"规格且"新窗口"要多窗口；正文字体族/字号需真正作用于 conversation 排版；`interfaceStyle` 的 glass/classic/parchment 各需自己的 DswAlias 调色板（见 `app_settings.dart` 内注释） | DEBT | P2 |
 
 ## 已闭环
 

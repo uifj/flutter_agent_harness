@@ -32,9 +32,21 @@
 
 `theme_contrast_test.dart` 作回归门禁 + allowlist；palette 不改（A 会抹平亮色三级文字层次，需设计肉眼）。`4703b8c`。
 
+## 设置页迁移 ADR-0005（starkins 版式 → 本项目栈）
+
+借 starkins 设置页的"形"（卡片分组 + 下拉/开关行），落本项目的"实"（dsw 配色、自研 i18n、overlay 无路由、`AppSettings` 单一持久化）。逐阶段：
+
+| 阶段 | 内容 | commit |
+| --- | --- | --- |
+| S1 | `AppSettings` 扩 5 枚举 + 2 开关（字体族/字号、对话宽度、界面风格、预览方式、展开工具调用、提示建议）+ 序列化往返测试 | `c56bb02` |
+| S2 | 审计后**塌缩为一个 `SettingsCard` 分组框**——starkins 的 SettingRow/Select/Toggle/PageTitle 本项目已有 dsw 重接版（`_SettingCellRow`/`_SwitchRow`/`_heading`），不重复造 | `a59bcdc` |
+| S3 | nav 增「外观」节（5 下拉 + 2 开关）、「常规」节两行包进 `SettingsCard`、en/zh 补键；默认节与 `find.text('Follow system')` 计数不变，既有测试零改动 | `f6c074c` |
+| S4 | 新增 `ui/appearance_scope.dart`（`WorkbenchPrefsScope` 式 InheritedWidget）驱动 `conversationWidth`（chat_view/composer/审批·计划卡同步加宽）与 `expandToolCalls`（ToolCard 初次展开）；无 scope 回退旧默认（748/折叠）。**未接线（仅持久化意图）**：`previewMode`、正文字体族/字号、`interfaceStyle` 皮肤 | `07ead77` |
+| S5 | ⏳ Windows `flutter run -d windows` 人眼走查外观节 + 加宽生效 + 卡片观感；`contrast_check` 零回退 | — |
+
 ## 每阶段门禁口径
 
-`flutter analyze` 零告警 · `dart format --set-exit-if-changed lib test tool spike` 零 diff · `flutter test` **651 通过 / 13 既有 Windows-only 失败（bash 路径/POSIX 分隔符/temp 锁）零新增**（本机门禁定义；macOS 全绿仍是权威）。
+`flutter analyze` 零告警 · `dart format --set-exit-if-changed lib test tool spike` 零 diff · `flutter test` **658 通过 / 13 既有 Windows-only 失败（bash 路径/POSIX 分隔符/temp 锁）零新增**（本机门禁定义；随 ADR-0005 加测增长，macOS 全绿仍是权威）。
 
 ## 待人签收（机器验不了的）
 
