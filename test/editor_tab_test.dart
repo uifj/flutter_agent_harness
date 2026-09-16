@@ -20,10 +20,12 @@ import 'package:agent_harness/state/workbench_store.dart';
 import 'package:agent_harness/ui/workbench/tabs/editor_tab.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
 import 'package:agent_harness/ui/conversation/assistant_markdown.dart';
+import 'package:agent_harness/theme/dsw_shad_bridge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:re_editor/re_editor.dart';
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadTheme;
 
 void main() {
   late Directory support;
@@ -50,6 +52,12 @@ void main() {
       tester.pumpWidget(
         MaterialApp(
           theme: dswThemeData(Brightness.light),
+          // Mirrors main's MaterialApp.builder: the confirm dialog is a
+          // ShadDialog, which reads ShadTheme off the caller context.
+          builder: (context, child) => ShadTheme(
+            data: dswShadTheme(Theme.of(context).brightness),
+            child: child!,
+          ),
           home: Scaffold(
             body: EditorTab(workbench: workbench, tab: tab),
           ),

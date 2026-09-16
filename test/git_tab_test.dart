@@ -13,10 +13,12 @@ import 'package:agent_harness/state/workbench_controller.dart';
 import 'package:agent_harness/state/workbench_store.dart';
 import 'package:agent_harness/ui/workbench/tabs/git_tab.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
+import 'package:agent_harness/theme/dsw_shad_bridge.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadTheme, ShadButton;
 
 import 'clipboard_probe.dart';
 import 'fake_git.dart';
@@ -46,6 +48,12 @@ void main() {
   Future<void> pumpTab(WidgetTester tester) => tester.pumpWidget(
     MaterialApp(
       theme: dswThemeData(Brightness.light),
+      // Mirrors main's MaterialApp.builder: the confirm dialog is a
+      // ShadDialog, which reads ShadTheme off the caller context.
+      builder: (context, child) => ShadTheme(
+        data: dswShadTheme(Theme.of(context).brightness),
+        child: child!,
+      ),
       home: Scaffold(
         body: GitHost(
           runner: fake.runner,
@@ -231,7 +239,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Discard changes'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(TextButton, 'Discard changes'));
+    await tester.tap(find.widgetWithText(ShadButton, 'Discard changes'));
     await tester.pumpAndSettle();
     expect(fake.commands, contains('checkout -- unstaged.txt'));
   });

@@ -35,6 +35,7 @@ import '../../../theme/dsw_typography.dart';
 import '../../../model/sidebar_tab.dart';
 import '../../../state/workbench_controller.dart';
 import '../../primitives/tappable.dart';
+import '../../primitives/confirm_dialog.dart';
 
 // ---- The view vocabulary, ported from GitView.tsx --------------------------
 
@@ -399,30 +400,12 @@ class _GitTabState extends State<GitTab> {
     String description,
     String confirmLabel,
   ) async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        final color = context.dsw;
-        return AlertDialog(
-          title: Text(title, style: DswType.sStrong14),
-          content: Text(description, style: DswType.xs13),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(context.tr('cancel')),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(
-                confirmLabel,
-                style: DswType.xs13.copyWith(color: color.stateErrorPrimary),
-              ),
-            ),
-          ],
-        );
-      },
+    return showConfirmDialog(
+      context,
+      title: title,
+      description: description,
+      confirmLabel: confirmLabel,
     );
-    return result ?? false;
   }
 
   /// Where a right-click's menu opens, at the cursor.

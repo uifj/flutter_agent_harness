@@ -51,6 +51,7 @@ import '../../../ui/conversation/assistant_markdown.dart';
 import '../../../model/sidebar_tab.dart';
 import '../../../state/workbench_controller.dart';
 import '../../primitives/tappable.dart';
+import '../../primitives/confirm_dialog.dart';
 import '../tab_registry.dart';
 
 /// The language modes this build compiles in.
@@ -263,30 +264,13 @@ class _EditorTabState extends State<EditorTab> {
       final title = _tr('reloadDirtyTitle');
       final description = _tr('reloadDirtyDesc', {'path': _shownPath()});
       final label = _tr('discardChanges');
-      final discard = await showDialog<bool>(
-        context: context,
-        builder: (context) {
-          final color = context.dsw;
-          return AlertDialog(
-            title: Text(title, style: DswType.sStrong14),
-            content: Text(description, style: DswType.xs13),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(context.tr('cancel')),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text(
-                  label,
-                  style: DswType.xs13.copyWith(color: color.stateErrorPrimary),
-                ),
-              ),
-            ],
-          );
-        },
+      final discard = await showConfirmDialog(
+        context,
+        title: title,
+        description: description,
+        confirmLabel: label,
       );
-      if (discard != true) return;
+      if (!discard) return;
     }
     await _load();
   }
