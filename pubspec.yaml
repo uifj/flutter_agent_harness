@@ -1,13 +1,20 @@
 name: agent_harness
 description: "A Flutter desktop agent harness: chat UI, tool-call projection via Genkit, and a split-pane workbench."
 version: 0.0.1
-homepage:
+# An app, never published — declared so the board_panel path dependency is
+# legitimate (a publishable package may not carry one).
+publish_to: 'none'
 
 environment:
   sdk: ^3.11.5
   flutter: ">=1.17.0"
 
 dependencies:
+  # ADR-0007: the board/calendar/table panels. Vendored in-repo (no upstream to
+  # re-fetch — see the ADR for why this is a recorded exception to the ADR-0001
+  # "vendored packages stay out of the repo" rule).
+  board_panel:
+    path: packages/board_panel
   file_picker: ^10.3.7
   flutter:
     sdk: flutter
