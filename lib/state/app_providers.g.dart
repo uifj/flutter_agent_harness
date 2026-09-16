@@ -785,6 +785,53 @@ final class DetailsSelectionProvider
 
 String _$detailsSelectionHash() => r'ceb363300cfc0ed37b3145876bc34eb14814d3cf';
 
+@ProviderFor(workspaceMode)
+final workspaceModeProvider = WorkspaceModeProvider._();
+
+final class WorkspaceModeProvider
+    extends
+        $FunctionalProvider<
+          WorkspaceModeController,
+          WorkspaceModeController,
+          WorkspaceModeController
+        >
+    with $Provider<WorkspaceModeController> {
+  WorkspaceModeProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'workspaceModeProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$workspaceModeHash();
+
+  @$internal
+  @override
+  $ProviderElement<WorkspaceModeController> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  WorkspaceModeController create(Ref ref) {
+    return workspaceMode(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(WorkspaceModeController value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<WorkspaceModeController>(value),
+    );
+  }
+}
+
+String _$workspaceModeHash() => r'2e17f5e7553863c2043fd1b432ee7e2ed7ab4734';
+
 /// The identity source. The mock is the live path today; `main` overrides this
 /// with a Supabase-backed repository when that lands (the seam is documented in
 /// `host/profile_repository.dart`) — the only thing the rest of the app sees is

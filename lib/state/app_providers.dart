@@ -40,6 +40,7 @@ import 'settings_store.dart';
 import 'side_chat_controller.dart';
 import 'streaming_tail.dart';
 import 'workbench_controller.dart';
+import 'workspace_mode_controller.dart';
 
 part 'app_providers.g.dart';
 
@@ -169,6 +170,20 @@ SessionIndex sessions(Ref ref) => ref.watch(appScopeProvider).sessions;
 @Riverpod(keepAlive: true)
 DetailsSelection detailsSelection(Ref ref) =>
     ref.watch(appScopeProvider).selection;
+
+// ---- Workspace modes (ADR-0007) -------------------------------------------
+//
+// The 企划/代理 top-level switch and the plan workspace's extension panel
+// selection. View state, not persisted (a launch starts in the agent workspace);
+// the ChangeNotifier is this file's own pattern — see `workspace_mode_controller`
+// for why it is not a riverpod Notifier.
+
+@Riverpod(keepAlive: true)
+WorkspaceModeController workspaceMode(Ref ref) {
+  final controller = WorkspaceModeController();
+  ref.onDispose(controller.dispose);
+  return controller;
+}
 
 // ---- Profile (ADR-0006) ---------------------------------------------------
 //

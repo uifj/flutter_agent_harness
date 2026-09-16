@@ -107,6 +107,9 @@ const enStrings = <String, String>{
   'collapseSidebar': 'Collapse sidebar',
   'newSession': 'New Session',
   'sessions': 'Sessions',
+  // The top-level workspace switch (ADR-0007)
+  'planMode': 'Plan',
+  'agentMode': 'Agent',
   'noSessionsYet': 'No sessions yet',
   'openDetailsPanel': 'Open details panel',
   'closeDetailsPanel': 'Close details panel',
@@ -114,6 +117,20 @@ const enStrings = <String, String>{
   // The hero and the composer
   'askAnything': 'Ask anything',
   'askAnythingHint': 'Ask anything, or describe a task',
+
+  // The plan workspace (ADR-0007)
+  'planNoWorkspace':
+      'Choose a workspace folder first — the plan vault is the workspace',
+  'planNoNoteSelected': 'Pick a markdown file from the tree',
+  'planNotes': 'Notes',
+  'planNoNotes': 'No markdown files in this workspace',
+  'planPreview': 'Preview',
+  'planSource': 'Source',
+  'planUnsaved': 'Unsaved changes',
+  'planDiscardTitle': 'Discard unsaved edits?',
+  'planDiscardDesc':
+      'Switching away from "{path}" without saving discards your edits.',
+
   'chooseWorkspaceFolder': 'Choose a workspace folder',
   'chooseAFolder': 'Choose a folder…',
   'send': 'Send',
@@ -473,6 +490,9 @@ const zhStrings = <String, String>{
   'collapseSidebar': '折叠侧边栏',
   'newSession': '新会话',
   'sessions': '会话',
+  // The top-level workspace switch (ADR-0007)
+  'planMode': '企划',
+  'agentMode': '代理',
   'noSessionsYet': '暂无会话',
   'openDetailsPanel': '打开详情面板',
   'closeDetailsPanel': '关闭详情面板',
@@ -480,6 +500,18 @@ const zhStrings = <String, String>{
   // The hero and the composer
   'askAnything': '随便问点什么',
   'askAnythingHint': '输入问题，或描述一个任务',
+
+  // The plan workspace (ADR-0007)
+  'planNoWorkspace': '请先选择工作区文件夹——企划库就是工作区',
+  'planNoNoteSelected': '从目录树中选择一个 Markdown 文件',
+  'planNotes': '笔记',
+  'planNoNotes': '此工作区暂无 Markdown 文件',
+  'planPreview': '预览',
+  'planSource': '源码',
+  'planUnsaved': '有未保存的修改',
+  'planDiscardTitle': '放弃未保存的编辑？',
+  'planDiscardDesc': '不保存就离开「{path}」将丢弃你的编辑。',
+
   'chooseWorkspaceFolder': '选择工作区文件夹',
   'chooseAFolder': '选择文件夹…',
   'send': '发送',

@@ -20,6 +20,7 @@ import '../../model/app_settings.dart' as appcfg;
 import '../../model/conversation.dart';
 import '../../model/user_profile.dart';
 import '../../state/session_index.dart';
+import '../../state/workspace_mode_controller.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_theme.dart';
@@ -40,6 +41,8 @@ class Sidebar extends StatefulWidget {
     this.profile,
     this.settings,
     this.onSettingsChanged,
+    this.mode,
+    this.onSelectMode,
     required this.onNewSession,
     required this.onToggle,
     required this.onOpenSession,
@@ -64,6 +67,11 @@ class Sidebar extends StatefulWidget {
   /// Both null (menu disabled) in tests that build a bare Sidebar.
   final appcfg.AppSettings? settings;
   final ValueChanged<appcfg.AppSettings>? onSettingsChanged;
+
+  /// The top-level workspace the app is in (ADR-0007), and the switch. Null
+  /// (switch hidden) in tests that build a bare Sidebar.
+  final WorkspaceMode? mode;
+  final ValueChanged<WorkspaceMode>? onSelectMode;
 
   final VoidCallback onNewSession;
   final VoidCallback onToggle;
@@ -167,6 +175,10 @@ class _SidebarState extends State<Sidebar> {
                   : CrossAxisAlignment.center,
               children: [
                 _logoRow(color, wide: wide),
+                if (widget.onSelectMode != null) ...[
+                  const SizedBox(height: 4),
+                  _modeSwitch(color, wide: wide),
+                ],
                 _newSessionButton(color, wide: wide),
                 Expanded(child: _sessionList(color, wide: wide)),
                 _footer(color, wide: wide),
@@ -174,6 +186,93 @@ class _SidebarState extends State<Sidebar> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  /// The top-level workspace switch (ADR-0007), starkins's `_TaskChannelTabs`
+  /// shape in dsw tokens: a two-cell segmented control expanded, and on the
+  /// rail a single toggle that flips to the OTHER workspace — the one control
+  /// a 36px rail can afford, and its icon names where the tap lands.
+  Widget _modeSwitch(DswAlias color, {required bool wide}) {
+    final onSelect = widget.onSelectMode!;
+    final mode = widget.mode ?? WorkspaceMode.agent;
+    if (!wide) {
+      final other = mode == WorkspaceMode.agent
+          ? WorkspaceMode.plan
+          : WorkspaceMode.agent;
+      return _IconButton(
+        onTap: () => onSelect(other),
+        wide: false,
+        tooltip: other == WorkspaceMode.plan
+            ? context.tr('planMode')
+            : context.tr('agentMode'),
+        builder: (_) => Icon(
+          mode == WorkspaceMode.agent
+              ? LucideIcons.book_open
+              : LucideIcons.message_square,
+          size: 18,
+          color: color.labelPrimary,
+        ),
+      );
+    }
+    return Container(
+      height: 32,
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: color.bgLayer3,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          for (final (candidate, icon, label) in [
+            (WorkspaceMode.plan, LucideIcons.book_open, context.tr('planMode')),
+            (
+              WorkspaceMode.agent,
+              LucideIcons.message_square,
+              context.tr('agentMode'),
+            ),
+          ])
+            Expanded(
+              child: _Pressable(
+                onTap: () => onSelect(candidate),
+                hoverColor: color.sidebarNavItemActive,
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: mode == candidate
+                        ? color.sidebarNavItemActive
+                        : null,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        icon,
+                        size: 14,
+                        color: mode == candidate
+                            ? color.labelPrimary
+                            : color.labelSecondary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: DswType.s14.copyWith(
+                          color: mode == candidate
+                              ? color.labelPrimary
+                              : color.labelSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
