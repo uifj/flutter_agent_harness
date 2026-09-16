@@ -33,6 +33,7 @@ import 'state/settings_store.dart';
 import 'theme/dsw_shad_bridge.dart';
 import 'theme/dsw_theme.dart';
 import 'ui/app_frame.dart';
+import 'ui/appearance_scope.dart';
 import 'ui/conversation/conversation_root.dart';
 import 'ui/conversation/details_panel.dart';
 import 'ui/conversation/hero_workspace_picker.dart';
@@ -102,6 +103,13 @@ class _DshAppState extends ConsumerState<DshApp> {
     // Actions: the scope handle. Save, session commands, folder picks —
     // imperative verbs that were never data.
     final scope = ref.watch(appScopeProvider);
+    // The conversation column's width class, resolved to pixels once per
+    // document and mounted below (ADR-0005 S4). The composer and the in-column
+    // cards read the same value off the scope, so the whole column widens
+    // together.
+    final contentWidth = doc.conversationWidth == cfg.AppConversationWidth.wide
+        ? chatContentWidthWide
+        : chatContentWidth;
 
     return MaterialApp(
       title: 'Agent Harness',
@@ -144,70 +152,74 @@ class _DshAppState extends ConsumerState<DshApp> {
           // settings panel that writes it floats over the same tree.
           child: WorkbenchPrefsScope(
             prefs: prefs,
-            child: AppFrame(
-              layout: ref.watch(layoutProvider),
-              sidebarBuilder: (context, collapsed, width) => Sidebar(
-                collapsed: collapsed,
-                width: width,
-                sessions: ref.watch(sessionsProvider),
-                onNewSession: scope.newSession,
-                onToggle: ref.read(layoutProvider).toggleSidebar,
-                onOpenSession: scope.openSession,
-                onOpenSettings: () => setState(() => _settingsOpen = true),
-                // The frame rebuilds the sidebar on every layout write, so the
-                // open state read here is never stale.
-                onToggleDetails: ref.read(layoutProvider).toggleDetails,
-                detailsOpen: ref.watch(layoutProvider).details != 0,
-              ),
-              center: DetailsSelectionScope(
-                selection: ref.watch(detailsSelectionProvider),
-                // The hero's picker reads the saved document, not a form, so a
-                // folder adopted anywhere (the hero itself, the settings panel)
-                // shows here in the same write that recorded it — `doc` above.
-                child: HeroWorkspaceScope(
-                  workspaceRoot: doc.workspaceRoot,
-                  recent: doc.recentWorkspaces,
-                  onPick: scope.pickFromHero,
-                  onAdopt: scope.adoptRecent,
-                  child: ConversationRoot(
-                    conversation: ref.watch(conversationProvider),
-                    tail: ref.watch(streamingTailProvider),
-                    modelDirectory: ref.watch(modelDirectoryProvider),
-                    // The seat offers; the host commits. The commit is a
-                    // plain model-field save — the scope's, so the runtime
-                    // follows the choice the way any model change does.
-                    onModelSelected: scope.selectModel,
-                    // dsh-at-file's Remote, in one process: the index
-                    // runs off the UI thread and lands as entries.
-                    onLookupFiles: scope.lookupWorkspaceFiles,
+            child: AppearanceScope(
+              contentWidth: contentWidth,
+              expandToolCalls: doc.expandToolCalls,
+              child: AppFrame(
+                layout: ref.watch(layoutProvider),
+                sidebarBuilder: (context, collapsed, width) => Sidebar(
+                  collapsed: collapsed,
+                  width: width,
+                  sessions: ref.watch(sessionsProvider),
+                  onNewSession: scope.newSession,
+                  onToggle: ref.read(layoutProvider).toggleSidebar,
+                  onOpenSession: scope.openSession,
+                  onOpenSettings: () => setState(() => _settingsOpen = true),
+                  // The frame rebuilds the sidebar on every layout write, so the
+                  // open state read here is never stale.
+                  onToggleDetails: ref.read(layoutProvider).toggleDetails,
+                  detailsOpen: ref.watch(layoutProvider).details != 0,
+                ),
+                center: DetailsSelectionScope(
+                  selection: ref.watch(detailsSelectionProvider),
+                  // The hero's picker reads the saved document, not a form, so a
+                  // folder adopted anywhere (the hero itself, the settings panel)
+                  // shows here in the same write that recorded it — `doc` above.
+                  child: HeroWorkspaceScope(
+                    workspaceRoot: doc.workspaceRoot,
+                    recent: doc.recentWorkspaces,
+                    onPick: scope.pickFromHero,
+                    onAdopt: scope.adoptRecent,
+                    child: ConversationRoot(
+                      conversation: ref.watch(conversationProvider),
+                      tail: ref.watch(streamingTailProvider),
+                      modelDirectory: ref.watch(modelDirectoryProvider),
+                      // The seat offers; the host commits. The commit is a
+                      // plain model-field save — the scope's, so the runtime
+                      // follows the choice the way any model change does.
+                      onModelSelected: scope.selectModel,
+                      // dsh-at-file's Remote, in one process: the index
+                      // runs off the UI thread and lands as entries.
+                      onLookupFiles: scope.lookupWorkspaceFiles,
+                    ),
                   ),
                 ),
+                details: DetailsPanel(
+                  conversation: ref.watch(conversationProvider),
+                  selection: ref.watch(detailsSelectionProvider),
+                  // Closing the column keeps the selection. dsh's `closeDetails`
+                  // does the same — it is a layout write and nothing else — which
+                  // is what lets the pill on the call already selected reopen the
+                  // panel onto it.
+                  onClose: ref.read(layoutProvider).closeDetails,
+                ),
+                workbench: Workbench(
+                  workbench: ref.watch(workbenchProvider),
+                  conversation: ref.watch(conversationProvider),
+                  sideChat: ref.watch(sideChatProvider),
+                  terminals: ref.watch(terminalsProvider),
+                  onClose: ref.read(layoutProvider).closeWorkbench,
+                ),
+                bottom: Workbench(
+                  workbench: ref.watch(workbenchProvider),
+                  conversation: ref.watch(conversationProvider),
+                  sideChat: ref.watch(sideChatProvider),
+                  terminals: ref.watch(terminalsProvider),
+                  onClose: ref.read(layoutProvider).closeBottom,
+                  panel: WorkbenchPanel.bottom,
+                ),
+                overlay: _overlay(doc),
               ),
-              details: DetailsPanel(
-                conversation: ref.watch(conversationProvider),
-                selection: ref.watch(detailsSelectionProvider),
-                // Closing the column keeps the selection. dsh's `closeDetails`
-                // does the same — it is a layout write and nothing else — which
-                // is what lets the pill on the call already selected reopen the
-                // panel onto it.
-                onClose: ref.read(layoutProvider).closeDetails,
-              ),
-              workbench: Workbench(
-                workbench: ref.watch(workbenchProvider),
-                conversation: ref.watch(conversationProvider),
-                sideChat: ref.watch(sideChatProvider),
-                terminals: ref.watch(terminalsProvider),
-                onClose: ref.read(layoutProvider).closeWorkbench,
-              ),
-              bottom: Workbench(
-                workbench: ref.watch(workbenchProvider),
-                conversation: ref.watch(conversationProvider),
-                sideChat: ref.watch(sideChatProvider),
-                terminals: ref.watch(terminalsProvider),
-                onClose: ref.read(layoutProvider).closeBottom,
-                panel: WorkbenchPanel.bottom,
-              ),
-              overlay: _overlay(doc),
             ),
           ),
         ),

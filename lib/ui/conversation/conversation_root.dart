@@ -25,6 +25,7 @@ import '../../state/model_directory.dart';
 import '../../state/streaming_tail.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
+import '../appearance_scope.dart';
 import 'approval_panel.dart';
 import 'chat_view.dart';
 import 'composer.dart';
@@ -52,12 +53,20 @@ String formatTokenCount(int tokens) {
 }
 
 /// `--dsh-chat-content-width`. The transcript column, and the axis every other
-/// card in this column is measured against.
+/// card in this column is measured against. This is the *normal* conversation
+/// width; the 'wide' class (ADR-0005) is [chatContentWidthWide].
 const chatContentWidth = 748.0;
 
-/// `--dsh-composer-card-max-width`: the content width plus both 16px insets. The
-/// input card is the one element allowed to be wider than the transcript.
-const composerCardMaxWidth = chatContentWidth + 32;
+/// The 'wide' conversation column. Absent a design token upstream, picked as the
+/// next step past [chatContentWidth] that still leaves the details column room
+/// on a default desktop window.
+const chatContentWidthWide = 960.0;
+
+/// `--dsh-composer-card-max-width` minus the content width: the input card is
+/// the one element allowed to be wider than the transcript, by both 16px side
+/// insets. Its max width is the resolved content width plus this inset, so a
+/// wide conversation widens the card the same amount it widens the column.
+const composerCardWidthInset = 32.0;
 
 /// `--dsh-composer-side-clearance`. The transcript pads this plus 16px per side,
 /// so it stays exactly 32px narrower than the input card at every viewport.
@@ -137,24 +146,28 @@ class _ConversationRootState extends State<ConversationRoot> {
   /// `conversation.hero.workspace` seat. A fresh install has no folder, and the
   /// hero is the first screen the user meets: the picker is the one control
   /// that explains what the app needs before any tool will run.
-  Widget _hero() => Center(
-    child: SizedBox(
-      width: composerCardMaxWidth + 2 * composerSideClearance,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _headline(),
-            const SizedBox(height: 8),
-            const HeroWorkspacePicker(),
-            const SizedBox(height: 8),
-            _stack(hero: true),
-          ],
+  Widget _hero() {
+    final contentWidth = AppearanceScope.widthOf(context, chatContentWidth);
+    return Center(
+      child: SizedBox(
+        width:
+            contentWidth + composerCardWidthInset + 2 * composerSideClearance,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _headline(),
+              const SizedBox(height: 8),
+              const HeroWorkspacePicker(),
+              const SizedBox(height: 8),
+              _stack(hero: true),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 
   /// `HeroShell.module.css:29-44`: a 34px mark, 10px gap, 26px/32px/500 text.
   ///

@@ -29,6 +29,7 @@ import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_theme.dart';
 import '../primitives/tappable.dart';
+import '../appearance_scope.dart';
 import '../../theme/dsw_typography.dart';
 import 'conversation_root.dart';
 
@@ -429,7 +430,11 @@ class _ComposerState extends State<Composer> {
       ),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: composerCardMaxWidth),
+          constraints: BoxConstraints(
+            maxWidth:
+                AppearanceScope.widthOf(context, chatContentWidth) +
+                composerCardWidthInset,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,

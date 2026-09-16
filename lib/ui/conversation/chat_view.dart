@@ -20,6 +20,7 @@ import '../../state/streaming_tail.dart';
 import '../../theme/dsw_static.dart';
 import '../../theme/dsw_theme.dart';
 import '../primitives/tappable.dart';
+import '../appearance_scope.dart';
 import '../../theme/dsw_typography.dart';
 import 'conversation_root.dart';
 import 'message_item.dart';
@@ -173,9 +174,8 @@ class _ChatViewState extends State<ChatView> {
         // 32px narrower than the input card at every viewport.
         const side = composerSideClearance + 16;
         final available = constraints.maxWidth - 2 * side;
-        final column = available < chatContentWidth
-            ? available
-            : chatContentWidth;
+        final contentWidth = AppearanceScope.widthOf(context, chatContentWidth);
+        final column = available < contentWidth ? available : contentWidth;
         return Stack(
           children: [
             Positioned.fill(child: _list(inset, side, column)),

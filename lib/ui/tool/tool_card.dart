@@ -24,6 +24,7 @@ import '../../theme/dsw_theme.dart';
 import '../primitives/tappable.dart';
 import '../../theme/dsw_typography.dart';
 import '../primitives/disclosure_row.dart';
+import '../appearance_scope.dart';
 import '../primitives/row_sweep.dart';
 import '../primitives/state_dot.dart';
 
@@ -38,12 +39,23 @@ class ToolCard extends StatefulWidget {
 
 class _ToolCardState extends State<ToolCard> {
   /// Expand state is view-local, as in the source: it is about this reader's
-  /// attention, not about the call.
-  bool _expanded = false;
+  /// attention, not about the call. Its *starting* value, though, is the
+  /// appearance preference (ADR-0005) — a newly-shown call opens to match how
+  /// the user likes tool blocks presented, then the reader is free to fold it.
+  late bool _expanded;
 
   /// `.root:hover`, which is what reveals the Inspect pill — the whole call,
   /// title row included, not just the body the pill sits under.
   bool _hovered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Only the initial mount consults the preference; a later preference change
+    // must not yank a card the reader already toggled. No scope (tests) →
+    // collapsed, the pre-ADR default.
+    _expanded = AppearanceScope.expandToolCallsOf(context);
+  }
 
   @override
   Widget build(BuildContext context) {

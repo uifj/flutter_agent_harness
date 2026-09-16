@@ -19,6 +19,7 @@ import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../primitives/capsule_button.dart';
+import '../appearance_scope.dart';
 import 'conversation_root.dart';
 
 class ApprovalPanel extends StatefulWidget {
@@ -70,7 +71,9 @@ class _ApprovalPanelState extends State<ApprovalPanel> {
       ),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: chatContentWidth),
+          constraints: BoxConstraints(
+            maxWidth: AppearanceScope.widthOf(context, chatContentWidth),
+          ),
           child: Container(
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
