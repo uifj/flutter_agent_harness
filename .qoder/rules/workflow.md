@@ -50,7 +50,7 @@
 | `dart-generate-test-mocks` | mockito 的生成路线与测试替身约定冲突：本仓库替身一律手写 `test/fake_*.dart`。codegen 在本仓库仅限 riverpod 注解（ADR-0002 修订 1），mockito 不在放行范围 | 同时立 ADR 接受 mockito 测试路线 |
 | `dart-use-ffigen` / `dart-setup-ffi-assets` | 无 C/C++ 资产；宿主能力（PTY、剪贴板、文件系统）全部走已装插件 | 真要接自研原生库 |
 | `dart-migrate-to-checks-package` | dev 依赖只有 `flutter_test`，没有 `test`/`checks`；"迁移"等于加依赖 | 同时接受引入 `checks` |
-| `flutter-add-integration-test` | 未配置 `integration_test`，且只有 macOS 目标（开发机是 Windows 就跑不了） | 有 macOS 验收机 + 立 ADR |
+| `flutter-add-integration-test` | 未配置 `integration_test`，也没有 golden 基线；集成测试要真机/模拟器驱动 + 稳定截图，属独立工程投入（本机已能跑 Windows 桌面，但仍未接这套） | 决定投入集成测试 + 立 ADR |
 
 **组件库现状（ADR-0002 实施中）**：`shadcn_ui` 0.56.3 已是 `pubspec.yaml` 的直接依赖，`lib/main.dart` 经 `theme/dsw_shad_bridge.dart` 挂载 `ShadTheme`（colour 仍全部来自 `DswAlias`），`capsule_button` 与块原语（`primitives/tappable.dart` 的 `DswHoverTap`）已用上 shad 的按钮/焦点/语义机制。`shadcn-ui-flutter` skill 从"守卫项"转为**正当的组件参考**。不变的约束：颜色/字号只从 `lib/theme/dsw_*` 取，不要 `import 'package:shadcn_ui/...'` 去读它的调色板配色——组件用 shad、配色用 dsw。`packages/flutter-shadcn-ui/` 仍是 gitignore 的本地源码镜像（ADR-0001）。
 
@@ -62,7 +62,7 @@
 
 **加一个工作台 tab。** 三步：`lib/model/sidebar_tab.dart` 的 `TabType` → 新建 `lib/ui/workbench/tabs/xxx_tab.dart` → 在 `lib/ui/workbench/workbench.dart` 里 `registerTab(TabDescriptor(...))`。registry 按 `TabType` 字符串为键；`tab_registry.dart` 头部写明了为什么只保留 4 个字段（源项目 `TabDescriptor` 的 `single`/`available`/`badge`/`urlTarget` 等在别处已有答案或无消费者），别回去补那十二个字段。
 
-**文案。** 新增或修改 UI 字符串必须**同时**进 `lib/l10n/locales.dart` 的 `enStrings` 与 `zhStrings`，键完全一致（实测当前各 251 键）。en 是先写的源语言，zh 逐键回退到 en（`translate()`：`zhStrings[key] ?? enStrings[key] ?? key`），两边都缺则把键本身渲染出来，好让缺口可见。取值走 `context.tr(key, params)`，`{name}` 占位符插值。**注意**：`locales.dart` 头部注释声称"en 在测试期对照校验"，但仓库里目前**没有任何测试引用这两个字典**——双语对齐只能靠手动核对，这是已存在的缺口，别假设它会被 `flutter test` 拦下（要补就按 §7 立 TST 类 ADR）。**不挂 `AppLocaleScope` 即退化成英文**，这是 widget 测试不关心 i18n 的前提，别改这个 fallback。不做 i18n 的两类内容：持久化进 layout 的 tab 标题（数据不能随语言翻），以及单例 tab 的显示名（在渲染时由类型派生）。
+**文案。** 新增或修改 UI 字符串必须**同时**进 `lib/l10n/locales.dart` 的 `enStrings` 与 `zhStrings`，键完全一致（**不记死条数**——它随加键漂移，是典型的会腐烂的断言；对齐才是不变量）。en 是先写的源语言，zh 逐键回退到 en（`translate()`：`zhStrings[key] ?? enStrings[key] ?? key`），两边都缺则把键本身渲染出来，好让缺口可见。取值走 `context.tr(key, params)`，`{name}` 占位符插值。**注意**：`locales.dart` 头部注释声称"en 在测试期对照校验"，但仓库里目前**没有任何测试引用这两个字典**——双语对齐只能靠手动核对，这是已存在的缺口，别假设它会被 `flutter test` 拦下（要补就按 §7 立 TST 类 ADR）。**不挂 `AppLocaleScope` 即退化成英文**，这是 widget 测试不关心 i18n 的前提，别改这个 fallback。不做 i18n 的两类内容：持久化进 layout 的 tab 标题（数据不能随语言翻），以及单例 tab 的显示名（在渲染时由类型派生）。
 
 **主题。** 颜色/字号/动效/阴影只从 `lib/theme/dsw_*` 取：别名令牌在 `dsw_alias.dart`，绑定与 elevation ramp 在 `dsw_theme.dart`，排版在 `dsw_typography.dart`。新增令牌加在 alias 层，让 widget 通过 `context` 拿。抄 dsh 的 CSS 阴影值必须换算——CSS blur 与 `BoxShadow.blurRadius` 不是一回事（见 `DswShadow._blur`）。
 

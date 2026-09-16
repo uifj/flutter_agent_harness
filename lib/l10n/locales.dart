@@ -79,6 +79,7 @@ const enStrings = <String, String>{
   'browserBlockedScheme': 'Only http and https addresses can be opened.',
   'browserBlockedLoopback': 'Local addresses are refused.',
   'browserStart': 'Enter an address above to start browsing.',
+  'browserUnsupported': 'In-app browsing is not available on this platform.',
 
   // The side-chat tab
   'sidechat': 'Side chat',
@@ -406,6 +407,7 @@ const zhStrings = <String, String>{
   'browserBlockedScheme': '只能打开 http 和 https 地址。',
   'browserBlockedLoopback': '本地地址已被拒绝。',
   'browserStart': '在上方输入地址开始浏览。',
+  'browserUnsupported': '当前平台不支持内置浏览器。',
 
   // The side-chat tab
   'sidechat': '边侧对话',

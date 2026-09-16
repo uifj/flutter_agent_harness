@@ -22,8 +22,8 @@
 
 ## 1. 仓库概览
 
-- **是什么**：`agent_harness` —— 用 **Flutter + Google Genkit** 从零实现的 **macOS 桌面端 AI Agent 工作台**：对话流 + 工具调用投影 + 分栏 workbench（文件树 / 编辑器 / 终端 / git / diff / 浏览器 / 子 agent / side chat）。pubspec 自述："A Flutter desktop agent harness: chat UI, tool-call projection via Genkit, and a split-pane workbench."
-- **不是什么**：不是移动端 App（只有 `macos/` 脚手架）；不是 dsh 的 fork（不吸收其代码，只取其设计思想重写）；不是发布物（`version: 0.0.1`，ad-hoc 签名，见 `build.md` §4）。
+- **是什么**：`agent_harness` —— 用 **Flutter + Google Genkit** 从零实现的 **桌面端 AI Agent 工作台**：对话流 + 工具调用投影 + 分栏 workbench（文件树 / 编辑器 / 终端 / git / diff / 浏览器 / 子 agent / side chat）。pubspec 自述："A Flutter desktop agent harness: chat UI, tool-call projection via Genkit, and a split-pane workbench."
+- **不是什么**：不是移动端/网页 App（三桌面平台 `macos/`+`windows/`+`linux/`，见 ADR-0003；无 `android/`/`ios/`/`web/`）；不是 dsh 的 fork（不吸收其代码，只取其设计思想重写）；不是发布物（`version: 0.0.1`，ad-hoc 签名，见 `build.md` §4）。
 - **规模**：`lib/` 95 个 Dart 文件 / ~29.5k 行，`test/` 39 个测试文件；`spike/` 2 个可执行证据脚本。
 - **技术栈**：Dart SDK `^3.11.5` / Flutter 3.41.9 stable；运行时 `genkit` 0.16.1 + `genkit_openai` / `genkit_anthropic` / `genkit_google_genai` / `genkit_mcp` / `genkit_middleware`（**全是 0.x**）；状态管理 `flutter_riverpod` 3.2.1 + `riverpod_annotation` 4.0.2（ADR-0002 修订 1：注解模式，`*.g.dart` 入库）；组件库 `shadcn_ui` 0.56.3（迁移中）；宿主能力 `flutter_pty` + `xterm`（终端）、`flutter_inappwebview`（浏览器 tab）、`file_picker` + `path_provider`（工作区）、`pasteboard`（剪贴板）、`gpt_markdown` + `re_editor` + `re_highlight`（渲染与编辑）、`schemantic`（工具运行时 schema）、`flutter_lucide`（图标）。lint 只有 `flutter_lints`（`riverpod_lint` 因 SDK meta 约束暂不可装，见 ADR-0002 修订 1）。
 - **刻意不存在的机制**：genkit 工具输入保持 Map、schema 运行时构造（codegen 仅限 riverpod 注解，见 ADR-0002 修订 1）；没有 `intl` / `.arb` / `flutter_localizations`（i18n 自研，见 §3）；没有路由表（单窗口，界面靠 widget 组合与 scope 拼装）。
@@ -39,10 +39,10 @@
 | `lib/host/` | 3 | 0.7k | 宿主能力：`git`、`terminal_manager`、`project_folder_ops`（security-scoped bookmark） |
 | `lib/ui/` | 46 | 18k | 界面：`workbench/`（16，含 `tabs/` 与 `tab_registry`）、`primitives/`（13，卡片/代码块/diff/终端等自绘件）、`conversation/`（12）、`layout/columns.dart`（约束求解）、`sidebar`、`tool/tool_card`、`settings` |
 | `lib/theme/` | 5 | 0.9k | `dsw_alias`（令牌）→ `dsw_theme`（挂到 `ThemeData` + `DswShadow` elevation ramp）→ `dsw_typography` / `dsw_motion` / `dsw_static` |
-| `lib/l10n/` | 1 | 0.7k | `locales.dart`：en/zh 双字典（各 251 键，当前键集完全对齐）+ `AppLocaleScope` + `context.tr()`，zh 逐键回退 en |
+| `lib/l10n/` | 1 | 0.7k | `locales.dart`：en/zh 双字典（键集当前完全对齐；条数不写死，见 debt-register 的 i18n 条）+ `AppLocaleScope` + `context.tr()`，zh 逐键回退 en |
 | `spike/` | 2 | — | `agent_spike.dart`（genkit 真实形状的可执行证据，头部 FINDINGS）、`runtime_smoke.dart`（命令行驱动 runtime 的验收门） |
 | `packages/flutter-shadcn-ui/` | — | — | **vendored 源码镜像，`.gitignore` 排除**（ADR-0001）。`shadcn_ui` 0.56.3 已是 pubspec 依赖（ADR-0002 实施中），但配色仍走 `dsw_*`（经 `theme/dsw_shad_bridge.dart`）。查组件 API 用入库的 `.qoder/skills/shadcn-ui-flutter/`；读实现看此目录或上游 `nank1ro/flutter-shadcn-ui` `0.56.3` |
-| `docs/` | 4 | — | `README.md`（ADR 规范）+ `debt-register.md`（状态源）+ `adr/`（模板 + ADR-0001） |
+| `docs/` | — | — | `README.md`（ADR 规范）+ `debt-register.md`（状态源）+ `adr/`（模板 + ADR-0001/0002/0003）+ `design-audit-2026-09.md` |
 
 ## 3. 架构不变量（违反即错误，命令可自证）
 
@@ -64,10 +64,11 @@ flutter test               # 只有 flutter test；dev 依赖没有 package:test
 flutter test test/conversation_controller_test.dart     # 守住流式拆分这条性能契约
 dart run spike/agent_spike.dart          # genkit 升版后必跑，核对头部 FINDINGS
 dart run spike/runtime_smoke.dart        # 离线冒烟；带 DEEPSEEK_API_KEY 真跑工具环与审批
-flutter build macos --release            # 需 macOS + Xcode + CocoaPods；Windows 上跑不了
+flutter build macos --release            # 需 macOS + Xcode + CocoaPods
+flutter run -d windows                         # Windows/Linux 桌面目标本机可跑（ADR-0003）
 ```
 
-本机是 Windows，只能做上面前六项 + 静态分析；`flutter build macos` 与 `pod install` 一律标"待 macOS 验证"，不要声称通过。详见 `.qoder/rules/build.md`。
+本机是 Windows：`flutter build windows` / `flutter run -d windows` 可本机验证（浏览器 tab 除外，见 ADR-0003）；`flutter build macos` 与 `pod install` 仍需在 macOS 真机验证，未跑过一律标"待 macOS 验证"。详见 `.qoder/rules/build.md`。
 
 ## 5. 工作流速查
 
@@ -103,7 +104,7 @@ flutter build macos --release            # 需 macOS + Xcode + CocoaPods；Windo
 
 ## 8. 现状缺口（以登记表为准）
 
-已知缺口的分类、优先级、状态一律看 [docs/debt-register.md](docs/debt-register.md)：`README.md` 仍是包模板、i18n 双语对齐无测试守卫、macOS 签名/公证缺口与 `.gitignore` 缺证书规则、无 CI 且版本仍 `0.0.1`、只有 macOS 目标。**修任何一个之前先按 `docs/README.md` 立 ADR 并置 ACCEPTED。**
+已知缺口的分类、优先级、状态一律看 [docs/debt-register.md](docs/debt-register.md)：`README.md` 仍是包模板、i18n 双语对齐无测试守卫、macOS 签名/公证缺口与 `.gitignore` 缺证书规则、无 CI 且版本仍 `0.0.1`。**修任何一个之前先按 `docs/README.md` 立 ADR 并置 ACCEPTED。**
 
 两条不算债务、但容易被误当成"应该在那儿"的事实：
 

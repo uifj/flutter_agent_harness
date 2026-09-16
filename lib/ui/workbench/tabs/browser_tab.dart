@@ -303,6 +303,18 @@ class _BrowserTabState extends State<BrowserTab> {
         ),
       );
     }
+    // flutter_inappwebview ships no Windows/Linux implementation (ADR-0003):
+    // constructing InAppWebView there throws MissingPluginException. Degrade to
+    // a message instead of crashing the tab.
+    if (!Platform.isMacOS) {
+      return Center(
+        child: Text(
+          context.tr('browserUnsupported'),
+          textAlign: TextAlign.center,
+          style: DswType.xs13.copyWith(color: color.labelTertiary),
+        ),
+      );
+    }
     return InAppWebView(
       key: ValueKey('browser:${widget.tab.id}:$_reloadKey'),
       initialUrlRequest: URLRequest(url: WebUri(_url!)),
