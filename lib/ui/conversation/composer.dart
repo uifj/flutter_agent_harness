@@ -810,25 +810,25 @@ class _CommandRowState extends State<_CommandRow> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
           child: Row(
-              children: [
-                Icon(widget.entry.icon, size: 13, color: color.labelSecondary),
-                const SizedBox(width: 8),
-                Text(
-                  widget.entry.command,
-                  style: DswType.xxs12.copyWith(
-                    color: color.labelPrimary,
-                    fontFamily: dswFontFamilyCode,
-                  ),
+            children: [
+              Icon(widget.entry.icon, size: 13, color: color.labelSecondary),
+              const SizedBox(width: 8),
+              Text(
+                widget.entry.command,
+                style: DswType.xxs12.copyWith(
+                  color: color.labelPrimary,
+                  fontFamily: dswFontFamilyCode,
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    context.tr(widget.entry.label),
-                    overflow: TextOverflow.ellipsis,
-                    style: DswType.xxs12.copyWith(color: color.labelSecondary),
-                  ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  context.tr(widget.entry.label),
+                  overflow: TextOverflow.ellipsis,
+                  style: DswType.xxs12.copyWith(color: color.labelSecondary),
                 ),
-              ],
+              ),
+            ],
           ),
         ),
       ),
@@ -1061,9 +1061,9 @@ class _ModelChip extends StatelessWidget {
                           ),
                         ),
                         if (!directory.isLoading)
-                          GestureDetector(
+                          DswHoverTap(
                             onTap: directory.refresh,
-                            child: Text(
+                            builder: (context, _, _) => Text(
                               context.tr('retry'),
                               style: DswType.xxxs11.copyWith(
                                 color: color.stateBusinessPrimary,

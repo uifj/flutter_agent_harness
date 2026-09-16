@@ -40,6 +40,7 @@ import 'package:xterm/xterm.dart';
 
 import '../../../host/terminal_manager.dart';
 import '../../../theme/dsw_theme.dart';
+import '../../primitives/tappable.dart';
 import '../../../theme/dsw_typography.dart';
 import '../../../model/sidebar_tab.dart';
 import '../../../state/workbench_controller.dart';
@@ -377,8 +378,6 @@ class _Banner extends StatefulWidget {
 }
 
 class _BannerState extends State<_Banner> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
@@ -399,25 +398,19 @@ class _BannerState extends State<_Banner> {
             ),
           ),
           const SizedBox(width: 6),
-          MouseRegion(
-            cursor: SystemMouseCursors.click,
-            onEnter: (_) => setState(() => _hovered = true),
-            onExit: (_) => setState(() => _hovered = false),
-            child: GestureDetector(
-              onTap: widget.onTap,
-              behavior: HitTestBehavior.opaque,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: _hovered
-                      ? color.interactiveBgHover
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  widget.action,
-                  style: DswType.xxs12.copyWith(color: color.labelSecondary),
-                ),
+          DswHoverTap(
+            onTap: widget.onTap,
+            semanticLabel: widget.action,
+            excludeSemantics: true,
+            builder: (context, hovered, _) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: hovered ? color.interactiveBgHover : Colors.transparent,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                widget.action,
+                style: DswType.xxs12.copyWith(color: color.labelSecondary),
               ),
             ),
           ),

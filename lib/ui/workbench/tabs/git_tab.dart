@@ -1170,37 +1170,28 @@ class _CommitButton extends StatefulWidget {
 }
 
 class _CommitButtonState extends State<_CommitButton> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    return MouseRegion(
-      cursor: widget.enabled
-          ? SystemMouseCursors.click
-          : SystemMouseCursors.basic,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.enabled ? widget.onTap : null,
-        behavior: HitTestBehavior.opaque,
-        child: Opacity(
-          opacity: widget.enabled ? 1 : 0.45,
-          child: Container(
-            height: 26,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: _hovered && widget.enabled
-                  ? color.buttonPrimaryHover
-                  : color.buttonPrimaryFill,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Center(
-              child: Text(
-                widget.label,
-                style: DswType.xxsStrong12.copyWith(
-                  color: color.labelPrimaryInverted,
-                ),
+    return DswHoverTap(
+      onTap: widget.enabled ? widget.onTap : null,
+      enabled: widget.enabled,
+      builder: (context, hovered, _) => Opacity(
+        opacity: widget.enabled ? 1 : 0.45,
+        child: Container(
+          height: 26,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: hovered && widget.enabled
+                ? color.buttonPrimaryHover
+                : color.buttonPrimaryFill,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Center(
+            child: Text(
+              widget.label,
+              style: DswType.xxsStrong12.copyWith(
+                color: color.labelPrimaryInverted,
               ),
             ),
           ),

@@ -575,8 +575,6 @@ class _DelegationCard extends StatefulWidget {
 }
 
 class _DelegationCardState extends State<_DelegationCard> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
@@ -592,98 +590,94 @@ class _DelegationCardState extends State<_DelegationCard> {
     return Row(
       children: [
         Expanded(
-          child: MouseRegion(
-            cursor: SystemMouseCursors.click,
-            onEnter: (_) => setState(() => _hovered = true),
-            onExit: (_) => setState(() => _hovered = false),
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => widget.onTap(node),
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(11, 6, 8, 6),
-                decoration: BoxDecoration(
-                  color: widget.selected
-                      ? color.interactiveBgActive
-                      : _hovered
-                      ? color.interactiveBgHover
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 5),
-                      child: StateDot(state: dotStateOf(node.status)),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 5,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: color.borderL2),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    agentNameOf(node.name),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: DswType.xxxsStrong11.copyWith(
-                                      color: color.labelTertiary,
-                                      height: 14 / 11,
-                                    ),
+          child: DswHoverTap(
+            onTap: () => widget.onTap(node),
+            semanticLabel: task.isNotEmpty ? task : agentNameOf(node.name),
+            excludeSemantics: true,
+            builder: (context, hovered, _) => Container(
+              padding: const EdgeInsets.fromLTRB(11, 6, 8, 6),
+              decoration: BoxDecoration(
+                color: widget.selected
+                    ? color.interactiveBgActive
+                    : hovered
+                    ? color.interactiveBgHover
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 5),
+                    child: StateDot(state: dotStateOf(node.status)),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: color.borderL2),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  agentNameOf(node.name),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: DswType.xxxsStrong11.copyWith(
+                                    color: color.labelTertiary,
+                                    height: 14 / 11,
                                   ),
                                 ),
                               ),
-                              if (task.isNotEmpty) ...[
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    task,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: DswType.xxxs11.copyWith(
-                                      color: color.labelPrimary,
-                                      fontFamily: dswFontFamilyCode,
-                                      fontFamilyFallback:
-                                          dswFontFamilyCodeFallback,
-                                    ),
-                                  ),
-                                ),
-                              ] else if (live) ...[
-                                const SizedBox(width: 6),
-                                const Expanded(
-                                  child: Text(
-                                    'Thinking…',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                          const SizedBox(height: 1),
-                          Text(
-                            secondary,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: DswType.xxxs11.copyWith(
-                              color: color.labelTertiary,
                             ),
+                            if (task.isNotEmpty) ...[
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  task,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: DswType.xxxs11.copyWith(
+                                    color: color.labelPrimary,
+                                    fontFamily: dswFontFamilyCode,
+                                    fontFamilyFallback:
+                                        dswFontFamilyCodeFallback,
+                                  ),
+                                ),
+                              ),
+                            ] else if (live) ...[
+                              const SizedBox(width: 6),
+                              const Expanded(
+                                child: Text(
+                                  'Thinking…',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          secondary,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: DswType.xxxs11.copyWith(
+                            color: color.labelTertiary,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -912,30 +906,24 @@ class _DockCloseButton extends StatefulWidget {
 }
 
 class _DockCloseButtonState extends State<_DockCloseButton> {
-  bool _hovered = false;
-
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          width: 20,
-          height: 20,
-          decoration: BoxDecoration(
-            color: _hovered ? color.interactiveBgHover : Colors.transparent,
-            borderRadius: BorderRadius.circular(5),
-          ),
-          child: Icon(
-            LucideIcons.x,
-            size: 10,
-            color: _hovered ? color.labelPrimary : color.labelSecondary,
-          ),
+    return DswHoverTap(
+      onTap: widget.onTap,
+      semanticLabel: context.tr('close'),
+      excludeSemantics: true,
+      builder: (context, hovered, _) => Container(
+        width: 20,
+        height: 20,
+        decoration: BoxDecoration(
+          color: hovered ? color.interactiveBgHover : Colors.transparent,
+          borderRadius: BorderRadius.circular(5),
+        ),
+        child: Icon(
+          LucideIcons.x,
+          size: 10,
+          color: hovered ? color.labelPrimary : color.labelSecondary,
         ),
       ),
     );
