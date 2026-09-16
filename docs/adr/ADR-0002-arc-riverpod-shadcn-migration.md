@@ -1,6 +1,6 @@
 # ADR-0002: develop 分支改造为 riverpod + shadcn_ui
 
-- **状态**: ACCEPTED
+- **状态**: IN-PROGRESS（riverpod 读侧 Stage 1–3 + shadcn Stage 4/5a–5c 已落；Stage 4 热替换链 provider 化经论证"保持命令式"关闭，见修订 2；余下为 macOS 真机验收 + 刻意暂缓的深层组件替换）
 - **分类**: ARC
 - **优先级**: P1
 - **影响维度**: 认知障碍 · 生产功能（键盘/无障碍可达性）· 依赖面扩大
@@ -48,6 +48,26 @@
 - **生成文件入库**：`*.g.dart` 随源码提交；`analysis_options.yaml` 排除 `**/*.g.dart` 与 `packages/**`（vendored 副本首次进入 analyzer 视野时一并排除）。genkit 工具 schema 仍是运行时构造（`SchemanticType.from`），与本次 codegen 无关。
 
 该修订同时触发的首个副作用（已在实施提交中处理）：仓库首次通过 `flutter analyze` 门禁后暴露两处潜伏问题——`LucideIcons.trash_2` 在 flutter_lucide 1.45.0 中已更名 `trash`（此前该错误使 git_tab/workbench 两个测试文件**根本无法编译**），以及 13 个 Windows 平台性测试失败（`/bin/bash` 路径、POSIX 路径分隔符、temp 目录锁），均先于本迁移存在，登记于 debt-register。
+
+### 修订 2（2026-09-16）：Stage 4 热替换链保持命令式（provider 化经论证否决）
+
+Stage 4 原设想把 `app_scope.dart` 的 runtime 热替换链改成 provider 刷新。逐行读 `AppScope.save` 后判定：**这条链不该 provider 化，保持命令式组合根**。
+
+证据（`lib/state/app_scope.dart` save 的既定顺序）：
+
+```
+build new runtime → _conversation.adoptRuntime(new) → _sideChat.adoptSource(new.side)
+→ await _workbench.bindSession(null) → await _sessions.adoptRuntime(new)
+→ await replaced.dispose()   // 最后 dispose：它可能还在收尾被这次切换抛弃的那一轮
+```
+
+"旧 runtime 最后 dispose" 是刻意的，正是本 ADR「后果」里点名的"流式拆分契约存在被 riverpod 重建语义静默破坏的风险"。而 riverpod 的 provider 在依赖变化重算时经 `ref.onDispose` **在重算那一刻**就销毁旧值，无法把销毁推迟到 N 个 `await adopt*` 之后——provider 化会让 conversation/sideChat 尚在改指新 runtime 时旧 runtime 已被销毁，触发 use-after-dispose 与流式静默断裂。没有干净的 riverpod 生命周期表达能保住这个顺序。
+
+同时：读侧（`settingsDocument`/`workbenchPrefs` + 9 个 per-controller provider）在 Stage 1–3 已全量 provider 化，`appScopeProvider`（keepAlive）已把 scope 挂进容器，runtime 经 `scope.runtime` 可达，无需把它的生命周期搬进 riverpod 来获得 DI 收益。
+
+据此 Stage 4 以"保持命令式"关闭，并补守卫测试 `test/app_scope_test.dart`（`f09576f`）钉住可观测的重建契约：仅改 workspace = 活 setter 不重建、改 model/skills = 重建、改外观 = 永不重建。dispose 顺序本身仍由 `conversation_controller_test.dart` 的流式契约 + 人工评审守。
+
+至此 ADR-0002 的 riverpod 迁移在本机可验证面上**实质完成**；剩余为 macOS 真机 VoiceOver/Full Keyboard 验收，以及刻意暂缓的深层组件替换（composer 主输入 `TextField`、`PopupMenuButton`×7、`Tooltip`×25——与测试耦合更深，见 migration-log 注记）。
 
 ## 后果（Consequences）
 

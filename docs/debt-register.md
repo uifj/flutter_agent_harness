@@ -7,7 +7,7 @@
 | 编号 | 标题 | 分类 | 优先级 | 状态 | 日期 | ADR |
 | --- | --- | --- | --- | --- | --- | --- |
 | ADR-0001 | vendored `packages/flutter-shadcn-ui` 不进版本库 | DEP | P2 | RESOLVED @ d72ff4c | 2026-09-15 | [链接](adr/ADR-0001-dep-vendored-shadcn-ui.md) |
-| ADR-0002 | develop 分支改造为 riverpod + shadcn_ui | ARC | P1 | IN-PROGRESS（修订 1：注解模式，riverpod 家族 3.2.1） | 2026-09-15 | [链接](adr/ADR-0002-arc-riverpod-shadcn-migration.md) |
+| ADR-0002 | develop 分支改造为 riverpod + shadcn_ui | ARC | P1 | IN-PROGRESS（riverpod 读侧 Stage 1–3 完成；Stage 4 热替换链经论证保持命令式·修订 2；shadcn Stage 4/5a–5c 已落；余 macOS 真机验收 + 暂缓的深层组件替换） | 2026-09-15 | [链接](adr/ADR-0002-arc-riverpod-shadcn-migration.md) |
 | ADR-0003 | 增加 Windows/Linux 桌面平台目标（本机可验证） | ARC | P2 | RESOLVED @ 54e75d7 | 2026-09-16 | [链接](adr/ADR-0003-arc-windows-linux-platforms.md) |
 | ADR-0004 | 亮色正文对比度 AA 修正层（A 新增 AA 别名 / B 显式豁免） | CFG | P1 | PROPOSED（待签收；回归门禁已先行落地） | 2026-09-16 | [链接](adr/ADR-0004-cfg-light-contrast-aa.md) |
 | ADR-0005 | 以 starkins 设置页为蓝本重建设置界面（重接本项目栈） | ARC | P1 | RESOLVED（S1–S5 落地，S5 真机走查通过；未接线的 previewMode/字体/皮肤见下方观察行） | 2026-09-16 | [链接](adr/ADR-0005-arc-starkins-settings-rebuild.md) |

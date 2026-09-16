@@ -10,6 +10,7 @@
 | 1 | boot stores（support/settings/prefs）override 进 `ProviderContainer` + `UncontrolledProviderScope` | `c62b3f5` |
 | 2 | `AppScope` 升 keepAlive provider，`DshApp` 转 `ConsumerStatefulWidget` | `5d5aa75` |
 | 3 | read seams（`settingsDocument`/`workbenchPrefs`）+ 9 个 per-controller provider；`main.dart` 转纯 Consumer 树（零 `ListenableBuilder`） | `178f941` |
+| 4 | runtime 热替换链 provider 化：**经论证否决，保持命令式组合根**（`AppScope.save` 的"新 runtime adopt 完 → 旧 runtime 最后 dispose"顺序 riverpod 的 `ref.onDispose` 无法表达，provider 化会 use-after-dispose 静默破坏流式契约）。补守卫测试 `test/app_scope_test.dart` 钉住重建契约（workspace=活 setter / model·skills=重建 / 外观=永不重建）。读侧 Stage 1–3 已全量 provider 化，`appScopeProvider` 已把 scope 挂进容器。见 ADR-0002 修订 2 | `f09576f` |
 
 边界不变量：`package:riverpod*` 仅 `main.dart` + `state/app_providers.dart`；`*.g.dart` 仅 riverpod 一处。
 
