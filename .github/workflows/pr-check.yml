@@ -1,0 +1,38 @@
+name: PR Checks
+
+env:
+  FLUTTER_VERSION: '3.41.9'
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+jobs:
+  checks:
+    name: Analyze / Format / Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Dart format
+        run: dart format --set-exit-if-changed lib test tool spike
+
+      - name: Dart analyze
+        run: dart analyze --fatal-infos lib test tool spike
+
+      - name: Flutter test
+        run: flutter test
