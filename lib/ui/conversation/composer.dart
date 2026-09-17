@@ -26,6 +26,7 @@ import '../../model/approval_mode.dart';
 import '../../model/attached_image.dart';
 import '../../model/file_search_rank.dart';
 import '../../model/workspace_index.dart';
+import '../../state/document_extractor.dart';
 import '../../state/model_directory.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
@@ -109,6 +110,10 @@ class ComposerState extends State<Composer> {
 
   /// The images riding the next send, in pick order.
   final _images = <AttachedImage>[];
+
+  /// Documents picked for text extraction. Each entry holds the display name
+  /// and the extracted text (null while extraction is in flight).
+  final _documents = <_AttachedDocument>[];
 
   /// The `/`-token the menu was dismissed for, or null when it is open. Escape
   /// dismisses it for the current token only; a different token reopens it.
@@ -339,12 +344,22 @@ class ComposerState extends State<Composer> {
 
   void _submit() {
     if (widget.blocked) return;
-    final text = _controller.text.trim();
-    if (text.isEmpty && _images.isEmpty) return;
+    var text = _controller.text.trim();
+    if (text.isEmpty && _images.isEmpty && _documents.isEmpty) return;
     _controller.clear();
     final images = List<AttachedImage>.of(_images);
     _images.clear();
+    final docs = List<_AttachedDocument>.of(_documents);
+    _documents.clear();
     setState(() => _wasEmpty = true);
+    // Prepend extracted document text as context ahead of the user's words.
+    final docBlocks = docs
+        .where((d) => d.text != null && d.text!.isNotEmpty)
+        .map((d) => '[${d.name}]\n${d.text!.trim()}')
+        .join('\n\n');
+    if (docBlocks.isNotEmpty) {
+      text = text.isEmpty ? docBlocks : '$docBlocks\n\n$text';
+    }
     widget.onSubmit(text, images);
   }
 
@@ -382,6 +397,34 @@ class ComposerState extends State<Composer> {
     }
   }
 
+  Future<void> _pickDocuments() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+        allowMultiple: true,
+      );
+      if (result == null || !mounted) return;
+      for (final file in result.files) {
+        final path = file.path;
+        if (path == null) continue;
+        if (!isExtractable(path)) continue;
+        _addDocument(path);
+      }
+    } on PlatformException {
+      // Picker unavailable; nothing to do.
+    }
+  }
+
+  void _addDocument(String path) {
+    final name = path.split(Platform.pathSeparator).last;
+    final doc = _AttachedDocument(name: name, text: null);
+    setState(() => _documents.add(doc));
+    extractText(path).then((text) {
+      if (!mounted) return;
+      setState(() => doc.text = text ?? '');
+    });
+  }
+
   Future<void> _pasteClipboardImage() async {
     try {
       final bytes = await Pasteboard.image;
@@ -405,15 +448,19 @@ class ComposerState extends State<Composer> {
     });
   }
 
-  /// Adds files from a drag-and-drop event. Paths are processed the same way
-  /// as the file picker — images become attachments, other files are ignored
-  /// for now (the app is image-focused; document support is a future phase).
+  /// Adds files from a drag-and-drop event. Images become visual attachments;
+  /// extractable documents (text files, PDFs) become text attachments; other
+  /// files are silently skipped.
   void addDroppedFiles(List<String> paths) {
     if (!mounted || paths.isEmpty) return;
     final picked = <AttachedImage>[];
     for (final path in paths) {
       final image = AttachedImage.fromFile(path);
-      if (image != null) picked.add(image);
+      if (image != null) {
+        picked.add(image);
+      } else if (isExtractable(path)) {
+        _addDocument(path);
+      }
     }
     if (picked.isEmpty) return;
     setState(() => _images.addAll(picked));
@@ -541,6 +588,10 @@ class ComposerState extends State<Composer> {
                     if (_images.isNotEmpty) ...[
                       const SizedBox(height: 6),
                       _imageChips(color),
+                    ],
+                    if (_documents.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      _documentChips(color),
                     ],
                     const SizedBox(height: 12),
                     _row(color),
@@ -689,6 +740,21 @@ class ComposerState extends State<Composer> {
     ),
   );
 
+  /// Document chips: a file icon + the name, with a remove affordance. While
+  /// extraction is in flight the text is null and a small spinner replaces the
+  /// icon — the chip stays interactive (remove works) throughout.
+  Widget _documentChips(DswAlias color) => Wrap(
+    spacing: 8,
+    runSpacing: 6,
+    children: [
+      for (var i = 0; i < _documents.length; i++)
+        _DocumentChip(
+          doc: _documents[i],
+          onRemove: () => setState(() => _documents.removeAt(i)),
+        ),
+    ],
+  );
+
   Widget _row(DswAlias color) => Padding(
     // 2px of the bottom pad moved to the top: the whole control row sits 2px
     // lower in the card without changing its height. Right pad is 4px (not 8)
@@ -710,7 +776,11 @@ class ComposerState extends State<Composer> {
         // a modifier of the draft, like the attachments.
         return Row(
           children: [
-            _AttachButton(onPick: _pickImages, onPaste: _pasteClipboardImage),
+            _AttachButton(
+              onPick: _pickImages,
+              onPickDocuments: _pickDocuments,
+              onPaste: _pasteClipboardImage,
+            ),
             const SizedBox(width: 4),
             if (showChip) ...[
               // Flexible rather than fixed: the chip's label ellipsizes
@@ -1038,9 +1108,14 @@ class _ImageChip extends StatelessWidget {
 /// The paperclip. A popup rather than a direct pick: the clipboard paste is the
 /// other half of the affordance, and the only way to offer both is a menu.
 class _AttachButton extends StatelessWidget {
-  const _AttachButton({required this.onPick, required this.onPaste});
+  const _AttachButton({
+    required this.onPick,
+    required this.onPickDocuments,
+    required this.onPaste,
+  });
 
   final Future<void> Function() onPick;
+  final Future<void> Function() onPickDocuments;
   final Future<void> Function() onPaste;
 
   @override
@@ -1052,7 +1127,7 @@ class _AttachButton extends StatelessWidget {
         textStyle: DswType.xs13.copyWith(color: color.labelPrimary),
       ),
       child: PopupMenuButton<String>(
-        tooltip: context.tr('attachImage'),
+        tooltip: context.tr('attach'),
         position: PopupMenuPosition.over,
         constraints: const BoxConstraints(minWidth: 220),
         itemBuilder: (context) => [
@@ -1068,6 +1143,21 @@ class _AttachButton extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(context.tr('chooseImages')),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: 'documents',
+            height: 36,
+            child: Row(
+              children: [
+                Icon(
+                  LucideIcons.file_text,
+                  size: 14,
+                  color: color.labelSecondary,
+                ),
+                const SizedBox(width: 8),
+                Text(context.tr('chooseDocuments')),
               ],
             ),
           ),
@@ -1089,6 +1179,7 @@ class _AttachButton extends StatelessWidget {
         ],
         onSelected: (value) {
           if (value == 'files') onPick();
+          if (value == 'documents') onPickDocuments();
           if (value == 'paste') onPaste();
         },
         child: Container(
@@ -1440,4 +1531,67 @@ class _PrimaryButtonState extends State<_PrimaryButton> {
       ),
     ),
   );
+}
+
+/// A document attached for text extraction. [text] starts null (extraction in
+/// flight) and is filled once the extractor resolves.
+class _AttachedDocument {
+  _AttachedDocument({required this.name, required this.text});
+  final String name;
+  String? text;
+}
+
+/// A compact chip showing the document name and a remove button. While
+/// extraction is in flight a small spinner replaces the file icon.
+class _DocumentChip extends StatelessWidget {
+  const _DocumentChip({required this.doc, required this.onRemove});
+
+  final _AttachedDocument doc;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.dsw;
+    final loading = doc.text == null;
+    return Container(
+      height: 28,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: color.bgLayer2,
+        border: Border.all(color: color.borderL2),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (loading)
+            SizedBox(
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.5,
+                color: color.labelCaption,
+              ),
+            )
+          else
+            Icon(LucideIcons.file_text, size: 13, color: color.labelSecondary),
+          const SizedBox(width: 6),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 140),
+            child: Text(
+              doc.name,
+              style: DswType.xs13.copyWith(color: color.labelPrimary),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: onRemove,
+            child: Icon(LucideIcons.x, size: 12, color: color.labelTertiary),
+          ),
+        ],
+      ),
+    );
+  }
 }

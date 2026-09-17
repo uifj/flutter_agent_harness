@@ -171,7 +171,9 @@ const enStrings = <String, String>{
 
   // The composer's tool row
   'attachImage': 'Attach images',
+  'attach': 'Attach',
   'chooseImages': 'Choose image files…',
+  'chooseDocuments': 'Attach documents (PDF, text)…',
   'pasteImage': 'Paste image from clipboard',
   'pasteImageFailed': 'The clipboard has no image.',
   'removeAttachment': 'Remove',
@@ -318,7 +320,8 @@ const enStrings = <String, String>{
   'backupCreateDesc': 'Export settings, sessions, and tasks to a zip file.',
   'backupExport': 'Export',
   'backupRestore': 'Restore from backup',
-  'backupRestoreDesc': 'Import data from a backup file, overwriting current data.',
+  'backupRestoreDesc':
+      'Import data from a backup file, overwriting current data.',
   'backupImport': 'Import',
   'backupCreated': 'Backup created with {count} files.',
   'backupRestored': 'Restored {count} files. Restart to apply.',
@@ -598,7 +601,9 @@ const zhStrings = <String, String>{
 
   // The composer's tool row
   'attachImage': '添加图片',
+  'attach': '附件',
   'chooseImages': '选择图片文件…',
+  'chooseDocuments': '附加文档（PDF、文本）…',
   'pasteImage': '从剪贴板粘贴图片',
   'pasteImageFailed': '剪贴板中没有图片。',
   'removeAttachment': '移除',
