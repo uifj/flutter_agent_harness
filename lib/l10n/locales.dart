@@ -51,6 +51,7 @@ const enStrings = <String, String>{
   'untitled': 'Untitled',
   'loading': 'Loading…',
   'confirm': 'Confirm',
+  'remove': 'Remove',
 
   // Tabs
   'explorer': 'Explorer',
@@ -130,6 +131,23 @@ const enStrings = <String, String>{
   'planDiscardTitle': 'Discard unsaved edits?',
   'planDiscardDesc':
       'Switching away from "{path}" without saving discards your edits.',
+
+  // The plan extensions (ADR-0007 D4)
+  'planExtensions': 'Extensions',
+  'planBoard': 'Board',
+  'planCalendar': 'Calendar',
+  'planTable': 'Table',
+  'planAddTask': 'Add',
+  'planTaskTitleHint': 'New task title',
+  'planTaskDateHint': 'yyyy-mm-dd',
+  'planGroupTodo': 'To do',
+  'planGroupInProgress': 'In progress',
+  'planGroupReview': 'Review',
+  'planGroupDone': 'Done',
+  'planColumnStatus': 'Status',
+  'planColumnTask': 'Task',
+  'planColumnDue': 'Due',
+  'planNoDue': '—',
 
   'chooseWorkspaceFolder': 'Choose a workspace folder',
   'chooseAFolder': 'Choose a folder…',
@@ -434,6 +452,7 @@ const zhStrings = <String, String>{
   'untitled': '未命名',
   'loading': '加载中…',
   'confirm': '确认',
+  'remove': '移除',
 
   // Tabs
   'explorer': '资源管理器',
@@ -511,6 +530,23 @@ const zhStrings = <String, String>{
   'planUnsaved': '有未保存的修改',
   'planDiscardTitle': '放弃未保存的编辑？',
   'planDiscardDesc': '不保存就离开「{path}」将丢弃你的编辑。',
+
+  // The plan extensions (ADR-0007 D4)
+  'planExtensions': '扩展',
+  'planBoard': '看板',
+  'planCalendar': '日程',
+  'planTable': '表格',
+  'planAddTask': '添加',
+  'planTaskTitleHint': '新任务标题',
+  'planTaskDateHint': 'yyyy-mm-dd',
+  'planGroupTodo': '待办',
+  'planGroupInProgress': '进行中',
+  'planGroupReview': '评审',
+  'planGroupDone': '完成',
+  'planColumnStatus': '状态',
+  'planColumnTask': '任务',
+  'planColumnDue': '截止',
+  'planNoDue': '—',
 
   'chooseWorkspaceFolder': '选择工作区文件夹',
   'chooseAFolder': '选择文件夹…',

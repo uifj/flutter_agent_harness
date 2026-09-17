@@ -28,6 +28,7 @@ import 'l10n/locales.dart';
 import 'model/app_settings.dart' as cfg;
 import 'state/app_providers.dart';
 import 'state/details_selection.dart';
+import 'state/plan_task_store.dart';
 import 'state/prefs_store.dart';
 import 'state/settings_store.dart';
 import 'state/workspace_mode_controller.dart';
@@ -38,6 +39,7 @@ import 'ui/appearance_scope.dart';
 import 'ui/conversation/conversation_root.dart';
 import 'ui/conversation/details_panel.dart';
 import 'ui/conversation/hero_workspace_picker.dart';
+import 'ui/plan/plan_extensions_view.dart';
 import 'ui/plan/plan_workspace.dart';
 import 'ui/settings/model_settings.dart';
 import 'ui/sidebar/sidebar.dart';
@@ -53,6 +55,9 @@ Future<void> main() async {
   final support = await getApplicationSupportDirectory();
   final settings = await SettingsStore.open(support);
   final prefsStore = await PrefsStore.open(support);
+  // The plan side's tasks (ADR-0007): same bootstrap rule — opened before the
+  // first frame, never from a provider body.
+  final planTasks = await PlanTaskStore.open(support);
   // The workspace access a previous launch recorded has to be claimed BEFORE
   // anything reads under the root — the file tree's first listing, the
   // session restore, the tools. A failure here is not an error: the hero
@@ -68,6 +73,7 @@ Future<void> main() async {
       supportDirectoryProvider.overrideWithValue(support),
       settingsStoreProvider.overrideWithValue(settings),
       prefsStoreProvider.overrideWithValue(prefsStore),
+      planTaskStoreProvider.overrideWithValue(planTasks),
     ],
   );
   runApp(
@@ -191,6 +197,13 @@ class _DshAppState extends ConsumerState<DshApp> {
                           onSelectMode: ref
                               .watch(workspaceModeProvider)
                               .selectMode,
+                          // The plan extension panels' open view + toggle.
+                          extensionView: ref
+                              .watch(workspaceModeProvider)
+                              .extensionView,
+                          onToggleExtension: ref
+                              .watch(workspaceModeProvider)
+                              .toggleExtension,
                           onNewSession: scope.newSession,
                           onToggle: ref.read(layoutProvider).toggleSidebar,
                           onOpenSession: scope.openSession,
@@ -239,11 +252,23 @@ class _DshAppState extends ConsumerState<DshApp> {
   }
 
   /// The center pane by workspace mode (ADR-0007): 代理 keeps the conversation
-  /// harness exactly as it was; 企划 swaps in the markdown vault.
+  /// harness exactly as it was; 企划 swaps in the markdown vault, and its
+  /// extension panels (board/calendar/table) take the pane over entirely.
   Widget _centerPane(cfg.AppSettings doc) {
     final scope = ref.watch(appScopeProvider);
-    if (ref.watch(workspaceModeProvider).mode == WorkspaceMode.plan) {
-      return PlanWorkspace(workspaceRoot: doc.workspaceRoot);
+    final modes = ref.watch(workspaceModeProvider);
+    if (modes.mode == WorkspaceMode.plan) {
+      return switch (modes.extensionView) {
+        PlanExtensionView.none => PlanWorkspace(
+          workspaceRoot: doc.workspaceRoot,
+        ),
+        PlanExtensionView.board ||
+        PlanExtensionView.calendar ||
+        PlanExtensionView.table => PlanExtensionsView(
+          store: ref.watch(planTaskStoreProvider),
+          view: modes.extensionView,
+        ),
+      };
     }
     return DetailsSelectionScope(
       selection: ref.watch(detailsSelectionProvider),

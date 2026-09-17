@@ -43,6 +43,8 @@ class Sidebar extends StatefulWidget {
     this.onSettingsChanged,
     this.mode,
     this.onSelectMode,
+    this.extensionView,
+    this.onToggleExtension,
     required this.onNewSession,
     required this.onToggle,
     required this.onOpenSession,
@@ -72,6 +74,11 @@ class Sidebar extends StatefulWidget {
   /// (switch hidden) in tests that build a bare Sidebar.
   final WorkspaceMode? mode;
   final ValueChanged<WorkspaceMode>? onSelectMode;
+
+  /// The plan workspace's open extension panel, and its toggle (ADR-0007 D4).
+  /// Null (group hidden) when no mode switch is wired.
+  final PlanExtensionView? extensionView;
+  final ValueChanged<PlanExtensionView>? onToggleExtension;
 
   final VoidCallback onNewSession;
   final VoidCallback onToggle;
@@ -178,6 +185,13 @@ class _SidebarState extends State<Sidebar> {
                 if (widget.onSelectMode != null) ...[
                   const SizedBox(height: 4),
                   _modeSwitch(color, wide: wide),
+                  // The plan workspace's extension panels (ADR-0007 D4) —
+                  // starkins's `_ExtensionGroup` shape: visible only in 企划,
+                  // each row its own toggle.
+                  if (widget.mode == WorkspaceMode.plan) ...[
+                    const SizedBox(height: 8),
+                    _extensionGroup(color, wide: wide),
+                  ],
                 ],
                 _newSessionButton(color, wide: wide),
                 Expanded(child: _sessionList(color, wide: wide)),
@@ -274,6 +288,82 @@ class _SidebarState extends State<Sidebar> {
             ),
         ],
       ),
+    );
+  }
+
+  /// The plan workspace's extension panels (ADR-0007 D4) — starkins's
+  /// `_ExtensionGroup`: a labelled group of rows, each a toggle for one panel
+  /// (board / calendar / table). Only shown in 企划 mode with a wired toggle.
+  Widget _extensionGroup(DswAlias color, {required bool wide}) {
+    final onToggle = widget.onToggleExtension;
+    if (onToggle == null) return const SizedBox.shrink();
+    final open = widget.extensionView ?? PlanExtensionView.none;
+    final entries = [
+      (PlanExtensionView.board, LucideIcons.kanban, context.tr('planBoard')),
+      (
+        PlanExtensionView.calendar,
+        LucideIcons.calendar,
+        context.tr('planCalendar'),
+      ),
+      (PlanExtensionView.table, LucideIcons.table, context.tr('planTable')),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (wide)
+          Padding(
+            padding: const EdgeInsets.only(left: 8, bottom: 4),
+            child: Text(
+              context.tr('planExtensions'),
+              style: DswType.xxxs11.copyWith(color: color.labelTertiary),
+            ),
+          ),
+        for (final (view, icon, label) in entries)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: _Pressable(
+              onTap: () => onToggle(view),
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                height: wide ? 32 : 36,
+                padding: EdgeInsets.symmetric(horizontal: wide ? 8 : 0),
+                decoration: BoxDecoration(
+                  color: open == view ? color.interactiveBgHover : null,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: wide
+                      ? MainAxisAlignment.start
+                      : MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      icon,
+                      size: wide ? 15 : 18,
+                      color: open == view
+                          ? color.labelPrimary
+                          : color.labelSecondary,
+                    ),
+                    if (wide) ...[
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: DswType.s14.copyWith(
+                            color: open == view
+                                ? color.labelPrimary
+                                : color.labelSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 

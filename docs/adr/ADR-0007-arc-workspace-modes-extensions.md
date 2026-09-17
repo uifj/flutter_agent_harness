@@ -43,8 +43,9 @@
 
 - 企划模式的侧栏显示「扩展」组（看板/日程/表格——starkins 同款三项；代理模式无扩展组，本项目代理侧的"扩展"已有真实居所=设置面板的 MCP/Skills 节，不重复造）。
 - 选中 → `extensionView` 置位，中心区渲染对应面板；再点收起或切模式重置。
-- **数据**：三个面板共享一个 `PlanTaskStore`（`lib/state/plan_task_store.dart`，ChangeNotifier），字段覆盖看板（组/序）与日程（日期）所需：`id/title/groupIndex/dueDate?/done`。**持久化到 `<support>/plan_tasks.json`**（tmp+rename 原子写，照 `settings_store.dart` 模式；starkins 也持久化任务，且不持久化的看板没有实用价值）。看板列固定四段（待办/进行中/评审/完成）拖拽改 `groupIndex`+序；日程 `EventController` 投影 `dueDate`；表格 `ExpandableTable` 全量投影。MVP 不做任务编辑对话框以外的新建/编辑表单复杂化——用最小的新建/编辑行内交互（见实施）。
-- 面板 widget 放 `lib/ui/plan/`（`plan_workspace.dart` 树+编辑器宿主、`board_view.dart`、`calendar_view.dart`、`table_view.dart`），配色/字号全走 `context.dsw` + `DswType`（board_panel 内部自带 shad fallback，不强改其内部）。
+- **数据**：三个面板共享一个 `PlanTaskStore`（`lib/state/plan_task_store.dart`，ChangeNotifier），字段覆盖看板（组/序）与日程（日期）所需：`id/title/groupIndex/dueDate?/done`。**持久化到 `<support>/plan_tasks.json`**（tmp+rename 原子写，照 `settings_store.dart` 模式；starkins 也持久化任务，且不持久化的看板没有实用价值）。看板列固定四段（待办/进行中/评审/完成）拖拽改 `groupIndex`+序；日程 `EventController` 投影 `dueDate`。MVP 不做任务编辑对话框以外的新建/编辑表单复杂化——用最小的新建/编辑行内交互（见实施）。
+- **实施细化（表格）**：表格改用手写 dsw 表（列头 + 每任务一行：完成切换/标题/截止/移除），**不用 board_panel 的 `ExpandableTable`**——后者基于 ChangeNotifier 的 cell 对象与 `build(context, details)` 契约，对一个扁平任务列表是过重的机器，且手写表与全应用 dsw 词汇更一致。看板与日历仍取 board_panel（拖拽看板、月视图是依赖的价值所在）。
+- 面板 widget：`lib/ui/plan/plan_workspace.dart`（树+编辑器宿主）与 `lib/ui/plan/plan_extensions_view.dart`（`PlanExtensionsView` + 内聚的 `_BoardView`/`_CalendarView`/`_TableView` + 共享 add 行/卡片），配色/字号全走 `context.dsw` + `DswType`（board_panel 内部自带 shad fallback，不强改其内部）。
 
 ### D5：board_panel 依赖接线（修断路径 + 入库）
 
