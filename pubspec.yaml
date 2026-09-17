@@ -39,6 +39,7 @@ dependencies:
   riverpod_annotation: 4.0.2
   schemantic: ^0.2.2
   shadcn_ui: 0.56.3
+  tray_manager: ^0.5.3
   window_manager: ^0.5.2
   xterm: ^4.0.0
 
@@ -59,6 +60,9 @@ flutter:
   # default chevron, selection handles); app code uses Lucide via
   # flutter_lucide.
   uses-material-design: true
+
+  assets:
+    - assets/icon/app_icon_source.png
 
   # To add assets to your package, add an assets section, like this:
   # assets:

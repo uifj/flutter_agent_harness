@@ -33,6 +33,7 @@ import 'state/hotkey_service.dart';
 import 'state/plan_task_store.dart';
 import 'state/prefs_store.dart';
 import 'state/settings_store.dart';
+import 'state/tray_service.dart';
 import 'state/workspace_mode_controller.dart';
 import 'theme/dsw_shad_bridge.dart';
 import 'theme/dsw_theme.dart';
@@ -101,6 +102,9 @@ class _DshAppState extends ConsumerState<DshApp> {
   /// handle is available for system-scope registration.
   HotkeyService? _hotkeys;
 
+  /// System tray service. Initialized alongside hotkeys after the first frame.
+  TrayService? _tray;
+
   @override
   void initState() {
     super.initState();
@@ -108,8 +112,11 @@ class _DshAppState extends ConsumerState<DshApp> {
     // worse way to learn that than the panel that fixes it. dsh opens an
     // onboarding dialog on the same condition.
     _settingsOpen = !ref.read(settingsStoreProvider).value.model.isConfigured;
-    // Register hotkeys after the frame so window_manager has a handle.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _initHotkeys());
+    // Register hotkeys and tray after the frame so window_manager has a handle.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initHotkeys();
+      _initTray();
+    });
   }
 
   void _initHotkeys() {
@@ -119,6 +126,13 @@ class _DshAppState extends ConsumerState<DshApp> {
       onOpenSettings: () => setState(() => _settingsOpen = true),
     );
     _hotkeys!.init();
+  }
+
+  void _initTray() {
+    _tray = TrayService(
+      onQuit: () => windowManager.close(),
+    );
+    _tray!.init();
   }
 
   Future<void> _toggleWindow() async {
@@ -134,6 +148,7 @@ class _DshAppState extends ConsumerState<DshApp> {
   @override
   void dispose() {
     _hotkeys?.dispose();
+    _tray?.dispose();
     super.dispose();
   }
 
