@@ -12,6 +12,8 @@
 // only the type is dsh's.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_mermaid/flutter_mermaid.dart';
+import 'package:gpt_markdown/custom_widgets/code_field.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 
 import '../../theme/dsw_alias.dart';
@@ -33,6 +35,8 @@ class AssistantMarkdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
+    final brightness = Theme.of(context).brightness;
+    final codeStyle = _styleSheet(color).codeBlock ?? const CodeBlockStyle();
     return GptMarkdownTheme(
       gptThemeData: dswMarkdownTheme(context),
       child: GptMarkdown(
@@ -45,6 +49,20 @@ class AssistantMarkdown extends StatelessWidget {
         // the incoming text, so it never trails the model.
         isStreaming: streaming,
         useDollarSignsForLatex: true,
+        codeBuilder: (context, name, code, closed) {
+          if (name == 'mermaid') {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: MermaidDiagram(
+                code: code,
+                style: brightness == Brightness.dark
+                    ? MermaidStyle.dark()
+                    : const MermaidStyle(),
+              ),
+            );
+          }
+          return CodeField(name: name, codes: code, style: codeStyle);
+        },
       ),
     );
   }
