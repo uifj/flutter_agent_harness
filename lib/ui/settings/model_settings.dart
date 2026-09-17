@@ -22,6 +22,7 @@ import 'dart:io' show Directory, HttpException, SocketException;
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadInput;
 
 import '../../genkit/models_endpoint.dart';
@@ -31,6 +32,7 @@ import '../../model/app_settings.dart' as settings;
 import '../../model/mcp_settings.dart';
 import '../../model/model_settings.dart';
 import '../../model/workbench_prefs.dart';
+import '../../state/backup_service.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_theme.dart';
@@ -40,7 +42,7 @@ import '../primitives/capsule_button.dart';
 import 'widgets/settings_card.dart';
 
 /// Which section the rail is pointing at.
-enum _Section { general, appearance, models, workspace, workbench, extensions }
+enum _Section { general, appearance, models, workspace, workbench, extensions, backup }
 
 class SettingsPanel extends StatefulWidget {
   const SettingsPanel({
@@ -496,6 +498,11 @@ class _SettingsPanelState extends State<SettingsPanel> {
         context.tr('settingsExtensions'),
         LucideIcons.puzzle,
       ),
+      _NavItem(
+        _Section.backup,
+        context.tr('settingsBackup'),
+        LucideIcons.database_backup,
+      ),
     ];
     final filtered = query.isEmpty
         ? items
@@ -627,6 +634,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     _Section.workspace => _workspaceSection(color),
                     _Section.workbench => _workbenchSection(color),
                     _Section.extensions => _extensionsSection(color),
+                    _Section.backup => _backupSection(color),
                   },
                 ],
               ),
@@ -1156,6 +1164,83 @@ class _SettingsPanelState extends State<SettingsPanel> {
       code: true,
     ),
   ];
+
+  /// Backup & Restore: export all persistent data to a zip archive, or restore
+  /// from one. The operations are fire-and-forget — the file picker handles the
+  /// path, and the service does the work. A snackbar reports the outcome.
+  List<Widget> _backupSection(DswAlias color) => [
+    _heading(
+      color,
+      context.tr('settingsBackup'),
+      context.tr('settingsBackupIntro'),
+    ),
+    const SizedBox(height: 12),
+    SettingsCard(
+      dividers: true,
+      children: [
+        _ActionRow(
+          title: context.tr('backupCreate'),
+          description: context.tr('backupCreateDesc'),
+          button: CapsuleButton(
+            label: context.tr('backupExport'),
+            onTap: _createBackup,
+          ),
+        ),
+        _ActionRow(
+          title: context.tr('backupRestore'),
+          description: context.tr('backupRestoreDesc'),
+          button: CapsuleButton(
+            label: context.tr('backupImport'),
+            onTap: _restoreBackup,
+          ),
+          last: true,
+        ),
+      ],
+    ),
+  ];
+
+  Future<void> _createBackup() async {
+    final path = await FilePicker.platform.saveFile(
+      dialogTitle: context.tr('backupExport'),
+      fileName: BackupService.defaultFileName(),
+      type: FileType.custom,
+      allowedExtensions: [BackupService.backupExtension],
+    );
+    if (path == null || !mounted) return;
+    try {
+      final count = await BackupService.createBackup(path);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.tr('backupCreated').replaceAll('{count}', '$count'))),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${context.tr('backupFailed')}: $e')),
+      );
+    }
+  }
+
+  Future<void> _restoreBackup() async {
+    final result = await FilePicker.platform.pickFiles(
+      dialogTitle: context.tr('backupImport'),
+      type: FileType.custom,
+      allowedExtensions: [BackupService.backupExtension],
+    );
+    if (result == null || result.files.single.path == null || !mounted) return;
+    try {
+      final count = await BackupService.restoreBackup(result.files.single.path!);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.tr('backupRestored').replaceAll('{count}', '$count'))),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${context.tr('backupFailed')}: $e')),
+      );
+    }
+  }
 
   /// One server, as a bordered card of four fields plus its remove button.
   /// Args are space-separated here and split at commit — the field is a
@@ -2360,6 +2445,52 @@ class _RemoveButtonState extends State<_RemoveButton> {
             color: hovered ? color.stateErrorPrimary : color.labelTertiary,
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A settings row with a title, description, and a trailing action button.
+/// Used by the backup section for export/import actions.
+class _ActionRow extends StatelessWidget {
+  const _ActionRow({
+    required this.title,
+    required this.description,
+    required this.button,
+    this.last = false,
+  });
+
+  final String title;
+  final String description;
+  final Widget button;
+  final bool last;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.dsw;
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: DswType.xxs12.copyWith(color: color.labelSecondary),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  style: DswType.xxxs11.copyWith(color: color.labelTertiary),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          button,
+        ],
       ),
     );
   }

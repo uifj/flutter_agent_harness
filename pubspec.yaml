@@ -10,6 +10,7 @@ environment:
   flutter: ">=1.17.0"
 
 dependencies:
+  archive: ^3.6.1
   # ADR-0007: the board/calendar/table panels. Vendored in-repo (no upstream to
   # re-fetch — see the ADR for why this is a recorded exception to the ADR-0001
   # "vendored packages stay out of the repo" rule).
