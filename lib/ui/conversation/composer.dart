@@ -100,10 +100,10 @@ class Composer extends StatefulWidget {
   final VoidCallback? onPickWorkspace;
 
   @override
-  State<Composer> createState() => _ComposerState();
+  State<Composer> createState() => ComposerState();
 }
 
-class _ComposerState extends State<Composer> {
+class ComposerState extends State<Composer> {
   final _controller = TextEditingController();
   late final FocusNode _focus = FocusNode(onKeyEvent: _onKeyEvent);
 
@@ -143,11 +143,11 @@ class _ComposerState extends State<Composer> {
     if (root == null) return;
     final generation = ++_branchGeneration;
     try {
-      final result = await Process.run(
-        'git',
-        ['rev-parse', '--abbrev-ref', 'HEAD'],
-        workingDirectory: root,
-      );
+      final result = await Process.run('git', [
+        'rev-parse',
+        '--abbrev-ref',
+        'HEAD',
+      ], workingDirectory: root);
       if (!mounted || generation != _branchGeneration) return;
       if (result.exitCode == 0) {
         setState(() => _gitBranch = (result.stdout as String).trim());
@@ -403,6 +403,20 @@ class _ComposerState extends State<Composer> {
         ),
       );
     });
+  }
+
+  /// Adds files from a drag-and-drop event. Paths are processed the same way
+  /// as the file picker — images become attachments, other files are ignored
+  /// for now (the app is image-focused; document support is a future phase).
+  void addDroppedFiles(List<String> paths) {
+    if (!mounted || paths.isEmpty) return;
+    final picked = <AttachedImage>[];
+    for (final path in paths) {
+      final image = AttachedImage.fromFile(path);
+      if (image != null) picked.add(image);
+    }
+    if (picked.isEmpty) return;
+    setState(() => _images.addAll(picked));
   }
 
   // ---------------------------------------------------------------------------

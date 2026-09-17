@@ -175,6 +175,7 @@ const enStrings = <String, String>{
   'pasteImage': 'Paste image from clipboard',
   'pasteImageFailed': 'The clipboard has no image.',
   'removeAttachment': 'Remove',
+  'dropFilesHint': 'Drop images to attach',
   'askEveryTime': 'Ask every time',
   'askEveryTimeDesc':
       'The agent interrupts for approval before it writes or runs anything.',
@@ -589,6 +590,7 @@ const zhStrings = <String, String>{
   'pasteImage': '从剪贴板粘贴图片',
   'pasteImageFailed': '剪贴板中没有图片。',
   'removeAttachment': '移除',
+  'dropFilesHint': '拖放图片以添加附件',
   'askEveryTime': '每次询问',
   'askEveryTimeDesc': '代理在写入或执行命令前会中断并请求批准。',
   'planFirst': '先做计划',

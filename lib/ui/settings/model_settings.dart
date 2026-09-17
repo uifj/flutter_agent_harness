@@ -466,16 +466,42 @@ class _SettingsPanelState extends State<SettingsPanel> {
   Widget _nav(DswAlias color) {
     final query = _search.text.trim().toLowerCase();
     final items = <_NavItem>[
-      _NavItem(_Section.general, context.tr('settingsGeneral'), LucideIcons.settings),
-      _NavItem(_Section.appearance, context.tr('settingsAppearance'), LucideIcons.sparkles),
-      _NavItem(_Section.models, context.tr('settingsModels'), LucideIcons.network),
-      _NavItem(_Section.workspace, context.tr('settingsWorkspace'), LucideIcons.folder_open),
-      _NavItem(_Section.workbench, context.tr('settingsWorkbench'), LucideIcons.columns_2),
-      _NavItem(_Section.extensions, context.tr('settingsExtensions'), LucideIcons.puzzle),
+      _NavItem(
+        _Section.general,
+        context.tr('settingsGeneral'),
+        LucideIcons.settings,
+      ),
+      _NavItem(
+        _Section.appearance,
+        context.tr('settingsAppearance'),
+        LucideIcons.sparkles,
+      ),
+      _NavItem(
+        _Section.models,
+        context.tr('settingsModels'),
+        LucideIcons.network,
+      ),
+      _NavItem(
+        _Section.workspace,
+        context.tr('settingsWorkspace'),
+        LucideIcons.folder_open,
+      ),
+      _NavItem(
+        _Section.workbench,
+        context.tr('settingsWorkbench'),
+        LucideIcons.columns_2,
+      ),
+      _NavItem(
+        _Section.extensions,
+        context.tr('settingsExtensions'),
+        LucideIcons.puzzle,
+      ),
     ];
     final filtered = query.isEmpty
         ? items
-        : items.where((item) => item.label.toLowerCase().contains(query)).toList();
+        : items
+              .where((item) => item.label.toLowerCase().contains(query))
+              .toList();
     return SizedBox(
       width: 188,
       child: Padding(
@@ -1607,10 +1633,7 @@ class _NavCellState extends State<_NavCell> {
           // The accent bar: a 3px pill on the leading edge when selected.
           border: widget.active
               ? Border(
-                  left: BorderSide(
-                    color: color.stateBusinessPrimary,
-                    width: 3,
-                  ),
+                  left: BorderSide(color: color.stateBusinessPrimary, width: 3),
                 )
               : null,
         ),
@@ -1628,7 +1651,9 @@ class _NavCellState extends State<_NavCell> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: DswType.s14.copyWith(
-                  color: widget.active ? color.labelPrimary : color.labelPrimary,
+                  color: widget.active
+                      ? color.labelPrimary
+                      : color.labelPrimary,
                 ),
               ),
             ),

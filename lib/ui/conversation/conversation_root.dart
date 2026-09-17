@@ -13,6 +13,7 @@
 
 import 'dart:math' as math;
 
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
@@ -124,6 +125,12 @@ class _ConversationRootState extends State<ConversationRoot> {
   /// The measured seat height, which the transcript reserves as bottom padding.
   final _seatHeight = ValueNotifier<double>(0);
 
+  /// Bridge to the composer's state — the drop target forwards files here.
+  final _composerKey = GlobalKey<ComposerState>();
+
+  /// Whether a file drag is hovering over the column.
+  bool _isDragging = false;
+
   /// The plan text the review card was answered or dismissed for. The card does
   /// not come back for the same plan once it has had its answer — a new plan
   /// text is a new review, and the guard is on the text rather than a counter
@@ -137,14 +144,69 @@ class _ConversationRootState extends State<ConversationRoot> {
   }
 
   @override
-  Widget build(BuildContext context) => ColoredBox(
-    color: context.dsw.bgBase,
-    child: ListenableBuilder(
-      listenable: widget.conversation,
-      builder: (context, _) =>
-          widget.conversation.nodes.isEmpty ? _hero() : _active(),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final content = ColoredBox(
+      color: context.dsw.bgBase,
+      child: ListenableBuilder(
+        listenable: widget.conversation,
+        builder: (context, _) =>
+            widget.conversation.nodes.isEmpty ? _hero() : _active(),
+      ),
+    );
+    return DropTarget(
+      onDragEntered: (_) => setState(() => _isDragging = true),
+      onDragExited: (_) => setState(() => _isDragging = false),
+      onDragDone: (details) {
+        setState(() => _isDragging = false);
+        _composerKey.currentState?.addDroppedFiles(
+          details.files.map((f) => f.path).toList(),
+        );
+      },
+      child: Stack(
+        children: [
+          content,
+          if (_isDragging)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: AnimatedOpacity(
+                  opacity: _isDragging ? 1 : 0,
+                  duration: const Duration(milliseconds: 150),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: context.dsw.bgBase.withAlpha(200),
+                      border: Border.all(
+                        color: context.dsw.stateBusinessPrimary,
+                        width: 2,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            LucideIcons.image_down,
+                            size: 40,
+                            color: context.dsw.stateBusinessPrimary,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            context.tr('dropFilesHint'),
+                            style: DswType.base16.copyWith(
+                              color: context.dsw.labelSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 
   /// Hero phase: the composer stack is flex-centred, floated a little above true
   /// centre by a 32px foot, and capped at the card width plus both clearances so
@@ -345,6 +407,7 @@ class _ConversationRootState extends State<ConversationRoot> {
       null =>
         _planReview() ??
             Composer(
+              key: _composerKey,
               hero: hero,
               busy: widget.conversation.isBusy,
               blocked: widget.conversation.isInputBlocked,
