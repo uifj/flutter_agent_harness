@@ -19,6 +19,7 @@ import 'dart:io' show HttpException;
 import 'package:flutter/foundation.dart';
 
 import '../genkit/models_endpoint.dart';
+import '../model/known_models.dart';
 import '../model/model_settings.dart';
 
 /// One offered model: an id, the provider it belongs to, and whether the
@@ -30,6 +31,7 @@ class DirectoryModel {
     required this.provider,
     required this.id,
     required this.fetched,
+    this.description,
   });
 
   final LlmProvider provider;
@@ -40,6 +42,10 @@ class DirectoryModel {
   /// stronger — a listed model is known to the endpoint; a default one is
   /// presumed.
   final bool fetched;
+
+  /// A one-line description from the local catalog, or null when the id is
+  /// unknown. The menu renders null as a provider-family fallback.
+  final String? description;
 }
 
 /// What the composer's model seat reads: the offered models, the current
@@ -175,6 +181,7 @@ class ModelDirectory extends ChangeNotifier {
       provider: provider,
       id: defaultModelFor(provider),
       fetched: false,
+      description: descriptionForModel(defaultModelFor(provider)),
     ),
   ];
 
@@ -194,6 +201,7 @@ class ModelDirectory extends ChangeNotifier {
             provider: defaults.first.provider,
             id: id,
             fetched: true,
+            description: descriptionForModel(id),
           ),
     ]);
   }

@@ -95,6 +95,7 @@ class ConversationRoot extends StatefulWidget {
     this.onLookupFiles,
     this.workspaceRoot,
     this.onPickWorkspace,
+    this.onOpenSettings,
   });
 
   final ConversationController conversation;
@@ -116,6 +117,11 @@ class ConversationRoot extends StatefulWidget {
 
   /// Opens the workspace picker from the status bar.
   final VoidCallback? onPickWorkspace;
+
+  /// Opens the full-screen settings view (ADR-0006). The model menu's
+  /// "模型管理" footer is the third entry point alongside the sidebar gear
+  /// and the quick menu's bottom row.
+  final VoidCallback? onOpenSettings;
 
   @override
   State<ConversationRoot> createState() => _ConversationRootState();
@@ -419,6 +425,7 @@ class _ConversationRootState extends State<ConversationRoot> {
               onLookupFiles: widget.onLookupFiles,
               workspaceRoot: widget.workspaceRoot,
               onPickWorkspace: widget.onPickWorkspace,
+              onOpenSettings: widget.onOpenSettings,
               onSubmit: (text, images) =>
                   widget.conversation.send(text, images: images),
               onStop: widget.conversation.stop,

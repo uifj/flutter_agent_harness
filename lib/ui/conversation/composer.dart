@@ -25,6 +25,7 @@ import '../../l10n/locales.dart';
 import '../../model/approval_mode.dart';
 import '../../model/attached_image.dart';
 import '../../model/file_search_rank.dart';
+import '../../model/known_models.dart';
 import '../../model/workspace_index.dart';
 import '../../state/document_extractor.dart';
 import '../../state/model_directory.dart';
@@ -52,6 +53,7 @@ class Composer extends StatefulWidget {
     this.onLookupFiles,
     this.workspaceRoot,
     this.onPickWorkspace,
+    this.onOpenSettings,
   });
 
   /// The centred empty-state variant: no bottom pad, and a two-line floor.
@@ -99,6 +101,11 @@ class Composer extends StatefulWidget {
   /// Opens the workspace picker. The status bar is the second entry point
   /// alongside the hero picker — both lead to the same dialog.
   final VoidCallback? onPickWorkspace;
+
+  /// Opens the full-screen settings view (ADR-0006). The model menu's footer
+  /// links here — "模型管理" is the third entry point alongside the sidebar
+  /// gear and the quick menu's bottom row.
+  final VoidCallback? onOpenSettings;
 
   @override
   State<Composer> createState() => ComposerState();
@@ -800,6 +807,7 @@ class ComposerState extends State<Composer> {
                 child: _ModelChip(
                   directory: widget.modelDirectory!,
                   onSelect: widget.onModelSelected,
+                  onOpenSettings: widget.onOpenSettings,
                 ),
               ),
             if (widget.modelDirectory != null && constraints.maxWidth >= 220)
@@ -1201,14 +1209,21 @@ class _AttachButton extends StatelessWidget {
 
 /// The model seat — dsh's `conversation.input.model`, in the `_ModeChip`'s
 /// own 24px capsule shape. The trigger names the runtime's current model; the
-/// menu offers the directory's list with the current one checked. A refresh
-/// row rides at the menu's foot so the fetched catalog is one click away
-/// without the seat depending on a host-side catalog load.
+/// menu offers the directory's list with the current one checked. Each item
+/// shows the model id on the first line and a one-line description below it
+/// (from the local catalog, or a provider-family fallback for unknown ids).
+/// A "模型管理" row at the foot opens settings; a refresh row below that lets
+/// the user re-probe the endpoint without leaving the menu.
 class _ModelChip extends StatelessWidget {
-  const _ModelChip({required this.directory, this.onSelect});
+  const _ModelChip({
+    required this.directory,
+    this.onSelect,
+    this.onOpenSettings,
+  });
 
   final ModelDirectory directory;
   final ValueChanged<String>? onSelect;
+  final VoidCallback? onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -1223,26 +1238,42 @@ class _ModelChip extends StatelessWidget {
         child: PopupMenuButton<String>(
           tooltip: context.tr('model'),
           position: PopupMenuPosition.over,
-          constraints: const BoxConstraints(minWidth: 260, maxHeight: 360),
+          constraints: const BoxConstraints(minWidth: 320, maxHeight: 420),
           enabled: onSelect != null,
           initialValue: directory.selectedModel,
           itemBuilder: (context) => [
             for (final model in directory.models)
               PopupMenuItem(
                 value: model.id,
-                height: 40,
+                height: 56,
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        model.id,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: DswType.xs13.copyWith(
-                          color: color.labelPrimary,
-                          fontFamily: dswFontFamilyCode,
-                          fontFamilyFallback: dswFontFamilyCodeFallback,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            model.id,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: DswType.xs13.copyWith(
+                              color: color.labelPrimary,
+                              fontFamily: dswFontFamilyCode,
+                              fontFamilyFallback: dswFontFamilyCodeFallback,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            model.description ??
+                                providerFamilyLabel(model.provider),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: DswType.xxxs11.copyWith(
+                              color: color.labelTertiary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     if (model.id == directory.selectedModel)
@@ -1254,6 +1285,34 @@ class _ModelChip extends StatelessWidget {
                   ],
                 ),
               ),
+            // The "模型管理" row: opens the full-screen settings view so the
+            // user can edit credentials, base URL, and provider — the things
+            // the menu itself cannot change.
+            PopupMenuItem(
+              enabled: onOpenSettings != null,
+              height: 40,
+              onTap: onOpenSettings,
+              child: Row(
+                children: [
+                  Icon(
+                    LucideIcons.settings,
+                    size: 14,
+                    color: onOpenSettings != null
+                        ? color.labelSecondary
+                        : color.labelDimmed,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    context.tr('modelManagement'),
+                    style: DswType.xs13.copyWith(
+                      color: onOpenSettings != null
+                          ? color.labelPrimary
+                          : color.labelDimmed,
+                    ),
+                  ),
+                ],
+              ),
+            ),
             // The refresh row: the fetched catalog on demand, with the load's
             // own one-line outcome under it when there is one to say.
             PopupMenuItem(

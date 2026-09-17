@@ -342,6 +342,7 @@ class _DshAppState extends ConsumerState<DshApp> {
           onLookupFiles: scope.lookupWorkspaceFiles,
           workspaceRoot: doc.workspaceRoot,
           onPickWorkspace: scope.pickFromHero,
+          onOpenSettings: () => setState(() => _settingsOpen = true),
         ),
       ),
     );
