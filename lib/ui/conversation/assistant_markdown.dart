@@ -44,6 +44,7 @@ class AssistantMarkdown extends StatelessWidget {
         // The reveal outruns this floor whenever it would otherwise fall behind
         // the incoming text, so it never trails the model.
         isStreaming: streaming,
+        useDollarSignsForLatex: true,
       ),
     );
   }
