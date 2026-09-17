@@ -261,6 +261,7 @@ class _DshAppState extends ConsumerState<DshApp> {
       return switch (modes.extensionView) {
         PlanExtensionView.none => PlanWorkspace(
           workspaceRoot: doc.workspaceRoot,
+          onPickWorkspace: scope.pickFromHero,
         ),
         PlanExtensionView.board ||
         PlanExtensionView.calendar ||

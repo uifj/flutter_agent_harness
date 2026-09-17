@@ -459,8 +459,8 @@ class _ComposerState extends State<Composer> {
                   // One notch weaker than a button's stroke, per the darkmode
                   // note in the source: exactly the l2-darkmode-thin pair.
                   border: Border.all(color: color.borderL2DarkmodeThin),
-                  borderRadius: BorderRadius.circular(22),
-                  boxShadow: DswShadow.lv2,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: DswShadow.lv1,
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,

@@ -36,11 +36,14 @@ import '../primitives/confirm_dialog.dart';
 import '../primitives/tappable.dart';
 
 /// The plan workspace center pane. [workspaceRoot] is the current agent
-/// workspace; null means there is no vault to read yet.
+/// workspace; null means there is no vault to read yet. [onPickWorkspace]
+/// is the callback for the footer's workspace switcher (may be null when
+/// the parent handles switching through a different path).
 class PlanWorkspace extends StatefulWidget {
-  const PlanWorkspace({super.key, this.workspaceRoot});
+  const PlanWorkspace({super.key, this.workspaceRoot, this.onPickWorkspace});
 
   final String? workspaceRoot;
+  final VoidCallback? onPickWorkspace;
 
   @override
   State<PlanWorkspace> createState() => _PlanWorkspaceState();
@@ -50,6 +53,9 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
   /// Every `*.md` in the vault, sorted by path — the index runs off the UI
   /// thread through the same `compute` the composer's mention menu uses.
   List<FileEntry> _notes = const [];
+
+  /// The hierarchical tree built from [_notes] + directory entries.
+  List<_TreeNode> _treeNodes = const [];
 
   /// The selected note's workspace-relative path, or null (nothing picked yet).
   String? _selected;
@@ -61,6 +67,9 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
   /// The Source/Preview toggle; preview renders with the transcript's own
   /// markdown renderer so a note and a chat reply read identically.
   bool _preview = false;
+
+  /// Expanded directory paths in the tree.
+  Set<String> _expandedDirs = <String>{};
 
   @override
   void initState() {
@@ -79,6 +88,8 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
       setState(() {
         _selected = null;
         _notes = const [];
+        _treeNodes = const [];
+        _expandedDirs = <String>{};
       });
       _reloadVault();
     }
@@ -95,14 +106,71 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
     if (root == null) return;
     final index = await compute(indexWorkspace, root);
     if (!mounted) return;
+    final mdFiles = [
+      for (final entry in index.entries)
+        if (entry.kind == 'file' &&
+            entry.relative.toLowerCase().endsWith('.md'))
+          entry,
+    ]..sort((a, b) => a.relative.compareTo(b.relative));
     setState(() {
-      _notes = [
+      _notes = mdFiles;
+      _treeNodes = _buildTree(mdFiles, index.entries);
+      // Default: expand all directories that contain markdown files.
+      _expandedDirs = {
         for (final entry in index.entries)
-          if (entry.kind == 'file' &&
-              entry.relative.toLowerCase().endsWith('.md'))
-            entry,
-      ]..sort((a, b) => a.relative.compareTo(b.relative));
+          if (entry.kind == 'dir') entry.relative,
+      };
     });
+  }
+
+  /// Builds a hierarchical tree from [mdFiles] (the leaves) and [allEntries]
+  /// (which includes directories). Directories that contain no `.md` files
+  /// (recursively) are omitted — the tree shows only the structure needed to
+  /// reach markdown files.
+  List<_TreeNode> _buildTree(
+    List<FileEntry> mdFiles,
+    List<FileEntry> allEntries,
+  ) {
+    final root = _TreeNode(name: '', relativePath: '', isDir: true);
+
+    for (final file in mdFiles) {
+      final parts = file.relative.split('/');
+      var current = root;
+      var pathSoFar = '';
+      for (var i = 0; i < parts.length - 1; i++) {
+        pathSoFar = pathSoFar.isEmpty ? parts[i] : '$pathSoFar/${parts[i]}';
+        var child = current.children.cast<_TreeNode?>().firstWhere(
+          (c) => c != null && c.name == parts[i] && c.isDir,
+          orElse: () => null,
+        );
+        if (child == null) {
+          child = _TreeNode(
+            name: parts[i],
+            relativePath: pathSoFar,
+            isDir: true,
+          );
+          current.children.add(child);
+        }
+        current = child;
+      }
+      current.children.add(
+        _TreeNode(name: parts.last, relativePath: file.relative, isDir: false),
+      );
+    }
+
+    // Sort: directories first (alphabetical), then files (alphabetical).
+    void sortChildren(_TreeNode node) {
+      node.children.sort((a, b) {
+        if (a.isDir != b.isDir) return a.isDir ? -1 : 1;
+        return a.name.compareTo(b.name);
+      });
+      for (final child in node.children) {
+        if (child.isDir) sortChildren(child);
+      }
+    }
+
+    sortChildren(root);
+    return root.children;
   }
 
   /// Selects a note, confirming away unsaved edits first — switching notes is
@@ -206,15 +274,9 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 14, 12, 10),
-          child: Text(
-            context.tr('planNotes'),
-            style: DswType.xxsStrong12.copyWith(color: color.labelSecondary),
-          ),
-        ),
+        _treeHeader(color),
         Expanded(
-          child: _notes.isEmpty
+          child: _treeNodes.isEmpty
               ? Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -225,22 +287,238 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
                     style: DswType.xxs12.copyWith(color: color.labelTertiary),
                   ),
                 )
-              : ListView.builder(
+              : ListView(
                   padding: const EdgeInsets.fromLTRB(6, 0, 6, 8),
-                  itemCount: _notes.length,
-                  itemBuilder: (context, index) {
-                    final note = _notes[index];
-                    return _NoteRow(
-                      entry: note,
-                      selected: note.relative == _selected,
-                      onTap: () => _open(note),
-                    );
-                  },
+                  children: [
+                    for (final node in _treeNodes)
+                      _renderNode(node, depth: 0, color: color),
+                  ],
                 ),
+        ),
+        if (widget.workspaceRoot != null) _treeFooter(color),
+      ],
+    ),
+  );
+
+  /// The tree header: "Notes" label + new-note / new-folder icon buttons.
+  Widget _treeHeader(DswAlias color) => Padding(
+    padding: const EdgeInsets.fromLTRB(12, 10, 8, 6),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            context.tr('planNotes'),
+            style: DswType.xxsStrong12.copyWith(color: color.labelSecondary),
+          ),
+        ),
+        _treeHeaderButton(
+          icon: LucideIcons.file_plus,
+          tooltip: context.tr('planNewNote'),
+          onTap: _onCreateNote,
+          color: color,
+        ),
+        const SizedBox(width: 2),
+        _treeHeaderButton(
+          icon: LucideIcons.folder_plus,
+          tooltip: context.tr('planNewFolder'),
+          onTap: _onCreateFolder,
+          color: color,
         ),
       ],
     ),
   );
+
+  Widget _treeHeaderButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+    required DswAlias color,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      waitDuration: const Duration(milliseconds: 500),
+      child: DswHoverTap(
+        onTap: onTap,
+        builder: (context, hovered, _) => Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: hovered ? color.interactiveBgHover : null,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Icon(icon, size: 14, color: color.labelSecondary),
+        ),
+      ),
+    );
+  }
+
+  /// The tree footer: current workspace name + optional switch button.
+  Widget _treeFooter(DswAlias color) {
+    final root = widget.workspaceRoot!;
+    final name = p.basename(root);
+    final onPick = widget.onPickWorkspace;
+    return Container(
+      height: 36,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: color.borderL1)),
+      ),
+      child: Row(
+        children: [
+          Icon(LucideIcons.folder, size: 13, color: color.labelTertiary),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: DswType.xxxs11.copyWith(color: color.labelTertiary),
+            ),
+          ),
+          if (onPick != null)
+            GestureDetector(
+              onTap: onPick,
+              child: Tooltip(
+                message: context.tr('planSwitchWorkspace'),
+                waitDuration: const Duration(milliseconds: 500),
+                child: Icon(
+                  LucideIcons.switch_camera,
+                  size: 13,
+                  color: color.labelTertiary,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Recursively renders a tree node with indentation.
+  Widget _renderNode(
+    _TreeNode node, {
+    required int depth,
+    required DswAlias color,
+  }) {
+    final indent = 6.0 + depth * 12;
+    if (node.isDir) {
+      final expanded = _expandedDirs.contains(node.relativePath);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _DirRow(
+            name: node.name,
+            expanded: expanded,
+            depth: depth,
+            onToggle: () => _onToggleDir(node.relativePath),
+            color: color,
+          ),
+          if (expanded)
+            for (final child in node.children)
+              _renderNode(child, depth: depth + 1, color: color),
+        ],
+      );
+    }
+    final entry = FileEntry(relative: node.relativePath, kind: 'file');
+    return Padding(
+      padding: EdgeInsets.only(left: indent),
+      child: _NoteRow(
+        entry: entry,
+        selected: node.relativePath == _selected,
+        onTap: () => _open(entry),
+      ),
+    );
+  }
+
+  void _onToggleDir(String path) {
+    setState(() {
+      if (_expandedDirs.contains(path)) {
+        _expandedDirs.remove(path);
+      } else {
+        _expandedDirs.add(path);
+      }
+    });
+  }
+
+  Future<void> _onCreateNote() async {
+    final root = widget.workspaceRoot;
+    if (root == null) return;
+    final name = await _showNameDialog(
+      context.tr('planNewNote'),
+      context.tr('planNewNoteHint'),
+    );
+    if (name == null || name.isEmpty) return;
+    final fileName = name.endsWith('.md') ? name : '$name.md';
+    final relativePath = fileName;
+    final fullPath = p.join(root, relativePath);
+    if (await File(fullPath).exists()) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.tr('planFileNameExists'))));
+      return;
+    }
+    await File(fullPath).writeAsString('');
+    await _reloadVault();
+    if (!mounted) return;
+    final entry = _notes.cast<FileEntry?>().firstWhere(
+      (e) => e != null && e.relative == relativePath,
+      orElse: () => null,
+    );
+    if (entry != null) _open(entry);
+  }
+
+  Future<void> _onCreateFolder() async {
+    final root = widget.workspaceRoot;
+    if (root == null) return;
+    final name = await _showNameDialog(
+      context.tr('planNewFolder'),
+      context.tr('planNewFolderHint'),
+    );
+    if (name == null || name.isEmpty) return;
+    final fullPath = p.join(root, name);
+    if (await Directory(fullPath).exists()) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.tr('planFolderNameExists'))),
+      );
+      return;
+    }
+    await Directory(fullPath).create(recursive: true);
+    await _reloadVault();
+  }
+
+  Future<String?> _showNameDialog(String title, String hint) async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title, style: DswType.sStrong14),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: DswType.xxs12.copyWith(color: context.dsw.labelTertiary),
+            border: const OutlineInputBorder(),
+          ),
+          autofocus: true,
+          style: DswType.s14,
+          onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(context.tr('planCancel'), style: DswType.s14),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            child: Text(context.tr('planCreate'), style: DswType.sStrong14),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    return result;
+  }
 
   // ---- The note editor -----------------------------------------------------
 
@@ -356,6 +634,59 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
               size: CapsuleSize.sm,
               enabled: _dirty && !_saving,
               onTap: _save,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A directory row in the vault tree: chevron + folder icon + name.
+class _DirRow extends StatelessWidget {
+  const _DirRow({
+    required this.name,
+    required this.expanded,
+    required this.depth,
+    required this.onToggle,
+    required this.color,
+  });
+
+  final String name;
+  final bool expanded;
+  final int depth;
+  final VoidCallback onToggle;
+  final DswAlias color;
+
+  @override
+  Widget build(BuildContext context) {
+    final indent = 6.0 + depth * 12;
+    return DswHoverTap(
+      onTap: onToggle,
+      builder: (context, hovered, _) => Container(
+        height: 28,
+        padding: EdgeInsets.only(left: indent, right: 8),
+        decoration: BoxDecoration(
+          color: hovered ? color.interactiveBgHover : null,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              expanded ? LucideIcons.chevron_down : LucideIcons.chevron_right,
+              size: 12,
+              color: color.labelTertiary,
+            ),
+            const SizedBox(width: 4),
+            Icon(LucideIcons.folder, size: 13, color: color.labelTertiary),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: DswType.xs13.copyWith(color: color.labelSecondary),
+              ),
             ),
           ],
         ),
@@ -496,4 +827,19 @@ class _DirtyBridgeState extends State<_DirtyBridge> {
 
   @override
   Widget build(BuildContext context) => widget.child;
+}
+
+/// One node in the vault tree: a directory (with children) or a leaf file.
+class _TreeNode {
+  _TreeNode({
+    required this.name,
+    required this.relativePath,
+    required this.isDir,
+    List<_TreeNode>? children,
+  }) : children = children ?? <_TreeNode>[];
+
+  final String name;
+  final String relativePath;
+  final bool isDir;
+  final List<_TreeNode> children;
 }

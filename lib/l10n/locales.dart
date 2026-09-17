@@ -118,6 +118,7 @@ const enStrings = <String, String>{
   // The hero and the composer
   'askAnything': 'Ask anything',
   'askAnythingHint': 'Ask anything, or describe a task',
+  'heroSubtitle': 'Ask anything, or open a workspace to begin',
 
   // The plan workspace (ADR-0007)
   'planNoWorkspace':
@@ -131,6 +132,15 @@ const enStrings = <String, String>{
   'planDiscardTitle': 'Discard unsaved edits?',
   'planDiscardDesc':
       'Switching away from "{path}" without saving discards your edits.',
+  'planNewNote': 'New Note',
+  'planNewFolder': 'New Folder',
+  'planNewNoteHint': 'File name (without .md)',
+  'planNewFolderHint': 'Folder name',
+  'planCreate': 'Create',
+  'planCancel': 'Cancel',
+  'planFileNameExists': 'A file with this name already exists',
+  'planFolderNameExists': 'A folder with this name already exists',
+  'planSwitchWorkspace': 'Switch workspace',
 
   // The plan extensions (ADR-0007 D4)
   'planExtensions': 'Extensions',
@@ -519,6 +529,7 @@ const zhStrings = <String, String>{
   // The hero and the composer
   'askAnything': '随便问点什么',
   'askAnythingHint': '输入问题，或描述一个任务',
+  'heroSubtitle': '随时提问，或打开工作区开始探索',
 
   // The plan workspace (ADR-0007)
   'planNoWorkspace': '请先选择工作区文件夹——企划库就是工作区',
@@ -530,6 +541,15 @@ const zhStrings = <String, String>{
   'planUnsaved': '有未保存的修改',
   'planDiscardTitle': '放弃未保存的编辑？',
   'planDiscardDesc': '不保存就离开「{path}」将丢弃你的编辑。',
+  'planNewNote': '新建笔记',
+  'planNewFolder': '新建文件夹',
+  'planNewNoteHint': '文件名（不含 .md）',
+  'planNewFolderHint': '文件夹名',
+  'planCreate': '创建',
+  'planCancel': '取消',
+  'planFileNameExists': '同名文件已存在',
+  'planFolderNameExists': '同名文件夹已存在',
+  'planSwitchWorkspace': '切换工作区',
 
   // The plan extensions (ADR-0007 D4)
   'planExtensions': '扩展',

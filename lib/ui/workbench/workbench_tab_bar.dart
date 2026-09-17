@@ -40,9 +40,9 @@ import 'tab_registry.dart';
 import 'workbench_prefs_scope.dart';
 import '../primitives/tappable.dart';
 
-/// Strip height — the source's 34px band (`sidebar.module.css:343`), tall
-/// enough that the 28px circular controls sit in it at top:3.
-const tabBarHeight = 34.0;
+/// Strip height — tall enough that the 32px circular controls sit in it
+/// comfortably, matching the sidebar session row rhythm.
+const tabBarHeight = 36.0;
 
 /// What a tab drag carries: enough to run [SidebarState.moveTab] without asking
 /// the tree where the tab came from, which would be a second answer that can
@@ -354,13 +354,9 @@ class _TabChipState extends State<_TabChip> {
       decoration: BoxDecoration(
         color: fill,
         border: Border(
-          right: BorderSide(color: color.borderL1),
-          // The active tab is marked at the top, the way the source does it, so
-          // the strip reads as tabs attached to the body below rather than as a
-          // row of buttons.
           top: BorderSide(
-            color: widget.active ? color.brandPrimary : Colors.transparent,
-            width: 2,
+            color: widget.active ? color.labelTertiary : Colors.transparent,
+            width: 1.5,
           ),
         ),
       ),
@@ -389,10 +385,10 @@ class _TabChipState extends State<_TabChip> {
             ),
           ),
           const SizedBox(width: 2),
-          // The close affordance holds its 16px whether shown or not: revealing it
+          // The close affordance holds its 18px whether shown or not: revealing it
           // on hover must not shift the title out from under the pointer.
           SizedBox.square(
-            dimension: 16,
+            dimension: 18,
             child: AnimatedOpacity(
               opacity: _hovered || widget.active ? 1 : 0,
               duration: DswMotion.respecting(context, DswMotion.fast),
@@ -667,7 +663,7 @@ class _CloseButton extends StatelessWidget {
       builder: (context, hovered, _) => Container(
         decoration: BoxDecoration(
           color: hovered ? color.interactiveBgActive : Colors.transparent,
-          borderRadius: BorderRadius.circular(3),
+          borderRadius: BorderRadius.circular(4),
         ),
         child: Center(
           child: Icon(

@@ -178,19 +178,29 @@ class _ConversationRootState extends State<ConversationRoot> {
     final color = context.dsw;
     return FittedBox(
       fit: BoxFit.scaleDown,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(LucideIcons.droplet, size: 34, color: color.labelPrimary),
-          const SizedBox(width: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(LucideIcons.droplet, size: 34, color: color.labelPrimary),
+              const SizedBox(width: 10),
+              Text(
+                context.tr('askAnything'),
+                style: DswType.xl24.copyWith(
+                  fontSize: 26,
+                  height: 32 / 26,
+                  fontWeight: FontWeight.w500,
+                  color: color.labelPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
           Text(
-            context.tr('askAnything'),
-            style: DswType.xl24.copyWith(
-              fontSize: 26,
-              height: 32 / 26,
-              fontWeight: FontWeight.w500,
-              color: color.labelPrimary,
-            ),
+            context.tr('heroSubtitle'),
+            style: DswType.xxs12.copyWith(color: color.labelSecondary),
           ),
         ],
       ),

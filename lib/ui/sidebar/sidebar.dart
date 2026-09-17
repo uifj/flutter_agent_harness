@@ -174,8 +174,8 @@ class _SidebarState extends State<Sidebar> {
             // Rail geometry: 36x36 controls centred in the 56px rail (10px sides),
             // 18px from the rail top to the first control.
             padding: wide
-                ? const EdgeInsets.symmetric(horizontal: 12, vertical: 6)
-                : const EdgeInsets.fromLTRB(10, 18, 10, 6),
+                ? const EdgeInsets.symmetric(horizontal: 12, vertical: 8)
+                : const EdgeInsets.fromLTRB(10, 18, 10, 8),
             child: Column(
               crossAxisAlignment: wide
                   ? CrossAxisAlignment.stretch
@@ -440,7 +440,7 @@ class _SidebarState extends State<Sidebar> {
   /// A 38px bar with a 12px radius expanded; a plain rail control collapsed.
   Widget _newSessionButton(DswAlias color, {required bool wide}) => Padding(
     padding: wide
-        ? const EdgeInsets.fromLTRB(2, 0, 2, 8)
+        ? const EdgeInsets.fromLTRB(2, 0, 2, 10)
         : const EdgeInsets.only(bottom: 12),
     child: Align(
       alignment: AlignmentDirectional.topStart,
@@ -457,7 +457,7 @@ class _SidebarState extends State<Sidebar> {
         // transition is the column's own fade in `build`.
         child: Container(
           width: wide ? null : 36,
-          height: wide ? 38 : 36,
+          height: 36,
           padding: wide
               ? const EdgeInsets.symmetric(horizontal: 16)
               : EdgeInsets.zero,
@@ -546,7 +546,7 @@ class _SidebarState extends State<Sidebar> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _profileRow(color),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
@@ -608,7 +608,7 @@ class _SidebarState extends State<Sidebar> {
                   ),
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               _IconButton(
                 onTap: _openSettingsSafe,
                 wide: false,
@@ -730,7 +730,7 @@ class _SidebarState extends State<Sidebar> {
   );
 }
 
-/// A 32px session row: 8px padding, radius 8, hover and selected share the same
+/// A 36px session row: 10px padding, radius 8, hover and selected share the same
 /// wash (`Rows.module.css:7-25, 108-118`).
 class _SessionRow extends StatelessWidget {
   const _SessionRow({
@@ -750,8 +750,8 @@ class _SessionRow extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        height: 32,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
           color: selected ? color.interactiveBgHover : null,
           borderRadius: BorderRadius.circular(8),
@@ -825,7 +825,8 @@ class _PressableState extends State<_Pressable> {
     final wash = widget.hoverColor ?? context.dsw.interactiveBgHover;
     return DswHoverTap(
       onTap: widget.onTap,
-      builder: (context, hovered, _) => DecoratedBox(
+      builder: (context, hovered, _) => AnimatedContainer(
+        duration: const Duration(milliseconds: 50),
         decoration: BoxDecoration(
           color: hovered ? wash : null,
           borderRadius: widget.borderRadius,
@@ -863,13 +864,12 @@ class _IconButton extends StatelessWidget {
         // screen reader, so exclude it.
         semanticLabel: tooltip,
         excludeSemantics: true,
-        builder: (context, hovered, _) => Container(
+        builder: (context, hovered, _) => AnimatedContainer(
+          duration: const Duration(milliseconds: 50),
           width: size,
           height: size,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            // The rail toggle rests as the brand mark with no hover circle,
-            // matching `.collapsed .toggle`; every other state gets the wash.
             color: hovered ? context.dsw.interactiveBgHover : null,
           ),
           child: Center(child: builder(hovered)),

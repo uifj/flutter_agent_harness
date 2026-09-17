@@ -576,15 +576,15 @@ class _ToggleButtonState extends State<_ToggleButton> {
           onTap: widget.onTap,
           behavior: HitTestBehavior.opaque,
           child: Container(
-            width: 28,
-            height: 28,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
               color: _hovered ? color.interactiveBgHover : Colors.transparent,
               shape: BoxShape.circle,
             ),
             child: Icon(
               widget.icon,
-              size: 16,
+              size: 18,
               color: _hovered ? color.labelPrimary : color.labelSecondary,
             ),
           ),
