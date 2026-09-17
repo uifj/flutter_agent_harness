@@ -129,9 +129,7 @@ class _DshAppState extends ConsumerState<DshApp> {
   }
 
   void _initTray() {
-    _tray = TrayService(
-      onQuit: () => windowManager.close(),
-    );
+    _tray = TrayService(onQuit: () => windowManager.close());
     _tray!.init();
   }
 

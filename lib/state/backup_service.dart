@@ -22,7 +22,8 @@ class BackupService {
   /// The file name pattern for backups: `agent_harness_backup_YYYYMMDD_HHMMSS.zip`.
   static String defaultFileName() {
     final now = DateTime.now();
-    final stamp = '${now.year}'
+    final stamp =
+        '${now.year}'
         '${now.month.toString().padLeft(2, '0')}'
         '${now.day.toString().padLeft(2, '0')}_'
         '${now.hour.toString().padLeft(2, '0')}'
@@ -40,11 +41,7 @@ class BackupService {
     final archive = Archive();
 
     // Files to back up (relative to support directory).
-    final files = <String>[
-      'settings.json',
-      'prefs.json',
-      'plan_tasks.json',
-    ];
+    final files = <String>['settings.json', 'prefs.json', 'plan_tasks.json'];
 
     // Add individual files.
     for (final relative in files) {

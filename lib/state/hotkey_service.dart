@@ -70,10 +70,7 @@ class HotkeyService {
     );
   }
 
-  Future<void> _register(
-    HotKey key, {
-    required HotKeyHandler onKeyDown,
-  }) async {
+  Future<void> _register(HotKey key, {required HotKeyHandler onKeyDown}) async {
     try {
       await hotKeyManager.register(key, keyDownHandler: onKeyDown);
       _registered.add(key);

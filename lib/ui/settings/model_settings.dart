@@ -42,7 +42,15 @@ import '../primitives/capsule_button.dart';
 import 'widgets/settings_card.dart';
 
 /// Which section the rail is pointing at.
-enum _Section { general, appearance, models, workspace, workbench, extensions, backup }
+enum _Section {
+  general,
+  appearance,
+  models,
+  workspace,
+  workbench,
+  extensions,
+  backup,
+}
 
 class SettingsPanel extends StatefulWidget {
   const SettingsPanel({
@@ -1211,7 +1219,11 @@ class _SettingsPanelState extends State<SettingsPanel> {
       final count = await BackupService.createBackup(path);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.tr('backupCreated').replaceAll('{count}', '$count'))),
+        SnackBar(
+          content: Text(
+            context.tr('backupCreated').replaceAll('{count}', '$count'),
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -1229,10 +1241,16 @@ class _SettingsPanelState extends State<SettingsPanel> {
     );
     if (result == null || result.files.single.path == null || !mounted) return;
     try {
-      final count = await BackupService.restoreBackup(result.files.single.path!);
+      final count = await BackupService.restoreBackup(
+        result.files.single.path!,
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.tr('backupRestored').replaceAll('{count}', '$count'))),
+        SnackBar(
+          content: Text(
+            context.tr('backupRestored').replaceAll('{count}', '$count'),
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;

@@ -13,9 +13,7 @@ import 'package:window_manager/window_manager.dart';
 /// The app's system tray service. Manages the tray icon, context menu, and
 /// click-to-toggle-window behaviour.
 class TrayService with TrayListener {
-  TrayService({
-    required this.onQuit,
-  });
+  TrayService({required this.onQuit});
 
   /// Called when the user selects "Quit" from the tray menu.
   final VoidCallback onQuit;
@@ -23,23 +21,16 @@ class TrayService with TrayListener {
   Future<void> init() async {
     // The icon path is relative to flutter_assets (declared in pubspec assets).
     const iconPath = 'assets/icon/app_icon_source.png';
-    await trayManager.setIcon(
-      iconPath,
-      isTemplate: Platform.isMacOS,
-    );
+    await trayManager.setIcon(iconPath, isTemplate: Platform.isMacOS);
     await trayManager.setToolTip('Agent Harness');
 
-    final menu = Menu(items: [
-      MenuItem(
-        label: 'Show / Hide',
-        onClick: (_) => _toggleWindow(),
-      ),
-      MenuItem.separator(),
-      MenuItem(
-        label: 'Quit',
-        onClick: (_) => onQuit(),
-      ),
-    ]);
+    final menu = Menu(
+      items: [
+        MenuItem(label: 'Show / Hide', onClick: (_) => _toggleWindow()),
+        MenuItem.separator(),
+        MenuItem(label: 'Quit', onClick: (_) => onQuit()),
+      ],
+    );
     await trayManager.setContextMenu(menu);
     trayManager.addListener(this);
   }
