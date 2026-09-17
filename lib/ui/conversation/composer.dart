@@ -13,6 +13,8 @@
 // Typing `/` as the first character of the draft opens the command menu above
 // the card: the three mode switches and "new session", filtered by the token.
 
+import 'dart:io' show Platform, Process;
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -47,6 +49,8 @@ class Composer extends StatefulWidget {
     this.modelDirectory,
     this.onModelSelected,
     this.onLookupFiles,
+    this.workspaceRoot,
+    this.onPickWorkspace,
   });
 
   /// The centred empty-state variant: no bottom pad, and a two-line floor.
@@ -87,6 +91,14 @@ class Composer extends StatefulWidget {
   /// feature: an `@` types as plain text.
   final Future<List<FileEntry>> Function()? onLookupFiles;
 
+  /// The current workspace root path. Shown in the status bar below the card;
+  /// absent hides the bar entirely (no workspace picked yet).
+  final String? workspaceRoot;
+
+  /// Opens the workspace picker. The status bar is the second entry point
+  /// alongside the hero picker — both lead to the same dialog.
+  final VoidCallback? onPickWorkspace;
+
   @override
   State<Composer> createState() => _ComposerState();
 }
@@ -101,6 +113,50 @@ class _ComposerState extends State<Composer> {
   /// The `/`-token the menu was dismissed for, or null when it is open. Escape
   /// dismisses it for the current token only; a different token reopens it.
   String? _dismissedToken;
+
+  // -------------------------------------------------------------------------
+  // Workspace status bar
+  // -------------------------------------------------------------------------
+
+  /// The current git branch, or null when the workspace is not a repo or the
+  /// query has not landed. Cached per workspace root — a root change invalidates
+  /// it and triggers a fresh query.
+  String? _gitBranch;
+
+  /// Stale-response guard for the branch query.
+  int _branchGeneration = 0;
+
+  @override
+  void didUpdateWidget(covariant Composer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.workspaceRoot != oldWidget.workspaceRoot) {
+      _gitBranch = null;
+      _queryBranch();
+    }
+  }
+
+  /// Queries the current branch for [workspaceRoot]. A single `git rev-parse`
+  /// call — the lightest possible probe, and it fails silently when the folder
+  /// is not a repo (the bar just shows the workspace name).
+  Future<void> _queryBranch() async {
+    final root = widget.workspaceRoot;
+    if (root == null) return;
+    final generation = ++_branchGeneration;
+    try {
+      final result = await Process.run(
+        'git',
+        ['rev-parse', '--abbrev-ref', 'HEAD'],
+        workingDirectory: root,
+      );
+      if (!mounted || generation != _branchGeneration) return;
+      if (result.exitCode == 0) {
+        setState(() => _gitBranch = (result.stdout as String).trim());
+      }
+    } catch (_) {
+      // Not a repo, git not installed, or any other failure — the bar degrades
+      // to workspace-name-only, which is still useful.
+    }
+  }
 
   // -------------------------------------------------------------------------
   // The @ mention menu (dsh-at-file)
@@ -210,6 +266,7 @@ class _ComposerState extends State<Composer> {
     // Drives the primary action's enabled state; the draft itself repaints
     // through the field.
     _controller.addListener(_onDraftChanged);
+    if (widget.workspaceRoot != null) _queryBranch();
   }
 
   @override
@@ -476,6 +533,11 @@ class _ComposerState extends State<Composer> {
                   ],
                 ),
               ),
+              // The workspace status bar: sits below the card, shows the
+              // workspace name and (when available) the git branch. Clicking
+              // it opens the same picker the hero uses.
+              if (widget.workspaceRoot != null && !widget.hero)
+                _workspaceStatusBar(color),
             ],
           ),
         ),
@@ -615,8 +677,10 @@ class _ComposerState extends State<Composer> {
 
   Widget _row(DswAlias color) => Padding(
     // 2px of the bottom pad moved to the top: the whole control row sits 2px
-    // lower in the card without changing its height.
-    padding: const EdgeInsets.fromLTRB(8, 2, 8, 6),
+    // lower in the card without changing its height. Right pad is 4px (not 8)
+    // so the send button sits at the card's edge — the model chip and button
+    // are the trailing group and should feel anchored to the right.
+    padding: const EdgeInsets.fromLTRB(8, 2, 4, 6),
     child: LayoutBuilder(
       builder: (context, constraints) {
         // A re-expanded sidebar over a narrow window squeezes the centre
@@ -655,7 +719,7 @@ class _ComposerState extends State<Composer> {
                 ),
               ),
             if (widget.modelDirectory != null && constraints.maxWidth >= 220)
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
             _primary(color),
           ],
         );
@@ -679,6 +743,71 @@ class _ComposerState extends State<Composer> {
           size: 16,
           // Static white in both themes: the glyph sits on the blue fill.
           color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  /// The workspace status bar: a single line below the composer card showing
+  /// the workspace name and (when the folder is a git repo) the current branch.
+  /// Clicking it opens the workspace picker — the same entry point as the hero.
+  ///
+  /// Format: `flutter_agent_harness  本地  develop` (Qoder style).
+  /// "本地" is the local-repo indicator; it is always shown because the bar
+  /// only appears when a workspace is picked, and a picked workspace is by
+  /// definition local.
+  Widget _workspaceStatusBar(DswAlias color) {
+    final root = widget.workspaceRoot!;
+    // The folder name, not the full path — the bar is a hint, not a file browser.
+    final name = root.split(Platform.pathSeparator).last;
+    final branch = _gitBranch;
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: DswHoverTap(
+        onTap: widget.onPickWorkspace,
+        semanticLabel: context.tr('workspaceStatusBar'),
+        builder: (context, hovered, _) => Container(
+          height: 28,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            color: hovered ? color.interactiveBgHover : null,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                LucideIcons.folder_open,
+                size: 14,
+                color: color.labelTertiary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                name,
+                style: DswType.xxs12.copyWith(color: color.labelSecondary),
+              ),
+              const SizedBox(width: 8),
+              // The "本地" (local) indicator — Qoder shows it to distinguish
+              // local repos from remote ones. This app only has local, so it
+              // is always shown when a workspace is picked.
+              Text(
+                context.tr('localRepo'),
+                style: DswType.xxs12.copyWith(color: color.labelTertiary),
+              ),
+              if (branch != null) ...[
+                const SizedBox(width: 8),
+                Icon(
+                  LucideIcons.git_branch,
+                  size: 12,
+                  color: color.labelTertiary,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  branch,
+                  style: DswType.xxs12.copyWith(color: color.labelTertiary),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );

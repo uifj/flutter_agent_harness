@@ -542,46 +542,7 @@ class _SidebarState extends State<Sidebar> {
         ? AlignmentDirectional.centerStart
         : AlignmentDirectional.center,
     child: wide
-        ? Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _profileRow(color),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: _Pressable(
-                      // Through the safe wrapper: opening the full view with the
-                      // quick-menu up must take the popup along (audit F2).
-                      onTap: _openSettingsSafe,
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        height: 32,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Row(
-                          children: [
-                            Icon(
-                              LucideIcons.settings,
-                              size: 16,
-                              color: color.labelSecondary,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              context.tr('settings'),
-                              style: DswType.s14.copyWith(
-                                color: color.labelPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  _detailsToggle(color, wide: true),
-                ],
-              ),
-            ],
-          )
+        ? _footerWide(color)
         : Column(
             children: [
               // The rail avatar is the same quick-menu trigger as the wide
@@ -625,47 +586,15 @@ class _SidebarState extends State<Sidebar> {
           ),
   );
 
-  /// Whether the quick-menu has everything it needs: a document and a save
-  /// path. False in tests that build a bare Sidebar — the trigger rests inert.
-  bool get _canMenu =>
-      widget.settings != null && widget.onSettingsChanged != null;
-
-  /// Opens (or re-opens) the footer quick-menu, owning its overlay entry
-  /// (audit F2): an existing entry is removed first, so the menu can never
-  /// stack on itself.
-  void _openQuickMenu() {
-    if (!_canMenu) return;
-    if (_quickMenu != null && _quickMenu!.mounted) _quickMenu!.remove();
-    _quickMenu = showSettingsQuickMenu(
-      context: context,
-      link: _menuLink,
-      initial: widget.settings!,
-      onChanged: widget.onSettingsChanged!,
-      onOpenSettings: _openSettingsSafe,
-    );
-  }
-
-  /// Opens the full settings view, closing the quick-menu first — the body
-  /// swap unmounts this sidebar, and a leftover entry would float over the new
-  /// surface (audit F2).
-  void _openSettingsSafe() {
-    if (_quickMenu != null && _quickMenu!.mounted) _quickMenu!.remove();
-    _quickMenu = null;
-    widget.onOpenSettings();
-  }
-
-  /// The footer's identity line: the avatar, and beside it the display name and
-  /// email. It is the quick-menu trigger (opens [showSettingsQuickMenu] when a
-  /// document is wired); when the profile is still loading or absent it collapses
-  /// to the avatar.
-  Widget _profileRow(DswAlias color) {
+  /// Wide footer: profile + settings gear + details toggle in a single row.
+  /// The settings button is icon-only (no "设置" text) — the gear is
+  /// universally recognizable and the row stays compact.
+  Widget _footerWide(DswAlias color) {
     final profile = widget.profile;
     final canMenu = _canMenu;
     return CompositedTransformTarget(
       link: _menuLink,
       child: DswHoverTap(
-        // The whole identity line is the quick-menu trigger; with no document
-        // wired (tests) it is inert.
         onTap: canMenu ? _openQuickMenu : null,
         semanticLabel: context.tr('quickPreferences'),
         builder: (context, hovered, _) => Container(
@@ -700,11 +629,57 @@ class _SidebarState extends State<Sidebar> {
                     ],
                   ),
                 ),
+              const Spacer(),
+              _Pressable(
+                onTap: _openSettingsSafe,
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  height: 28,
+                  width: 28,
+                  alignment: Alignment.center,
+                  child: Icon(
+                    LucideIcons.settings,
+                    size: 16,
+                    color: color.labelSecondary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              _detailsToggle(color, wide: true),
             ],
           ),
         ),
       ),
     );
+  }
+
+  /// Whether the quick-menu has everything it needs: a document and a save
+  /// path. False in tests that build a bare Sidebar — the trigger rests inert.
+  bool get _canMenu =>
+      widget.settings != null && widget.onSettingsChanged != null;
+
+  /// Opens (or re-opens) the footer quick-menu, owning its overlay entry
+  /// (audit F2): an existing entry is removed first, so the menu can never
+  /// stack on itself.
+  void _openQuickMenu() {
+    if (!_canMenu) return;
+    if (_quickMenu != null && _quickMenu!.mounted) _quickMenu!.remove();
+    _quickMenu = showSettingsQuickMenu(
+      context: context,
+      link: _menuLink,
+      initial: widget.settings!,
+      onChanged: widget.onSettingsChanged!,
+      onOpenSettings: _openSettingsSafe,
+    );
+  }
+
+  /// Opens the full settings view, closing the quick-menu first — the body
+  /// swap unmounts this sidebar, and a leftover entry would float over the new
+  /// surface (audit F2).
+  void _openSettingsSafe() {
+    if (_quickMenu != null && _quickMenu!.mounted) _quickMenu!.remove();
+    _quickMenu = null;
+    widget.onOpenSettings();
   }
 
   /// The right-column switch: the panel-right mirror of the header's

@@ -161,6 +161,10 @@ class _SettingsPanelState extends State<SettingsPanel> {
 
   _Section _section = _Section.general;
 
+  /// The nav's filter field. Empty shows every cell; non-empty keeps only the
+  /// cells whose label contains the query (case-insensitive).
+  late final _search = TextEditingController();
+
   /// A key is a secret in a shared-screen sense, so it starts masked; the reveal
   /// is there because a mistyped key fails with the same 401 as a wrong one.
   bool _revealed = false;
@@ -219,6 +223,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
     // menu of wrong answers.
     _baseUrl.addListener(_onBaseUrlChanged);
     _fontFamilyFocus.addListener(_onFontFieldBlur);
+    _search.addListener(_onEdited);
   }
 
   /// Drops the fetch state — the list, and whatever the last probe said —
@@ -302,6 +307,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
     }
     _fontFamily.dispose();
     _fontFamilyFocus.dispose();
+    _search.dispose();
     super.dispose();
   }
 
@@ -457,66 +463,65 @@ class _SettingsPanelState extends State<SettingsPanel> {
     ),
   );
 
-  Widget _nav(DswAlias color) => SizedBox(
-    width: 188,
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(12, 22, 12, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(
-              context.tr('settings'),
-              style: DswType.baseStrong16.copyWith(color: color.labelPrimary),
+  Widget _nav(DswAlias color) {
+    final query = _search.text.trim().toLowerCase();
+    final items = <_NavItem>[
+      _NavItem(_Section.general, context.tr('settingsGeneral'), LucideIcons.settings),
+      _NavItem(_Section.appearance, context.tr('settingsAppearance'), LucideIcons.sparkles),
+      _NavItem(_Section.models, context.tr('settingsModels'), LucideIcons.network),
+      _NavItem(_Section.workspace, context.tr('settingsWorkspace'), LucideIcons.folder_open),
+      _NavItem(_Section.workbench, context.tr('settingsWorkbench'), LucideIcons.columns_2),
+      _NavItem(_Section.extensions, context.tr('settingsExtensions'), LucideIcons.puzzle),
+    ];
+    final filtered = query.isEmpty
+        ? items
+        : items.where((item) => item.label.toLowerCase().contains(query)).toList();
+    return SizedBox(
+      width: 188,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 22, 12, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                context.tr('settings'),
+                style: DswType.baseStrong16.copyWith(color: color.labelPrimary),
+              ),
             ),
-          ),
-          const SizedBox(height: 18),
-          _NavCell(
-            label: context.tr('settingsGeneral'),
-            icon: LucideIcons.settings,
-            active: _section == _Section.general,
-            onTap: () => setState(() => _section = _Section.general),
-          ),
-          const SizedBox(height: 4),
-          _NavCell(
-            label: context.tr('settingsAppearance'),
-            icon: LucideIcons.sparkles,
-            active: _section == _Section.appearance,
-            onTap: () => setState(() => _section = _Section.appearance),
-          ),
-          const SizedBox(height: 4),
-          _NavCell(
-            label: context.tr('settingsModels'),
-            icon: LucideIcons.network,
-            active: _section == _Section.models,
-            onTap: () => setState(() => _section = _Section.models),
-          ),
-          const SizedBox(height: 4),
-          _NavCell(
-            label: context.tr('settingsWorkspace'),
-            icon: LucideIcons.folder_open,
-            active: _section == _Section.workspace,
-            onTap: () => setState(() => _section = _Section.workspace),
-          ),
-          const SizedBox(height: 4),
-          _NavCell(
-            label: context.tr('settingsWorkbench'),
-            icon: LucideIcons.columns_2,
-            active: _section == _Section.workbench,
-            onTap: () => setState(() => _section = _Section.workbench),
-          ),
-          const SizedBox(height: 4),
-          _NavCell(
-            label: context.tr('settingsExtensions'),
-            icon: LucideIcons.puzzle,
-            active: _section == _Section.extensions,
-            onTap: () => setState(() => _section = _Section.extensions),
-          ),
-        ],
+            const SizedBox(height: 14),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: _SearchField(
+                controller: _search,
+                hint: context.tr('searchSettings'),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final item in filtered) ...[
+                      _NavCell(
+                        label: item.label,
+                        icon: item.icon,
+                        active: _section == item.section,
+                        onTap: () => setState(() => _section = item.section),
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   Widget _content(DswAlias color) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -625,6 +630,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
         _SettingCellRow(
           title: context.tr('theme'),
           description: context.tr('themeDesc'),
+          leading: LucideIcons.palette,
           labels: {
             settings.ThemeMode.system: context.tr('followSystem'),
             settings.ThemeMode.light: context.tr('light'),
@@ -637,6 +643,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
         _SettingCellRow(
           title: context.tr('language'),
           description: context.tr('languageDesc'),
+          leading: LucideIcons.languages,
           labels: {
             settings.LocaleMode.system: context.tr('followSystem'),
             settings.LocaleMode.en: 'English',
@@ -668,6 +675,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
         _SettingCellRow<settings.AppFontFamily>(
           title: context.tr('appearanceTextFont'),
           description: context.tr('appearanceTextFontDesc'),
+          leading: LucideIcons.type,
           labels: {
             settings.AppFontFamily.sansSerif: context.tr('fontSansSerif'),
             settings.AppFontFamily.serif: context.tr('fontSerif'),
@@ -691,6 +699,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
         _SettingCellRow<settings.AppConversationWidth>(
           title: context.tr('conversationWidth'),
           description: context.tr('conversationWidthDesc'),
+          leading: LucideIcons.move_horizontal,
           labels: {
             settings.AppConversationWidth.normal: context.tr('widthNormal'),
             settings.AppConversationWidth.wide: context.tr('widthWide'),
@@ -702,6 +711,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
         _SettingCellRow<settings.AppInterfaceStyle>(
           title: context.tr('interfaceStyle'),
           description: context.tr('interfaceStyleDesc'),
+          leading: LucideIcons.columns_2,
           labels: {
             settings.AppInterfaceStyle.standard: context.tr('styleStandard'),
             settings.AppInterfaceStyle.glass: context.tr('styleGlass'),
@@ -715,6 +725,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
         _SettingCellRow<settings.AppPreviewMode>(
           title: context.tr('previewMode'),
           description: context.tr('previewModeDesc'),
+          leading: LucideIcons.eye,
           labels: {
             settings.AppPreviewMode.newWindow: context.tr('previewNewWindow'),
             settings.AppPreviewMode.sidePanel: context.tr('previewSidePanel'),
@@ -1207,6 +1218,7 @@ class _SettingCellRow<T> extends StatefulWidget {
     required this.labels,
     required this.value,
     required this.onChanged,
+    this.leading,
     this.last = false,
   });
 
@@ -1217,6 +1229,10 @@ class _SettingCellRow<T> extends StatefulWidget {
   final Map<T, String> labels;
   final T value;
   final ValueChanged<T> onChanged;
+
+  /// An optional icon painted in `labelTertiary` to the left of the text —
+  /// echoes the nav's icon language so each row self-describes.
+  final IconData? leading;
 
   /// Whether the hairline separator is drawn. The section sets it on its
   /// last row; dsh's column strips it there (`:last-child { border: none }`).
@@ -1241,6 +1257,10 @@ class _SettingCellRowState<T> extends State<_SettingCellRow<T>> {
       ),
       child: Row(
         children: [
+          if (widget.leading != null) ...[
+            Icon(widget.leading, size: 16, color: color.labelTertiary),
+            const SizedBox(width: 12),
+          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1495,6 +1515,56 @@ class _ForgetButton extends StatelessWidget {
   }
 }
 
+/// One row of the nav's filterable list — the section it points at, the label
+/// the search matches against, and the icon the cell paints.
+class _NavItem {
+  const _NavItem(this.section, this.label, this.icon);
+  final _Section section;
+  final String label;
+  final IconData icon;
+}
+
+/// The nav's search field: a 32px box with a leading search glyph, matching
+/// the `_Field` height so the nav reads as one rhythm.
+class _SearchField extends StatelessWidget {
+  const _SearchField({required this.controller, required this.hint});
+
+  final TextEditingController controller;
+  final String hint;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.dsw;
+    return Container(
+      height: 32,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.borderL2),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 8),
+          Icon(LucideIcons.search, size: 14, color: color.labelTertiary),
+          const SizedBox(width: 6),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              style: DswType.s14.copyWith(color: color.labelPrimary),
+              decoration: InputDecoration(
+                isCollapsed: true,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                hintStyle: DswType.s14.copyWith(color: color.labelDimmed),
+                hintText: hint,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// `.navCell`: 40px, radius 12, asymmetric padding, the sidebar nav item's three
 /// states.
 class _NavCell extends StatefulWidget {
@@ -1534,17 +1604,32 @@ class _NavCellState extends State<_NavCell> {
               ? color.sidebarNavItemHover
               : null,
           borderRadius: BorderRadius.circular(12),
+          // The accent bar: a 3px pill on the leading edge when selected.
+          border: widget.active
+              ? Border(
+                  left: BorderSide(
+                    color: color.stateBusinessPrimary,
+                    width: 3,
+                  ),
+                )
+              : null,
         ),
         child: Row(
           children: [
-            Icon(widget.icon, size: 16, color: color.labelSecondary),
+            Icon(
+              widget.icon,
+              size: 16,
+              color: widget.active ? color.brandPrimary : color.labelSecondary,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 widget.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: DswType.s14.copyWith(color: color.labelPrimary),
+                style: DswType.s14.copyWith(
+                  color: widget.active ? color.labelPrimary : color.labelPrimary,
+                ),
               ),
             ),
           ],

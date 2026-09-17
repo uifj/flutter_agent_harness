@@ -120,6 +120,10 @@ const enStrings = <String, String>{
   'askAnythingHint': 'Ask anything, or describe a task',
   'heroSubtitle': 'Ask anything, or open a workspace to begin',
 
+  // Workspace status bar (below composer)
+  'workspaceStatusBar': 'Workspace status bar',
+  'localRepo': 'Local',
+
   // The plan workspace (ADR-0007)
   'planNoWorkspace':
       'Choose a workspace folder first — the plan vault is the workspace',
@@ -306,6 +310,7 @@ const enStrings = <String, String>{
   'settingsWorkspace': 'Workspace',
   'settingsWorkbench': 'Workbench',
   'settingsExtensions': 'Extensions',
+  'searchSettings': 'Search settings…',
   'settingsGeneralIntro': 'How the app itself looks and behaves.',
   'settingsAppearanceIntro':
       'The face and width of the conversation, and how generated files are '
@@ -531,6 +536,10 @@ const zhStrings = <String, String>{
   'askAnythingHint': '输入问题，或描述一个任务',
   'heroSubtitle': '随时提问，或打开工作区开始探索',
 
+  // Workspace status bar (below composer)
+  'workspaceStatusBar': '工作区状态栏',
+  'localRepo': '本地',
+
   // The plan workspace (ADR-0007)
   'planNoWorkspace': '请先选择工作区文件夹——企划库就是工作区',
   'planNoNoteSelected': '从目录树中选择一个 Markdown 文件',
@@ -708,6 +717,7 @@ const zhStrings = <String, String>{
   'settingsWorkspace': '工作区',
   'settingsWorkbench': '工作台',
   'settingsExtensions': '扩展',
+  'searchSettings': '搜索设置…',
   'settingsGeneralIntro': '应用自身的外观与行为。',
   'settingsAppearanceIntro': '对话的字体与宽度，以及生成文件的呈现方式。',
   'settingsModelsIntro': '此构建连接哪个端点。',

@@ -292,6 +292,8 @@ class _DshAppState extends ConsumerState<DshApp> {
           // dsh-at-file's Remote, in one process: the index runs off the UI
           // thread and lands as entries.
           onLookupFiles: scope.lookupWorkspaceFiles,
+          workspaceRoot: doc.workspaceRoot,
+          onPickWorkspace: scope.pickFromHero,
         ),
       ),
     );

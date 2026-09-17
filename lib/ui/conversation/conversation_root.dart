@@ -92,6 +92,8 @@ class ConversationRoot extends StatefulWidget {
     this.modelDirectory,
     this.onModelSelected,
     this.onLookupFiles,
+    this.workspaceRoot,
+    this.onPickWorkspace,
   });
 
   final ConversationController conversation;
@@ -107,6 +109,12 @@ class ConversationRoot extends StatefulWidget {
   /// Supplies the workspace file index for the `@` mention menu — the seam
   /// dsh-at-file's Remote occupied. Absent disables the menu.
   final Future<List<FileEntry>> Function()? onLookupFiles;
+
+  /// The current workspace root, shown in the composer's status bar.
+  final String? workspaceRoot;
+
+  /// Opens the workspace picker from the status bar.
+  final VoidCallback? onPickWorkspace;
 
   @override
   State<ConversationRoot> createState() => _ConversationRootState();
@@ -346,6 +354,8 @@ class _ConversationRootState extends State<ConversationRoot> {
               modelDirectory: widget.modelDirectory,
               onModelSelected: widget.onModelSelected,
               onLookupFiles: widget.onLookupFiles,
+              workspaceRoot: widget.workspaceRoot,
+              onPickWorkspace: widget.onPickWorkspace,
               onSubmit: (text, images) =>
                   widget.conversation.send(text, images: images),
               onStop: widget.conversation.stop,
