@@ -30,6 +30,7 @@ dependencies:
   genkit_middleware: ^0.6.1
   genkit_openai: ^0.4.1
   gpt_markdown: ^1.2.1
+  hotkey_manager: ^0.2.3
   pasteboard: ^0.2.0
   path: ^1.9.1
   path_provider: ^2.1.6
@@ -38,6 +39,7 @@ dependencies:
   riverpod_annotation: 4.0.2
   schemantic: ^0.2.2
   shadcn_ui: 0.56.3
+  window_manager: ^0.5.2
   xterm: ^4.0.0
 
 dev_dependencies:

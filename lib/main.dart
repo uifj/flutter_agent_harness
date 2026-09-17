@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadTheme;
+import 'package:window_manager/window_manager.dart';
 
 import 'genkit/models_endpoint.dart';
 import 'host/project_folder_ops.dart';
@@ -28,6 +29,7 @@ import 'l10n/locales.dart';
 import 'model/app_settings.dart' as cfg;
 import 'state/app_providers.dart';
 import 'state/details_selection.dart';
+import 'state/hotkey_service.dart';
 import 'state/plan_task_store.dart';
 import 'state/prefs_store.dart';
 import 'state/settings_store.dart';
@@ -63,6 +65,8 @@ Future<void> main() async {
   // session restore, the tools. A failure here is not an error: the hero
   // picker's own UI is the "ask again" path.
   await restoreWorkspaceAccess(bookmark: settings.value.workspaceBookmark);
+  // Window manager: required for global hotkeys and system tray.
+  await windowManager.ensureInitialized();
   // The container owns the store providers (ADR-0002 stage 1): `main` opens
   // the stores above — async bootstrap stays imperative, a first frame racing
   // a FutureProvider for its own settings document is a bug, not a loading
@@ -93,6 +97,10 @@ class _DshAppState extends ConsumerState<DshApp> {
   /// is a view concern rather than a controller's.
   bool _settingsOpen = false;
 
+  /// Global hotkey service. Initialized after the first frame so the window
+  /// handle is available for system-scope registration.
+  HotkeyService? _hotkeys;
+
   @override
   void initState() {
     super.initState();
@@ -100,6 +108,33 @@ class _DshAppState extends ConsumerState<DshApp> {
     // worse way to learn that than the panel that fixes it. dsh opens an
     // onboarding dialog on the same condition.
     _settingsOpen = !ref.read(settingsStoreProvider).value.model.isConfigured;
+    // Register hotkeys after the frame so window_manager has a handle.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initHotkeys());
+  }
+
+  void _initHotkeys() {
+    _hotkeys = HotkeyService(
+      onToggleWindow: _toggleWindow,
+      onNewSession: () => ref.read(appScopeProvider).newSession(),
+      onOpenSettings: () => setState(() => _settingsOpen = true),
+    );
+    _hotkeys!.init();
+  }
+
+  Future<void> _toggleWindow() async {
+    final isVisible = await windowManager.isVisible();
+    if (isVisible) {
+      await windowManager.hide();
+    } else {
+      await windowManager.show();
+      await windowManager.focus();
+    }
+  }
+
+  @override
+  void dispose() {
+    _hotkeys?.dispose();
+    super.dispose();
   }
 
   @override
