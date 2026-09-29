@@ -20,7 +20,7 @@ ZCode 那条经验里值得搬的不是它的 15 模块 `requires` 图（本仓�
 
 ## 决策（Decision）
 
-新增 `tool/check_architecture.dart`（约 230 行，只用 `dart:io` + `dart:convert`，零新依赖）与 `tool/architecture_baseline.json`（入库）。
+新增 `tool/check_architecture.dart`（322 行，只用 `dart:io` + `dart:convert`，零新依赖）与 `tool/architecture_baseline.json`（入库）。
 
 五条规则，前三条就是文档里的三条不变量，后两条是把文档里"说过但没人查"的约定也纳入：
 
