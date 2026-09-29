@@ -34,6 +34,8 @@ import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:agent_harness/state/hotkey_service.dart';
+
 import 'fake_turn_source.dart';
 import 'amplified_text_probe.dart';
 
@@ -58,6 +60,7 @@ void main() {
   Future<void> pump(
     WidgetTester tester, {
     required bool collapsed,
+    VoidCallback? onToggle,
     double scale = 1.0,
     WorkspaceMode? mode,
     UserProfile? profile,
@@ -81,7 +84,7 @@ void main() {
                   onToggleExtension: (_) {},
                   profile: profile,
                   onNewSession: () {},
-                  onToggle: () {},
+                  onToggle: onToggle ?? () {},
                   onOpenSession: (_) {},
                   onOpenSettings: () {},
                   onToggleDetails: () {},
@@ -461,4 +464,34 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+  // The rail has no hamburger: its brand mark *is* the way back out, swapping to
+  // a panel glyph when hovered or focused. A reading of the code is not evidence
+  // that it works, so both forms are pressed here — and each has to say which
+  // way it goes, because the same control means "collapse" in one form and
+  // "open" in the other. The reveal-on-focus itself is the primitive's own
+  // contract, already pinned in dsw_hover_tap_test.dart.
+  testWidgets('both forms carry a working collapse control', (tester) async {
+    for (final collapsed in const [false, true]) {
+      var toggles = 0;
+      await pump(tester, collapsed: collapsed, onToggle: () => toggles++);
+      // The two-phase collapse fades the wide content in behind an
+      // IgnorePointer, so a tap before the settle lands on nothing.
+      await tester.pumpAndSettle();
+
+      final tip = collapsed
+          ? 'Open sidebar (${HotkeyService.sidebarAccelerator})'
+          : 'Collapse sidebar (${HotkeyService.sidebarAccelerator})';
+      expect(
+        find.byTooltip(tip),
+        findsOneWidget,
+        reason: collapsed
+            ? 'the rail says how to open'
+            : 'the wide form says how to close',
+      );
+
+      await tester.tap(find.byTooltip(tip));
+      await tester.pump();
+      expect(toggles, 1, reason: tip);
+    }
+  });
 }
