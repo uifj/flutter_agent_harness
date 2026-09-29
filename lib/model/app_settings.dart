@@ -72,7 +72,9 @@ enum AppFontFamily {
       raw == 'serif' ? serif : sansSerif;
 }
 
-/// The conversation text size.
+/// The app's text-size step. Multiplied into the system's own `TextScaler` at
+/// the root (`main.dart`), so it composes with the OS's "放大文本" instead of
+/// replacing it — which is why it is a factor and not a pixel size.
 enum AppFontSize {
   small,
   medium,
@@ -87,6 +89,14 @@ enum AppFontSize {
     'small' => small,
     'large' => large,
     _ => medium,
+  };
+
+  /// The default is exactly 1.0: choosing "medium" must change nothing, and a
+  /// factor is what lets the root multiply it into the platform's scaler.
+  double get scale => switch (this) {
+    small => 0.9,
+    medium => 1.0,
+    large => 1.15,
   };
 }
 

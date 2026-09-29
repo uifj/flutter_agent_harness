@@ -63,6 +63,22 @@ void main() {
       expect(const AppSettings().toJson().containsKey('fontFamily'), isFalse);
     });
 
+    // The stored step multiplies INTO the platform's own scaler at the root, so
+    // two properties are load-bearing: `medium` must be a no-op (a default that
+    // quietly scaled the whole app by 0.95 would be invisible in a screenshot
+    // and impossible to attribute), and the three steps must actually differ —
+    // a stepper whose two ends render the same size is a control that lies.
+    test('the text-size steps compose onto the platform scaler', () {
+      expect(AppFontSize.medium.scale, 1.0);
+      expect(AppFontSize.small.scale, lessThan(1.0));
+      expect(AppFontSize.large.scale, greaterThan(1.0));
+      expect(
+        {for (final size in AppFontSize.values) size.scale}.length,
+        AppFontSize.values.length,
+      );
+      expect(const AppSettings().fontSize, AppFontSize.medium);
+    });
+
     test('reads an absent document as the defaults', () {
       final decoded = AppSettings.fromJson(const {});
       expect(decoded.model.baseUrl, defaultBaseUrl);
