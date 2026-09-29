@@ -33,6 +33,8 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
+import 'amplified_text_probe.dart';
+
 /// Owns the mode as state, the way `ConversationRoot`'s ListenableBuilder
 /// does: a selector the chip flips must be able to reach the chip, which only
 /// happens if the host rebuilds with the new value.
@@ -140,27 +142,31 @@ void main() {
     Future<List<FileEntry>> Function()? onLookupFiles,
     double? width,
     String? workspaceRoot,
+    double step = 1.0,
     void Function(String text, List<AttachedImage> images, InputDelivery)?
     onSubmit,
   }) => tester.pumpWidget(
     MaterialApp(
       theme: dswThemeData(Brightness.light),
       home: Scaffold(
-        body: _ComposerHost(
-          mode: mode,
-          onMode: (next) => mode = next,
-          onNewSession: () => newSession++,
-          onSubmit: onSubmit ?? (text, images, delivery) {},
-          hero: hero,
-          busy: busy,
-          blocked: blocked,
-          withModeSelector: withModeSelector,
-          withNewSession: withNewSession,
-          modelDirectory: directory,
-          onModelSelected: onModelSelected,
-          onLookupFiles: onLookupFiles,
-          width: width,
-          workspaceRoot: workspaceRoot,
+        body: AmplifiedText(
+          step: step,
+          child: _ComposerHost(
+            mode: mode,
+            onMode: (next) => mode = next,
+            onNewSession: () => newSession++,
+            onSubmit: onSubmit ?? (text, images, delivery) {},
+            hero: hero,
+            busy: busy,
+            blocked: blocked,
+            withModeSelector: withModeSelector,
+            withNewSession: withNewSession,
+            modelDirectory: directory,
+            onModelSelected: onModelSelected,
+            onLookupFiles: onLookupFiles,
+            width: width,
+            workspaceRoot: workspaceRoot,
+          ),
         ),
       ),
     ),
@@ -722,6 +728,87 @@ void main() {
         temp.deleteSync(recursive: true);
       }
     });
+  });
+
+  // The card's own seats, plus the four menus that only exist once tapped.
+  //
+  // `composer.dart` carries the largest cluster of pinned seats left in lib/ui,
+  // and a menu row is a glyph beside a label — the first place an amplified
+  // system runs out of width. Each stage below measures the tree WITH the menu
+  // open, since a menu is in no one's tree otherwise.
+  group('amplified text', () {
+    for (final (label, step) in const [
+      ('1.8x', amplifiedTextStep),
+      ('2.2x', nextTextStep),
+    ]) {
+      testWidgets('the card and its menus keep their labels ($label)', (
+        tester,
+      ) async {
+        Future<void> tap(Finder target) async {
+          await tester.tap(target);
+          await tester.pumpAndSettle();
+        }
+
+        // Tap the barrier rather than an entry: a menu left open covers the
+        // next face, and a route nobody popped leaves its timer armed.
+        Future<void> close() async {
+          await tester.tapAt(const Offset(4, 4));
+          await tester.pumpAndSettle();
+        }
+
+        await pump(
+          tester,
+          step: step,
+          directory: ModelDirectory(
+            current: const ModelSettings(
+              apiKey: 'sk-live',
+              model: defaultModel,
+            ),
+          ),
+          // Without a commit the chip is inert by design, and an inert chip has
+          // no menu to measure.
+          onModelSelected: (_) {},
+          onLookupFiles: () async => const [
+            FileEntry(relative: 'README.md', kind: 'file'),
+            FileEntry(relative: 'src', kind: 'dir'),
+          ],
+        );
+        expect(textDefects(tester), isEmpty, reason: 'the composer card');
+
+        await tap(find.byIcon(LucideIcons.paperclip));
+        expect(find.text('Choose image files…'), findsOneWidget);
+        expect(textDefects(tester), isEmpty, reason: 'the attach menu');
+        await close();
+
+        await tap(find.text('Ask every time'));
+        expect(find.text('Plan first'), findsOneWidget);
+        expect(textDefects(tester), isEmpty, reason: 'the mode picker');
+        await close();
+
+        await tap(find.byIcon(LucideIcons.cpu));
+        expect(find.byIcon(LucideIcons.check), findsOneWidget);
+        expect(textDefects(tester), isEmpty, reason: 'the model menu');
+        await close();
+
+        await tester.enterText(find.byType(TextField), '/');
+        await tester.pump();
+        expect(find.text('Commands'), findsOneWidget);
+        expect(textDefects(tester), isEmpty, reason: 'the command menu');
+
+        await tester.enterText(find.byType(TextField), '@');
+        await tester.pump();
+        expect(find.text('Files'), findsOneWidget);
+        expect(textDefects(tester), isEmpty, reason: 'the mention menu');
+
+        // The two deliveries a blocked turn puts where the send circle was.
+        await pump(tester, step: step, blocked: true);
+        await tester.enterText(find.byType(TextField), 'hello');
+        await tester.pumpAndSettle();
+        expect(find.text('Queue'), findsOneWidget);
+        expect(find.text('Steer'), findsOneWidget);
+        expect(textDefects(tester), isEmpty, reason: 'the delivery buttons');
+      });
+    }
   });
 
   // Audit item 4, the half of it that is not spacing: the card used to carry one
