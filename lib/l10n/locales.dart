@@ -109,8 +109,11 @@ const enStrings = <String, String>{
   'collapseBottomPanel': 'Collapse bottom panel',
 
   // The sidebar
-  'openSidebar': 'Open sidebar',
-  'collapseSidebar': 'Collapse sidebar',
+  // The two sidebar tooltips carry the accelerator, which `lib/ui` cannot ask
+  // the platform for (architecture rule 5) — `HotkeyService.sidebarAccelerator`
+  // spells it. A door you can only find by hovering is not an affordance.
+  'openSidebar': 'Open sidebar ({accel})',
+  'collapseSidebar': 'Collapse sidebar ({accel})',
   'newSession': 'New Session',
   'sessions': 'Sessions',
   // The top-level workspace switch (ADR-0007)
@@ -575,8 +578,8 @@ const zhStrings = <String, String>{
   'collapseBottomPanel': '折叠底部面板',
 
   // The sidebar
-  'openSidebar': '展开侧边栏',
-  'collapseSidebar': '折叠侧边栏',
+  'openSidebar': '展开侧边栏（{accel}）',
+  'collapseSidebar': '折叠侧边栏（{accel}）',
   'newSession': '新会话',
   'sessions': '会话',
   // The top-level workspace switch (ADR-0007)

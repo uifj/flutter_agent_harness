@@ -124,6 +124,7 @@ class _DshAppState extends ConsumerState<DshApp> {
       onToggleWindow: _toggleWindow,
       onNewSession: () => ref.read(appScopeProvider).newSession(),
       onOpenSettings: () => setState(() => _settingsOpen = true),
+      onToggleSidebar: () => ref.read(layoutProvider).toggleSidebar(),
     );
     _hotkeys!.init();
   }

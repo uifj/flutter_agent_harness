@@ -19,6 +19,7 @@ class HotkeyService {
     required this.onToggleWindow,
     required this.onNewSession,
     required this.onOpenSettings,
+    required this.onToggleSidebar,
   });
 
   /// Toggles the window's visibility (show/hide).
@@ -29,6 +30,17 @@ class HotkeyService {
 
   /// Opens the settings page.
   final VoidCallback onOpenSettings;
+
+  /// Collapses the sidebar to its rail, or asks for the panel back. The frame
+  /// decides what "toggle" means at the current width — see
+  /// `LayoutController.toggleSidebar`.
+  final VoidCallback onToggleSidebar;
+
+  /// The sidebar toggle's accelerator, spelled the way the host spells it. The
+  /// tooltip shows this so the shortcut is discoverable rather than tribal
+  /// knowledge; `lib/ui` cannot ask the platform directly (architecture rule 5).
+  static String get sidebarAccelerator =>
+      Platform.isMacOS ? '\u2318B' : 'Ctrl+B';
 
   final List<HotKey> _registered = [];
 
@@ -67,6 +79,17 @@ class HotkeyService {
         scope: HotKeyScope.inapp,
       ),
       onKeyDown: (_) => onOpenSettings(),
+    );
+
+    // ZCode's `CmdOrCtrl+B`: the panel's own door needs a keyboard door, or the
+    // rail's hover-swap is the only way to learn the column can come back.
+    await _register(
+      HotKey(
+        key: LogicalKeyboardKey.keyB,
+        modifiers: [mod],
+        scope: HotKeyScope.inapp,
+      ),
+      onKeyDown: (_) => onToggleSidebar(),
     );
   }
 

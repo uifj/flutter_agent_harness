@@ -19,6 +19,7 @@ import '../../l10n/locales.dart';
 import '../../model/app_settings.dart' as appcfg;
 import '../../model/conversation.dart';
 import '../../model/user_profile.dart';
+import '../../state/hotkey_service.dart';
 import '../../state/session_index.dart';
 import '../../state/workspace_mode_controller.dart';
 import '../../theme/dsw_alias.dart';
@@ -426,9 +427,12 @@ class _SidebarState extends State<Sidebar> {
         _IconButton(
           onTap: widget.onToggle,
           wide: wide,
-          tooltip: widget.collapsed
-              ? context.tr('openSidebar')
-              : context.tr('collapseSidebar'),
+          // The accelerator is spelled by whoever registers it, so the tooltip
+          // and the key cannot drift apart.
+          tooltip: context.tr(
+            widget.collapsed ? 'openSidebar' : 'collapseSidebar',
+            {'accel': HotkeyService.sidebarAccelerator},
+          ),
           // On the rail the toggle rests as the brand mark and reveals the
           // panel icon on hover — that swap *is* the expand affordance.
           builder: (hovered) => wide || hovered
