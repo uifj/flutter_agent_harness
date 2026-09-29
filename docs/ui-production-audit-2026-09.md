@@ -27,7 +27,7 @@
 | --- | --- | --- | --- | --- |
 | 1 | 标题栏：系统按钮与标题间距过近 | **本仓库没有自绘标题栏**：`macos/` 全仓 `grep titleBarStyle\|titleVisibility\|styleMask` = 0 命中，`MainFlutterWindow.swift:4` 只用默认 `NSWindow`。截图里那行"Agent Harness"是** macOS 原生标题栏**，间距由系统决定 | **不成立（作为我们的 bug）** | 这不是"加 padding"能修的。要呼吸感只有两条路：① `titleBarStyle = .hiddenInset` + 自绘一行应用内 chrome（能放面包屑/窗口标题，代价是要自己处理拖动区与全屏行为）；② 保持原生、把标题留空（`windowManager.setTitle('')`），让那行只剩系统按钮。**决策进 ADR-0018**，不偷偷选 ① |
 | 2a | 会话列表文字截断 | `sidebar.dart:738-742` 是 `maxLines: 1 + TextOverflow.ellipsis`——**截断策略本身是对的**。真正的问题在标题内容：`agent_runtime.dart:1382-1390` 的 `_titleOf()` 取"第一条 user 消息的文本"，而 ADR-0009 的指令注入（`instructions.dart`）正是把 `<project-instructions>` 块作为**同一条消息的前置 TextPart** 发出去的（`agent_runtime.dart:961-972`）。于是每条会话标题都以 `<project-instructions> …` 开头，80 字预算被注入块吃光 | **部分成立（症状真、归因错）** | **这是 ADR-0009 引入的回归**，且是 DEF 级：用户看到的会话名是模型读的散文，不是自己说的话。修法：`_titleOf` 跳过指令块（按块的起始标记识别），或标题改由控制器在**用户原文**上生成并持久化。**这条优先于所有美化项** |
-| 2b | 无活跃状态指示 | **有**，但和 hover 是同一个颜色：`sidebar.dart:729-732` `color: selected ? color.interactiveBgHover : null`，而 hover 态用的也是 `interactiveBgHover`（`:560`、`:603`、`:731`） | **部分成立** | 选中与悬停共用一个 token ⇒ 鼠标划过谁，谁就像"当前会话"。缺的不是指示器，是**第二个状态语义**。目标：选中用独立 token + 左侧 2px 强调条（ZCode 的 nested-radius/强调条律见 §4），hover 只改亮度不改身份 |
+| 2b | 无活跃状态指示 | **有**，但和 hover 是同一个颜色：`sidebar.dart:729-732` `color: selected ? color.interactiveBgHover : null`，而 hover 态用的也是 `interactiveBgHover`（`:560`、`:603`、`:731`） | **部分成立** | 选中与悬停共用一个 token ⇒ 鼠标划过谁，谁就像"当前会话"。缺的不是指示器，是**第二个状态语义**。目标：**一个与 hover 不同的独立选中 token**（ZCode 用 `bg-selected` = 10% neutral-950，见 §4.2），hover 只改亮度不改身份；行首再留一个状态圆点槽位。**不加左侧强调条**——那不是 ZCode 的做法，初稿写错已在 §4.2 更正 |
 | 2c | Logo 与按钮留白不足；底部设置按钮孤立 | 品牌行 `sidebar.dart:374-377`：`EdgeInsets.only(left: 4, top: 8, bottom: 8)`——4px 左、8px 上下，确实紧。且 `:397` 把文案**硬编码成 `'DSH'`**（截图里侧栏是 DSH，窗口标题是 Agent Harness） | **成立，且比报告说的严重** | ① 留白按 §4 的间距标度重定；② `'DSH'` 是**第三方产品名残留在我们的 UI 上**，商用不可接受，必须换成产品名并进 i18n（`locales.dart` 双键）；③ 底部三件套（头像/齿轮/侧栏开关）要成为一个视觉组，而不是三个散落图标 |
 | 3 | 对话区代码块与路径堆成文字墙，缺层级；段落间距模糊 | `assistant_markdown.dart` 已有 h1–h6 与 code block 的完整样式映射（`:80-86`、`:103-124`），圆角 6/12 混用（`:106`、`:115`），`fontSizeFactor: 0.875` | **部分成立** | 排版**令牌存在**，缺的是**层级差**：正文与 inline code 的视觉权重几乎相同（截图里满屏反引号包裹的 `run-raw-sql`、`create-bucket`），列表项无呼吸。目标：inline code 降饱和 + 底色、段落/列表间距走统一标度、圆角收敛到 §4 的嵌套律。**必须用截图这一屏做前后对照验收**，不许只改常量 |
 | 4 | 输入框控件拥挤、对齐不精准、缺容器质感 | `composer.dart:7` 自述"控制行是 dsh 的 toolbar"，attach/mode/model/send 一行排开；`_deliverChips`（`:881-903`）在忙时**再往同一行塞两枚**（排队/转向），间距 6/8 硬编码 | **成立** | 拥挤是**忙时**才出现的：两枚投递 chip 与三枚既有控件抢同一基线。目标：控制行统一高度与基线、chip 间距走标度、忙时溢出策略见 §2 条 6。**注意**：`composer_test.dart` 已有"blocked composer offers the two deliveries"用例，改布局不许把它改松 |
@@ -52,13 +52,77 @@
 >
 > 本报告初稿曾列第三条"会话列表在真机上为空"，**已自查删除**：第一张截图是全新启动（`暂无会话` 是正确状态，那时还没有任何会话），不是缺陷。留此记录是为了说明本文的判定口径：截图里看不出来的一律不算。
 
-## 4. ZCode 参照（数值待回填）
+## 4. ZCode 参照（实测数值，2026-09-29 逐文件核过）
 
-ZCode 侧的实测数值（标题栏预留、侧栏宽度与折叠控件、composer 窄屏降级策略、断点常量、`DESIGN.md` 的间距/圆角/字号标律）由并行调研产出，回填本节后进入 ADR-0017/0018。**在拿到数值前不写"照 ZCode 的 X px"这类句子**——那是会腐烂的假事实。
+栈：Electron + React 19.2.7 + TS + Tailwind v4 `@theme` + shadcn 派生原语 + Zustand + `react-resizable-panels`。**不是 Flutter**，所以搬的是数值与律，不是代码。令牌真值在它的 `DESIGN.md`（537 行）。
 
-已确认可搬的两条律（来自本仓库既有的 `docs/zcode-vs-agent-harness-2026-09.md` §3 设计系统行）：
-- **radius = 嵌套深度递减**（外层大、内层小）。我们现在 6/8/12 混用且无律（`assistant_markdown.dart:106,115`、`sidebar.dart:727,732`）。
-- **单一 base 字号标度派生全量**（ZCode 的 `--ui-font-size`，默认 14px）。Flutter 侧等价物 = 一个 base scalar → `TextTheme`，顺带补上 ADR-0005 欠的文本缩放。
+### 4.1 窗口 chrome（对应本文条 1）
+
+| 事实 | 值 | 证据 |
+| --- | --- | --- |
+| 标题栏形态 | `titleBarStyle: "hidden"` + 红绿灯手动定位 `{x: 22, y: 23}` | `packages/desktop/src/main/desktopWindowChrome.ts:140-141`、`desktopWindowButtonPosition.ts:5` |
+| 左侧避让 | **96px**（macOS），Windows 右侧 **136px**，且由原生 `onWindowControlsOverlayChanged` 实时同步而非写死 | `useAppChromeState.ts:7,155-170`、`desktopWindowButtonPosition.ts:8` |
+| 顶栏高度 | `h-14`（56px）浮层，内部 macOS `h-14` / Win-Linux `h-12` | `DesktopTopOverlay.tsx:106,118-119` |
+| **顶栏里没有标题** | 顶栏只放侧栏开关 / 前进后退 / 新任务 / 更新按钮；标题在**第二行** `WorkspaceHeader`（`h-12` + `border-b border-border/50` + `p-2` + `[app-region:drag]`） | `DesktopTopOverlay.tsx:152-217`、`WorkspaceHeader.tsx:140-141,157` |
+| 侧栏隐藏时 | header 右让 `pl-66`(264px)/`pl-58`(232px)（macOS），其他平台 `pl-44`/`pl-38` | `WorkspaceHeader.tsx:123-133` |
+| 可拖与可点 | 拖拽靠 `[app-region:drag]`，交互簇再标 `[app-region:no-drag]` | `DesktopTopOverlay.tsx:131` |
+| 面板圆角随平台 | Win 5 / macOS≥26 **12** / 其他 6 / Linux 12，把手内缩 = 圆角 + 4 | `workspaceShellWindowChrome.ts:14-29` |
+
+> **对本仓库的含义**：报告条 1 的"呼吸感"在它那里不是调 padding，而是**放弃原生标题栏、自绘两行 chrome**。这是一次窗口形态决策（红绿灯定位、拖动区、全屏行为都要自己负责），因此单独立 **ADR-0018**，不在美化批里顺手做。
+
+### 4.2 侧栏（对应条 2）
+
+| 事实 | 值 | 证据 |
+| --- | --- | --- |
+| 宽度 | 默认 **264px** = 下限，上限 50%，键盘步长 16px，持久化；并镜像进 CSS 变量让浮层跟着变 | `WorkspaceShellLayout.tsx:99-107` |
+| 折叠入口 | `PanelLeftClose/Open` 图标 + **`CmdOrCtrl+B`** | `DesktopTopOverlay.tsx:78,159`、`packages/shared/src/shortcutCommands.ts:70` |
+| 折叠态 | 空 rail：`border-r bg-background-alt` + `h-9` 拖拽条 + **一枚 `size-7` ghost 按钮，logo 交叉淡入成"展开"图标** | `WorkspaceSidebarCollapsedRail.tsx:17-44` |
+| Logo 与按钮之间 | 先一段裸 `h-12` 拖拽占位，再 `flex-col gap-1 px-2 py-3`（Win `py-2`） | `WorkspaceSidebar.tsx:1257,1266` |
+| 行 | `rounded-lg pl-2.5 pr-1 py-1`，`gap-2` | `TaskListItem.tsx:544` |
+| **选中态** | **只有背景染色** `bg-selected`（= 10% neutral-950），**没有左侧强调条** | `TaskListItem.tsx:550`、`styles.css:330-341` |
+| 状态指示 | 行首 4×4 槽位放 `h-1.5 w-1.5 rounded-full` 圆点（运行/等待等） | `TaskListItem.tsx:556-584` |
+| 标题截断 | **mask 渐隐，不是省略号**；标题行 `h-6 text-ui-base`，元信息行 `h-6 text-foreground-subtle`（左标签 truncate、右时间与 `·`） | `TaskListItem.tsx:642-681,716-718`、`components/TaskTitleOverflowText.tsx` |
+| 底部簇 | `gap-2.5 px-4 pt-2 pb-4`；账号胶囊用**非对称圆角** `rounded-tl-2xl rounded-bl-2xl border-0 pl-0` 与相邻件焊成一组 | `WorkspaceSidebarFooter.tsx:218-228` |
+
+> **更正本文 2b 的原目标**：我初稿写"选中加左侧 2px 强调条（ZCode 的强调条律）"——**ZCode 没有强调条**，它靠的是**一个与 hover 不同的独立 token**（`bg-selected` = 10% neutral-950）加**行首状态圆点槽**。照它做就够了；强调条是我自己加的，不许挂在 ZCode 名下。
+
+### 4.3 会话区层级（对应条 3）
+
+| 事实 | 值 | 证据 |
+| --- | --- | --- |
+| 列宽用**容器查询**，量的是面板不是窗口 | `@min-[864px]/conversation: w-[calc(100%-6rem)] max-w-4xl`；`@min-[1280px]/conversation: w-[calc(100%-24rem)] max-w-6xl`；容器声明 `@container/conversation` | `v4/conversationLayout.ts:5`、`v4/SessionPane.tsx:4624` |
+| 反"文字墙"那一行 | `leading-[1.75] tracking-wide` + 首子元素 `mt-0`、末子元素 `mb-0` | `components/ai-elements/message.tsx:1368` |
+| 标题节奏 | h1–h6 一律 `mt-6 mb-4`；**只有 h1/h2 改字号，h3–h6 改字重** | `message.tsx:441-446` |
+| inline code | `rounded-md bg-markdown-inline-code/50 mx-0.5 px-1.5 py-0.5 font-mono text-ui-sm`（**底色 + 缩小 + 等宽**，不靠加粗） | `message.tsx:1548` |
+| 代码块 | `rounded-xl bg-background`（**靠反色，不加边框**）+ 头部 `px-3 py-2 text-muted-foreground` | `code-block.tsx:155,190` |
+| 工具输出降权 | `text-ui-xs text-foreground-subtlest` 的 chip：`rounded border bg-background-alt px-1.5 py-0.5 leading-none`；路径 `font-mono tabular-nums`；正文块 `max-h-60 rounded-xl border bg-muted/15 p-3` | `ToolSummaryRow.tsx:93`、`renderers.tsx:32`、`ToolCallBody.tsx:109` |
+
+### 4.4 Composer（对应条 4、6）
+
+| 事实 | 值 | 证据 |
+| --- | --- | --- |
+| 容器 | `flex-col gap-3 rounded-2xl border border-input-border bg-input p-3`，`hover:` 换边色、`focus-within:` 再换 | `prompt-editor/ChatPromptEditor.tsx:347-348` |
+| 工具条基线 | `flex items-end gap-3`——**以底边对齐**，不是居中 | `:388` |
+| 左右簇 | 左：附件/`+` → 模式/审批；右：`ml-auto gap-1.5` 取消(`size-8`) → 模型 → 思考 → 发送(`size-7 rounded-lg bg-brand`) | `:389-403,413-447` |
+| **窄屏策略** | **实测降级为图标，不换行**：`useComposerToolbarFit.ts` 按 0–3 档依次丢标签 → 丢 provider 前缀 → 丢思考图标 → 模型触发器收成 `size-7 p-0 gap-0`；用离屏 `cloneNode` 探针 + `ResizeObserver` 量，兜底 gap 12px | `useComposerToolbarFit.ts:4-45,55-66,84-93`、`V4ComposerToolbar.tsx:1065,1068` |
+
+### 4.5 断点（对应条 5、7）
+
+最小窗口 **480×640**（`desktopWindowSize.ts:6-7`），内容 `min-w-[320px]`（`WorkspaceShellLayout.tsx:1640`）。自动收起：会话列 <**360px** 收侧栏、侧 pane <**480px**，300ms 空闲判定、仅窗口尺寸变化触发（`:108,117,118,460-500`）。容器阈值：会话 480/624/864/1280、composer 480/640、workspace-header 420/560、share 480/640、artifacts 380（`WorkspaceHeaderSections.tsx:471`、`styles.css:88`）。**只有 markdown 表格用窗口宽度**（`markdown-table.tsx:146,150`）。
+
+### 4.6 可搬的"高级感"清单（零新依赖）
+
+4px 基 + 4/8/12/16/20-24 节奏（`DESIGN.md:265-273`）· radius-by-nesting `xl→lg→md→sm` 及控件对照表（`:285-334`）· 单一 `--ui-font-size: 14px` 驱动 ±4/2/0/-1/-2/-4 标度，**绝不动 root font-size**（`styles.css:58,143-151`、`DESIGN.md:212`）· 边框/hover/选中一律 `color-mix(in oklab, neutral-950 N%)`（`styles.css:330-341`）· **先对比度后阴影**的分层（`:463-476`）· 时长 150（颜色/宽度）/200（位移）/300（padding）· 4px 透明把手 + 2px 显形线（`WorkspaceShellLayout.tsx:1627-1630`）· `tabular-nums` 与 `text-wrap: pretty`（`styles.css:70`）。
+
+**明确不抄**：它 `styles.css:120-124` 有 `*:focus,*:focus-visible{outline:none!important;box-shadow:none!important}`，与它自己 `DESIGN.md:504` 矛盾、且会杀掉键盘焦点。本仓库的 `DswHoverTap` 四性测试（指针/键盘/语义/右键）是更强的既有约束，**不许为了"像 ZCode"退化它**。
+
+### 4.7 许可与归属（搬之前必读）
+
+ZCode 是 Apache-2.0，但它的 `NOTICE.md:70` §4 明写：**Apache-2.0 不覆盖第三方代码、原生二进制、字体、图标与 web 资源**。具体到本项目会碰到的：
+- `packages/ui/src/components/ui` 与 `styles.css` 是 **MIT shadcn**；`components/ai-elements` 源自 **Vercel ai-elements**（`third-party/copied-components.json`）。我们本来就已直接依赖 `shadcn_ui` 0.56.3，所以**不引入新许可面**——只借数值。
+- **不可搬**：`ZCode` 名称、`public/logo/icons/*`、`packages/ui/src/assets/provider-icons/*`（`model-provider-logo-sources.json` 记录它们是 openrouter 等官方品牌文件原样拷贝）、通知音 mp3、channel/cli/plugin 图标。
+- **可搬**：数值、令牌公式、radius/间距律、容器查询阈值、以及"实测降级"这个算法思路。
+- `third-party/embedded-components.json` 里 Skia/expat/freetype 标着 `reviewRequired` 未解——**不要碰那三个的产物**。
 
 ## 5. 实施批次（每批都要过门禁 + 给截图证据）
 
@@ -78,7 +142,8 @@ ZCode 侧的实测数值（标题栏预留、侧栏宽度与折叠控件、compo
 - **不引入新依赖**做滚动/虚拟列表/字体缩放——`flutter test` 与 `pubspec` 现状能覆盖的就用现状。
 - **不做 Web/移动断点体系**：三桌面目标（ADR-0003），响应式的边界是"窗口能拖到多窄还不坏"，不是手机适配。
 - **不为"高级感"动 ADR-0004 的对比度豁免面之外的正文配色**——那要另立 ADR 并跑 `contrast_check`。
-- **不复制 ZCode 的代码**（Apache-2.0 允许借鉴设计，但本仓库规则是不 fork 其代码）；搬的是数值与律。
+- **不复制 ZCode 的代码**（本仓库规则是不 fork 其代码）；搬的是数值与律。
+- **不碰 ZCode 的品牌与素材**：`ZCode` 名称、`public/logo/icons/*`、`provider-icons/*`（官方品牌文件原样拷贝）、通知音、以及 `reviewRequired` 未解的 Skia/expat/freetype 产物——它的 `NOTICE.md:70` §4 明写 Apache-2.0 不覆盖这些。
 
 ## 7. 关联
 
