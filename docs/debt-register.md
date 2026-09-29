@@ -9,10 +9,11 @@
 | ADR-0001 | vendored `packages/flutter-shadcn-ui` 不进版本库 | DEP | P2 | RESOLVED @ d72ff4c | 2026-09-15 | [链接](adr/ADR-0001-dep-vendored-shadcn-ui.md) |
 | ADR-0002 | develop 分支改造为 riverpod + shadcn_ui | ARC | P1 | IN-PROGRESS（riverpod 读侧 Stage 1–3 完成、Stage 4 热替换链保持命令式·修订 2；shadcn Stage 4/5a–5d 已落、深层组件替换达自然边界·修订 3；余仅 macOS 真机验收） | 2026-09-15 | [链接](adr/ADR-0002-arc-riverpod-shadcn-migration.md) |
 | ADR-0003 | 增加 Windows/Linux 桌面平台目标（本机可验证） | ARC | P2 | RESOLVED @ 54e75d7 | 2026-09-16 | [链接](adr/ADR-0003-arc-windows-linux-platforms.md) |
-| ADR-0004 | 亮色正文对比度 AA 修正层（A 新增 AA 别名 / B 显式豁免） | CFG | P1 | PROPOSED（待签收；回归门禁已先行落地） | 2026-09-16 | [链接](adr/ADR-0004-cfg-light-contrast-aa.md) |
+| ADR-0004 | 亮色正文对比度 AA 修正层（A 新增 AA 别名 / B 显式豁免） | CFG | P1 | ACCEPTED（决策性关闭：采纳 **B 显式豁免**，palette 不改；回归门禁 `test/theme_contrast_test.dart` 已落地防恶化。此前本行误记 PROPOSED，与 ADR 正文的 ACCEPTED(B) 矛盾，2026-09-29 拍平） | 2026-09-16 | [链接](adr/ADR-0004-cfg-light-contrast-aa.md) |
 | ADR-0005 | 以 starkins 设置页为蓝本重建设置界面（重接本项目栈） | ARC | P1 | RESOLVED（S1–S5 落地，S5 真机走查通过；未接线的 previewMode/字体/皮肤见下方观察行） | 2026-09-16 | [链接](adr/ADR-0005-arc-starkins-settings-rebuild.md) |
 | ADR-0006 | 设置面重构：全屏设置视图 + 底部级联快捷菜单 + 用户 Profile（预留 Supabase） | ARC | P1 | RESOLVED（S1–S5 已落 develop，S5 Windows 真机走查通过；Supabase 仅预留接缝未接） | 2026-09-16 | [链接](adr/ADR-0006-arc-settings-fullscreen-profile.md) |
 | ADR-0007 | 工作区模式切换（企划/代理）+ 企划 Markdown 工作台 + 扩展面板（board_panel） | ARC | P1 | ACCEPTED（S1–S5 待实施；board_panel 入库为 ADR-0001 先例的记录在案例外） | 2026-09-16 | [链接](adr/ADR-0007-arc-workspace-modes-extensions.md) |
+| ADR-0008 | i18n 双语键集对齐加机器守卫 | TST | P2 | RESOLVED @ 5c14ec8（`test/l10n_parity_test.dart`；反向验证实测过：单侧插一个键即失败并指名缺哪个） | 2026-09-29 | [链接](adr/ADR-0008-tst-i18n-key-parity.md) |
 
 > 2026-09-15 设计层审计（方法：design-review 插件手动审查模型）产出了完整证据链，见 [design-audit-2026-09.md](design-audit-2026-09.md)。阻断级/ majors 的处置归属：键盘无障碍（A1/A3）与表单控件缺口（C1）并入 ADR-0002 实施；A2（对比度）与文本缩放留下方观察表。
 
@@ -36,13 +37,12 @@
 
 | 现象 | 证据 | 建议分类 | 建议优先级 |
 | --- | --- | --- | --- |
-| 测试套件不可在 Windows 移植（13/657 失败） | 2026-09-15 首次在本机跑全套：`shell_run_test` 8 个（写死 `/bin/bash`）、`editor_tab_test` 1 个（temp 目录删除遇 Windows 文件锁 errno 32）、`git_tab_test` 2 个与 `workbench_ui_test` 2 个（tab id / 断言用 POSIX 路径分隔符拼接 `support.path`）。全部先于 riverpod 迁移存在；其中 git_tab/workbench 4 个此前被 `trash_2` 编译错误掩盖（该错已修）。macOS 上的全绿仍是权威门禁；本机门禁为"相对基线零新增失败" | TST | P1 |
-| 亮色主题 6 组正文令牌对比度低于 WCAG AA | 确定性计算（`tool/contrast_check.dart` / `test/theme_contrast_test.dart`）：`labelDimmed` 1.26、`labelCaption` 2.13、`labelTertiary` 3.71（97 处）、`stateWarnLabel` 2.79、审批条 `stateWarnPrimary` 1.99（`approval_panel.dart:104-118`）、`stateSuccessPrimary` 2.28。dsh 原版调色板固有。**[ADR-0004](adr/ADR-0004-cfg-light-contrast-aa.md) 已决策：采纳 B 显式豁免（A 会抹平亮色三级文字层次，需设计肉眼权衡），palette 不改；回归门禁 `theme_contrast_test.dart` 已落地防恶化** | CFG | P1（已豁免） |
+| 测试套件不可在 Windows 移植（13/657 失败） | 2026-09-15 首次在本机跑全套：`shell_run_test` 8 个（写死 `/bin/bash`）、`editor_tab_test` 1 个（temp 目录删除遇 Windows 文件锁 errno 32）、`git_tab_test` 2 个与 `workbench_ui_test` 2 个（tab id / 断言用 POSIX 路径分隔符拼接 `support.path`）。全部先于 riverpod 迁移存在；其中 git_tab/workbench 4 个此前被 `trash_2` 编译错误掩盖（该错已修）。本机门禁为"相对基线零新增失败"。（2026-09-29 注：本行自 2026-09-16 起未在本机复跑；"macOS 全绿"也不再成立，见下一行。） | TST | P1 |
+| macOS 开发机上 2 个既有失败（+699 -2） | 2026-09-29 在当前 macOS(Darwin arm64) 开发机首跑 `flutter test`：① `test/app_scope_test.dart:52` 期望 `support.path` 为 `/var/folders/...`，实得 `/private/var/folders/...`——macOS 的 `systemTemp` 软链接在真实路径解析后被规范化，断言比的是字符串而非规范化后的路径；② `test/plan_workspace_test.dart:100` `find.text('notes')` 命中 2 个（目录行本身 + 笔记行的"folder 作第二行"标签，`plan_workspace.dart:698-720`），断言 `findsOneWidget` 因此过不了。**两条都与本轮配置改动无关**（`git diff --stat -- test lib` 为空），且均为 HEAD `8a2b8f2` 上即可复现的既有状态；此前 Windows 行记的 13 个失败与本机器这 2 个是两套平台各自的表现 | TST | P1 |
 | 无文本缩放适配 | `textScaler|textScaleFactor` 全仓库 0 处；disclosure_row 等自绘件固定高度（24px header），macOS 辅助功能放大文本时裁切 | DEF | P2 |
-| i18n 双语对齐无守卫 | `lib/l10n/locales.dart:11-13` 注释声称 en 会"在 test 时对照校验"，但 `grep -rn "enStrings\|zhStrings" test/` 零命中；当前键集恰好对齐（不写死条数，加键即失真故刻意省略），纯靠手动维持 | TST | P2 |
-| `README.md` 仍是 Flutter 包模板 | 文件通篇 `TODO:`，无一句项目说明；新人和代理拿它当入口会拿到零信息 | DEBT | P2 |
+| `README.md` 仍是 Flutter 包模板 | `README.md` 与 `CHANGELOG.md` 通篇 `TODO:`（模板注释未清），无一句项目说明；新人和代理拿它当入口会拿到零信息。代理入口是 `AGENTS.md`，但根 README 是 pub/git 默认展示面 | DEBT | P2 |
 | macOS 分发缺口 | `CODE_SIGN_IDENTITY = "-"`、无 `DEVELOPMENT_TEAM`、未配 hardened runtime / `notarytool` 公证 → 产物只能本机运行；且 `.gitignore` 缺 `*.p12`/`*.cer`/`*.mobileprovision`，一旦有人放证书就会入库 | CFG | P1（若要对外发布） |
-| 无 CI / 无版本推进 | 仓库无工作流文件，`pubspec.yaml` 仍 `version: 0.0.1`；analyze/format/test 全绿只靠人自觉 | DEBT | P2 |
+| 版本仍 0.0.1，且 CI 不覆盖签名公证 | `pubspec.yaml` 仍 `version: 0.0.1`（`CHANGELOG.md` 也只有一句 TODO）。CI **已存在**（`d09b92d`）：`pr-check.yml` 跑 format + `dart analyze --fatal-infos` + `flutter test`，`build.yml` 是 `workflow_dispatch` 三平台出包、可选发 GitHub Release（dmg/zip/tar）。但两个工作流都不含 `codesign` / `notarytool` / secrets，所以 Release 产物依旧 ad-hoc——"CI 绿"与"可对外分发"是两件事。另注意版本基线现有两处真值（`pubspec.yaml` 与两个 yml 的 `FLUTTER_VERSION`） | CFG | P2 |
 | workbench store 防抖测试负载下 flaky | `test/workbench_controller_test.dart` 的 "store collapses a burst into the last value" 在 `flutter test` 全套并发下偶发失败（2026-09-16 遇到一次，单跑 3/3 通过、重跑全套即消失）。debounce/计时对调度敏感，非确定性 | TST | P2 |
 | ADR-0005 S4 未接线的偏好（仅持久化意图） | `AppSettings` 已存 `previewMode`/`fontFamily`/`fontSize`/`interfaceStyle`，外观节也能改并落盘，但渲染端忽略：`conversationWidth`+`expandToolCalls` 已经 `ui/appearance_scope.dart` 生效，其余三项未接。`previewMode` 需先定"生成文件预览流"规格且"新窗口"要多窗口；正文字体族/字号需真正作用于 conversation 排版；`interfaceStyle` 的 glass/classic/parchment 各需自己的 DswAlias 调色板（见 `app_settings.dart` 内注释） | DEBT | P2 |
 

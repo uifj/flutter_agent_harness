@@ -6,7 +6,7 @@
 - **影响维度**: 评估阻断（缺口无法被 CI 发现）· 幻觉源（注释声称的"测试期对照"并不存在）
 - **日期**: 2026-09-29
 - **来源**: 用户决策（本会话配置校准时确认"双语对齐无守卫"要补，并按纪律先立 TST 类 ADR）
-- **修复 commit**: 与本文件同批的 `test(l10n)` 提交（hash 记在 `docs/debt-register.md` 的 ADR-0008 行）
+- **修复 commit**: 5c14ec8（`test(l10n): guard en/zh dictionary key parity`）
 
 ## 背景（Context）
 
