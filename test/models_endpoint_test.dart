@@ -19,6 +19,8 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadTheme;
 
+import 'amplified_text_probe.dart';
+
 /// Scripts the answer, or the failure; records every ask.
 class FakeModelsFetcher implements ModelsEndpointFetcher {
   FakeModelsFetcher({this.models = const [], this.error});
@@ -90,12 +92,13 @@ void main() {
     Future<void> pump(
       WidgetTester tester, {
       required FakeModelsFetcher fetcher,
+      double step = 1.0,
     }) => tester.pumpWidget(
       MaterialApp(
         theme: dswThemeData(Brightness.light),
         builder: (context, child) => ShadTheme(
           data: dswShadTheme(Theme.of(context).brightness),
-          child: child!,
+          child: amplifiedAppBuilder(step, child),
         ),
         home: Scaffold(
           body: SettingsPanel(
@@ -140,6 +143,51 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('gpt-4o'), findsOneWidget);
       expect(find.text('o3-mini'), findsOneWidget);
+    });
+
+    // The quick-select is the settings surface's last popup nobody had laid out
+    // amplified: it opens only over a fetch that landed, so the hosts without a
+    // fetcher could not reach it. Its rows are the worst case for a one-line
+    // label — a code font, no spaces to break at, and real endpoints answer
+    // with names like `gpt-4.1-2024-10-21-preview`.
+    group('amplified text', () {
+      for (final (label, step) in const [
+        ('1.8x', amplifiedTextStep),
+        ('2.2x', nextTextStep),
+      ]) {
+        testWidgets('the pick menu keeps every id ($label)', (tester) async {
+          // The editor card's rows grow with the step, so in the default 600px
+          // window the quick-select button is at y 689.6 by 1.8x: the host has
+          // to be tall enough to reach it, the same reason the settings walk
+          // asks for one page.
+          tester.view.physicalSize = const Size(1400, 6000);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
+
+          await pump(
+            tester,
+            fetcher: FakeModelsFetcher(
+              models: ['gpt-4o', 'o3-mini', 'gpt-4.1-2024-10-21-preview'],
+            ),
+            step: step,
+          );
+
+          await tester.tap(find.text('Models'));
+          await tester.pump();
+          await tester.tap(find.text('Test connection'));
+          await tester.pump();
+          await tester.tap(find.text('Customized'));
+          await tester.pump();
+          await tester.tap(find.byIcon(LucideIcons.list));
+          await tester.pumpAndSettle();
+
+          // The last row, not the first: the menu's height cap means a row the
+          // list never built is a row the probe never saw.
+          expect(find.text('gpt-4.1-2024-10-21-preview'), findsOneWidget);
+          expect(textDefects(tester), isEmpty, reason: 'the pick menu');
+          expect(tester.takeException(), isNull);
+        });
+      }
     });
 
     testWidgets('a failed probe reports the failure beside the button', (

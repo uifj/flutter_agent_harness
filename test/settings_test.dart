@@ -629,6 +629,34 @@ void main() {
           expect(find.text('English'), findsNothing);
         });
       }
+
+      // The shell sets no minimum window size, so a narrow window is a state
+      // users reach, and the card is then ~430px wide. Measured there at 1.8x
+      // before this: the General row's title column was given 0.0px and the
+      // value pill spilled past the card — the pill has now moved under the
+      // label. The step above this still cannot be served at that width (a
+      // capsule's own one-line label is 396px inside 380), and the reason it
+      // cannot is registered in the debt table rather than papered over here.
+      testWidgets('a narrow card moves its pill under the label', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(700, 6000);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+
+        await pump(
+          tester,
+          settings: const AppSettings(model: ModelSettings(apiKey: 'k')),
+          onSave: (_) async {},
+          scale: amplifiedTextStep,
+        );
+        await tester.tap(find.text('General').first);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Follow system'), findsWidgets);
+        expect(textDefects(tester), isEmpty, reason: 'General at 700px');
+        expect(tester.takeException(), isNull);
+      });
     });
   });
 }
