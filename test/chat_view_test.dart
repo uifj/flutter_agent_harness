@@ -11,6 +11,11 @@
 // that supplies its own would be testing the harness. The contract is coarse and
 // blunt — walk the column through every state a turn puts it in, pump real
 // frames, and assert nothing was thrown.
+//
+// The last two tests are of a different kind: they measure rectangles. Both came
+// out of the production audit reading pixels off one screenshot, and the only
+// way to settle a claim like that is to ask the rendered column for its own
+// geometry at fixed viewport widths.
 
 import 'dart:async';
 
@@ -18,6 +23,7 @@ import 'package:agent_harness/model/conversation.dart';
 import 'package:agent_harness/model/turn_event.dart';
 import 'package:agent_harness/state/conversation_controller.dart';
 import 'package:agent_harness/state/streaming_tail.dart';
+import 'package:agent_harness/theme/dsw_shape.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
 import 'package:agent_harness/ui/conversation/conversation_root.dart';
 import 'package:flutter/material.dart';
@@ -211,6 +217,88 @@ void main() {
 
     expect(find.textContaining('No API key set.'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  // Audit §3-C read the screenshot's "body hugs the right, blank strip on the
+  // left" as an off-centre column and asked for a repro. Here it is, and the
+  // column is not off-centre: at 1400/1152/700 the card lands on the middle of
+  // the width it is given, the reply starts one inset inside its left edge and
+  // the aside ends one inset inside its right edge. The strip belongs to the
+  // aside, whose own cap is `min(525px, 82%)` of the column — 223px of the 748
+  // column at full width, and the percentage takes over below it (at 700 the
+  // column is 636 and the bubble is 521.5). Guarding the two axes, not the
+  // pixels, is what keeps a future `Center` from quietly becoming one-sided.
+  testWidgets('the transcript and the aside share the card\'s two axes', (
+    tester,
+  ) async {
+    final longDraft = ('word ' * 200).trimRight();
+    for (final width in const [1400.0, 1152.0, 700.0]) {
+      final probeSource = FakeTurnSource();
+      final probeTail = StreamingTail();
+      final probeController = ConversationController(
+        runtime: probeSource,
+        tail: probeTail,
+      );
+      addTearDown(probeController.dispose);
+      addTearDown(probeTail.dispose);
+      tester.view.physicalSize = Size(width, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: dswThemeData(Brightness.light),
+          home: Scaffold(
+            body: ConversationRoot(
+              conversation: probeController,
+              tail: probeTail,
+            ),
+          ),
+        ),
+      );
+      unawaited(probeController.send(longDraft));
+      await tester.pump();
+      probeSource.emit(const TextDelta(text: 'Hello there', messageIndex: 0));
+      await tester.idle();
+      await tester.pump();
+      probeSource.emit(
+        const TurnFinished(outcome: TurnOutcome.completed, sessionId: 's1'),
+      );
+      await probeSource.close();
+      await tester.pumpAndSettle();
+
+      // The input card is the one float-radius box in this column, and the
+      // user's pill is the only one in the transcript.
+      final card = tester.getRect(
+        find.byWidgetPredicate(
+          (w) =>
+              w is DecoratedBox &&
+              w.decoration is BoxDecoration &&
+              (w.decoration as BoxDecoration).borderRadius ==
+                  BorderRadius.circular(DswShape.float),
+        ),
+      );
+      final aside = tester.getRect(
+        find.byWidgetPredicate(
+          (w) =>
+              w is DecoratedBox &&
+              w.decoration is BoxDecoration &&
+              (w.decoration as BoxDecoration).borderRadius ==
+                  BorderRadius.circular(DswShape.pill),
+        ),
+      );
+      final reply = tester.getRect(answer('Hello there'));
+      final inset = composerCardWidthInset / 2;
+      final column = card.width - composerCardWidthInset;
+
+      expect(card.center.dx, width / 2, reason: 'at $width');
+      expect(reply.left, card.left + inset, reason: 'at $width');
+      expect(aside.right, card.right - inset, reason: 'at $width');
+      expect(
+        aside.width,
+        column * 0.82 < 525 ? closeTo(column * 0.82, 0.01) : 525.0,
+        reason: 'the aside takes min(525px, 82%) of the column at $width',
+      );
+    }
   });
 
   // Audit §3-B. The band at the top of the seat is see-through on purpose — that
