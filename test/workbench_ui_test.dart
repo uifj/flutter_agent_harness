@@ -34,6 +34,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:xterm/xterm.dart';
 
+import 'amplified_text_probe.dart';
 import 'fake_terminal_process.dart';
 import 'fake_turn_source.dart';
 
@@ -80,6 +81,7 @@ void main() {
     WidgetTester tester, [
     WorkbenchController? controller,
     WorkbenchPrefs prefs = const WorkbenchPrefs(),
+    double? scale,
   ]) => tester.pumpWidget(
     MaterialApp(
       theme: dswThemeData(Brightness.light),
@@ -87,13 +89,16 @@ void main() {
         body: SizedBox(
           width: 460,
           height: 600,
-          child: WorkbenchPrefsScope(
-            prefs: prefs,
-            child: Workbench(
-              workbench: controller ?? workbench,
-              conversation: conversation,
-              terminals: pool,
-              onClose: () => closed++,
+          child: AmplifiedText(
+            step: scale ?? 1.0,
+            child: WorkbenchPrefsScope(
+              prefs: prefs,
+              child: Workbench(
+                workbench: controller ?? workbench,
+                conversation: conversation,
+                terminals: pool,
+                onClose: () => closed++,
+              ),
             ),
           ),
         ),
@@ -553,5 +558,66 @@ void main() {
         expect(workbench.state.tabs.single.type, BuiltinTabType.git);
       },
     );
+  });
+
+  // ADR-0017 S3, on the workbench's own chrome. `app_frame_test.dart` proves the
+  // shell survives the system's larger text step; this proves the four tab bodies
+  // hung off it do, because none of their labels were in that tree.
+  //
+  // Measured at 1.8x before the seats were scaled: the tree's search hint wanted
+  // 32.0 in a 29.0 box, its rows 36.0 against a 22.0 `itemExtent`, the editor's
+  // path 32.0 in 27.0, the side chat's title 40.0 in 35.0 and the browser's
+  // address field 36.0 in 33.0. All five are one line of chrome, so each now
+  // takes its height from the same step the type does.
+  group('amplified text', () {
+    testWidgets('no tab body spills or cuts a label', (tester) async {
+      final step = amplifiedTextStep;
+      // The root is resolved because the tree canonicalises it, and an
+      // unresolved root makes every displayed path disagree with the disk.
+      final root = workspace();
+      Directory('${root.path}/deeply').createSync();
+      File(
+        '${root.path}/deeply/yet-another-nested-file-name.dart',
+      ).writeAsStringSync('void main() {}\n');
+
+      await pump(tester, null, const WorkbenchPrefs(), step);
+      expect(textDefects(tester), isEmpty, reason: 'an empty pane');
+
+      workbench.openGit();
+      await pump(tester, null, const WorkbenchPrefs(), step);
+      await tester.pumpAndSettle();
+      expect(textDefects(tester), isEmpty, reason: 'the git tab');
+
+      workbench.openTerminal();
+      await pump(tester, null, const WorkbenchPrefs(), step);
+      await tester.pumpAndSettle();
+      expect(textDefects(tester), isEmpty, reason: 'the terminal tab');
+
+      workbench.workspaceRoot = root.path;
+      workbench.openFolder(root.path);
+      await pump(tester, null, const WorkbenchPrefs(), step);
+      await pumpUntil(tester, find.text('deeply'));
+      expect(textDefects(tester), isEmpty, reason: 'the file tree');
+
+      workbench.openFile(
+        '${root.path}/deeply/yet-another-nested-file-name.dart',
+      );
+      await pump(tester, null, const WorkbenchPrefs(), step);
+      await tester.pumpAndSettle();
+      expect(textDefects(tester), isEmpty, reason: 'an open file');
+
+      workbench.openSideChat();
+      await pump(tester, null, const WorkbenchPrefs(), step);
+      await tester.pumpAndSettle();
+      expect(textDefects(tester), isEmpty, reason: 'a side chat');
+
+      workbench.openBrowserUntitled();
+      await pump(tester, null, const WorkbenchPrefs(), step);
+      await tester.pumpAndSettle();
+      expect(textDefects(tester), isEmpty, reason: 'a browser tab');
+      // The web view arms a load timeout; left armed, the binding fails the test
+      // for a pending timer rather than for anything about the layout.
+      await tester.pump(const Duration(seconds: 31));
+    });
   });
 }

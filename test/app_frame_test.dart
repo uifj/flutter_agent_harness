@@ -19,9 +19,9 @@ import 'package:agent_harness/ui/conversation/conversation_root.dart';
 import 'package:agent_harness/ui/layout/columns.dart';
 import 'package:agent_harness/ui/sidebar/sidebar.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'amplified_text_probe.dart';
 import 'fake_turn_source.dart';
 
 void main() {
@@ -64,43 +64,35 @@ void main() {
     tester.view.physicalSize = Size(width, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    final scaffold = Scaffold(
-      body: AppFrame(
-        layout: layout,
-        sidebarBuilder: (context, collapsed, width) => Sidebar(
-          collapsed: collapsed,
-          width: width,
-          sessions: index,
-          onNewSession: () {},
-          onToggle: layout.toggleSidebar,
-          onOpenSession: (_) {},
-          onOpenSettings: () {},
-          onToggleDetails: layout.toggleDetails,
-          detailsOpen: layout.details != 0,
-        ),
-        center:
-            center ?? ConversationRoot(conversation: controller, tail: tail),
-        details: details,
-        workbench: workbench,
-        bottom: bottom,
-      ),
-    );
-    // A `Builder` because the scaler has to read the MediaQuery MaterialApp just
-    // installed — and its child is a separate value, not the variable holding the
-    // builder: a closure that captures the variable it assigns to builds itself
-    // forever, and the frame dies with a StackOverflowError.
-    final root = scale == null
-        ? scaffold
-        : Builder(
-            builder: (context) => MediaQuery(
-              data: MediaQuery.of(
-                context,
-              ).copyWith(textScaler: TextScaler.linear(scale)),
-              child: scaffold,
-            ),
-          );
     await tester.pumpWidget(
-      MaterialApp(theme: dswThemeData(Brightness.light), home: root),
+      MaterialApp(
+        theme: dswThemeData(Brightness.light),
+        home: AmplifiedText(
+          step: scale ?? 1.0,
+          child: Scaffold(
+            body: AppFrame(
+              layout: layout,
+              sidebarBuilder: (context, collapsed, width) => Sidebar(
+                collapsed: collapsed,
+                width: width,
+                sessions: index,
+                onNewSession: () {},
+                onToggle: layout.toggleSidebar,
+                onOpenSession: (_) {},
+                onOpenSettings: () {},
+                onToggleDetails: layout.toggleDetails,
+                detailsOpen: layout.details != 0,
+              ),
+              center:
+                  center ??
+                  ConversationRoot(conversation: controller, tail: tail),
+              details: details,
+              workbench: workbench,
+              bottom: bottom,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -391,74 +383,29 @@ void main() {
   // system's "放大文本"; 1.8 is macOS's largest step short of XXL.
   //
   // An overflowing `RenderFlex` is itself sized to its constraint — the
-  // *children* are what spill — so this walks the render tree and adds the
-  // children up, then names the owner by its creator chain. Two rows did spill
-  // when this was first run: the sidebar's "New session" label (a non-flex
-  // `Text`, so its ellipsis never got to trigger) wanted 299.9px in a 222px
-  // bar, and the approval panel's three buttons wanted 809.6px in a 622px
-  // seat. Both now flex or wrap.
+  // *children* are what spill — and a paragraph clipped by a fixed-height seat
+  // throws nothing at all, so both axes have to be measured rather than looked
+  // at. The measuring lives in `amplified_text_probe.dart` now, because the
+  // workbench, the settings page and the plan workspace need the same proof.
   //
-  // The other axis fails quietly, so it is measured too: a seat nailed to a
-  // pixel height clips the label the text step just grew, and the framework
-  // says nothing when it does. One-line chrome now sizes itself from that step.
+  // What this shell showed the first time it ran at 1.8x. Two rows spilled: the
+  // sidebar's "New session" label wanted 299.9px in a 222px bar (a non-flex
+  // `Text` never gets its ellipsis to trigger), and the approval panel's three
+  // buttons wanted 809.6px in a 622px seat. Seven labels were cut: the tool
+  // card's "Read" header 43.0 in a 24.0 seat — behind that header's own
+  // `ClipRect` — and its path summary likewise, the running row 40.0 in 26.0,
+  // the sidebar's "New Session" 40.0 in 34.0, the composer's mode chip 25.0 in
+  // 22.0, the three approval answers 40.0 in 36.0, the queued draft's chips
+  // 32.0 in 28.0. The rows flex or wrap; every one-line seat now takes its
+  // height from the same step the label does, which is the same pixel at rest.
+  //
+  // A `minHeight` floor was tried first and is wrong for the shared header: its
+  // collapsed preview is a widget the caller hands over, and given an unbounded
+  // line it wrapped to 88px and grew the whole row — `disclosure_row_test`
+  // caught that.
   testWidgets('nothing spills when the system amplifies text', (tester) async {
-    List<String> spills() {
-      final found = <String>[];
-      for (final ro in tester.allRenderObjects.whereType<RenderFlex>()) {
-        if (ro.direction != Axis.horizontal) continue;
-        final max = ro.constraints.maxWidth;
-        if (max >= double.infinity) continue;
-        final sum = ro.getChildrenAsList().whereType<RenderBox>().fold<double>(
-          0,
-          (a, b) => a + b.size.width,
-        );
-        if (sum <= max + 0.5) continue;
-        var chain = ro.toStringShort();
-        for (final el in tester.allElements) {
-          if (el.renderObject != ro) continue;
-          chain = el.debugGetCreatorChain(8);
-          break;
-        }
-        found.add(
-          '${sum.toStringAsFixed(1)} vs ${max.toStringAsFixed(1)} :: $chain',
-        );
-      }
-      return found;
-    }
-
-    // A paragraph tells no lies about its own box: `getMaxIntrinsicHeight`
-    // ignores the constraint that clipped it, so a need taller than the box it
-    // was handed is a silent clip - no framework error, just a cut-off label.
-    // Seven labels were measured this way at 1.8x: the tool card's "Read" header
-    // wanted 43.0 in a 24.0 seat (behind that header's own `ClipRect`), as did
-    // its path summary, the sidebar's "New Session" wanted 40.0 in 34.0, the
-    // running row 40.0 in 26.0, the composer's mode chip 25.0 in 22.0, and the
-    // three approval answers 40.0 in 36.0. Every one of those seats is chrome
-    // that is exactly one line tall, so each now takes its height from the same
-    // text step the label does - the same pixels at rest, and no cut glyphs at
-    // the larger steps. (A `minHeight` floor was tried first and is wrong here:
-    // the header's collapsed preview is a free widget, and given an unbounded
-    // line it wrapped to 88px and grew the whole row - `disclosure_row_test`
-    // caught it.)
-    List<String> clips() {
-      final found = <String>[];
-      for (final el in tester.allElements) {
-        final ro = el.renderObject;
-        if (ro is! RenderParagraph || !ro.hasSize) continue;
-        final needed = ro.getMaxIntrinsicHeight(ro.size.width);
-        if (needed <= ro.size.height + 0.5) continue;
-        found.add(
-          '${needed.toStringAsFixed(1)} vs ${ro.size.height.toStringAsFixed(1)} '
-          ':: "${ro.text.toPlainText()}" <- ${el.debugGetCreatorChain(6)}',
-        );
-      }
-      return found;
-    }
-
-    List<String> defects() => [...spills(), ...clips()];
-
-    await pump(tester, scale: 1.8);
-    expect(defects(), isEmpty, reason: 'hero');
+    await pump(tester, scale: amplifiedTextStep);
+    expect(textDefects(tester), isEmpty, reason: 'hero');
 
     source.sessions = [
       SessionSummary(
@@ -469,7 +416,11 @@ void main() {
     ];
     await index.refresh();
     await tester.pump(const Duration(milliseconds: 400));
-    expect(defects(), isEmpty, reason: 'a session titled in two sentences');
+    expect(
+      textDefects(tester),
+      isEmpty,
+      reason: 'a session titled in two sentences',
+    );
 
     unawaited(controller.send('hi'));
     await tester.pump();
@@ -482,7 +433,7 @@ void main() {
     );
     await tester.idle();
     await tester.pump(const Duration(milliseconds: 400));
-    expect(defects(), isEmpty, reason: 'a tool card mid-turn');
+    expect(textDefects(tester), isEmpty, reason: 'a tool card mid-turn');
 
     source.emit(
       const ApprovalRequired(
@@ -504,11 +455,19 @@ void main() {
     );
     await tester.idle();
     await tester.pump(const Duration(milliseconds: 400));
-    expect(defects(), isEmpty, reason: 'the approval panel with three answers');
+    expect(
+      textDefects(tester),
+      isEmpty,
+      reason: 'the approval panel with three answers',
+    );
 
     await controller.send('a queued follow-up draft for the line');
     await tester.pump(const Duration(milliseconds: 400));
-    expect(defects(), isEmpty, reason: 'a draft waiting in the queue');
+    expect(
+      textDefects(tester),
+      isEmpty,
+      reason: 'a draft waiting in the queue',
+    );
     expect(tester.takeException(), isNull);
   });
 }
