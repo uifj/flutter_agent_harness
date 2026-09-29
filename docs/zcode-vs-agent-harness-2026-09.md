@@ -202,7 +202,8 @@ C 组全部挂到对应前置 ADR 之后，不在本轮。
 | A2 指令注入 | `lib/genkit/instructions.dart` + `agent_runtime` 排队/排空 | ADR-0009 | 9019f3c | 已合入；带 key 的真实链路（模型确实收到该块）待确认 |
 | A8 能力位 | `model/known_models.dart` + `state/model_directory.dart` + composer 单门 | ADR-0010 | c34d1a7 · ac18647 · 4496677 | 已合入；**只做了 `supportsImage`**——PDF 本地抽文字、视频无通道，给没有消费者的能力位是凭空加抽象。顺带修掉两处同源缺陷（纯附件发不出、Windows 附件名） |
 | A6 架构检查器 | `tool/check_architecture.dart` + `tool/architecture_baseline.json` | ADR-0011 | f74417b | 已合入；5 条规则、7 条 baseline 债务、只拦新增。**没改 `.github/workflows/`**：`test/architecture_check_test.dart` 让 pr-check 的 `flutter test` 顺带跑它，加 CI 步骤就是第二份真值 |
-| A1 审批规则 / A3 工具元数据 / A4 队列 | 未开始 | 下一编号 ADR-0012 | — | 第 2 步。A1 与 A3 建议合并立 ADR（A3 的 `readOnly` 是 A1 判定的输入）；A1 落盘层级建议**先做 app 级**（`<support>/approvals.json`），把 ZCode 的"写进工作区"那一层留到确认 security-scoped bookmark 影响之后 |
+| A3 只读集单点声明 / A1 免问审批规则 | `model/approval_rule.dart` + `genkit/tools.dart` 的 `decideGate` + `state/approval_rule_store.dart` + 面板"总是允许" + 设置页 `approvals` 节 | ADR-0012 | b51ad6a · bca42ce · 15a0ae6 | 已合入；本地可写工具与 MCP 外部工具共用同一判定顺序（plan 拒 → deny → allow → 非 ask 放行 → interrupt），`readOnlyToolNames` 成为只读的唯一声明，`_subagentTools` 消失。**与评估文档不同的两处瘦身**：① 落盘只做 app 级 `<support>/approvals.json`（按工作区分键），没有写进工作区；② ZCode 的会话级规则与 deny 的面板创建入口都没做——前者没有消费者，后者面板上没有"永久拒绝"这个动词。余带 key 的真实链路确认免问生效 |
+| A4 队列 | 未开始 | 下一编号 ADR-0013 | — | 第 2 步的最后一件。落点 `state/conversation_controller.dart` + `model/turn_event.dart`；按评估文档的明确瘦身：每会话 FIFO、run settle 时排空、`queue`/`guide` 两种投递语义，不做 epoch/CAS/LRU |
 | B1 checkpoint/rewind | 未开始 | ADR-0015 预留 | — | 第 3 步 |
 
 移植时踩到的两条与文档判断不同的事实：

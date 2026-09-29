@@ -17,6 +17,7 @@
 | ADR-0009 | 工作区指令注入（AGENTS.md → 上下文消息） | ARC | P1 | IN-PROGRESS @ 9019f3c（S1 已落：`lib/genkit/instructions.dart` + 11 例单测 + `send()` 排队/排空；顺带修掉 `_systemPrompt` 的 "on the user's Mac" 平台硬编码。带 key 的真实链路注入仍待确认） | 2026-09-29 | [链接](adr/ADR-0009-arc-workspace-instructions.md) |
 | ADR-0010 | 图片附件按模型能力门控（含纯附件发不出、Windows 附件名两处缺陷） | DEF | P1 | IN-PROGRESS @ c34d1a7/ac18647/4496677（能力表 + composer 单门 + 两处同源缺陷已修，7 例测试绿；余 macOS 真机贴一张 deepseek 下的图走查） | 2026-09-29 | [链接](adr/ADR-0010-def-image-capability-gate.md) |
 | ADR-0011 | 架构不变量做成可执行门禁（指纹 baseline + 只拦新增） | TST | P2 | RESOLVED @ f74417b（`tool/check_architecture.dart` 五条规则 + `tool/architecture_baseline.json` 7 条实况债务 + 6 例测试；反向验证实测：临时往 `lib/model/` 加一个 flutter import → 退出码 1 并指名规则。`flutter test` 已含它，CI 无需改） | 2026-09-29 | [链接](adr/ADR-0011-tst-architecture-gate.md) |
+| ADR-0012 | 工具契约与审批规则（A3 只读集单点声明 + A1 免问规则按工作区落盘） | ARC | P1 | IN-PROGRESS @ b51ad6a/bca42ce/15a0ae6（只读集改为单点声明、`_subagentTools` 消失；本地与 MCP 工具共用同一判定顺序；`<support>/approvals.json` 按工作区分键 + 原子写；面板加"总是允许"、设置页加可撤销清单；38 例新测试全绿。会话级作用域与 deny 的创建入口**实施时砍掉**，理由写在 ADR 决策段。余带 key 的真实链路确认） | 2026-09-29 | [链接](adr/ADR-0012-arc-tool-contracts-and-approval-rules.md) |
 
 > 2026-09-15 设计层审计（方法：design-review 插件手动审查模型）产出了完整证据链，见 [design-audit-2026-09.md](design-audit-2026-09.md)。阻断级/ majors 的处置归属：键盘无障碍（A1/A3）与表单控件缺口（C1）并入 ADR-0002 实施；A2（对比度）与文本缩放留下方观察表。
 
