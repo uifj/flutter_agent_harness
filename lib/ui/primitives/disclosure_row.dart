@@ -70,8 +70,15 @@ class DisclosureRow extends StatelessWidget {
     // `hovered` drives only the leading cross-fade; a keyboard focus lights the
     // same way through DswHoverTap's builder.
     Widget painted(bool hovered) {
+      // The header is exactly one line of its own title: 24 at the text step the
+      // app was designed at, and the same line box when the system amplifies text
+      // (measured: a fixed 24 clipped the scaled title, 43.0 needed in a 24.0
+      // seat, and this row sits behind the sweep's `ClipRect`). One number feeds
+      // both the seat and the title's `height:` multiplier — they must agree.
+      const line = 24.0;
+      final seat = line * MediaQuery.textScalerOf(context).scale(1);
       final row = SizedBox(
-        height: 24,
+        height: seat,
         child: Row(
           children: [
             SizedBox.square(
@@ -93,8 +100,9 @@ class DisclosureRow extends StatelessWidget {
                     titleStyle ??
                     DswType.s14.copyWith(
                       // dsh writes the header's leading literally rather than through
-                      // the 14/22 token, so the port does too.
-                      height: 24 / 14,
+                      // the 14/22 token, so the port does too — and it is the same
+                      // 24 that sizes the seat above.
+                      height: line / 14,
                       color: color.labelSecondary,
                     ),
               ),

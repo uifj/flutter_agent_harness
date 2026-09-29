@@ -212,8 +212,16 @@ class _ApprovalPanelState extends State<ApprovalPanel> {
     final rememberable = widget.request.ruleFor(ApprovalOutcome.allow) != null;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
+      // A Wrap, not a Row: these three labels are the widest fixed content in
+      // the panel, and a Row measures its children against an unbounded width,
+      // so at the system's 1.8x text step they wanted 809.6px in a 622px seat
+      // and spilled 187px off the right. Wrapping loses nothing at 1x — same
+      // 8px gaps, same trailing edge — and a second run is what the panel does
+      // when the words get bigger than the seat.
+      child: Wrap(
+        alignment: WrapAlignment.end,
+        spacing: 8,
+        runSpacing: 8,
         children: [
           CapsuleButton(
             label: context.tr('reject'),
@@ -221,15 +229,12 @@ class _ApprovalPanelState extends State<ApprovalPanel> {
             danger: true,
             onTap: () => _answer(false),
           ),
-          if (rememberable) ...[
-            const SizedBox(width: 8),
+          if (rememberable)
             CapsuleButton(
               label: context.tr('alwaysAllow'),
               enabled: !_answered,
               onTap: () => _answer(true, remember: true),
             ),
-          ],
-          const SizedBox(width: 8),
           CapsuleButton(
             label: context.tr('allowOnce'),
             enabled: !_answered,

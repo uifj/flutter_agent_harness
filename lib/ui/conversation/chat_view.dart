@@ -296,7 +296,10 @@ class _TurnStatusState extends State<_TurnStatus>
     return Align(
       alignment: Alignment.centerLeft,
       child: SizedBox(
-        height: 26,
+        // One line of its own chrome: the label is 14/22, so the seat that used
+        // to be nailed to 26 clipped it at the system's larger text steps (40.0
+        // needed, 26.0 given). The seat rides the same step the type does.
+        height: 26 * MediaQuery.textScalerOf(context).scale(1),
         child: Row(
           children: [
             AnimatedBuilder(

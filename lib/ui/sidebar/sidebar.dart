@@ -468,7 +468,10 @@ class _SidebarState extends State<Sidebar> {
         // transition is the column's own fade in `build`.
         child: Container(
           width: wide ? null : 36,
-          height: 36,
+          // One line of chrome, so the seat rides the text step instead of
+          // clipping it: a nailed 36 held 40 worth of 14/22 label at the system's
+          // 1.8x step. The bar is the same 36 at the designed step.
+          height: 36 * MediaQuery.textScalerOf(context).scale(1),
           padding: wide
               ? const EdgeInsets.symmetric(horizontal: 16)
               : EdgeInsets.zero,
@@ -487,11 +490,19 @@ class _SidebarState extends State<Sidebar> {
               ),
               if (wide) ...[
                 const SizedBox(width: 6),
-                Text(
-                  context.tr('newSession'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: DswType.sStrong14.copyWith(color: color.labelPrimary),
+                // Flexible, not a bare ellipsised Text: a Row measures its
+                // non-flex children against an unbounded width, so the ellipsis
+                // alone never gets to trigger. At the system's 1.8x text step
+                // this label wanted 299.9px in a 222px bar and spilled 78px.
+                Flexible(
+                  child: Text(
+                    context.tr('newSession'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: DswType.sStrong14.copyWith(
+                      color: color.labelPrimary,
+                    ),
+                  ),
                 ),
               ],
             ],

@@ -79,8 +79,12 @@ class CapsuleButton extends StatelessWidget {
       ShadButton(
         onPressed: enabled ? onTap : null,
         enabled: enabled,
-        // figma 1:155 geometry, per size.
-        height: _dense ? 28 : 36,
+        // figma 1:155 geometry, per size — and worn scaled with the text, because
+        // shad's `height:` reaches its ConstrainedBox as BOTH min and max
+        // (`button.dart:1130-1143`), so a 36px capsule at the system's 1.8x step
+        // clipped its own 40px label. The box is one line of chrome either way:
+        // it grows with the type instead of cutting it.
+        height: (_dense ? 28 : 36) * MediaQuery.textScalerOf(context).scale(1),
         padding: EdgeInsets.symmetric(horizontal: _dense ? 10 : 14),
         backgroundColor: isPrimary
             ? color.buttonPrimaryFill

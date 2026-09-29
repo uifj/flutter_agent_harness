@@ -1650,7 +1650,10 @@ class _ModeChip extends StatelessWidget {
             // icon alone still names the mode to anyone who knows the menu.
             final tight = constraints.maxWidth < 64;
             return Container(
-              height: 24,
+              // One line of chrome: the label is 11/14, and a seat nailed to 24
+              // cut it once the system amplified text (25.0 needed). At the
+              // designed step this is still exactly 24.
+              height: 24 * MediaQuery.textScalerOf(context).scale(1),
               padding: EdgeInsets.symmetric(horizontal: tight ? 0 : 8),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(DswShape.inner),
