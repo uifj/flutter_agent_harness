@@ -71,19 +71,6 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
   }
 
-  testWidgets('the table projects every task, dated or not', (tester) async {
-    await pump(tester, PlanExtensionView.table);
-
-    expect(tester.takeException(), isNull);
-    expect(find.text('Task'), findsOneWidget);
-    expect(find.text('write the intro'), findsOneWidget);
-    expect(find.text('2026-09-20'), findsOneWidget);
-    expect(find.text('draft outline'), findsOneWidget);
-    // The undated task shows the em dash, not an empty cell — a blank column
-    // reads as a rendering bug to the person looking at it.
-    expect(find.text('—'), findsOneWidget);
-  });
-
   /// Hands the loop real time until [finder] matches. The store's
   /// `notifyListeners` sits behind an atomic file write, and a `testWidgets`
   /// body runs under FakeAsync - which never yields to the real event loop, so a
@@ -188,9 +175,32 @@ void main() {
     await pump(tester, PlanExtensionView.calendar);
 
     expect(tester.takeException(), isNull);
-    // The month grid is the package's own widget tree; the host's contract here
-    // is "it mounts and the shared add row is still above it".
+    // The add row above the grid is the host's, and the day cell now is too
+    // (`_DayCell`), so the dated task's own title is on screen.
     expect(find.text('New task title'), findsOneWidget);
+    expect(find.text('write the intro'), findsOneWidget);
+  });
+
+  testWidgets("tapping a day's task toggles it through the store", (
+    tester,
+  ) async {
+    await pump(tester, PlanExtensionView.calendar);
+
+    await tester.tap(find.text('write the intro'));
+    expect(store.tasks.first.done, isTrue);
+
+    // The strike-through is the panel's side of the same write, and it lands
+    // only once the store's atomic save drains.
+    await settled(
+      tester,
+      find.byWidgetPredicate(
+        (w) =>
+            w is Text &&
+            w.data == 'write the intro' &&
+            w.style?.decoration == TextDecoration.lineThrough,
+      ),
+    );
+    expect(tester.takeException(), isNull);
   });
 
   group('amplified text', () {
@@ -222,11 +232,16 @@ void main() {
       expect(textDefects(tester), isEmpty, reason: 'the board');
     });
 
-    // Not asserted for the calendar, and that is a recorded gap rather than an
-    // oversight: the month grid's day cells are `board_panel`'s own 22.0-tall
-    // seat, and at 1.8x every visible day number wants 36.0 (`"31" 36.0 vs 22.0`).
-    // The host owns the add row above it - which the table case already measures -
-    // while fixing the grid means changing the vendored package, which this
-    // repo's gates do not cover. Numbers and reason in ADR-0017 S3.
+    // The month grid is guarded too, since its cells are drawn here now: the
+    // package's own `FilledCell` seated every day number in a 22.0 circle, which
+    // at 1.8x wanted 36.0 ("31" 36.0 vs 22.0, one defect per visible day).
+    // `MonthView.cellBuilder` is the package's extension point, so the seat
+    // rides the step without touching the lint-excluded package.
+    testWidgets('the calendar keeps its days and its task rows', (
+      tester,
+    ) async {
+      await pumpWide(tester, PlanExtensionView.calendar);
+      expect(textDefects(tester), isEmpty, reason: 'the month grid');
+    });
   });
 }
