@@ -23,6 +23,7 @@ import '../../state/session_index.dart';
 import '../../state/workspace_mode_controller.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../primitives/tappable.dart';
@@ -235,7 +236,7 @@ class _SidebarState extends State<Sidebar> {
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: color.bgLayer3,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(DswShape.card),
       ),
       child: Row(
         children: [
@@ -251,14 +252,14 @@ class _SidebarState extends State<Sidebar> {
               child: _Pressable(
                 onTap: () => onSelect(candidate),
                 hoverColor: color.sidebarNavItemActive,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(DswShape.control),
                 child: Container(
                   height: 28,
                   decoration: BoxDecoration(
                     color: mode == candidate
                         ? color.sidebarNavItemActive
                         : null,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(DswShape.control),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -323,13 +324,13 @@ class _SidebarState extends State<Sidebar> {
             padding: const EdgeInsets.only(bottom: 2),
             child: _Pressable(
               onTap: () => onToggle(view),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(DswShape.control),
               child: Container(
                 height: wide ? 32 : 36,
                 padding: EdgeInsets.symmetric(horizontal: wide ? 8 : 0),
                 decoration: BoxDecoration(
                   color: open == view ? color.interactiveBgHover : null,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(DswShape.control),
                 ),
                 child: Row(
                   mainAxisAlignment: wide
@@ -601,7 +602,7 @@ class _SidebarState extends State<Sidebar> {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: BoxDecoration(
             color: hovered && canMenu ? color.interactiveBgHover : null,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(DswShape.control),
           ),
           child: Row(
             children: [
@@ -632,7 +633,7 @@ class _SidebarState extends State<Sidebar> {
               const Spacer(),
               _Pressable(
                 onTap: _openSettingsSafe,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(DswShape.control),
                 child: Container(
                   height: 28,
                   width: 28,
@@ -723,13 +724,13 @@ class _SessionRow extends StatelessWidget {
     final color = context.dsw;
     return _Pressable(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(DswShape.control),
       child: Container(
         height: 36,
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
-          color: selected ? color.interactiveBgHover : null,
-          borderRadius: BorderRadius.circular(8),
+          color: selected ? color.interactiveSelected : null,
+          borderRadius: BorderRadius.circular(DswShape.control),
         ),
         child: Row(
           children: [

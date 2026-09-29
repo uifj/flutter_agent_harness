@@ -17,6 +17,7 @@ import '../../l10n/locales.dart';
 import '../../model/approval_rule.dart';
 import '../../model/conversation.dart';
 import '../../theme/dsw_alias.dart';
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../primitives/capsule_button.dart';
@@ -82,7 +83,7 @@ class _ApprovalPanelState extends State<ApprovalPanel> {
               // Warn semantics ride the state tokens; the stroke is what marks
               // this card out from the input card it stands in for.
               border: Border.all(color: color.stateWarnSecondary),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(DswShape.float),
               boxShadow: DswShadow.lv2,
             ),
             child: Column(

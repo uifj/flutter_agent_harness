@@ -22,6 +22,7 @@ import '../../state/checkpoint_store.dart';
 import '../../state/details_selection.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../primitives/confirm_dialog.dart';
 import '../primitives/tappable.dart';
@@ -127,7 +128,7 @@ class _ToolCardState extends State<ToolCard> {
         height: 2,
         decoration: BoxDecoration(
           color: color.labelCaption,
-          borderRadius: BorderRadius.circular(1),
+          borderRadius: BorderRadius.circular(DswShape.pill),
         ),
       ),
       Expanded(
@@ -274,7 +275,7 @@ class _ToolCardState extends State<ToolCard> {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         border: Border.all(color: color.borderL1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(DswShape.shell),
         color: color.markdownCodeBlock,
       ),
       child: Column(
@@ -390,7 +391,7 @@ class _QuietPill extends StatelessWidget {
               // and reads too heavy for a quiet in-flow affordance.
               color: hovered ? color.interactiveBgHoverSolid : color.bgBase,
               border: Border.all(color: color.borderL2),
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(DswShape.pill),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,

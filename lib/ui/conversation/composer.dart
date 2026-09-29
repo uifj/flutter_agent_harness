@@ -32,6 +32,7 @@ import '../../state/document_extractor.dart';
 import '../../state/model_directory.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../primitives/tappable.dart';
 import '../appearance_scope.dart';
@@ -612,7 +613,7 @@ class ComposerState extends State<Composer> {
                   // One notch weaker than a button's stroke, per the darkmode
                   // note in the source: exactly the l2-darkmode-thin pair.
                   border: Border.all(color: color.borderL2DarkmodeThin),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(DswShape.float),
                   boxShadow: DswShadow.lv1,
                 ),
                 child: Column(
@@ -654,7 +655,7 @@ class ComposerState extends State<Composer> {
       decoration: BoxDecoration(
         color: color.bgLayer2,
         border: Border.all(color: color.borderL2),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(DswShape.shell),
         boxShadow: DswShadow.lv2,
       ),
       child: Column(
@@ -686,7 +687,7 @@ class ComposerState extends State<Composer> {
       decoration: BoxDecoration(
         color: color.bgLayer2,
         border: Border.all(color: color.borderL2),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(DswShape.shell),
         boxShadow: DswShadow.lv2,
       ),
       child: Column(
@@ -925,7 +926,7 @@ class ComposerState extends State<Composer> {
           padding: const EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
             color: hovered ? color.interactiveBgHover : null,
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(DswShape.inner),
           ),
           child: Row(
             children: [
@@ -1141,7 +1142,7 @@ class _ImageChip extends StatelessWidget {
           width: 56,
           height: 56,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(DswShape.control),
             border: Border.all(color: color.borderL2),
             image: DecorationImage(
               image: MemoryImage(image.bytes),
@@ -1255,7 +1256,9 @@ class _AttachButton extends StatelessWidget {
         child: Container(
           width: 28,
           height: 24,
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(6)),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(DswShape.inner),
+          ),
           child: Center(
             child: Icon(
               LucideIcons.paperclip,
@@ -1445,7 +1448,7 @@ class _ModelChip extends StatelessWidget {
             height: 24,
             padding: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(DswShape.inner),
               border: Border.all(color: color.borderL2),
             ),
             child: Row(
@@ -1570,7 +1573,7 @@ class _ModeChip extends StatelessWidget {
               height: 24,
               padding: EdgeInsets.symmetric(horizontal: tight ? 0 : 8),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(DswShape.inner),
                 border: Border.all(
                   color: tight ? Colors.transparent : color.borderL2,
                 ),
@@ -1687,7 +1690,7 @@ class _DeliverChip extends StatelessWidget {
           decoration: BoxDecoration(
             color: hovered ? color.interactiveBgHover : null,
             border: Border.all(color: color.borderL2),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(DswShape.control),
           ),
           child: Row(
             children: [
@@ -1731,7 +1734,7 @@ class _DocumentChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.bgLayer2,
         border: Border.all(color: color.borderL2),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(DswShape.control),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

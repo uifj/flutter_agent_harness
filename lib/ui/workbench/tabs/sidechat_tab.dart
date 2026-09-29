@@ -27,6 +27,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../../l10n/locales.dart';
 import '../../../state/side_chat_controller.dart';
+import '../../../theme/dsw_shape.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
 import '../../../model/sidebar_tab.dart';
@@ -260,7 +261,7 @@ class _Bubble extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
             color: color.interactiveBgHover,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(DswShape.control),
           ),
           child: Text(
             message.text,
@@ -346,7 +347,7 @@ class _SendButtonState extends State<_SendButton> {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: hovered ? color.interactiveBgHoverAccent : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(DswShape.inner),
         ),
         child: Icon(
           LucideIcons.send,
@@ -391,7 +392,7 @@ class _HeaderButtonState extends State<_HeaderButton> {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: hovered ? color.interactiveBgHover : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(DswShape.inner),
           ),
           child: Icon(
             widget.icon,

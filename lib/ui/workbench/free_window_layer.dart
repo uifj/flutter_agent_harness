@@ -26,6 +26,7 @@ import '../../l10n/locales.dart';
 import '../../state/conversation_controller.dart';
 import '../../state/side_chat_controller.dart';
 import '../../theme/dsw_alias.dart';
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../../model/sidebar_state.dart';
@@ -159,12 +160,12 @@ class _FreeWindowState extends State<_FreeWindow> {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: color.bgLayer2,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(DswShape.control),
         border: Border.all(color: color.borderL2),
         boxShadow: DswShadow.lv3,
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(DswShape.control),
         child: Stack(
           children: [
             Column(
@@ -378,7 +379,7 @@ class _CloseButtonState extends State<_CloseButton> {
           height: 20,
           decoration: BoxDecoration(
             color: _hovered ? color.interactiveBgHover : Colors.transparent,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(DswShape.inset),
           ),
           child: Icon(
             LucideIcons.x,

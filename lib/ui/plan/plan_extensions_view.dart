@@ -24,6 +24,7 @@ import '../../model/plan_task.dart';
 import '../../state/plan_task_store.dart';
 import '../../state/workspace_mode_controller.dart';
 import '../../theme/dsw_alias.dart';
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../primitives/capsule_button.dart';
@@ -424,7 +425,7 @@ class _Card extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: color.bgBase,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(DswShape.control),
           border: Border.all(color: color.borderL2),
         ),
         child: Row(

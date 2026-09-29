@@ -25,6 +25,7 @@ import '../../state/checkpoint_store.dart';
 import '../../state/conversation_controller.dart';
 import '../../state/model_directory.dart';
 import '../../state/streaming_tail.dart';
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../appearance_scope.dart';
@@ -196,7 +197,7 @@ class _ConversationRootState extends State<ConversationRoot> {
                         color: context.dsw.stateBusinessPrimary,
                         width: 2,
                       ),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(DswShape.shell),
                     ),
                     child: Center(
                       child: Column(

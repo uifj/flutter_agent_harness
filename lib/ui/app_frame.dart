@@ -34,6 +34,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import '../state/layout_controller.dart';
 import '../theme/dsw_alias.dart';
 import '../theme/dsw_motion.dart';
+import '../theme/dsw_shape.dart';
 import '../theme/dsw_theme.dart';
 import 'layout/columns.dart';
 
@@ -422,7 +423,7 @@ class _AppFrameState extends State<AppFrame> {
                         color: active
                             ? color.buttonFloatingHover
                             : color.buttonFloatingFill,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(DswShape.card),
                         border: Border.all(
                           color: active
                               ? color.borderL3

@@ -26,6 +26,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../../l10n/locales.dart';
+import '../../../theme/dsw_shape.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
 import '../../../model/sidebar_tab.dart';
@@ -369,7 +370,7 @@ class _BarIconButton extends StatelessWidget {
             color: interactive && hovered
                 ? color.interactiveBgHover
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(DswShape.inner),
           ),
           child: Icon(
             icon,

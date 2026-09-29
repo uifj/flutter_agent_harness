@@ -39,6 +39,7 @@ import 'package:flutter/material.dart';
 import 'package:xterm/xterm.dart';
 
 import '../../../host/terminal_manager.dart';
+import '../../../theme/dsw_shape.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../primitives/tappable.dart';
 import '../../../theme/dsw_typography.dart';
@@ -406,7 +407,7 @@ class _BannerState extends State<_Banner> {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: hovered ? color.interactiveBgHover : Colors.transparent,
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(DswShape.inset),
               ),
               child: Text(
                 widget.action,

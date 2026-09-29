@@ -25,6 +25,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import '../../l10n/locales.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../../model/sidebar_state.dart';
@@ -364,7 +365,7 @@ class _WelcomeActionState extends State<_WelcomeAction> {
             color: _hovered && enabled
                 ? color.interactiveBgHover
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(DswShape.inset),
             border: Border.all(color: color.borderL2),
           ),
           child: Row(

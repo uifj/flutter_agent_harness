@@ -8,6 +8,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 
@@ -34,7 +35,7 @@ class Pill extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: scheme.bgLayer2,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(DswShape.shell),
       ),
       child: Text(
         label,

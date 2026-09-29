@@ -31,6 +31,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import '../../l10n/locales.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../../model/sidebar_tab.dart';
@@ -622,7 +623,7 @@ class _Feedback extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
         color: color.bgLayer3,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(DswShape.inset),
         border: Border.all(color: color.borderL2),
       ),
       child: Row(
@@ -663,7 +664,7 @@ class _CloseButton extends StatelessWidget {
       builder: (context, hovered, _) => Container(
         decoration: BoxDecoration(
           color: hovered ? color.interactiveBgActive : Colors.transparent,
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(DswShape.inset),
         ),
         child: Center(
           child: Icon(

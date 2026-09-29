@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 
 import 'dsw_alias.dart';
 import 'dsw_typography.dart';
+import 'dsw_shape.dart';
 
 /// The `--dsw-shadow-*` elevation ramp.
 ///
@@ -161,7 +162,7 @@ ThemeData dswThemeData(Brightness brightness) {
     tooltipTheme: TooltipThemeData(
       decoration: BoxDecoration(
         color: c.tooltipBg,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(DswShape.inner),
       ),
       textStyle: DswType.xxxs11.copyWith(color: c.labelPrimaryForeground),
     ),

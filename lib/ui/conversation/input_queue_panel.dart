@@ -17,6 +17,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import '../../l10n/locales.dart';
 import '../../model/queued_input.dart';
 import '../../theme/dsw_alias.dart';
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../appearance_scope.dart';
@@ -61,7 +62,7 @@ class InputQueuePanel extends StatelessWidget {
             decoration: BoxDecoration(
               color: color.bgLayer1,
               border: Border.all(color: color.borderL2),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(DswShape.float),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,

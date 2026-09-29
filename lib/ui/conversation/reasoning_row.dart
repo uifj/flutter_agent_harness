@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../theme/dsw_alias.dart';
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../primitives/disclosure_row.dart';
@@ -71,7 +72,7 @@ class _ReasoningRowState extends State<ReasoningRow> {
           height: 2,
           decoration: BoxDecoration(
             color: color.labelCaption,
-            borderRadius: BorderRadius.circular(1),
+            borderRadius: BorderRadius.circular(DswShape.pill),
           ),
         ),
         Expanded(

@@ -31,6 +31,7 @@ import 'package:path/path.dart' as p;
 
 import '../../../host/git.dart';
 import '../../../l10n/locales.dart';
+import '../../../theme/dsw_shape.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
 import '../../../model/sidebar_tab.dart';
@@ -864,7 +865,7 @@ class _FileRow extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 34),
         decoration: BoxDecoration(
           color: hovered ? color.interactiveBgHover : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(DswShape.control),
         ),
         child: Row(
           children: [
@@ -880,7 +881,7 @@ class _FileRow extends StatelessWidget {
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: color.interactiveBgHover,
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(DswShape.inset),
                       ),
                       child: Text(
                         badgeOf(entry),
@@ -944,7 +945,7 @@ class _LogRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
           decoration: BoxDecoration(
             color: hovered ? color.interactiveBgHover : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(DswShape.control),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -981,7 +982,7 @@ class _LogRow extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 5),
                       decoration: BoxDecoration(
                         border: Border.all(color: color.borderL2),
-                        borderRadius: BorderRadius.circular(999),
+                        borderRadius: BorderRadius.circular(DswShape.pill),
                       ),
                       child: Text(
                         ref,
@@ -1045,7 +1046,7 @@ class _BranchSelect extends StatelessWidget {
         decoration: BoxDecoration(
           color: color.bgBase,
           border: Border.all(color: color.borderL2),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(DswShape.inner),
         ),
         child: Row(
           children: [
@@ -1150,7 +1151,7 @@ class _CommitButtonState extends State<_CommitButton> {
             color: hovered && widget.enabled
                 ? color.buttonPrimaryHover
                 : color.buttonPrimaryFill,
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(DswShape.inner),
           ),
           child: Center(
             child: Text(
@@ -1193,7 +1194,7 @@ class _LoadMoreState extends State<_LoadMore> {
               ? color.interactiveBgHover
               : Colors.transparent,
           border: Border.all(color: color.borderL2),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(DswShape.inner),
         ),
         child: Center(
           child: Opacity(

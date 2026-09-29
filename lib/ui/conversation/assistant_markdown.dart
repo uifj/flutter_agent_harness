@@ -17,6 +17,7 @@ import 'package:gpt_markdown/custom_widgets/code_field.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 
 import '../../theme/dsw_alias.dart';
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 
@@ -103,7 +104,7 @@ InlineCodeStyle _inlineCode(DswAlias color) => InlineCodeStyle(
   fontSizeFactor: 0.875,
   color: color.labelPrimary,
   backgroundColor: color.markdownInlineCode,
-  borderRadius: const Radius.circular(6),
+  borderRadius: const Radius.circular(DswShape.inner),
   padding: const EdgeInsets.symmetric(horizontal: 5),
 );
 
@@ -112,7 +113,7 @@ GptMarkdownStyleSheet _styleSheet(DswAlias color) => GptMarkdownStyleSheet(
   // carrying the language and the copy control.
   codeBlock: CodeBlockStyle(
     backgroundColor: color.markdownCodeBlock,
-    borderRadius: const Radius.circular(12),
+    borderRadius: const Radius.circular(DswShape.shell),
     borderWidth: 0,
     padding: const EdgeInsets.all(14),
     headerPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),

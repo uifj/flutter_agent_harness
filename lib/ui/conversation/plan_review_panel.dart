@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/locales.dart';
 import '../../theme/dsw_alias.dart';
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../primitives/capsule_button.dart';
@@ -86,7 +87,7 @@ class _PlanReviewPanelState extends State<PlanReviewPanel> {
             decoration: BoxDecoration(
               color: color.inputMajor,
               border: Border.all(color: color.stateBusinessPrimary),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(DswShape.float),
               boxShadow: DswShadow.lv2,
             ),
             child: Column(

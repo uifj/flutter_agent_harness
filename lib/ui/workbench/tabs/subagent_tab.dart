@@ -38,6 +38,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import '../../../l10n/locales.dart';
 import '../../../model/conversation.dart';
 import '../../../state/conversation_controller.dart';
+import '../../../theme/dsw_shape.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../primitives/tappable.dart';
 import '../../../theme/dsw_typography.dart';
@@ -400,7 +401,7 @@ class _RootCardState extends State<_RootCard> {
         padding: const EdgeInsets.fromLTRB(11, 7, 8, 7),
         decoration: BoxDecoration(
           color: hovered ? color.interactiveBgHover : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(DswShape.control),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -602,7 +603,7 @@ class _DelegationCardState extends State<_DelegationCard> {
                     : hovered
                     ? color.interactiveBgHover
                     : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(DswShape.control),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -625,7 +626,9 @@ class _DelegationCardState extends State<_DelegationCard> {
                                 ),
                                 decoration: BoxDecoration(
                                   border: Border.all(color: color.borderL2),
-                                  borderRadius: BorderRadius.circular(4),
+                                  borderRadius: BorderRadius.circular(
+                                    DswShape.inset,
+                                  ),
                                 ),
                                 child: Text(
                                   agentNameOf(node.name),
@@ -719,7 +722,7 @@ class _KillButtonState extends State<_KillButton> {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: color.stateErrorPrimary.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(DswShape.inner),
           ),
           child: Text(
             'Confirm',
@@ -743,7 +746,7 @@ class _KillButtonState extends State<_KillButton> {
           color: hovered
               ? color.stateErrorPrimary.withValues(alpha: 0.12)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(DswShape.inner),
         ),
         child: Icon(
           LucideIcons.square,
@@ -805,7 +808,7 @@ class _OutputDock extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.bgBase,
         border: Border.all(color: color.borderL2),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(DswShape.control),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -918,7 +921,7 @@ class _DockCloseButtonState extends State<_DockCloseButton> {
         height: 20,
         decoration: BoxDecoration(
           color: hovered ? color.interactiveBgHover : Colors.transparent,
-          borderRadius: BorderRadius.circular(5),
+          borderRadius: BorderRadius.circular(DswShape.inner),
         ),
         child: Icon(
           LucideIcons.x,

@@ -32,6 +32,7 @@ import 'package:path/path.dart' as p;
 import '../../../host/git.dart';
 import '../../../l10n/locales.dart';
 import '../../../theme/dsw_alias.dart';
+import '../../../theme/dsw_shape.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
 import '../../../model/sidebar_tab.dart';
@@ -813,7 +814,7 @@ class _FileHeaderState extends State<_FileHeader> {
           color: hovered && expandable
               ? color.interactiveBgHover
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(DswShape.inset),
         ),
         child: Row(
           children: [
@@ -850,7 +851,7 @@ class _FileHeaderState extends State<_FileHeader> {
                 padding: const EdgeInsets.symmetric(horizontal: 6),
                 decoration: BoxDecoration(
                   border: Border.all(color: color.borderL2),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(DswShape.pill),
                 ),
                 child: Text(
                   tag,

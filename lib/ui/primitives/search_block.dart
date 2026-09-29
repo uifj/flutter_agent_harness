@@ -11,6 +11,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/dsw_alias.dart';
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import 'block_chrome.dart';
@@ -230,7 +231,7 @@ class _SearchBlockState extends State<SearchBlock> {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: color.markdownCodeBlock,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(DswShape.shell),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

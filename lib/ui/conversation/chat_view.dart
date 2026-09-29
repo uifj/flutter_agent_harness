@@ -17,6 +17,7 @@ import '../../l10n/locales.dart';
 import '../../model/conversation.dart';
 import '../../state/conversation_controller.dart';
 import '../../state/streaming_tail.dart';
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_static.dart';
 import '../../theme/dsw_theme.dart';
 import '../primitives/tappable.dart';
@@ -387,7 +388,7 @@ class _ToBottomButton extends StatelessWidget {
                 ? color.buttonFloatingHover
                 : color.buttonFloatingFill,
             border: Border.all(color: color.borderL2),
-            borderRadius: BorderRadius.circular(100),
+            borderRadius: BorderRadius.circular(DswShape.pill),
             boxShadow: DswShadow.lv2,
           ),
           child: Icon(

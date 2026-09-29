@@ -68,6 +68,7 @@ final class DswAlias {
     required this.interactiveBgHoverAccent,
     required this.interactiveBgHoverDanger,
     required this.interactiveBgHoverSolid,
+    required this.interactiveSelected,
     required this.labelCaption,
     required this.labelDimmed,
     required this.labelPrimary,
@@ -174,6 +175,13 @@ final class DswAlias {
   final Color interactiveBgHoverDanger;
   final Color interactiveBgHoverSolid;
 
+  /// The row that names the thing a person is currently looking at.
+  ///
+  /// Deliberately NOT [interactiveBgHover]: when selected and hover share one
+  /// colour, hovering a row fakes an active state, and there is no way to tell
+  /// which session you are in without clicking. ADR-0017.
+  final Color interactiveSelected;
+
   // Text.
   final Color labelCaption;
   final Color labelDimmed;
@@ -279,6 +287,9 @@ final class DswAlias {
     interactiveBgHoverAccent: Color.fromRGBO(38, 49, 72, 0.14),
     interactiveBgHoverDanger: Color.fromRGBO(236, 19, 19, 0.05),
     interactiveBgHoverSolid: DswStatic.neutralBluish75,
+    // Hover is 0.06 of the same ink; selected has to read as a state, not as
+    // a slightly stronger hover, so it is a notch under the accent step (0.14).
+    interactiveSelected: Color.fromRGBO(38, 49, 72, 0.10),
     labelCaption: DswStatic.neutralBluish400,
     labelDimmed: DswStatic.neutralBluish200,
     labelPrimary: DswStatic.neutralBluish1000,
@@ -374,6 +385,8 @@ final class DswAlias {
     interactiveBgHoverAccent: Color.fromRGBO(255, 255, 255, 0.24),
     interactiveBgHoverDanger: Color.fromRGBO(242, 90, 90, 0.15),
     interactiveBgHoverSolid: DswStatic.neutralBluish800,
+    // Hover is 0.08 here; 0.14 would collide with interactiveBgHoverAccent.
+    interactiveSelected: Color.fromRGBO(255, 255, 255, 0.12),
     labelCaption: DswStatic.neutralBluish600,
     labelDimmed: DswStatic.neutralBluish750,
     labelPrimary: DswStatic.neutralBluish50,

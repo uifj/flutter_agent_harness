@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 
 import '../../model/conversation.dart';
 import '../../theme/dsw_alias.dart';
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../primitives/state_dot.dart';
@@ -60,7 +61,7 @@ class _UserBubble extends StatelessWidget {
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: color.bubble,
-                borderRadius: BorderRadius.circular(22),
+                borderRadius: BorderRadius.circular(DswShape.pill),
               ),
               child: Padding(
                 // 10 + 24 + 10: the 44px single-line bubble the source calls out.

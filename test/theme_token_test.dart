@@ -5,10 +5,12 @@
 // Sampled rather than exhaustive: asserting all 89 pairs would just be the same
 // transcription a second time, and would fail for the same reason.
 
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:agent_harness/theme/dsw_alias.dart';
 import 'package:agent_harness/theme/dsw_static.dart';
+import 'package:agent_harness/theme/dsw_shape.dart';
 import 'package:agent_harness/theme/dsw_typography.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -157,6 +159,75 @@ void main() {
       expect(italic.height, upright.height);
       expect(italic.fontWeight, upright.fontWeight);
       expect(italic.fontFamily, upright.fontFamily);
+    });
+  });
+
+  // ADR-0017: shape has one source of truth, and the two interactive states are
+  // two different tokens. These are scans rather than value checks because the
+  // failure they guard is "someone added a 13th radius", which no fixed
+  // assertion can catch.
+  group('shape token contract', () {
+    final literal = RegExp(r'\b(?:Border)?Radius\.circular\([0-9]');
+
+    test('no widget picks its own radius', () {
+      final offenders = <String>[];
+      for (final entry in Directory('lib/ui').listSync(recursive: true)) {
+        if (entry is! File || !entry.path.endsWith('.dart')) continue;
+        final lines = entry.readAsLinesSync();
+        for (var i = 0; i < lines.length; i++) {
+          if (literal.hasMatch(lines[i])) {
+            offenders.add('${entry.path}:${i + 1}  ${lines[i].trim()}');
+          }
+        }
+      }
+      expect(offenders, isEmpty, reason: 'use a DswShape tier instead');
+    });
+
+    test('the radius scale decreases inward, and pill is last', () {
+      expect([
+        DswShape.inset,
+        DswShape.inner,
+        DswShape.control,
+        DswShape.card,
+        DswShape.shell,
+        DswShape.float,
+      ], orderedEquals([4.0, 6.0, 8.0, 10.0, 12.0, 16.0]));
+      expect(DswShape.pill, greaterThan(DswShape.float));
+    });
+
+    test('spacing is on the 4px rhythm', () {
+      for (final step in [
+        DswShape.xs,
+        DswShape.sm,
+        DswShape.md,
+        DswShape.lg,
+        DswShape.xl,
+      ]) {
+        expect(step % 4, 0, reason: 'base unit is 4px');
+      }
+    });
+
+    test('selected is NOT the same colour as hover, in either theme', () {
+      // The whole point of ADR-0017 S2: one colour for both means hovering a
+      // row fakes an active state.
+      expect(
+        DswAlias.light.interactiveSelected,
+        isNot(DswAlias.light.interactiveBgHover),
+      );
+      expect(
+        DswAlias.dark.interactiveSelected,
+        isNot(DswAlias.dark.interactiveBgHover),
+      );
+      // And it must sit between hover and the accent step, so it reads as a
+      // state rather than as a pressed control.
+      expect(
+        DswAlias.light.interactiveSelected.a,
+        greaterThan(DswAlias.light.interactiveBgHover.a),
+      );
+      expect(
+        DswAlias.light.interactiveSelected.a,
+        lessThan(DswAlias.light.interactiveBgHoverAccent.a),
+      );
     });
   });
 }

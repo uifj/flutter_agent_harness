@@ -28,6 +28,7 @@ import 'package:re_editor/re_editor.dart';
 import '../../l10n/locales.dart';
 import '../../model/workspace_index.dart';
 import '../../theme/dsw_alias.dart';
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../conversation/assistant_markdown.dart';
@@ -344,7 +345,7 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
           height: 24,
           decoration: BoxDecoration(
             color: hovered ? color.interactiveBgHover : null,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(DswShape.inset),
           ),
           child: Icon(icon, size: 14, color: color.labelSecondary),
         ),
@@ -668,7 +669,7 @@ class _DirRow extends StatelessWidget {
         padding: EdgeInsets.only(left: indent, right: 8),
         decoration: BoxDecoration(
           color: hovered ? color.interactiveBgHover : null,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(DswShape.inner),
         ),
         child: Row(
           children: [
@@ -726,7 +727,7 @@ class _NoteRowState extends State<_NoteRow> {
         padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
           color: widget.selected || hovered ? color.interactiveBgHover : null,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(DswShape.inner),
         ),
         child: Row(
           children: [

@@ -37,6 +37,7 @@ import '../../state/approval_rule_store.dart';
 import '../../state/backup_service.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../primitives/tappable.dart';
@@ -849,7 +850,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
   Widget _providerRowCard(DswAlias color, LlmProvider provider) => Container(
     padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
     decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(DswShape.shell),
       border: Border.all(color: color.borderL2),
     ),
     child: Column(
@@ -917,7 +918,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
     padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
     decoration: BoxDecoration(
       color: color.bgModulePlatform,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(DswShape.shell),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1340,7 +1341,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
     padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
     decoration: BoxDecoration(
       color: color.bgLayer1,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(DswShape.shell),
       border: Border.all(color: color.borderL2),
     ),
     child: Column(
@@ -1506,7 +1507,7 @@ class _SettingCellRowState<T> extends State<_SettingCellRow<T>> {
                   color: _hovered
                       ? color.interactiveBgHover
                       : color.bgModulePlatform,
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(DswShape.float),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -1643,7 +1644,7 @@ class _RecentRowState extends State<_RecentRow> {
           : hovered
           ? color.interactiveBgHover
           : Colors.transparent,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(DswShape.control),
     ),
     child: Row(
       children: [
@@ -1705,7 +1706,7 @@ class _ForgetButton extends StatelessWidget {
         height: 20,
         decoration: BoxDecoration(
           color: hovered ? color.interactiveBgHover : Colors.transparent,
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(DswShape.inset),
         ),
         child: Icon(
           LucideIcons.x,
@@ -1740,7 +1741,7 @@ class _SearchField extends StatelessWidget {
     return Container(
       height: 32,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(DswShape.control),
         border: Border.all(color: color.borderL2),
       ),
       child: Row(
@@ -1805,7 +1806,7 @@ class _NavCellState extends State<_NavCell> {
               : hovered
               ? color.sidebarNavItemHover
               : null,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(DswShape.shell),
           // The accent bar: a 3px pill on the leading edge when selected.
           border: widget.active
               ? Border(
@@ -2022,7 +2023,7 @@ class _Switch extends StatelessWidget {
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: value ? color.brandPrimary : color.bgLayer1,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(DswShape.card),
         border: Border.all(color: value ? color.brandPrimary : color.borderL2),
       ),
       child: AnimatedAlign(
@@ -2140,7 +2141,7 @@ class _StepButtonState extends State<_StepButton> {
           color: hovered && widget.onTap != null
               ? color.interactiveBgHover
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(DswShape.inner),
           border: Border.all(color: color.borderL2),
         ),
         child: Icon(
@@ -2185,7 +2186,7 @@ class _RevealButtonState extends State<_RevealButton> {
           height: 28,
           decoration: BoxDecoration(
             color: hovered ? color.interactiveBgHover : null,
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(DswShape.inner),
           ),
           child: Icon(
             widget.revealed ? LucideIcons.eye_off : LucideIcons.eye,
@@ -2255,7 +2256,7 @@ class _RowEditButtonState extends State<_RowEditButton> {
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
           color: hovered ? color.interactiveBgHoverSolid : null,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(DswShape.float),
           border: Border.all(color: color.borderL2),
         ),
         child: Center(
@@ -2307,7 +2308,9 @@ class _CustomizedDisclosureState extends State<_CustomizedDisclosure> {
             onTap: widget.onToggle,
             builder: (context, hovered, _) => Container(
               padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
-              decoration: BoxDecoration(borderRadius: BorderRadius.circular(6)),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(DswShape.inner),
+              ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -2386,7 +2389,9 @@ class _ModelPickButton extends StatelessWidget {
         child: Container(
           width: 28,
           height: 28,
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(6)),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(DswShape.inner),
+          ),
           child: Icon(
             LucideIcons.list,
             size: 16,
@@ -2528,7 +2533,7 @@ class _RemoveButtonState extends State<_RemoveButton> {
           height: 28,
           decoration: BoxDecoration(
             color: hovered ? color.interactiveBgHover : null,
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(DswShape.inner),
           ),
           child: Icon(
             LucideIcons.x,

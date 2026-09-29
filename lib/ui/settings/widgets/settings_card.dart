@@ -25,6 +25,7 @@
 
 import 'package:flutter/widgets.dart';
 
+import '../../../theme/dsw_shape.dart';
 import '../../../theme/dsw_theme.dart';
 
 /// A rounded, hairline-bordered surface that stacks full-width setting rows into
@@ -63,7 +64,7 @@ class SettingsCard extends StatelessWidget {
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(DswShape.shell),
         border: Border.all(color: color.borderL2),
       ),
       padding: padding,

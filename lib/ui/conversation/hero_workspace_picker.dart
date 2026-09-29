@@ -19,6 +19,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../l10n/locales.dart';
 import '../../theme/dsw_motion.dart';
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../primitives/tappable.dart';
 import '../../theme/dsw_typography.dart';
@@ -99,7 +100,7 @@ class HeroWorkspacePicker extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: hovered ? color.interactiveBgHover : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(DswShape.control),
           border: Border.all(color: hovered ? color.borderL2 : color.borderL1),
         ),
         child: Row(

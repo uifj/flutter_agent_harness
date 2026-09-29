@@ -28,6 +28,7 @@ import 'package:flutter/services.dart' show LogicalKeyboardKey;
 
 import '../../../l10n/locales.dart';
 import '../../../model/app_settings.dart' as settings;
+import '../../../theme/dsw_shape.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
 import '../../primitives/tappable.dart';
@@ -142,7 +143,7 @@ class _QuickMenuOverlayState extends State<_QuickMenuOverlay> {
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
                       color: color.bgLayer2,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(DswShape.shell),
                       border: Border.all(color: color.borderL2),
                     ),
                     clipBehavior: Clip.antiAlias,
@@ -314,7 +315,7 @@ class _Chip extends StatelessWidget {
               : hovered
               ? color.interactiveBgHover
               : color.bgLayer3,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(DswShape.control),
           border: Border.all(
             color: selected ? color.brandPrimary : color.borderL2,
           ),

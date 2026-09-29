@@ -21,6 +21,7 @@ import '../../model/conversation.dart';
 import '../../state/conversation_controller.dart';
 import '../../state/details_selection.dart';
 import '../../theme/dsw_alias.dart';
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../primitives/tappable.dart';
 import '../../theme/dsw_typography.dart';
@@ -265,7 +266,7 @@ class _Pre extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: color.markdownCodeBlock,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(DswShape.shell),
       ),
       child: SelectableText(
         text,
