@@ -326,7 +326,9 @@ class _EditorTabState extends State<EditorTab> {
     final readOnly = content is _Text ? content.readOnlyReason : null;
     final canPreview = _isMarkdown && content is _Text;
     return Container(
-      height: 28,
+      // One line of chrome: the file path is 11/14 and the system's text step
+      // made it 32.0 where a nailed 28 gave it 27.0.
+      height: 28 * MediaQuery.textScalerOf(context).scale(1),
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: color.bgLayer1,

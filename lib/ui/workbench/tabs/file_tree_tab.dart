@@ -272,7 +272,10 @@ class _FileTreeTabState extends State<FileTreeTab> {
               : ListView.builder(
                   primary: false,
                   padding: const EdgeInsets.symmetric(vertical: 4),
-                  itemExtent: _rowHeight,
+                  // The extent is one row of labels, so it scales with them -
+                  // `itemExtent` clips whatever the row wants to be taller.
+                  itemExtent:
+                      _rowHeight * MediaQuery.textScalerOf(context).scale(1),
                   itemCount: rows.length,
                   itemBuilder: (context, index) {
                     final row = rows[index];
@@ -309,7 +312,9 @@ class _FileTreeTabState extends State<FileTreeTab> {
   /// that jumps while being filtered is a tree whose rows cannot be clicked
   /// mid-thought.
   Widget _searchBox(DswAlias color) => Container(
-    height: 30,
+    // A one-line seat, so it rides the text step: at the system's 1.8x the hint
+    // needed 32.0 and got 29.0.
+    height: 30 * MediaQuery.textScalerOf(context).scale(1),
     padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
     decoration: BoxDecoration(
       color: color.bgLayer1,

@@ -223,7 +223,9 @@ class _BrowserTabState extends State<BrowserTab> {
   Widget _bar(BuildContext context) {
     final color = context.dsw;
     return Container(
-      height: 34,
+      // One line of chrome: the address field's 13/20 hint needed 36.0 in the
+      // 33.0 this seat left it once the system amplified text.
+      height: 34 * MediaQuery.textScalerOf(context).scale(1),
       padding: const EdgeInsets.symmetric(horizontal: 4),
       decoration: BoxDecoration(
         color: color.bgLayer1,

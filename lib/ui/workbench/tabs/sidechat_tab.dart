@@ -155,7 +155,9 @@ class _SideChatTabState extends State<SideChatTab> {
   Widget _header(BuildContext context) {
     final color = context.dsw;
     return Container(
-      height: 36,
+      // One line of chrome, so the title's own step sets the height: 14/22 needed
+      // 40.0 in a 35.0 seat at the system's 1.8x.
+      height: 36 * MediaQuery.textScalerOf(context).scale(1),
       padding: const EdgeInsets.only(left: 12, right: 8),
       decoration: BoxDecoration(
         color: color.bgLayer1,
