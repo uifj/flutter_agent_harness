@@ -288,8 +288,13 @@ class ComposerState extends State<Composer> {
     // Drives the primary action's enabled state; the draft itself repaints
     // through the field.
     _controller.addListener(_onDraftChanged);
+    // And the card's stroke needs a repaint the field never asks for: focus is
+    // the container's state, not the text's.
+    _focus.addListener(_onFocusChanged);
     if (widget.workspaceRoot != null) _queryBranch();
   }
+
+  void _onFocusChanged() => setState(() {});
 
   @override
   void dispose() {
@@ -299,6 +304,10 @@ class ComposerState extends State<Composer> {
   }
 
   bool _wasEmpty = true;
+
+  /// Whether the pointer is over the input card — the middle of the card's three
+  /// strokes, see [_card].
+  bool _cardHovered = false;
 
   void _onDraftChanged() {
     final text = _controller.text;
@@ -607,33 +616,7 @@ class ComposerState extends State<Composer> {
                 _mentionMenu(color),
                 const SizedBox(height: 6),
               ],
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: color.inputMajor,
-                  // One notch weaker than a button's stroke, per the darkmode
-                  // note in the source: exactly the l2-darkmode-thin pair.
-                  border: Border.all(color: color.borderL2DarkmodeThin),
-                  borderRadius: BorderRadius.circular(DswShape.float),
-                  boxShadow: DswShadow.lv1,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(height: 10),
-                    _draft(color),
-                    if (_images.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      _imageChips(color),
-                    ],
-                    if (_documents.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      _documentChips(color),
-                    ],
-                    const SizedBox(height: 12),
-                    _row(color),
-                  ],
-                ),
-              ),
+              _card(color),
               // The workspace status bar: sits below the card, shows the
               // workspace name and (when available) the git branch. Clicking
               // it opens the same picker the hero uses.
@@ -725,6 +708,55 @@ class ComposerState extends State<Composer> {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  /// The input card itself, and the one place its three states are decided.
+  ///
+  /// ZCode's prompt editor carries `border-input-border` → `hover:` →
+  /// `focus-within:` (ChatPromptEditor.tsx:347). A single static stroke at 6%
+  /// alpha is why the card read as "边界不清": nothing told the user which
+  /// surface was about to receive the keystrokes. Focus wins over hover because
+  /// typing is the state that matters, and it lands on `brandPrimary` — the
+  /// same token every other focused control in this app resolves to.
+  Widget _card(DswAlias color) {
+    final stroke = _focus.hasFocus
+        ? color.brandPrimary
+        : _cardHovered
+        ? color.borderL3
+        : color.borderL2DarkmodeThin;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _cardHovered = true),
+      onExit: (_) => setState(() => _cardHovered = false),
+      child: AnimatedContainer(
+        duration: DswMotion.respecting(context, DswMotion.fast),
+        curve: DswMotion.easeInOut,
+        decoration: BoxDecoration(
+          color: color.inputMajor,
+          // One notch weaker than a button's stroke at rest, per the darkmode
+          // note in the source: exactly the l2-darkmode-thin pair.
+          border: Border.all(color: stroke),
+          borderRadius: BorderRadius.circular(DswShape.float),
+          boxShadow: DswShadow.lv1,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            _draft(color),
+            if (_images.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              _imageChips(color),
+            ],
+            if (_documents.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              _documentChips(color),
+            ],
+            const SizedBox(height: 12),
+            _row(color),
+          ],
+        ),
       ),
     );
   }

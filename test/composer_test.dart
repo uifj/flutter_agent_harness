@@ -23,8 +23,10 @@ import 'package:agent_harness/model/model_settings.dart';
 import 'package:agent_harness/model/queued_input.dart';
 import 'package:agent_harness/model/workspace_index.dart';
 import 'package:agent_harness/state/model_directory.dart';
+import 'package:agent_harness/theme/dsw_shape.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
 import 'package:agent_harness/ui/conversation/composer.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
@@ -720,5 +722,68 @@ void main() {
         temp.deleteSync(recursive: true);
       }
     });
+  });
+
+  // Audit item 4, the half of it that is not spacing: the card used to carry one
+  // static 6%-alpha stroke, so nothing on screen said which surface was about to
+  // receive the keystrokes. ZCode's prompt editor carries three (`ChatPromptEditor
+  // .tsx:347`: `border-input-border` → `hover:` → `focus-within:`) and so does this
+  // now. The states are reached the way a user reaches them — autofocus, `Tab`
+  // away, pointer in and out, tap back in — and the strokes are read off the
+  // painted decoration, so a regression to one static colour fails here.
+  testWidgets('the card shows which surface has the keyboard', (tester) async {
+    Color stroke() {
+      final box = tester.widget<AnimatedContainer>(
+        find.byWidgetPredicate(
+          (w) =>
+              w is AnimatedContainer &&
+              w.decoration is BoxDecoration &&
+              (w.decoration as BoxDecoration).borderRadius ==
+                  BorderRadius.circular(DswShape.float),
+        ),
+      );
+      return ((box.decoration! as BoxDecoration).border! as Border).top.color;
+    }
+
+    final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    // Parked outside the card, so 'hover' only ever means the one move in.
+    await pointer.addPointer(location: const Offset(1, 1));
+    addTearDown(pointer.removePointer);
+
+    await pump(tester);
+    await tester.pumpAndSettle();
+    final color = tester.element(find.byType(TextField)).dsw;
+    expect(
+      stroke(),
+      color.brandPrimary,
+      reason: 'the draft autofocuses, so the card opens focused',
+    );
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.tab);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.tab);
+    await tester.pumpAndSettle();
+    expect(stroke(), color.borderL2DarkmodeThin, reason: 'idle, pointer away');
+
+    await pointer.moveTo(tester.getCenter(find.byType(TextField)));
+    await tester.pumpAndSettle();
+    expect(stroke(), color.borderL3, reason: 'hover, pointer on the card');
+
+    await pointer.moveTo(const Offset(1, 1));
+    await tester.pumpAndSettle();
+    expect(stroke(), color.borderL2DarkmodeThin, reason: 'back to idle');
+
+    await tester.tapAt(tester.getCenter(find.byType(TextField)));
+    await tester.pumpAndSettle();
+    expect(
+      stroke(),
+      color.brandPrimary,
+      reason: 'focus outranks hover: typing is the state that matters',
+    );
+
+    // Three states, three colours — the same law ADR-0017 S2 set for selection.
+    expect(
+      {color.borderL2DarkmodeThin, color.borderL3, color.brandPrimary}.length,
+      3,
+    );
   });
 }
