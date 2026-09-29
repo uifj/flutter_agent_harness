@@ -755,38 +755,82 @@ class _SessionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    return _Pressable(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(DswShape.control),
-      child: Container(
-        height: 36,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: selected ? color.interactiveSelected : null,
+    final title = session.title ?? context.tr('untitled');
+    // A one-line seat rides the text step (ADR-0017 S3). Pinned at 36 this row is
+    // exactly one line at 1.8x and one clipped line at the next step up: at 2.2x
+    // both the title and the time label wanted 44.0 of the 36.0 they were handed.
+    final step = MediaQuery.textScalerOf(context).scale(1);
+    return Tooltip(
+      // The row ellipsises, and the column is 280px wide by default: after the
+      // time label there is roughly 200px for the title, so most real titles are
+      // cut. Truncation is the right strategy (audit 2a) - it just has to leave a
+      // way to read the rest, which on a desktop means on hover.
+      message: title,
+      waitDuration: const Duration(milliseconds: 500),
+      child: Semantics(
+        // The other half of "which session is up", for a screen reader and for
+        // anyone who cannot tell a 10% wash from a 6% one. `container` because
+        // the row's button flag and its focus action live on nodes below: without
+        // a merge boundary the flag landed where nothing is handed it, and the row
+        // still announced as an ordinary button.
+        selected: selected,
+        container: true,
+        child: _Pressable(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(DswShape.control),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                session.title ?? context.tr('untitled'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: DswType.s14.copyWith(
-                  height: 20 / 14,
-                  color: color.labelPrimary,
+          child: Container(
+            height: 36 * step,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: selected ? color.interactiveSelected : null,
+              borderRadius: BorderRadius.circular(DswShape.control),
+            ),
+            child: Row(
+              children: [
+                // The row-head slot, and the second half of audit 2b. It is the
+                // width of the neighbours' icons (14) plus their gap (6), so a
+                // title starts on the same line a mode label does - and it is
+                // reserved on EVERY row: a dot that only the selected row has
+                // would shove that row's text sideways, which is a jump, not an
+                // indicator. No left accent bar: the audit corrected that to
+                // ZCode's slot + distinct token.
+                SizedBox(
+                  width: 14,
+                  child: selected
+                      ? Center(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: color.brandPrimary,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const SizedBox.square(dimension: 6),
+                          ),
+                        )
+                      : null,
                 ),
-              ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: DswType.s14.copyWith(
+                      height: 20 / 14,
+                      color: color.labelPrimary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _time(session.updatedAt),
+                  style: DswType.xxs12.copyWith(
+                    height: 20 / 12,
+                    color: color.labelTertiary,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 6),
-            Text(
-              _time(session.updatedAt),
-              style: DswType.xxs12.copyWith(
-                height: 20 / 12,
-                color: color.labelTertiary,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
