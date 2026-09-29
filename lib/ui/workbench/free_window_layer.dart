@@ -262,7 +262,9 @@ class _FreeWindowState extends State<_FreeWindow> {
         behavior: HitTestBehavior.opaque,
         onSecondaryTapDown: (details) => _menu(details.globalPosition),
         child: Container(
-          height: 32,
+          // One line of chrome holding the tab's title: pinned at 32 the bottom
+          // stroke left 31.0 for a label wanting 32.0 at 1.8x and 40.0 at 2.2x.
+          height: 32 * MediaQuery.textScalerOf(context).scale(1),
           padding: const EdgeInsets.only(left: 10, right: 4),
           decoration: BoxDecoration(
             color: color.bgLayer1,
