@@ -360,6 +360,19 @@ class _FileTreeTabState extends State<FileTreeTab> {
     final relative = root != null && p.isWithin(root, row.path)
         ? p.relative(row.path, from: root)
         : row.path;
+    // One menu row: the glyph keeps its seat and the label is what yields. A
+    // bare `Text` here is handed the menu's whole width, so a label spilled past
+    // the popup once the system amplified text (274.8 of 256.0 at 1.8x).
+    Widget menuItem(IconData icon, String label) => Row(
+      children: [
+        Icon(icon, size: 13, color: color.labelSecondary),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+      ],
+    );
+    final seat = 34 * MediaQuery.textScalerOf(context).scale(1);
     final choice = await showMenu<String>(
       context: context,
       position: RelativeRect.fromLTRB(
@@ -372,60 +385,27 @@ class _FileTreeTabState extends State<FileTreeTab> {
       items: [
         PopupMenuItem(
           value: 'open',
-          height: 34,
-          child: Row(
-            children: [
-              Icon(
-                row.isDirectory ? LucideIcons.chevron_right : LucideIcons.file,
-                size: 13,
-                color: color.labelSecondary,
-              ),
-              const SizedBox(width: 8),
-              Text(context.tr('open')),
-            ],
+          height: seat,
+          child: menuItem(
+            row.isDirectory ? LucideIcons.chevron_right : LucideIcons.file,
+            context.tr('open'),
           ),
         ),
         PopupMenuItem(
           value: 'copyRelative',
-          height: 34,
-          child: Row(
-            children: [
-              Icon(LucideIcons.copy, size: 13, color: color.labelSecondary),
-              const SizedBox(width: 8),
-              Text(context.tr('copyRelative')),
-            ],
-          ),
+          height: seat,
+          child: menuItem(LucideIcons.copy, context.tr('copyRelative')),
         ),
         PopupMenuItem(
           value: 'copyAbsolute',
-          height: 34,
-          child: Row(
-            children: [
-              Icon(
-                LucideIcons.file_symlink,
-                size: 13,
-                color: color.labelSecondary,
-              ),
-              const SizedBox(width: 8),
-              Text(context.tr('copyAbsolute')),
-            ],
-          ),
+          height: seat,
+          child: menuItem(LucideIcons.file_symlink, context.tr('copyAbsolute')),
         ),
         if (row.isDirectory)
           PopupMenuItem(
             value: 'treeTab',
-            height: 34,
-            child: Row(
-              children: [
-                Icon(
-                  LucideIcons.list_tree,
-                  size: 13,
-                  color: color.labelSecondary,
-                ),
-                const SizedBox(width: 8),
-                Text(context.tr('openInTreeTab')),
-              ],
-            ),
+            height: seat,
+            child: menuItem(LucideIcons.list_tree, context.tr('openInTreeTab')),
           ),
       ],
     );
