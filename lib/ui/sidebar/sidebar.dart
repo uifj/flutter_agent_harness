@@ -193,20 +193,35 @@ class _SidebarState extends State<Sidebar> {
                   ? CrossAxisAlignment.stretch
                   : CrossAxisAlignment.center,
               children: [
-                _logoRow(color, wide: wide),
-                if (widget.onSelectMode != null) ...[
-                  SizedBox(height: wide ? DswShape.md : DswShape.xs),
-                  _modeSwitch(color, wide: wide),
-                  // The plan workspace's extension panels (ADR-0007 D4) —
-                  // starkins's `_ExtensionGroup` shape: visible only in 企划,
-                  // each row its own toggle.
-                  if (widget.mode == WorkspaceMode.plan) ...[
-                    const SizedBox(height: DswShape.sm),
-                    _extensionGroup(color, wide: wide),
-                  ],
+                // Expanded, the column reads as one scroll view: measured in a
+                // 600px window in 企划 mode, the growing chrome (brand row, mode
+                // switch, three extension rows, New Session) left the session
+                // list 77.8px at the 1.8x text step and 0.0px at 2.2x - the
+                // sessions were unreachable while the chrome they sat behind
+                // stayed on screen. Chrome may scroll away, content may not
+                // vanish. The rail has no chrome to spare and its list is a
+                // single glyph, so it keeps the plain column.
+                if (wide)
+                  Expanded(
+                    child: ListenableBuilder(
+                      listenable: widget.sessions,
+                      builder: (context, _) => CustomScrollView(
+                        slivers: [
+                          SliverToBoxAdapter(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: _chrome(color, wide: true),
+                            ),
+                          ),
+                          ..._sessionSlivers(color),
+                        ],
+                      ),
+                    ),
+                  )
+                else ...[
+                  ..._chrome(color, wide: false),
+                  Expanded(child: _sessionList(color)),
                 ],
-                _newSessionButton(color, wide: wide),
-                Expanded(child: _sessionList(color, wide: wide)),
                 _footer(color, wide: wide),
               ],
             ),
@@ -216,6 +231,24 @@ class _SidebarState extends State<Sidebar> {
     );
   }
 
+  /// The column's chrome: the brand row, the workspace switch with its
+  /// extension rows, and New Session. A list rather than a widget because the
+  /// wide form lays it out inside a sliver and the rail lays it out directly.
+  List<Widget> _chrome(DswAlias color, {required bool wide}) => [
+    _logoRow(color, wide: wide),
+    if (widget.onSelectMode != null) ...[
+      SizedBox(height: wide ? DswShape.md : DswShape.xs),
+      _modeSwitch(color, wide: wide),
+      // The plan workspace's extension panels (ADR-0007 D4) — starkins's
+      // `_ExtensionGroup` shape: visible only in 企划, each row its own toggle.
+      if (widget.mode == WorkspaceMode.plan) ...[
+        const SizedBox(height: DswShape.sm),
+        _extensionGroup(color, wide: wide),
+      ],
+    ],
+    _newSessionButton(color, wide: wide),
+  ];
+
   /// The top-level workspace switch (ADR-0007), starkins's `_TaskChannelTabs`
   /// shape in dsw tokens: a two-cell segmented control expanded, and on the
   /// rail a single toggle that flips to the OTHER workspace — the one control
@@ -223,6 +256,9 @@ class _SidebarState extends State<Sidebar> {
   Widget _modeSwitch(DswAlias color, {required bool wide}) {
     final onSelect = widget.onSelectMode!;
     final mode = widget.mode ?? WorkspaceMode.agent;
+    // One line of chrome, so both seats ride the text step: a nailed 32/28 held
+    // 40.0 worth of s14 label at the system's 1.8x step and cut "Plan"/"Agent".
+    final step = MediaQuery.textScalerOf(context).scale(1);
     if (!wide) {
       final other = mode == WorkspaceMode.agent
           ? WorkspaceMode.plan
@@ -243,7 +279,7 @@ class _SidebarState extends State<Sidebar> {
       );
     }
     return Container(
-      height: 32,
+      height: 32 * step,
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: color.bgLayer3,
@@ -260,42 +296,62 @@ class _SidebarState extends State<Sidebar> {
             ),
           ])
             Expanded(
-              child: _Pressable(
-                onTap: () => onSelect(candidate),
-                hoverColor: color.sidebarNavItemActive,
-                borderRadius: BorderRadius.circular(DswShape.control),
-                child: Container(
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: mode == candidate
-                        ? color.sidebarNavItemActive
-                        : null,
+              child: LayoutBuilder(
+                builder: (context, cell) {
+                  // The composer chips' rule, applied to the switch: a cell that
+                  // cannot fit its label sheds the label before the row gives up
+                  // on the control. 71px is 'Agent' at s14 - the wider of the two
+                  // names in English (the 企划 pair is shorter) - and the glyph
+                  // plus its gap cost 20. At the system's 1.8x step the label
+                  // wanted 127.2 in a 126.0 cell and spilled, which is what this
+                  // line replaces; the glyph alone still says which mode is which.
+                  final showLabel = cell.maxWidth >= 20 + 71 * step;
+                  return _Pressable(
+                    onTap: () => onSelect(candidate),
+                    hoverColor: color.sidebarNavItemActive,
                     borderRadius: BorderRadius.circular(DswShape.control),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        icon,
-                        size: 14,
+                    semanticLabel: showLabel ? null : label,
+                    child: Container(
+                      height: 28 * step,
+                      decoration: BoxDecoration(
                         color: mode == candidate
-                            ? color.labelPrimary
-                            : color.labelSecondary,
+                            ? color.sidebarNavItemActive
+                            : null,
+                        borderRadius: BorderRadius.circular(DswShape.control),
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: DswType.s14.copyWith(
-                          color: mode == candidate
-                              ? color.labelPrimary
-                              : color.labelSecondary,
-                        ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            icon,
+                            size: 14,
+                            color: mode == candidate
+                                ? color.labelPrimary
+                                : color.labelSecondary,
+                          ),
+                          if (showLabel) ...[
+                            const SizedBox(width: 6),
+                            // Flexible, not a bare Text: a Row hands a non-flex
+                            // child the whole row width to size itself in, so the
+                            // ellipsis would never have triggered.
+                            Flexible(
+                              child: Text(
+                                label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: DswType.s14.copyWith(
+                                  color: mode == candidate
+                                      ? color.labelPrimary
+                                      : color.labelSecondary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               ),
             ),
         ],
@@ -310,6 +366,9 @@ class _SidebarState extends State<Sidebar> {
     final onToggle = widget.onToggleExtension;
     if (onToggle == null) return const SizedBox.shrink();
     final open = widget.extensionView ?? PlanExtensionView.none;
+    // Only the expanded row carries a label, so only its seat rides the step:
+    // a nailed 32 cut 'Board'/'Calendar'/'Table' at 40.0 wanted, 1.8x's measure.
+    final step = MediaQuery.textScalerOf(context).scale(1);
     final entries = [
       (PlanExtensionView.board, LucideIcons.kanban, context.tr('planBoard')),
       (
@@ -337,7 +396,7 @@ class _SidebarState extends State<Sidebar> {
               onTap: () => onToggle(view),
               borderRadius: BorderRadius.circular(DswShape.control),
               child: Container(
-                height: wide ? 32 : 36,
+                height: wide ? 32 * step : 36,
                 padding: EdgeInsets.symmetric(horizontal: wide ? 8 : 0),
                 decoration: BoxDecoration(
                   color: open == view ? color.interactiveBgHover : null,
@@ -512,31 +571,29 @@ class _SidebarState extends State<Sidebar> {
     ),
   );
 
-  /// The browsing region. On the rail it degrades to an icon that asks for the
-  /// column back, since 36px cannot hold a session title.
-  Widget _sessionList(DswAlias color, {required bool wide}) {
-    if (!wide) {
-      return Align(
-        alignment: AlignmentDirectional.topStart,
-        child: _IconButton(
-          onTap: widget.onToggle,
-          wide: false,
-          tooltip: context.tr('sessions'),
-          builder: (_) => Icon(
-            LucideIcons.message_square,
-            size: 18,
-            color: color.labelPrimary,
-          ),
-        ),
-      );
-    }
+  /// The rail's browsing region: an icon that asks for the column back, since
+  /// 36px cannot hold a session title. The wide column's own list is a sliver
+  /// ([_sessionSlivers]), because its chrome scrolls with it.
+  Widget _sessionList(DswAlias color) => Align(
+    alignment: AlignmentDirectional.topStart,
+    child: _IconButton(
+      onTap: widget.onToggle,
+      wide: false,
+      tooltip: context.tr('sessions'),
+      builder: (_) =>
+          Icon(LucideIcons.message_square, size: 18, color: color.labelPrimary),
+    ),
+  );
 
-    return ListenableBuilder(
-      listenable: widget.sessions,
-      builder: (context, _) {
-        final sessions = widget.sessions.sessions;
-        if (sessions.isEmpty) {
-          return Padding(
+  /// The sessions, as slivers to sit under the column's chrome in one scroll
+  /// view. Called from inside a `ListenableBuilder` on the index, so the list
+  /// stays lazy: the builder only runs for rows the viewport reaches.
+  List<Widget> _sessionSlivers(DswAlias color) {
+    final sessions = widget.sessions.sessions;
+    if (sessions.isEmpty) {
+      return [
+        SliverToBoxAdapter(
+          child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Text(
               widget.sessions.isLoading
@@ -544,19 +601,20 @@ class _SidebarState extends State<Sidebar> {
                   : context.tr('noSessionsYet'),
               style: DswType.xxs12.copyWith(color: color.labelTertiary),
             ),
-          );
-        }
-        return ListView.builder(
-          padding: EdgeInsets.zero,
-          itemCount: sessions.length,
-          itemBuilder: (context, index) => _SessionRow(
-            session: sessions[index],
-            selected: sessions[index].id == widget.sessions.activeId,
-            onTap: () => widget.onOpenSession(sessions[index].id),
           ),
-        );
-      },
-    );
+        ),
+      ];
+    }
+    return [
+      SliverList.builder(
+        itemCount: sessions.length,
+        itemBuilder: (context, index) => _SessionRow(
+          session: sessions[index],
+          selected: sessions[index].id == widget.sessions.activeId,
+          onTap: () => widget.onOpenSession(sessions[index].id),
+        ),
+      ),
+    ];
   }
 
   Widget _footer(DswAlias color, {required bool wide}) => Align(
@@ -859,10 +917,15 @@ class _Pressable extends StatefulWidget {
     required this.child,
     this.hoverColor,
     this.borderRadius,
+    this.semanticLabel,
   });
 
   final VoidCallback onTap;
   final Widget child;
+
+  /// Names the control when nothing in [child] can: the mode cell sheds its
+  /// label once the text step makes it too wide, and a lone glyph is unnamed.
+  final String? semanticLabel;
 
   /// Null means no wash at all — the brand row is a button in behaviour only.
   final Color? hoverColor;
@@ -878,6 +941,7 @@ class _PressableState extends State<_Pressable> {
     final wash = widget.hoverColor ?? context.dsw.interactiveBgHover;
     return DswHoverTap(
       onTap: widget.onTap,
+      semanticLabel: widget.semanticLabel,
       builder: (context, hovered, _) => AnimatedContainer(
         duration: const Duration(milliseconds: 50),
         decoration: BoxDecoration(
@@ -950,28 +1014,35 @@ class _UserAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final profile = this.profile;
-    return Container(
-      width: size,
-      height: size,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: profile == null
-            ? color.bgLayer3
-            : _avatarFill(color, profile.avatarColorIndex),
-      ),
-      child: profile == null
-          ? Icon(
-              LucideIcons.user,
-              size: size * 0.55,
-              color: color.labelTertiary,
-            )
-          : Text(
-              profile.initial,
-              style: DswType.xsStrong13.copyWith(
-                color: color.labelPrimaryForeground,
+    return MediaQuery.withNoTextScaling(
+      // The initial is decoration, not content: the name is spelled out beside it
+      // in the wide footer and the control's accessible name is the quick-menu
+      // label. Grown with the step it wanted 36.0 inside a 28.0 circle (and the
+      // rail has no room for a bigger one), so the glyph rides the circle rather
+      // than the user's setting.
+      child: Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: profile == null
+              ? color.bgLayer3
+              : _avatarFill(color, profile.avatarColorIndex),
+        ),
+        child: profile == null
+            ? Icon(
+                LucideIcons.user,
+                size: size * 0.55,
+                color: color.labelTertiary,
+              )
+            : Text(
+                profile.initial,
+                style: DswType.xsStrong13.copyWith(
+                  color: color.labelPrimaryForeground,
+                ),
               ),
-            ),
+      ),
     );
   }
 }
