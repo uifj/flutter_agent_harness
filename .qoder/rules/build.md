@@ -71,8 +71,8 @@ flutter test
 
 1. 在当前开发机上：`flutter pub get` → `dart format --set-exit-if-changed lib test tool spike` → `dart analyze --fatal-infos lib test tool spike` → `flutter test` 全绿（= pr-check 同口径），且 pr-check 在目标分支上确实绿。
 2. `dart run spike/agent_spike.dart` 重跑，头部 FINDINGS 仍然成立（genkit 版本没动过；或动过且 `lib/genkit/` 投影已适配）。
-3. 真实链路冒烟：`DEEPSEEK_API_KEY=... dart run spike/runtime_smoke.dart`，按该文件头的顺序验：流式回答 → 工具环（listDir + readFile）→ 审批往返（writeFile → interrupt → resume）→ 会话从盘上恢复。
-4. `flutter build macos --release` 成功且 `Agent Harness.app` 能起；首次经 hero picker 授权工作区后，terminal / git / editor / browser 四类 tab 各至少打开一次不崩，并且**新加的表面也各走一遍**：双树（右栏 + 下栏各开 tab、跨树拖拽/右键移动）、企划模式（Markdown 工作台 + 看板/日程/表格扩展面板）、全屏设置与底部快捷菜单、托盘显示/隐藏与全局热键（`Cmd/Ctrl+Shift+H` 系统级、`Cmd/Ctrl+N`、`Cmd/Ctrl+,`）、拖文件入 composer 与 PDF 抽文本、LaTeX/Mermaid 渲染、本地备份/恢复。browser tab 在非 macOS 上是占位降级（§2B），那一格标"待 macOS 验证"或直接在 macOS 上验。
+3. 真实链路冒烟：`DEEPSEEK_API_KEY=... dart run spike/runtime_smoke.dart`，按该文件头的顺序验：流式回答 → 工具环（listDir + readFile）→ 审批往返（writeFile → interrupt → resume）→ 会话从盘上恢复。**当前这条在本机跑不起来**：`dart run` 到 `genkit/tools.dart → state/fs_revision.dart → package:flutter/foundation`（命令行 VM 没有 `dart:ui`）。已登记在 `docs/debt-register.md`（ARC/P1），修它要先立 ADR；在它恢复之前，这一格只能标"未验证"，不要跳过去写"已冒烟"。
+4. `flutter build macos --release` 成功且 `Agent Harness.app` 能起；首次经 hero picker 授权工作区后，terminal / git / editor / browser 四类 tab 各至少打开一次不崩，并且**新加的表面也各走一遍**：双树（右栏 + 下栏各开 tab、跨树拖拽/右键移动）、企划模式（Markdown 工作台 + 看板/日程/表格扩展面板）、全屏设置与底部快捷菜单、托盘显示/隐藏与全局热键（`Cmd/Ctrl+Shift+H` 系统级、`Cmd/Ctrl+N`、`Cmd/Ctrl+,`）、拖文件入 composer 与 PDF 抽文本、LaTeX/Mermaid 渲染、本地备份/恢复（zip 里现在也带 `checkpoints/`）、写入卡片上的回退 pill（预览 → 确认 → 报告，含"被用户自己的编辑挡住"与"镜像没存"那两格）。browser tab 在非 macOS 上是占位降级（§2B），那一格标"待 macOS 验证"或直接在 macOS 上验。
 5. 版本号只在 `pubspec.yaml` 递增过。
 6. `git diff macos/Runner/*.entitlements` 为空（或存在已 ACCEPTED 的 ADR 解释改动）。
 7. 无 key、无证书、无描述文件进入提交（`git status` 与 `git diff --cached` 双查）。
