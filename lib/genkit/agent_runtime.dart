@@ -28,6 +28,7 @@ import '../model/attached_image.dart';
 import '../model/conversation.dart';
 import '../model/mention_expansion.dart';
 import '../model/model_settings.dart';
+import '../model/queued_input.dart';
 import '../model/todo_state.dart';
 import '../model/turn_event.dart';
 import '../model/turn_source.dart';
@@ -469,6 +470,105 @@ class _ToolGatePlugin extends GenkitPlugin {
   ];
 }
 
+const _guideName = 'dshGuideInject';
+
+/// What the user typed while a turn was running, waiting for a model call.
+///
+/// Allocated before the `Genkit` instance and carried by a plugin for the same
+/// reason [_StopFlag] is: middleware can only reach the registry through one.
+class _GuideHolder {
+  final _waiting = <QueuedInput>[];
+
+  void add(QueuedInput input) => _waiting.add(input);
+
+  /// Everything waiting, oldest first, leaving the holder empty.
+  List<QueuedInput> takeAll() {
+    if (_waiting.isEmpty) return const [];
+    final taken = List<QueuedInput>.of(_waiting);
+    _waiting.clear();
+    return taken;
+  }
+
+  void clear() => _waiting.clear();
+}
+
+/// Writes mid-run steering into the request that is about to be sent.
+///
+/// Three facts make this the right seam, all of them recorded in
+/// `spike/agent_spike.dart` and worth re-checking on a version bump:
+/// `GenerateMiddleware.model` runs once per model call of the tool loop;
+/// `ModelRequest.messages` is writable; and the loop derives the *next* turn's
+/// history from the request the middleware was handed. So text added here is
+/// read by this call and then carried by the rest of the run, into the persisted
+/// session — it is a steering input, not a one-shot whisper.
+///
+/// The parts ride on the last user/tool message rather than opening a new one:
+/// the providers map one `Message` to one turn, so a steer lands in the same
+/// turn as the tool results it reacts to instead of creating two adjacent
+/// non-assistant turns.
+class _GuideInjector extends GenerateMiddleware {
+  _GuideInjector(this._guides);
+
+  final _GuideHolder _guides;
+
+  @override
+  Future<ModelResponse> model(
+    ModelRequest request,
+    ActionFnArg<ModelResponseChunk, ModelRequest, void> ctx,
+    Future<ModelResponse> Function(
+      ModelRequest request,
+      ActionFnArg<ModelResponseChunk, ModelRequest, void> ctx,
+    )
+    next,
+  ) {
+    final waiting = _guides.takeAll();
+    if (waiting.isEmpty) return next(request, ctx);
+
+    final parts = [
+      for (final input in waiting) ...[
+        if (input.text.isNotEmpty) TextPart(text: input.text),
+        for (final image in input.images)
+          MediaPart(
+            media: Media(contentType: image.mediaType, url: image.dataUrl),
+          ),
+      ],
+    ];
+    final messages = request.messages;
+    final last = messages.isEmpty ? null : messages.last;
+    if (last != null && (last.role == Role.user || last.role == Role.tool)) {
+      messages[messages.length - 1] = Message(
+        role: last.role,
+        content: [...last.content, ...parts],
+      );
+    } else {
+      messages.add(Message(role: Role.user, content: parts));
+    }
+    request.messages = messages;
+    return next(request, ctx);
+  }
+}
+
+/// Travels as a plugin for the reason stated on [_GuideInjector]. Attached to
+/// the main agent only: a delegation's model calls belong to a different
+/// conversation, and reading the holder there would swallow the parent's steer
+/// before the parent asked again.
+class _GuidePlugin extends GenkitPlugin {
+  _GuidePlugin(this._guides);
+
+  final _GuideHolder _guides;
+
+  @override
+  String get name => _guideName;
+
+  @override
+  List<GenerateMiddlewareDef> middleware() => [
+    defineMiddleware<Map<String, dynamic>>(
+      name: _guideName,
+      create: (config, ctx) => _GuideInjector(_guides),
+    ),
+  ];
+}
+
 /// The side chat's turn source: a thin adapter over the side agent's chat.
 ///
 /// No store — the side thread is one-shot asides, so nothing persists. Each
@@ -517,6 +617,7 @@ class AgentRuntime implements TurnSource {
     required _UsageLedger usage,
     required List<ToolAuditRecord> toolAudit,
     required ApprovalModeHolder approval,
+    required _GuideHolder guides,
     required this.side,
     required this.settings,
     required this.sessionRoot,
@@ -528,7 +629,8 @@ class AgentRuntime implements TurnSource {
        _stop = stop,
        _usage = usage,
        _toolAudit = toolAudit,
-       _approval = approval;
+       _approval = approval,
+       _guides = guides;
 
   /// Builds a runtime for [settings], persisting snapshots under [sessionRoot]
   /// and defaulting the skills directory to `<support>/skills`.
@@ -591,6 +693,7 @@ class AgentRuntime implements TurnSource {
     // up front or the reference would resolve to nothing.
     final usage = _UsageLedger();
     final toolAudit = <ToolAuditRecord>[];
+    final guides = _GuideHolder();
     final ai = Genkit(
       // No `prompts/` directory in this app; skip the lookup entirely.
       promptDir: null,
@@ -599,6 +702,7 @@ class AgentRuntime implements TurnSource {
         _StopGatePlugin(stop),
         _UsagePlugin(usage),
         _ToolGatePlugin(approval, toolAudit, approvalRules),
+        _GuidePlugin(guides),
         AgentsPlugin(),
         SkillsPlugin(),
       ],
@@ -687,6 +791,7 @@ class AgentRuntime implements TurnSource {
         middlewareRef<Map<String, dynamic>>(name: _stopGateName),
         middlewareRef<Map<String, dynamic>>(name: _usageName),
         middlewareRef<Map<String, dynamic>>(name: _toolGateName),
+        middlewareRef<Map<String, dynamic>>(name: _guideName),
         agents(agents: const [_subagentName], maxDelegations: _maxDelegations),
         // The skills middleware contributes a `use_skill` tool even when its
         // scan finds nothing, so only attach it when there is something to
@@ -710,6 +815,7 @@ class AgentRuntime implements TurnSource {
       usage: usage,
       toolAudit: toolAudit,
       approval: approval,
+      guides: guides,
       side: SideChatSource(sideAgent),
       settings: settings,
       sessionRoot: sessionRoot,
@@ -725,6 +831,7 @@ class AgentRuntime implements TurnSource {
   final _UsageLedger _usage;
   final List<ToolAuditRecord> _toolAudit;
   final ApprovalModeHolder _approval;
+  final _GuideHolder _guides;
 
   /// What the tool gate has seen, oldest first, capped at
   /// [_toolAuditCapacity] entries. In memory only for now — the persisted
@@ -795,6 +902,21 @@ class AgentRuntime implements TurnSource {
   String? get sessionId => _chat?.sessionId;
 
   bool get isTurnActive => _turn != null;
+
+  /// Hands [input] to the running turn's next model call.
+  ///
+  /// A turn paused on an approval counts as running: the text waits through the
+  /// pause and is read by the model call that follows the user's verdict. False
+  /// means nothing is open to steer, so the caller sends it as a turn instead.
+  @override
+  bool guide(QueuedInput input) {
+    if (_turn == null && _pendingInterrupts.isEmpty) return false;
+    _guides.add(input);
+    return true;
+  }
+
+  @override
+  List<QueuedInput> takeUndeliveredGuides() => _guides.takeAll();
 
   /// Sends [text], with [images] riding the same message, and streams the
   /// turn.
@@ -1123,6 +1245,10 @@ class AgentRuntime implements TurnSource {
   void startNewSession() {
     _chat = null;
     _pendingInterrupts.clear();
+    // A steer waiting on a conversation that is going away has no turn left to
+    // read it; letting it sit would inject last session's correction into this
+    // one's first model call.
+    _guides.clear();
     _planTools.reset();
     _queueInstructions();
   }
@@ -1137,6 +1263,7 @@ class AgentRuntime implements TurnSource {
     final chat = await _agent.loadChat(sessionId: id);
     _chat = chat;
     _pendingInterrupts.clear();
+    _guides.clear();
     // The restored transcript already carries the instruction block it was
     // started with; re-queueing would send the same folder brief twice.
     _pendingInstructions = null;

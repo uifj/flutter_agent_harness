@@ -94,6 +94,23 @@
 //     recorded in the earlier report was fixed at the projection layer; see
 //     test/restore_projection_test.dart for the locked contract.
 //
+// 15. MID-RUN STEERING WORKS THROUGH `GenerateMiddleware.model` (0.16.1, probe
+//     G). Measured: the hook fires once per model CALL of the tool loop (a
+//     marker written at call #1 was absent from call #0's request and present
+//     in call #1's: `{0: false, 1: true}`); `ModelRequest.messages` is writable
+//     and what is written reaches the model fn; and the loop derives the NEXT
+//     turn's history from the request the middleware was handed — the marker
+//     landed in the persisted snapshot (1 file) even though `chat.messages`
+//     never carries it (see 8). So a steer injected there is read by the rest of
+//     the run and remembered by every later turn.
+//     Deliberate shape: the parts ride on the last user/tool message instead of
+//     opening another non-assistant turn (one provider turn, no adjacent-role
+//     risk). The cost is that a restored transcript cannot show that row — the
+//     text sits inside a `tool` message, and projecting it there would also
+//     invent user rows out of any tool that returns text content.
+//     If a future version rebuilds each request from loop state, this degrades
+//     to a one-shot whisper: re-run probe G after any genkit bump.
+//
 // ===========================================================================
 library;
 
@@ -102,6 +119,7 @@ import 'dart:io';
 
 import 'package:genkit/genkit.dart';
 import 'package:genkit/io.dart';
+import 'package:genkit/plugin.dart' show GenkitPlugin;
 import 'package:schemantic/schemantic.dart';
 
 /// Tool input schema built at runtime. Note this is `SchemanticType.from`, not
@@ -532,6 +550,80 @@ Future<void> main() async {
   }
   stdout.writeln('  sawCustom=$sawCustom');
 
+  // =======================================================================
+  banner(
+    'G. mid-run steering (ADR-0013): the model hook rewrites the request, '
+    'and the loop carries it',
+  );
+  // =======================================================================
+  // Three facts `lib/genkit/agent_runtime.dart`'s `_GuideInjector` depends on
+  // and its own tests cannot see: the `model` hook fires once per model CALL of
+  // the tool loop (not once per turn); `ModelRequest.messages` is writable and
+  // the provider receives what was written; and the loop derives the NEXT turn's
+  // history from the request the middleware held — so a steer injected there is
+  // carried to the end of the run and persisted with it. Should a version bump
+  // make the loop rebuild each request from its own state instead, the
+  // injection degrades into a one-shot whisper that vanishes from the
+  // transcript, and nothing above this file would notice.
+  const marker = _steerMarker;
+  final steerAi = Genkit(promptDir: null, plugins: [_SteerProbePlugin()]);
+  final steerList = steerAi
+      .defineTool<Map<String, dynamic>, Map<String, dynamic>>(
+        name: 'steerList',
+        description: 'List entries of a directory.',
+        inputSchema: objectSchema(
+          {
+            'path': {'type': 'string'},
+          },
+          required: ['path'],
+        ),
+        fn: (input, context) async => ToolResult.response({
+          'entries': ['a.txt', 'b.txt'],
+        }),
+      );
+  final steerSaw = <int, bool>{};
+  defineScriptedModel(steerAi, 'steerloop', (call, req) {
+    steerSaw[call] = req.messages.any(
+      (m) => m.content.any((p) => p.text == marker),
+    );
+    return switch (call) {
+      0 => [
+        modelToolCall('steerList', {
+          'path': '/tmp',
+        }, text: 'Listing the directory. '),
+      ],
+      _ => [modelText('Noted: the failing test comes first.')],
+    };
+  });
+  final steerAgent = steerAi.defineAgent(
+    name: 'steerAgent',
+    model: modelRef('steerloop'),
+    system: 'probe G',
+    tools: [steerList],
+    maxTurns: 4,
+    use: [middlewareRef<Map<String, dynamic>>(name: 'steerProbe')],
+    store: FileSessionStore(sessionDir.path),
+  );
+  final steerChat = steerAgent.chat();
+  final steerTurn = steerChat.sendStream(text: 'what is in /tmp?');
+  await for (final _ in steerTurn.stream) {}
+  final steerResponse = await steerTurn.response;
+  stdout.writeln(
+    '  per model call, did the request carry the marker: $steerSaw',
+  );
+  stdout.writeln('  final answer: ${steerResponse.text}');
+  final carried = steerChat.messages.any(
+    (m) => m.content.any((p) => p.text == marker),
+  );
+  stdout.writeln('  chat history carries the marker: $carried');
+  final persisted = sessionDir
+      .listSync(recursive: true)
+      .whereType<File>()
+      .where((f) => f.readAsStringSync().contains(marker))
+      .length;
+  stdout.writeln('  snapshot files containing the marker: $persisted');
+  await steerAi.shutdown();
+
   await ai.shutdown();
   sessionDir.deleteSync(recursive: true);
   stdout.writeln('\nspike done.');
@@ -547,3 +639,52 @@ String _describeMessage(Message m) => m.content
       return 'other(${p.toJson().keys.toList()})';
     })
     .join(', ');
+
+/// The marker the probe G model call must see, and the hook that puts it there.
+/// Mirrors `_GuideInjector` in agent_runtime.dart: parts ride on the last
+/// user/tool message instead of opening an adjacent non-assistant turn.
+const _steerMarker = '[spike-steer] look at the failing test first';
+
+class _SteerProbe extends GenerateMiddleware {
+  bool injected = false;
+
+  @override
+  Future<ModelResponse> model(
+    ModelRequest request,
+    ActionFnArg<ModelResponseChunk, ModelRequest, void> ctx,
+    Future<ModelResponse> Function(
+      ModelRequest request,
+      ActionFnArg<ModelResponseChunk, ModelRequest, void> ctx,
+    )
+    next,
+  ) {
+    final messages = request.messages;
+    final last = messages.isEmpty ? null : messages.last;
+    if (!injected && last != null && last.role == Role.tool) {
+      injected = true;
+      messages[messages.length - 1] = Message(
+        role: last.role,
+        content: [
+          ...last.content,
+          TextPart(text: _steerMarker),
+        ],
+      );
+      request.messages = messages;
+      stdout.writeln('    [steerProbe] wrote the marker into the tool message');
+    }
+    return next(request, ctx);
+  }
+}
+
+class _SteerProbePlugin extends GenkitPlugin {
+  @override
+  String get name => 'steerProbePlugin';
+
+  @override
+  List<GenerateMiddlewareDef> middleware() => [
+    defineMiddleware<Map<String, dynamic>>(
+      name: 'steerProbe',
+      create: (config, ctx) => _SteerProbe(),
+    ),
+  ];
+}
