@@ -7,9 +7,10 @@
 // wrapper.
 //
 // One deviation to know about: dsh renders headings from its own
-// `--dsw-font-markdown-h*` ramp with 32px/16px margins. The renderer here takes a
-// heading text style but owns the spacing, so heading rhythm is the package's and
-// only the type is dsh's.
+// `--dsw-font-markdown-h*` ramp with 32px/16px margins. The renderer takes a
+// heading text style but owns no heading *spacing*, so the type is dsh's and
+// the rhythm is ZCode's (`mt-6 mb-4` — see [_styleSheet]) because dsh's numbers
+// describe a CSS box model that collapses margins and this one does not.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_mermaid/flutter_mermaid.dart';
@@ -109,6 +110,18 @@ InlineCodeStyle _inlineCode(DswAlias color) => InlineCodeStyle(
 );
 
 GptMarkdownStyleSheet _styleSheet(DswAlias color) => GptMarkdownStyleSheet(
+  // ZCode's heading rhythm is `mt-6 mb-4` on every level
+  // (`ai-elements/message.tsx:442-449`): a title opens a section, so it gets
+  // more air above it than a paragraph break does. Without this the renderer
+  // puts a heading at exactly the same gap as a blank line — which is the
+  // measured shape of "no hierarchy" here (both were 18.4px).
+  //
+  // These are paddings, not the gaps. Flutter has no margin collapsing, so
+  // this air ADDS to the renderer's paragraph break rather than replacing it:
+  // the gap above a title is one paragraph break plus [DswShape.xl].
+  heading: const HeadingStyle(
+    padding: EdgeInsets.only(top: DswShape.xl, bottom: DswShape.lg),
+  ),
   // `CodeBlock.module.css:4-40`: a 12px-radius block with a banner strip
   // carrying the language and the copy control.
   codeBlock: CodeBlockStyle(
