@@ -22,6 +22,8 @@ import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:shadcn_ui/shadcn_ui.dart'
+    show ShadButton, ShadDialog, ShadInput, showShadDialog;
 import 'package:path/path.dart' as p;
 import 'package:re_editor/re_editor.dart';
 
@@ -488,33 +490,51 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
     await _reloadVault();
   }
 
+  /// The shell is the one ADR-0002 Stage 5b mapped `showDialog`/`AlertDialog`
+  /// onto, shared with `primitives/confirm_dialog.dart`: `ShadDialog` for the
+  /// box, `ShadInput` for the field (Material's `OutlineInputBorder` was the
+  /// last hand-drawn chrome left in this surface), and `ShadButton` for both
+  /// actions — outline for Cancel, filled for Create, so the two are
+  /// distinguishable by weight and not only by text.
   Future<String?> _showNameDialog(String title, String hint) async {
     final controller = TextEditingController();
-    final result = await showDialog<String>(
+    final result = await showShadDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => ShadDialog(
         title: Text(title, style: DswType.sStrong14),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: DswType.xxs12.copyWith(color: context.dsw.labelTertiary),
-            border: const OutlineInputBorder(),
-          ),
-          autofocus: true,
-          style: DswType.s14,
-          onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
-        ),
         actions: [
-          TextButton(
+          // One line of chrome each, so the seat rides the text step: measured
+          // 24.0 for a 25.0 label at 1.8x, and shad's `height:` is both the min
+          // and the max of its ConstrainedBox (`button.dart:1130-1143`), so a
+          // nailed 24 cuts the word instead of growing. 24 is what the box is
+          // at 1.0x, so the default step is bit-for-bit unchanged.
+          ShadButton.outline(
+            height: 24 * MediaQuery.textScalerOf(context).scale(1),
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(context.tr('planCancel'), style: DswType.s14),
+            child: Text(context.tr('planCancel')),
           ),
-          TextButton(
+          ShadButton(
+            height: 24 * MediaQuery.textScalerOf(context).scale(1),
             onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: Text(context.tr('planCreate'), style: DswType.sStrong14),
+            child: Text(context.tr('planCreate')),
           ),
         ],
+        child: ShadInput(
+          controller: controller,
+          // The hint is what yields: 'File name (without .md)' wrapped to three
+          // lines inside the field's own box (72.0 wanted, 40.0 given) and cut
+          // itself. The text the user types keeps the line.
+          placeholder: Text(
+            hint,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: DswType.xs13.copyWith(color: context.dsw.labelTertiary),
+          ),
+          style: DswType.s14,
+          autofocus: true,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
+        ),
       ),
     );
     controller.dispose();

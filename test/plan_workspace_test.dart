@@ -193,6 +193,17 @@ void main() {
         await tester.tap(find.text('readme.md'));
         await pumpUntil(tester, find.text('Save'));
         expect(textDefects(tester), isEmpty, reason: 'an open note');
+
+        // The name dialog is a route, and it is the surface's one control that
+        // only exists once the tree header is tapped: title, placeholder, the
+        // two actions. Cancel closes it so no route outlives the measurement.
+        await tester.tap(find.byTooltip('New Note'));
+        await pumpUntil(tester, find.text('Create'));
+        expect(find.text('Cancel'), findsOneWidget);
+        expect(textDefects(tester), isEmpty, reason: 'the name dialog');
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+        expect(find.text('Create'), findsNothing);
         await settle(tester);
       },
     );
