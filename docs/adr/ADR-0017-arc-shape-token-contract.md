@@ -1,11 +1,11 @@
 # ADR-0017: 形状令牌契约（圆角按嵌套深度、选中态与 hover 分离）
 
-- **状态**: IN-PROGRESS @ `c2255c6`（S1+S2 已落并进门禁守卫）+ `74ab800`/`88b9f54`（同日：守卫改成读参数起始 token、4 处漏网字面量收回、侧栏品牌行并线 + 产品名进 i18n）；S3 文本缩放未动
+- **状态**: IN-PROGRESS @ `c2255c6`（S1+S2 已落并进门禁守卫）+ `74ab800`/`88b9f54`（同日：守卫改成读参数起始 token、4 处漏网字面量收回、侧栏品牌行并线 + 产品名进 i18n）；S3 文本缩放未动 · S2b 输入卡三态边已落 @ `b9684f4`
 - **分类**: ARC
 - **优先级**: P1
 - **影响维度**: 生产功能（UI 一致性）/ 可维护性
 - **日期**: 2026-09-29
-- **修复 commit**: `c2255c6`（S1 形状令牌 + S2 选中态）· `74ab800`（侧栏品牌行并线与产品名）· `88b9f54`（守卫改读起始 token + 4 处漏网字面量）；S3 待做
+- **修复 commit**: `c2255c6`（S1 形状令牌 + S2 选中态）· `74ab800`（侧栏品牌行并线与产品名）· `88b9f54`（守卫改读起始 token + 4 处漏网字面量）· `b9684f4`（S2b 输入卡三态边）；S3 待做
 - **来源**: `docs/ui-production-audit-2026-09.md` §2 条 2b、§4.2、§4.6；ZCode `DESIGN.md` 的 radius-by-nesting 律
 
 ## 背景（Evidence）
@@ -61,6 +61,16 @@ static const controlMd = 28.0;    static const hitSlop = 4.0;  // 透明命中�
 
 > **这条底色不在对比度门禁的覆盖面里**：`tool/contrast_check.dart` 的配对全是正文/状态色，`grep -n interactive tool/contrast_check.dart` = 0 命中，所以它既不救 hover 也不救 selected。钉住 selected 的是 `theme_token_test.dart` 里"selected 的 alpha 必须严格落在 hover 与 accent 之间"那条——它守的是**可分辨**，不是 AA。低 alpha 洗色叠加行文字的实际对比度仍是人眼/真机的活（登记表口径：`contrast_check` 之外的面按 ADR-0004 方案 B 处理）。
 
+### S2b 同一条律用在**容器**上：输入卡三态边（本批 @ `b9684f4`）
+
+S2 说的是"两个状态两个 token"，同一条律在输入卡上一直没人执行：`composer.dart` 的卡片只有一枚**静态** `borderL2DarkmodeThin`（6% 黑），于是屏幕上没有任何东西说明"键盘在谁那里"——审计条 4 的"缺乏容器化质感、边界不清"量的就是这件事，而不是圆角或阴影。ZCode 的对应物是一条三态律（`ChatPromptEditor.tsx:347`：`border-input-border` → `hover:border-input-border-hover` → `focus-within:border-input-border-focused`），其**实测**档位是 静置 10% → hover 20%（正好 2×）→ focus 换色相（`styles.css:176-177,196-198`）。
+
+落地按本仓库自己的标度取同一条形状：静置 `borderL2DarkmodeThin`（0.06）→ hover `borderL3`（0.12，正好 2×）→ focus-within `brandPrimary`，`AnimatedContainer` + `DswMotion.fast`（100ms，动效令牌里写明这一档就是 hover/press 反馈）且经 `DswMotion.respecting` 尊重 reduced-motion；焦点优先于 hover，因为"正在打字"才是用户需要知道的状态。
+
+两条刻意的不做：**不换 ZCode 的 `bg-input-focused`**——那要新增一枚底色令牌 × 两个主题，而让这块边界说话的是边不是底；**不新增令牌**——三档全部复用别名层已有字段，这正是 S2 想要的结果（状态可分辨，靠选档位而不是造档位）。
+
+守卫 `test/composer_test.dart` 的 `the card shows which surface has the keyboard`：autofocus → `Tab` 走开 → 指针进 → 指针出 → 点回字段，五段都读**画出来的** `BoxDecoration.border`（不是 widget 参数），末尾再断言三枚 token 互不相等——与 S2 的 `selected ≠ hover` 同形。反向验过：把三态换回一枚静置边即红（`Expected: brandPrimary … Actual: 0.06 black`）。
+
 ### S3 文本缩放（排在后面，本 ADR 只立约不实施）
 
 一个 base scalar → `TextTheme` 全量派生 + `MediaQuery.textScaler` 接住系统缩放。**不许**动 root font-size（ZCode 明写这条，理由是它会让整页比例失衡）。做完即闭环 ADR-0005 的"无文本缩放适配"。
@@ -81,10 +91,10 @@ static const controlMd = 28.0;    static const hitSlop = 4.0;  // 透明命中�
 
 - **守卫（本 ADR 的长期牙齿）**：`test/theme_token_test.dart` 新增一组，扫 `lib/ui/**` 里每一处 `Radius.circular(`，要求括号之后的第一个非空 token **必须是 `DswShape.`**，命中数必须为 0。因为 87 处在本次一并转换，所以守卫可以做成绝对断言而不是 ADR-0011 那种 baseline ratchet。同时断言 `DswShape` 的递减律（`inset < inner < control < card < shell`）——律本身也要被测。
   > **首版守卫是漏的，这条要记住**：它当时写的是 `Radius\.circular\([0-9]`——只认括号后紧跟数字。于是 `BorderRadius.circular(wide ? 12 : 999)`（侧栏 New Session 两处）与 `BorderRadius.circular(_dense ? 14 : 18)`（`capsule_button` 两处）**带着字面量从它眼皮底下过了 4 处**，"94 处清零"那句因此并不成立。改成"读参数起始 token"后，反向验证是做回去：把 `wide ? 12 : 999` 塞回侧栏，守卫立刻红并指名行号。**只认数字形状的正则，等于给"三元里的数字"开了后门**——这一条对任何 `grep` 式门禁都适用。
-- `interactiveSelected` 与 `interactiveBgHover` **必须不相等**（一条断言钉住"两个状态两个 token"，防止以后有人"顺手合并"）。
-- `dart tool/contrast_check.dart` 与 `test/theme_contrast_test.dart` 仍绿（ADR-0004 口径）。
-- 门禁同口径：format / `--fatal-infos` analyze / `check_architecture` / `flutter test` 相对基线（当前 `+821 -2`）零新增失败。
-- 真机前后截图：侧栏（选中 vs 悬停）、composer 容器、代码块三处。终端无 Screen Recording 权限时标"待人工走查"。
+- `interactiveSelected` 与 `interactiveBgHover` **必须不相等**（一条断言钉住"两个状态两个 token"，防止以后有人"顺手合并"）。S2b 同形：`composer_test.dart` 的 `the card shows which surface has the keyboard` 走 autofocus／`Tab`／指针进出／点回字段五段，读的是**画出来的** `BoxDecoration.border`，末尾断言三枚 token 互不相等；反向验过是把三态换回一枚静置边，红。
+- `dart tool/contrast_check.dart` 与 `test/theme_contrast_test.dart` 仍绿（ADR-0004 口径）：S2b 只动**边**不动正文色，`contrast_check` 的配对里本来就没有 `border*`，前后同为 9 对低于 4.5:1。
+- 门禁同口径：format / `--fatal-infos` analyze / `check_architecture` / `flutter test` 相对基线（本批 `+834 -2`）零新增失败。
+- 真机前后截图：侧栏（选中 vs 悬停）、composer 容器、代码块三处。终端无 Screen Recording 权限时标"待人工走查"。**S2b 之后这一条对 composer 只剩"好不好看"**：状态律本身已经可测并且已测，它不再依赖眼睛。
 
 ## 关联（Links）
 
