@@ -88,9 +88,9 @@
 
 ## 4. 测试约定
 
-- 一律 `flutter test`。dev 依赖只有 `flutter_test`，`dart test` 跑不起来（52 个 `*_test.dart` 全部 import `package:flutter_test`，包括纯逻辑的 `test/file_search_test.dart`；`test/` 下另外 4 个文件是辅助替身/探针，不是测试）。
+- 一律 `flutter test`。dev 依赖只有 `flutter_test`，`dart test` 跑不起来（`test/` 下**每一个** `*_test.dart` 都 import `package:flutter_test`，包括纯逻辑的 `test/file_search_test.dart`；条数以 `ls test/*_test.dart | wc -l` 现场为准，别抄文档。另有 3 个手写替身 + 1 个探针，它们不是测试）。
 - **CI 已经在跑这套门禁**（`.github/workflows/pr-check.yml`，push/PR 到 `develop`·`main`）：`dart format --set-exit-if-changed lib test tool spike` + `dart analyze --fatal-infos lib test tool spike` + `flutter test`。本地三条命令与它同口径，`--fatal-infos` 意味着 info 级提示也会拦下你。
-- **当前基线不是绝对全绿**：2026-09-29 在 macOS 开发机首跑 `flutter test` 得 +699 -2，2 个失败已登记在债务表（`app_scope_test` 的 `/var`↔`/private/var` 路径规范化、`plan_workspace_test` 的 `find.text('notes')` 命中两个 widget），都与代理配置改动无关。交付前跑一次记下失败集，只对"零新增失败"负责，别把它们说成自己改坏的，也别顺手改测试断言。
+- **当前基线不是绝对全绿**：2026-09-29 在 macOS 开发机跑到 `+723 -2`（ADR-0009/0010/0011 三批新测试之后；首跑时是 `+699 -2`），2 个失败已登记在债务表（`app_scope_test` 的 `/var`↔`/private/var` 路径规范化、`plan_workspace_test` 的 `find.text('notes')` 命中两个 widget），都与代理配置改动无关。交付前跑一次记下失败集，只对"零新增失败"负责，别把它们说成自己改坏的，也别顺手改测试断言。**通过条数会随加测试漂移，验收口径始终是那两个失败没变多**。
 - 替身手写，命名 `test/fake_*.dart`（现成三个：`fake_turn_source.dart`、`fake_git.dart`、`fake_terminal_process.dart`；`clipboard_probe.dart` 是探针不是测试）。文件系统类测试走真实临时目录，因为要验的是 mtime 排序、跳过 VCS 元数据、二进制早退这类**文件系统事实**，fake 证不出来。
 - 每个测试文件头部用注释写清"本文件要守住的那句话"以及它存在的理由（参考 `test/conversation_controller_test.dart`、`test/file_search_test.dart`）。
 - widget 测试不挂 `AppLocaleScope`，直接断言英文文案。
