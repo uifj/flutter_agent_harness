@@ -176,6 +176,9 @@ const enStrings = <String, String>{
   'chooseDocuments': 'Attach documents (PDF, text)…',
   'pasteImage': 'Paste image from clipboard',
   'pasteImageFailed': 'The clipboard has no image.',
+  'imagesUnsupportedByModel':
+      '"{model}" does not accept images. Attach it as a document instead, '
+      'or pick a vision model in the model menu.',
   'removeAttachment': 'Remove',
   'dropFilesHint': 'Drop images to attach',
   'askEveryTime': 'Ask every time',
@@ -607,6 +610,7 @@ const zhStrings = <String, String>{
   'chooseDocuments': '附加文档（PDF、文本）…',
   'pasteImage': '从剪贴板粘贴图片',
   'pasteImageFailed': '剪贴板中没有图片。',
+  'imagesUnsupportedByModel': '「{model}」不支持图片。请改用附加文档，或在模型菜单里选择支持视觉的模型。',
   'removeAttachment': '移除',
   'dropFilesHint': '拖放图片以添加附件',
   'askEveryTime': '每次询问',

@@ -14,6 +14,8 @@
 // get out of the way.
 
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:agent_harness/model/approval_mode.dart';
 import 'package:agent_harness/model/attached_image.dart';
@@ -26,6 +28,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 
 /// Owns the mode as state, the way `ConversationRoot`'s ListenableBuilder
 /// does: a selector the chip flips must be able to reach the chip, which only
@@ -184,6 +187,85 @@ void main() {
 
       expect(find.text('Choose image files…'), findsOneWidget);
       expect(find.text('Paste image from clipboard'), findsOneWidget);
+    });
+  });
+
+  group('the attach gate', () {
+    // A real 1×1 PNG: the accepted chip decodes its bytes, so a fake payload
+    // would fail for the wrong reason.
+    final pngBytes = base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    );
+    late Directory temp;
+    late File png;
+
+    setUp(() {
+      temp = Directory.systemTemp.createTempSync('composer_attach_');
+      png = File(p.join(temp.path, 'shot.png'))..writeAsBytesSync(pngBytes);
+    });
+
+    tearDown(() => temp.deleteSync(recursive: true));
+
+    ComposerState card(WidgetTester tester) =>
+        tester.state<ComposerState>(find.byType(Composer));
+
+    ModelDirectory serving(String model) => ModelDirectory(
+      current: ModelSettings(apiKey: 'sk-live', model: model),
+    );
+
+    testWidgets('a text-only model refuses the drop and says why', (
+      tester,
+    ) async {
+      List<AttachedImage>? sent;
+      await pump(
+        tester,
+        directory: serving(defaultModel),
+        onSubmit: (text, images) => sent = images,
+      );
+
+      card(tester).addDroppedFiles([png.path]);
+      await tester.pump();
+
+      expect(find.textContaining('does not accept images'), findsOneWidget);
+      await tester.tap(find.byIcon(LucideIcons.arrow_up));
+      await tester.pump();
+      // Nothing was attached, so the send is the empty-draft no-op: the image
+      // did not ride along and did not silently disappear either.
+      expect(sent, isNull);
+    });
+
+    testWidgets('a vision model takes the same drop', (tester) async {
+      List<AttachedImage>? sent;
+      await pump(
+        tester,
+        directory: serving('gpt-4o'),
+        onSubmit: (text, images) => sent = images,
+      );
+
+      card(tester).addDroppedFiles([png.path]);
+      await tester.pump();
+
+      expect(find.textContaining('does not accept images'), findsNothing);
+      await tester.tap(find.byIcon(LucideIcons.arrow_up));
+      await tester.pump();
+      expect(sent, hasLength(1));
+      expect(sent!.single.name, 'shot.png');
+    });
+
+    testWidgets('documents still land when the image is refused', (
+      tester,
+    ) async {
+      final note = File(p.join(temp.path, 'note.md'))
+        ..writeAsStringSync('# hello');
+      await pump(tester, directory: serving(defaultModel));
+
+      card(tester).addDroppedFiles([png.path, note.path]);
+      await tester.pump();
+
+      // The gate is about media parts only: a text document needs no capability
+      // flag, because the app extracts it locally before the send.
+      expect(find.textContaining('does not accept images'), findsOneWidget);
+      expect(find.text('note.md'), findsOneWidget);
     });
   });
 

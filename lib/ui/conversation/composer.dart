@@ -382,6 +382,30 @@ class ComposerState extends State<Composer> {
   // Image attachment
   // ---------------------------------------------------------------------------
 
+  /// The one door images come in through: the picker, the clipboard, a drop.
+  ///
+  /// An image the selected model cannot be sent is refused here, with the
+  /// reason, while the user still has the file — instead of vanishing at the
+  /// provider after the send already cleared the chips (ADR-0010). No model
+  /// directory (tests, previews) means no gate.
+  void _attachImages(List<AttachedImage> incoming) {
+    if (incoming.isEmpty) return;
+    final directory = widget.modelDirectory;
+    if (directory == null || directory.acceptsImages) {
+      setState(() => _images.addAll(incoming));
+      return;
+    }
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(
+        content: Text(
+          context.tr('imagesUnsupportedByModel', {
+            'model': directory.selectedModel,
+          }),
+        ),
+      ),
+    );
+  }
+
   Future<void> _pickImages() async {
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -396,8 +420,7 @@ class ComposerState extends State<Composer> {
         final image = AttachedImage.fromFile(path);
         if (image != null) picked.add(image);
       }
-      if (picked.isEmpty) return;
-      setState(() => _images.addAll(picked));
+      _attachImages(picked);
     } on PlatformException {
       // The picker is unavailable (a test harness, a headless run): the menu
       // item simply does nothing rather than killing the card.
@@ -444,15 +467,13 @@ class ComposerState extends State<Composer> {
 
   void _addPaste(Uint8List bytes) {
     if (!mounted) return;
-    setState(() {
-      _images.add(
-        AttachedImage(
-          name: 'pasted-${_images.length + 1}.png',
-          bytes: bytes,
-          mediaType: 'image/png',
-        ),
-      );
-    });
+    _attachImages([
+      AttachedImage(
+        name: 'pasted-${_images.length + 1}.png',
+        bytes: bytes,
+        mediaType: 'image/png',
+      ),
+    ]);
   }
 
   /// Adds files from a drag-and-drop event. Images become visual attachments;
@@ -469,8 +490,7 @@ class ComposerState extends State<Composer> {
         _addDocument(path);
       }
     }
-    if (picked.isEmpty) return;
-    setState(() => _images.addAll(picked));
+    _attachImages(picked);
   }
 
   // ---------------------------------------------------------------------------
@@ -822,7 +842,11 @@ class ComposerState extends State<Composer> {
   /// The 34px send / stop circle. Both states share the button, so the toggle is
   /// a glyph swap rather than a layout change.
   Widget _primary(DswAlias color) {
-    final enabled = widget.busy || (!widget.blocked && !_wasEmpty);
+    // `_wasEmpty` tracks the draft, but a draft of just an image or a document
+    // is still something to send — the guard `_submit` applies is on all three.
+    final hasPayload =
+        !_wasEmpty || _images.isNotEmpty || _documents.isNotEmpty;
+    final enabled = widget.busy || (!widget.blocked && hasPayload);
     return Tooltip(
       message: widget.busy ? context.tr('stop') : context.tr('send'),
       waitDuration: const Duration(milliseconds: 500),
