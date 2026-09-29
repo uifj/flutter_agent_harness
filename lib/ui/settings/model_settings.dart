@@ -588,7 +588,10 @@ class _SettingsPanelState extends State<SettingsPanel> {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       SizedBox(
-        height: 54,
+        // The action row is one line of chrome, so the whole seat rides the text
+        // step: at 1.8x the label it holds needed more than the 26px this box
+        // leaves after its own 20/8 padding, and was cut mid-glyph.
+        height: 54 * MediaQuery.textScalerOf(context).scale(1),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(10, 20, 14, 8),
           child: Row(
@@ -1501,7 +1504,9 @@ class _SettingCellRowState<T> extends State<_SettingCellRow<T>> {
               onExit: (_) => setState(() => _hovered = false),
               child: AnimatedContainer(
                 duration: DswMotion.respecting(context, DswMotion.fast),
-                height: 36,
+                // One line of chrome, so the seat follows the text step: 36 gave
+                // this row's 14/22 label 36.0 where 40.0 was needed at 1.8x.
+                height: 36 * MediaQuery.textScalerOf(context).scale(1),
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
                   color: _hovered
@@ -1739,7 +1744,10 @@ class _SearchField extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = context.dsw;
     return Container(
-      height: 32,
+      // One line of chrome: the field's text is 14/22, and a nailed 32 left it
+      // 30.0 of box where 40.0 was needed at the system's 1.8x step - the guard
+      // quotes that pair if this line goes back to a constant.
+      height: 32 * MediaQuery.textScalerOf(context).scale(1),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(DswShape.control),
         border: Border.all(color: color.borderL2),
@@ -1943,6 +1951,11 @@ class _Field extends StatelessWidget {
           style: style,
           placeholder: Text(
             hint,
+            // A placeholder is one line, as it is on the web: at the system's
+            // larger text steps a wrapping hint either grew the field or was cut
+            // mid-word, and neither says what the field wants.
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: style.copyWith(color: color.labelDimmed),
           ),
           trailing: trailing,
@@ -2079,11 +2092,14 @@ class _Stepper extends StatelessWidget {
               onTap: value > min ? () => onChanged(value - 1) : null,
             ),
             SizedBox(
-              width: 40,
-              height: 32,
+              // A one-line readout, so both of its dimensions ride the text
+              // step: 40x32 wrapped "13" onto two clipped lines at 1.8x.
+              width: 40 * MediaQuery.textScalerOf(context).scale(1),
+              height: 32 * MediaQuery.textScalerOf(context).scale(1),
               child: Center(
                 child: Text(
                   '$value',
+                  maxLines: 1,
                   style: DswType.s14.copyWith(
                     color: color.labelPrimary,
                     fontFamily: dswFontFamilyCode,
@@ -2252,7 +2268,9 @@ class _RowEditButtonState extends State<_RowEditButton> {
       onTap: widget.onTap,
       builder: (context, hovered, _) => AnimatedContainer(
         duration: DswMotion.respecting(context, DswMotion.fast),
-        height: 28,
+        // One line of chrome: the 12/18 label needed 32.0 at the system's 1.8x
+        // where this seat, less its own stroke, gave it 26.0.
+        height: 28 * MediaQuery.textScalerOf(context).scale(1),
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
           color: hovered ? color.interactiveBgHoverSolid : null,

@@ -9,6 +9,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'amplified_text_probe.dart';
 import 'package:agent_harness/model/app_settings.dart';
 import 'package:agent_harness/model/model_settings.dart';
 import 'package:agent_harness/model/workbench_prefs.dart';
@@ -157,6 +158,7 @@ void main() {
       VoidCallback? onClose,
       WorkbenchPrefs workbenchPrefs = const WorkbenchPrefs(),
       ValueChanged<WorkbenchPrefs>? onPrefsChange,
+      double scale = 1.0,
     }) => tester.pumpWidget(
       MaterialApp(
         theme: dswThemeData(Brightness.light),
@@ -170,13 +172,16 @@ void main() {
         // sits in a `Scaffold`. The text fields need that Material ancestor, so
         // the harness supplies the same one rather than a lighter wrapper.
         home: Scaffold(
-          body: SettingsPanel(
-            settings: settings,
-            onSave: onSave,
-            onClose: onClose ?? () {},
-            onPickFolder: onPickFolder ?? (_) async => null,
-            workbenchPrefs: workbenchPrefs,
-            onPrefsChange: onPrefsChange,
+          body: AmplifiedText(
+            step: scale,
+            child: SettingsPanel(
+              settings: settings,
+              onSave: onSave,
+              onClose: onClose ?? () {},
+              onPickFolder: onPickFolder ?? (_) async => null,
+              workbenchPrefs: workbenchPrefs,
+              onPrefsChange: onPrefsChange,
+            ),
           ),
         ),
       ),
@@ -550,6 +555,52 @@ void main() {
       await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pump();
       expect(changes.last.terminalFontFamily, "'JetBrains Mono', monospace");
+    });
+    // ADR-0017 S3, on the settings panel. Measured at 1.8x before these three
+    // seats were scaled: the search field's 14/22 text wanted 40.0 in the 30.0 a
+    // nailed 32 left it, the action row's dense capsule wanted 32.0 in the 26.0
+    // the 54px header allowed after its own padding, and a provider row wanted
+    // 40.0 in 36.0. All three are one line of chrome, so each now rides the step.
+    group('amplified text', () {
+      testWidgets('no section spills or cuts a label', (tester) async {
+        // Tall enough that the panel's whole content lays out at once: the
+        // sections are a single scroll list, so measuring one page would only
+        // ever see the first.
+        tester.view.physicalSize = const Size(1400, 6000);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+
+        await pump(
+          tester,
+          settings: const AppSettings(model: ModelSettings(apiKey: 'k')),
+          onSave: (_) async {},
+          scale: amplifiedTextStep,
+        );
+        await tester.pumpAndSettle();
+        expect(textDefects(tester), isEmpty, reason: 'every section at once');
+
+        // The provider rows expand on demand, so the panel has to be walked
+        // section by section: the first pass never laid out what a closed
+        // section keeps hidden.
+        // The provider rows and the workbench card expand on demand, so the
+        // panel has to be walked nav by nav: the pass above never laid out what
+        // a closed section keeps hidden.
+        for (final section in const [
+          'General',
+          'Appearance',
+          'Models',
+          'Workbench',
+          'Workspace',
+          'Extensions',
+          'Backup & Restore',
+        ]) {
+          // Both the nav cell and the section's own heading carry the label,
+          // and the tall viewport lays both out at once.
+          await tester.tap(find.text(section).first);
+          await tester.pumpAndSettle();
+          expect(textDefects(tester), isEmpty, reason: section);
+        }
+      });
     });
   });
 }
