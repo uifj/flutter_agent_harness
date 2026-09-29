@@ -1,6 +1,7 @@
 # ADR-0019: 标题栏要不要从系统原生改成应用内自绘（hiddenInset）
 
-- **状态**: PROPOSED
+- **状态**: ACCEPTED（选 ③）／实施 IN-PROGRESS —— 代码已落 `657fe22`，**真机签收未做**，故不得进 RESOLVED（本 ADR 自己的验证条就是这个门槛）
+- **决策修正**: 前置条件 1 在写这份 ADR 时已经满足，只是不在它以为的地方（见下）
 - **分类**: ARC
 - **优先级**: P2
 - **影响维度**: 生产功能（商用观感）/ 跨平台一致性
@@ -41,12 +42,32 @@
 
 **置 PROPOSED 不动手的前置条件（缺一条都不开工）**：
 
-1. "这条会话叫什么"在 `lib/model/` 有单一真值（今天它只在
-   `agent_runtime.sessionTitle(List<Message>)` 里，输入是 genkit 的 `Message`）；
+1. ~~"这条会话叫什么"在 `lib/model/` 有单一真值~~ —— **这条在写 ADR 时就已成立，证据在现场**：
+   `lib/model/conversation.dart:215` 的 `SessionSummary.title` 就是那份真值，
+   运行时在持久化时用 `sessionTitle()` 填它（`agent_runtime.dart:1369`），
+   侧栏那一行读的就是它（`ui/sidebar/sidebar.dart:822`）。
+   实施因此**没有新造真值**，只是把已有的两份（会话标题、工作区目录）交给窗口；
 2. 本机拿到 Screen Recording 权限，或由用户本人走查——否则 ①/②/③ 的观感改动
    全部无法签收，违反 build.md §0"没在当前平台真跑过的不声称成功"；
 3. 若最终选 ①：Windows/Linux 的退化写法要同时定（是保留原生标题栏，
    还是三平台都自绘），并把结论写进 build.md §2B。
+
+## 实施（③，`657fe22`）
+
+- 纯函数 `lib/model/window_title.dart` 的 `composeWindowTitle`：
+  `"<会话> — <目录 basename>"`，只有一半就显示那一半，**两者都没有则返回 null**
+  （窗口是新开的，此时 bundle 名才是诚实的那行）。会话那半在 48 字内先让位——
+  标题栏自己的 ellipsis 会把**目录**挤出去，而目录是用户猜不到的那半。
+- 接线 `lib/state/window_title_service.dart`：听 `SessionIndex`（它同时知道
+  哪条会话是活跃的与它的标题），工作区由 `main` 在 `settingsDocumentProvider`
+  变化时推进来。放在首帧之后、与 tray/hotkeys 同一道缝，因为要等窗口句柄。
+- 守卫 `test/window_title_test.dart` 五条：两半都有／只有目录／只有会话／
+  两者皆无＝null／长句让位后目录仍在。`flutter test` = `+897 -2`（那两条既有失败未变），
+  analyze `--fatal-infos` 无告警，`check_architecture` 新增两文件后仍 0 new（126 个 lib 文件）。
+- **仍未闭环的一半**：`windowManager.setTitle` 是平台通道调用，widget 测不到；
+  本机无 Screen Recording 权限截不到系统标题栏。所以 ③ 的**观感**要用户在 macOS 上
+  看一眼（打开任意会话，标题栏应读作"那句话 — 目录名"），①/② 维持 DEFERRED
+  的理由不变（平台分叉 + 同样看不见就不能签收）。
 
 ## 后果（Consequences）
 
