@@ -26,6 +26,7 @@ import 'package:schemantic/schemantic.dart';
 
 import '../model/approval_mode.dart';
 import '../model/approval_rule.dart';
+import '../model/checkpoint.dart';
 import '../model/workspace.dart';
 import '../state/fs_revision.dart';
 import 'file_search.dart';
@@ -56,8 +57,12 @@ SchemanticType<Map<String, dynamic>> _objectSchema(
 /// Registration happens once, in [define]; the tools read [workspace] at call
 /// time, so opening a different folder does not mean re-registering anything.
 class WorkspaceTools {
-  WorkspaceTools(this._ai, {ApprovalModeHolder? approval, this.rules})
-    : _approval = approval ?? ApprovalModeHolder();
+  WorkspaceTools(
+    this._ai, {
+    ApprovalModeHolder? approval,
+    this.rules,
+    this.checkpoints,
+  }) : _approval = approval ?? ApprovalModeHolder();
 
   final Genkit _ai;
 
@@ -68,6 +73,11 @@ class WorkspaceTools {
   /// when nothing is wired (the spike, a bare runtime in a test), which means
   /// every gated call asks, exactly as it did before ADR-0012.
   final ApprovalRuleBook? rules;
+
+  /// The recorded before-image of every file this tool overwrote (ADR-0014).
+  /// Null leaves the tools exactly as they were before: the write happens and
+  /// nothing can be rewound, which is the honest reading of a bare runtime.
+  final CheckpointSink? checkpoints;
 
   /// Null until the user opens a folder — in which case every tool refuses,
   /// telling the model why.
@@ -260,6 +270,14 @@ class WorkspaceTools {
       return ToolResult.response(
         await _guard(() async {
           final file = File(path);
+          // The before-image has to be read before the overwrite, and it is
+          // read here rather than at the top of the tool because the approval
+          // pause is exactly when someone else may have changed the file.
+          final checkpoint = checkpoints?.record(
+            path: ws.relative(path),
+            after: utf8.encode(content),
+            before: file.existsSync() ? file.readAsBytesSync() : null,
+          );
           file.parent.createSync(recursive: true);
           file.writeAsStringSync(content);
           // The tree's revision: an agent write is the one change the panels
@@ -269,6 +287,7 @@ class WorkspaceTools {
             'ok': true,
             'path': ws.relative(path),
             'bytes': utf8.encode(content).length,
+            if (checkpoint != null) 'checkpoint': checkpoint.id,
           };
         }),
       );
@@ -381,6 +400,13 @@ class WorkspaceTools {
                   newString: newString,
                   replaceAll: replaceAll,
                 );
+          // `current` is the true before-image: bytes as they were the instant
+          // before this write, after the pause and after the re-read.
+          final checkpoint = checkpoints?.record(
+            path: ws.relative(path),
+            after: utf8.encode(outcome.content),
+            before: utf8.encode(current),
+          );
           file.writeAsStringSync(outcome.content);
           // Same announcement as a write: an edit changed the disk, and the
           // tree that shows it should not wait for the user to notice.
@@ -389,6 +415,7 @@ class WorkspaceTools {
             'ok': true,
             'path': ws.relative(path),
             'replacements': outcome.replacements,
+            if (checkpoint != null) 'checkpoint': checkpoint.id,
           };
         }),
       );

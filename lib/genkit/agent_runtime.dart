@@ -25,6 +25,7 @@ import '../model/app_settings.dart';
 import '../model/approval_mode.dart';
 import '../model/approval_rule.dart';
 import '../model/attached_image.dart';
+import '../model/checkpoint.dart';
 import '../model/conversation.dart';
 import '../model/mention_expansion.dart';
 import '../model/model_settings.dart';
@@ -645,6 +646,7 @@ class AgentRuntime implements TurnSource {
     required Directory sessionRoot,
     required Directory support,
     ApprovalRuleBook? approvalRules,
+    CheckpointSink? checkpoints,
   }) {
     final model = settings.model;
     final stop = _StopFlag();
@@ -729,7 +731,12 @@ class AgentRuntime implements TurnSource {
             ),
           );
 
-    final tools = WorkspaceTools(ai, approval: approval, rules: approvalRules);
+    final tools = WorkspaceTools(
+      ai,
+      approval: approval,
+      rules: approvalRules,
+      checkpoints: checkpoints,
+    );
     final planTools = PlanTools(ai);
     final workspaceToolList = tools.define();
 
