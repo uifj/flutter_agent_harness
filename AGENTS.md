@@ -37,13 +37,13 @@
 | --- | --- | --- | --- |
 | `lib/main.dart` | 1 | ~240 | 纯装配：开 store → 恢复工作区授权 → 建 riverpod container（override stores）→ 挂树；并接 `window_manager` / `tray_service` / `hotkey_service`。**不做业务决策** |
 | `lib/genkit/` | 9 | 3.6k | Genkit 唯一的家：`agent_runtime`（投影 + 系统提示 + 审批回路 + 指令注入 + 中途转向的 `_GuideInjector`，ADR-0013）、`tools`（`WorkspaceTools`：工具与 `decideGate` 审批门禁，并在覆盖写之前把 before 镜像交给 `CheckpointSink`，ADR-0014）、`instructions`（工作区 `AGENTS.md` 发现与合并，ADR-0009，纯 Dart）、`shell_run` / `text_edit` / `read_window` / `plan_tools` / `file_search` / `models_endpoint` |
-| `lib/model/` | 24 | 4.5k | 纯 Dart 领域词汇：`conversation` / `turn_event` / `turn_source` / `approval_mode` / `approval_rule`（免问规则，ADR-0012）/ `queued_input`（忙时输入与它的两种投递，ADR-0013）/ `checkpoint`（before 镜像的值、FNV 指纹与 `CheckpointSink` 接口，ADR-0014——它是 `lib/model` 第一次定义"由 genkit 侧消费、由 state 侧实现"的接口）/ `sidebar_tab`（+ `sidebar_state` 双树）/ `split_node` / `workbench` / `workspace` / `plan_task` / `user_profile` / `known_models`（含 `modelAcceptsImages`，ADR-0010）/ `mcp_settings` / 各 settings。手写 `toJson`/`fromJson` |
-| `lib/state/` | 23 | 4.9k | 控制器与持久化：`app_providers`（+ 唯一入库生成件 `app_providers.g.dart`，19 个 provider：stores、read seams、per-controller provider，ADR-0002）、`app_scope`（组合根：runtime 热替换链仍在其中，并在此打开 `approval_rule_store` 与 `checkpoint_store`）、`conversation_controller`、`workbench_controller` / `workbench_store`（双树持久化）、`layout_controller`、`workspace_mode_controller`（企划/代理，ADR-0007）、`plan_task_store`、`approval_rule_store`（`<support>/approvals.json`，按工作区分键，ADR-0012）/ `checkpoint_store`（`<support>/checkpoints/` 的镜像、冲突闸门与 rewind，ADR-0014）、`model_directory`、`session_index`、`backup_service`、`tray_service`、`hotkey_service`、`document_extractor`、`settings_store` / `prefs_store`（原子写）、`streaming_tail` |
+| `lib/model/` | 25 | 4.6k | 纯 Dart 领域词汇：`conversation` / `turn_event` / `turn_source` / `approval_mode` / `approval_rule`（免问规则，ADR-0012）/ `queued_input`（忙时输入与它的两种投递，ADR-0013）/ `checkpoint`（before 镜像的值、FNV 指纹与 `CheckpointSink` 接口，ADR-0014）、`fs_revision`（工作区文件版本号，**纯 Dart 的监听表**，ADR-0015——`lib/model` 里第一个全局可变单例，理由写在该文件头部）——它是 `lib/model` 第一次定义"由 genkit 侧消费、由 state 侧实现"的接口）/ `sidebar_tab`（+ `sidebar_state` 双树）/ `split_node` / `workbench` / `workspace` / `plan_task` / `user_profile` / `known_models`（含 `modelAcceptsImages`，ADR-0010）/ `mcp_settings` / 各 settings。手写 `toJson`/`fromJson` |
+| `lib/state/` | 22 | 4.9k | 控制器与持久化：`app_providers`（+ 唯一入库生成件 `app_providers.g.dart`，19 个 provider：stores、read seams、per-controller provider，ADR-0002）、`app_scope`（组合根：runtime 热替换链仍在其中，并在此打开 `approval_rule_store` 与 `checkpoint_store`）、`conversation_controller`、`workbench_controller` / `workbench_store`（双树持久化）、`layout_controller`、`workspace_mode_controller`（企划/代理，ADR-0007）、`plan_task_store`、`approval_rule_store`（`<support>/approvals.json`，按工作区分键，ADR-0012）/ `checkpoint_store`（`<support>/checkpoints/` 的镜像、冲突闸门与 rewind，ADR-0014）、`model_directory`、`session_index`、`backup_service`、`tray_service`、`hotkey_service`、`document_extractor`、`settings_store` / `prefs_store`（原子写）、`streaming_tail` |
 | `lib/host/` | 4 | 0.8k | 宿主能力：`git`、`terminal_manager`、`project_folder_ops`（security-scoped bookmark）、`profile_repository`（ADR-0006 S1，用户 Profile） |
 | `lib/ui/` | 55 | ~21.5k | 界面：`workbench/`（16，含 `tabs/` 9、`tab_registry`、`workbench_tab_bar` 右键菜单）、`primitives/`（15，卡片/代码块/diff/终端等自绘件）、`conversation/`（13，含 `assistant_markdown`：LaTeX + Mermaid，与 `input_queue_panel`：忙时队列条）、`layout/columns.dart`（约束求解）、`plan/`（2，企划工作台 + 扩展面板）、`settings/`（3：全屏设置 + `widgets/` 卡片与级联快捷菜单）、`sidebar`、`tool/`（2：`tool_card` 与它读的 `checkpoint_scope`，卡片上那枚回退 pill 属于 ADR-0014）、根 `app_frame.dart`（五区外壳）+ `appearance_scope.dart` |
 | `lib/theme/` | 6 | 1.0k | `dsw_alias`（令牌）→ `dsw_theme`（挂到 `ThemeData` + `DswShadow` elevation ramp）→ `dsw_typography` / `dsw_motion` / `dsw_static` / `dsw_shad_bridge`（DswAlias→ShadColorScheme） |
 | `lib/l10n/` | 1 | 0.9k | `locales.dart`：en/zh 双字典（键集对齐由 `test/l10n_parity_test.dart` 守卫，ADR-0008；条数不写死）+ `AppLocaleScope` + `context.tr()`，zh 逐键回退 en |
-| `spike/` | 2 | — | `agent_spike.dart`（genkit 真实形状的可执行证据，头部 FINDINGS）、`runtime_smoke.dart`（命令行驱动 runtime 的验收门——**当前 `dart run` 在本机编译不过**，链路 `genkit/tools.dart → state/fs_revision.dart → flutter/foundation`，已登记） |
+| `spike/` | 2 | — | `agent_spike.dart`（genkit 真实形状的可执行证据，头部 FINDINGS）、`runtime_smoke.dart`（命令行驱动 runtime 的验收门：没有 Flutter、没有 UI 也能把工具环跑起来。它能编译的前提是 ADR-0015，并由 `check_architecture` 规则 6 守着） |
 | `tool/` | 2 | — | `contrast_check.dart`：对 `dsw_static` + `dsw_alias` 做 WCAG 对比度三求值（dart:io/dart:math only），`dart tool/contrast_check.dart`；`check_architecture.dart`：五条架构规则的指纹 baseline 门禁（ADR-0011），baseline 落 `tool/architecture_baseline.json` |
 | `packages/board_panel/` | — | — | **入库的本地包**（path 依赖，ADR-0007 D5 记录为 ADR-0001"vendored 不入库"的例外）：看板/日程/表格扩展面板，由 `ui/plan/plan_extensions_view.dart` 消费，数据来自 `state/plan_task_store.dart` |
 | `packages/flutter-shadcn-ui/` | — | — | **vendored 源码镜像，`.gitignore` 排除**（ADR-0001）。`shadcn_ui` 0.56.3 已是 pubspec 依赖（ADR-0002 实施中），但配色仍走 `dsw_*`（经 `theme/dsw_shad_bridge.dart`）。查组件 API 用入库的 `.qoder/skills/shadcn-ui-flutter/`；读实现看此目录或上游 `nank1ro/flutter-shadcn-ui` `0.56.3` |
@@ -56,11 +56,12 @@
 grep -rn "package:genkit" lib/ | grep -v "^lib/genkit/"   # 必须为空（注释文字除外）
 grep -rln "package:flutter" lib/model/                    # 必须为空
 grep -rn "\.\./ui/" lib/state/                            # 只有 layout_controller 一条已知例外
+grep -rn "package:flutter\|\.\./state/" lib/genkit/       # 必须为空：运行时不许碰 Flutter，也不许伸进 lib/state（ADR-0015）
 ```
 
 Genkit 变更只应砸 `lib/genkit/` 两个文件，而不是穿过 widget 树；`lib/model/` 是运行时与 UI 之间的唯一词汇表。唯一被放行的例外是 `test/restore_projection_test.dart`（它要构造持久化形状），别顺手清掉。完整表述与例外登记见 `.qoder/rules/workflow.md` §0。
 
-这三行 grep 现在有一条命令代替：**`dart tool/check_architecture.dart`**（ADR-0011）。它按五条规则（三条不变量 + `lib/ui` 不直接 `dart:io` + riverpod 只在装配根）用**指纹 baseline + 只拦新增**运作，并由 `test/architecture_check_test.dart` 跟着 `flutter test` 一起在 CI 上跑。`tool/architecture_baseline.json` 是今日实况，不是豁免清单。
+这四行 grep 现在有一条命令代替：**`dart tool/check_architecture.dart`**（ADR-0011，规则 6 由 ADR-0015 补）。它按六条规则（三条不变量 + 运行时不碰 Flutter/state + `lib/ui` 不直接 `dart:io` + riverpod 只在装配根）用**指纹 baseline + 只拦新增**运作，并由 `test/architecture_check_test.dart` 跟着 `flutter test` 一起在 CI 上跑。`tool/architecture_baseline.json` 是今日实况，不是豁免清单。
 
 ## 4. 环境与命令
 
@@ -73,7 +74,7 @@ flutter test test/conversation_controller_test.dart     # 守住流式拆分这�
 dart tool/contrast_check.dart            # 主题令牌 WCAG 对比度三求值（ADR-0004 的门禁）
 dart tool/check_architecture.dart        # 架构门禁（ADR-0011）；--update 只在债务减少时跑
 dart run spike/agent_spike.dart          # genkit 升版后必跑，核对头部 FINDINGS
-dart run spike/runtime_smoke.dart        # 离线冒烟；带 DEEPSEEK_API_KEY 真跑工具环与审批。当前本机编译不过（genkit 经 `state/fs_revision.dart` 摸到 flutter），修它需先立 ADR
+dart run spike/runtime_smoke.dart        # 离线冒烟（无 key 走 no-key 路径）；带 DEEPSEEK_API_KEY 真跑工具环与审批
 flutter build macos --release            # 需 macOS + Xcode + CocoaPods
 flutter build windows --release          # 需 VS C++ 桌面负载 + CMake（+ nuget，见 build.md §2B）
 flutter build linux --release            # 需 GTK 工具链
@@ -115,7 +116,7 @@ flutter build linux --release            # 需 GTK 工具链
 
 ## 8. 现状缺口（以登记表为准）
 
-已知缺口的分类、优先级、状态一律看 [docs/debt-register.md](docs/debt-register.md)：`README.md` 与 `CHANGELOG.md` 仍是包模板、macOS 签名/公证缺口与 `.gitignore` 缺证书规则、版本仍 `0.0.1`、无文本缩放适配、ADR-0005 那三项"仅持久化未接线"的偏好、**`spike/runtime_smoke.dart` 这道"真实链路"门当前不可运行**（ADR-0012/0013/0014 的带 key 签收都卡在它上面）。（i18n 双语对齐的守卫缺口已由 ADR-0008 闭环。）**修任何一个之前先按 `docs/README.md` 立 ADR 并置 ACCEPTED。**
+已知缺口的分类、优先级、状态一律看 [docs/debt-register.md](docs/debt-register.md)：`README.md` 与 `CHANGELOG.md` 仍是包模板、macOS 签名/公证缺口与 `.gitignore` 缺证书规则、版本仍 `0.0.1`、无文本缩放适配、ADR-0005 那三项"仅持久化未接线"的偏好。（`spike/runtime_smoke.dart` 那道"真实链路"门曾不可运行，已由 ADR-0015 修好并加进门禁；ADR-0012/0013/0014 的收尾现在只等一把 API key。）（i18n 双语对齐的守卫缺口已由 ADR-0008 闭环。）**修任何一个之前先按 `docs/README.md` 立 ADR 并置 ACCEPTED。**
 
 **测试基线（本机 macOS，2026-09-29）不是绝对全绿**：`flutter test` 得 `+781 -2`，两个既有失败（macOS temp 路径 `/var`↔`/private/var` 规范化、企划树 `find.text('notes')` 命中两处）已登记在债务表的待立 ADR 观察里。验收口径因此是**相对基线零新增失败**，不是"全绿"；通过条数会随加测试漂移，别把它当常数，也不要为了让套件变绿去改那两条断言。
 
