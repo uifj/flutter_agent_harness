@@ -9,6 +9,7 @@
 import 'approval_mode.dart';
 import 'attached_image.dart';
 import 'conversation.dart';
+import 'queued_input.dart';
 import 'turn_event.dart';
 
 abstract interface class TurnSource {
@@ -25,6 +26,17 @@ abstract interface class TurnSource {
     required String ref,
     required bool approved,
   });
+
+  /// Hands [input] to the running turn, to be read at its next model call.
+  ///
+  /// Returns false when nothing is running — the caller then has to deliver it
+  /// itself, as a turn. A true return is not a promise the model read it yet:
+  /// a turn that is only streaming an answer never makes another model call, so
+  /// what it holds comes back out of [takeUndeliveredGuides].
+  bool guide(QueuedInput input);
+
+  /// Guides a running turn never reached, oldest first; emptied by reading.
+  List<QueuedInput> takeUndeliveredGuides();
 
   /// Sets how gated tools behave from the next call. Live — no rebuild.
   set approvalMode(ApprovalMode mode);
