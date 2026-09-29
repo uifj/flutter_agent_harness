@@ -12,6 +12,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:path/path.dart' as p;
+
 /// The image extensions Flutter's own decoders handle — the same set
 /// `matchFileViewer` in the sidebar registry treats as images.
 const imageExtensions = {
@@ -56,17 +58,12 @@ class AttachedImage {
     final mediaType = mediaTypeOf(file);
     if (mediaType == null) return null;
     return AttachedImage(
-      name: _basename(file),
+      name: p.basename(file),
       // Synchronous on purpose: picked images are local and small, and the
       // composer's menu handler is already async — a second await would buy
       // nothing but a frame of spinner over a millisecond of disk.
       bytes: File(file).readAsBytesSync(),
       mediaType: mediaType,
     );
-  }
-
-  static String _basename(String path) {
-    final slash = path.lastIndexOf('/');
-    return slash < 0 ? path : path.substring(slash + 1);
   }
 }
