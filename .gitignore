@@ -37,6 +37,11 @@ migrate_working_dir/
 dart_sources.md
 repomix-output.*
 
+# Local archive of third-party reference sources (~88 MB, untracked by intent).
+# Not a pubspec dependency and no code imports it; keeping it out of the repo
+# avoids a one-way 88 MB commit. Do not `git add -A` at the repository root.
+/_archive_project/
+
 # Vendored third-party UI reference clone, intentionally untracked.
 # It is not a pubspec dependency and no code imports it; keep provenance and
 # pinned version in the ADR instead of 5.7 MB of upstream history.
