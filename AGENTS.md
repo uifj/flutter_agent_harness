@@ -118,7 +118,7 @@ flutter build linux --release            # 需 GTK 工具链
 
 已知缺口的分类、优先级、状态一律看 [docs/debt-register.md](docs/debt-register.md)：`README.md` 与 `CHANGELOG.md` 仍是包模板、macOS 签名/公证缺口与 `.gitignore` 缺证书规则、版本仍 `0.0.1`、ADR-0005 那几项"仅持久化未接线"的偏好（`previewMode`/正文字体族/界面皮肤；`fontSize` 已由 ADR-0017 S3 接上，余下的是**非 AppFrame 那约 73 处紧座位在放大文本下仍未测**）。（`spike/runtime_smoke.dart` 那道"真实链路"门曾不可运行，已由 ADR-0015 修好并加进门禁；ADR-0012/0013/0014 的收尾现在只等一把 API key。）（i18n 双语对齐的守卫缺口已由 ADR-0008 闭环。）**修任何一个之前先按 `docs/README.md` 立 ADR 并置 ACCEPTED。**
 
-**测试基线（本机 macOS，2026-09-30 校准）不是绝对全绿**：`flutter test` 得 `+890 -2`，两个既有失败（macOS temp 路径 `/var`↔`/private/var` 规范化、企划树 `find.text('notes')` 命中两处）已登记在债务表的待立 ADR 观察里。验收口径因此是**相对基线零新增失败**，不是"全绿"；通过条数会随加测试漂移，别把它当常数，也不要为了让套件变绿去改那两条断言。
+**测试基线（本机 macOS，2026-09-30 校准）不是绝对全绿**：`flutter test` 得 `+891 -2`，两个既有失败（macOS temp 路径 `/var`↔`/private/var` 规范化、企划树 `find.text('notes')` 命中两处）已登记在债务表的待立 ADR 观察里。验收口径因此是**相对基线零新增失败**，不是"全绿"；通过条数会随加测试漂移，别把它当常数，也不要为了让套件变绿去改那两条断言。
 
 **CI 已经有了**（`.github/workflows/`，commit `d09b92d`）：`pr-check.yml` 在 push/PR 到 `develop`·`main` 上跑 format + `dart analyze --fatal-infos` + `flutter test`；`build.yml` 是 `workflow_dispatch` 手动三平台出包并可选发 GitHub Release。**但它只保证门禁命令，不等于签名/公证已过**——CI 产物依旧 ad-hoc，见 `build.md` §4/§5。
 
