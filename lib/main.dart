@@ -343,6 +343,10 @@ class _DshAppState extends ConsumerState<DshApp> {
           workspaceRoot: doc.workspaceRoot,
           onPickWorkspace: scope.pickFromHero,
           onOpenSettings: () => setState(() => _settingsOpen = true),
+          // ADR-0014 S3: the card offers the undo, the scope decides whether
+          // there is a folder to undo inside and which conversation owns it.
+          onPreviewRewind: scope.previewRewind,
+          onRewind: scope.rewindCheckpoint,
         ),
       ),
     );

@@ -53,11 +53,7 @@ class RewindSkip {
 
 /// One file a rewind would touch, as the confirmation shows it.
 class RewindFile {
-  const RewindFile({
-    required this.path,
-    required this.deletes,
-    required this.blocked,
-  });
+  const RewindFile({required this.path, required this.deletes, this.blockedBy});
 
   final String path;
 
@@ -65,9 +61,13 @@ class RewindFile {
   /// created by the agent.
   final bool deletes;
 
-  /// True when the rewind leaves it alone — a later edit outside the agent, or
-  /// an image that is no longer stored.
-  final bool blocked;
+  /// Why the rewind leaves this one alone — a later edit outside the agent, or
+  /// an image that is no longer stored — or null when it does touch it. The
+  /// reason travels rather than a bare flag: a confirmation that says "this one
+  /// is not going back" without saying why is one the user cannot judge.
+  final RewindSkipReason? blockedBy;
+
+  bool get blocked => blockedBy != null;
 }
 
 class RewindReport {
@@ -291,7 +291,7 @@ class CheckpointStore extends ChangeNotifier implements CheckpointSink {
       RewindFile(
         path: target.goal.path,
         deletes: target.goal.wasCreated,
-        blocked: target.blocked != null,
+        blockedBy: target.blocked,
       ),
   ];
 

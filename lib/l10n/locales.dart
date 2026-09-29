@@ -177,6 +177,17 @@ const enStrings = <String, String>{
   'deliveryGuide': 'Steer this turn',
   'dragToReorder': 'Drag to reorder',
 
+  // Going back through a recorded file write (ADR-0014)
+  'rewindPill': 'Undo this write',
+  'rewindTitle': 'Go back to before this write?',
+  'rewindConfirm': 'Go back',
+  'rewindNothing': 'Nothing left to undo.',
+  'rewindRestores': 'Restores',
+  'rewindDeletes': 'Deletes',
+  'rewindSkips': 'Leaves alone',
+  'rewindWhyChanged': 'edited outside the agent',
+  'rewindWhyNoImage': 'no before-image was stored',
+
   // The composer's tool row
   'attachImage': 'Attach images',
   'attach': 'Attach',
@@ -626,6 +637,16 @@ const zhStrings = <String, String>{
   'deliveryQueue': '本轮结束后',
   'deliveryGuide': '转向本轮',
   'dragToReorder': '拖拽改序',
+
+  'rewindPill': '撤销这次写入',
+  'rewindTitle': '回到这次写入之前？',
+  'rewindConfirm': '回到之前',
+  'rewindNothing': '没有可以撤销的内容。',
+  'rewindRestores': '将恢复',
+  'rewindDeletes': '将删除',
+  'rewindSkips': '保持不变',
+  'rewindWhyChanged': '在代理之外被修改',
+  'rewindWhyNoImage': '未保存改动前的内容',
 
   // The composer's tool row
   'attachImage': '添加图片',

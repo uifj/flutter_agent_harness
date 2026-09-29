@@ -16,17 +16,21 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
+import '../../l10n/locales.dart';
 import '../../model/conversation.dart';
+import '../../state/checkpoint_store.dart';
 import '../../state/details_selection.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_theme.dart';
+import '../primitives/confirm_dialog.dart';
 import '../primitives/tappable.dart';
 import '../../theme/dsw_typography.dart';
 import '../primitives/disclosure_row.dart';
 import '../appearance_scope.dart';
 import '../primitives/row_sweep.dart';
 import '../primitives/state_dot.dart';
+import 'checkpoint_scope.dart';
 
 class ToolCard extends StatefulWidget {
   const ToolCard({super.key, required this.node});
@@ -142,12 +146,19 @@ class _ToolCardState extends State<ToolCard> {
     ],
   );
 
-  /// `.bodyWrap`: the IN/OUT card (figma 1249:35657) with the Inspect pill under
+  /// `.bodyWrap`: the IN/OUT card (figma 1249:35657) with the pills under
   /// it. A sibling of the header row rather than part of it, which is what keeps
   /// a click in here from toggling the row.
+  ///
+  /// The second pill is this build's own, not dsh's (ADR-0014): a `write` or
+  /// `edit` that left a checkpoint can offer to go back through it. Only those
+  /// two tools can, because only those two are intercepted as file mutations.
   Widget? _body(DswAlias color, _ToolRowModel model) {
     if (!model.expandable) return null;
     final selection = DetailsSelectionScope.maybeOf(context);
+    final checkpoint = model.checkpointId;
+    final rewindable =
+        checkpoint != null && CheckpointScope.maybeOf(context) != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -156,14 +167,104 @@ class _ToolCardState extends State<ToolCard> {
         // No scope, no pill: a transcript mounted without one has nowhere to
         // send the selection, and a dead affordance is worse than none.
         if (selection != null)
-          _InspectPill(
+          _QuietPill(
             revealed: _hovered,
+            // dsh's `IconInspectOutline12` is the `</>` glyph: two chevrons
+            // around a slash.
+            icon: LucideIcons.code,
+            label: 'Inspect',
             onTap: () =>
                 selection.select(callId: widget.node.id, toolName: model.title),
+          ),
+        if (rewindable)
+          _QuietPill(
+            revealed: _hovered,
+            icon: LucideIcons.undo_2,
+            label: context.tr('rewindPill'),
+            onTap: () => _rewind(checkpoint),
           ),
       ],
     );
   }
+
+  /// Preview, confirm, go, report.
+  ///
+  /// The preview comes first because the confirmation has to be honest about the
+  /// files it cannot touch: a rewind whose every file was edited outside the
+  /// agent is worth declining, and the user should learn that before their files
+  /// change rather than after.
+  Future<void> _rewind(String checkpointId) async {
+    final service = CheckpointScope.maybeOf(context);
+    if (service == null) return;
+    final files = service.preview(checkpointId);
+    if (files.isEmpty) {
+      _report(context.tr('rewindNothing'));
+      return;
+    }
+    final confirmed = await showConfirmDialog(
+      context,
+      title: context.tr('rewindTitle'),
+      description: _describe(
+        restored: [
+          for (final file in files)
+            if (!file.blocked && !file.deletes) file.path,
+        ],
+        deleted: [
+          for (final file in files)
+            if (!file.blocked && file.deletes) file.path,
+        ],
+        skipped: [
+          for (final file in files)
+            if (file.blocked) '${file.path} · ${_reason(file.blockedBy!)}',
+        ],
+      ),
+      confirmLabel: context.tr('rewindConfirm'),
+    );
+    if (!confirmed || !mounted) return;
+    final report = service.rewind(checkpointId);
+    if (report.didNothing) {
+      _report(context.tr('rewindNothing'));
+      return;
+    }
+    _report(
+      _describe(
+        restored: report.restored,
+        deleted: report.deleted,
+        skipped: [for (final skip in report.skipped) skip.path],
+      ),
+    );
+  }
+
+  /// One line per group, in the order the rewind acts on them. The same builder
+  /// writes the confirmation and the report after it, so the two cannot tell
+  /// different stories about one rewind.
+  String _describe({
+    required List<String> restored,
+    required List<String> deleted,
+    required List<String> skipped,
+  }) => [
+    for (final group in <(String, List<String>)>[
+      (context.tr('rewindRestores'), restored),
+      (context.tr('rewindDeletes'), deleted),
+      (context.tr('rewindSkips'), skipped),
+    ])
+      if (group.$2.isNotEmpty) '${group.$1} ${_names(group.$2)}',
+  ].join('\n');
+
+  /// A long list caps itself rather than pushing the dialog off the screen; the
+  /// count of what is not shown stays visible so the truncation is not silent.
+  String _names(List<String> names) => names.length <= _rewindListCap
+      ? names.join(', ')
+      : '${names.take(_rewindListCap).join(', ')} +${names.length - _rewindListCap}';
+
+  String _reason(RewindSkipReason reason) => switch (reason) {
+    RewindSkipReason.changedOutsideAgent => context.tr('rewindWhyChanged'),
+    RewindSkipReason.imageUnavailable => context.tr('rewindWhyNoImage'),
+  };
+
+  void _report(String message) => ScaffoldMessenger.maybeOf(
+    context,
+  )?.showSnackBar(SnackBar(content: Text(message)));
 
   Widget _ioCard(DswAlias color, _ToolRowModel model) {
     final input = model.input;
@@ -236,8 +337,11 @@ class _ToolCardState extends State<ToolCard> {
 }
 
 // -----------------------------------------------------------------------------
-// Inspect pill
+// Quiet pills
 // -----------------------------------------------------------------------------
+
+/// How many names one rewind line spells out before it counts the rest.
+const _rewindListCap = 6;
 
 /// `.inspectButton`: a quiet 11/16 pill in real flow under the expanded body's
 /// bottom-left corner, revealed by hovering anywhere on the call.
@@ -249,11 +353,20 @@ class _ToolCardState extends State<ToolCard> {
 /// dsh's pill jumps to the trajectory record for the call. This build has no
 /// trajectory, so it points at the details column instead — the same gesture
 /// ("show me more about this call") landing on the richest view there is here,
-/// and the seat dsh's own `openDetails` was cut for.
-class _InspectPill extends StatelessWidget {
-  const _InspectPill({required this.revealed, required this.onTap});
+/// and the seat dsh's own `openDetails` was cut for. The rewind pill is the same
+/// chrome with a different promise, which is why the label and glyph are
+/// parameters rather than a second copy of this widget.
+class _QuietPill extends StatelessWidget {
+  const _QuietPill({
+    required this.revealed,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   final bool revealed;
+  final IconData icon;
+  final String label;
   final VoidCallback onTap;
 
   @override
@@ -268,7 +381,7 @@ class _InspectPill extends StatelessWidget {
         curve: DswMotion.easeInOut,
         child: DswHoverTap(
           onTap: onTap,
-          semanticLabel: 'Inspect',
+          semanticLabel: label,
           excludeSemantics: true,
           builder: (context, hovered, _) => Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -283,15 +396,13 @@ class _InspectPill extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  // `IconInspectOutline12` is the `</>` glyph: two chevrons
-                  // around a slash.
-                  LucideIcons.code,
+                  icon,
                   size: 12,
                   color: hovered ? color.labelPrimary : color.labelSecondary,
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  'Inspect',
+                  label,
                   style: DswType.xs13.copyWith(
                     fontSize: 11,
                     height: 16 / 11,
@@ -387,6 +498,7 @@ class _ToolRowModel {
     required this.output,
     required this.outputIsError,
     required this.state,
+    required this.checkpointId,
   });
 
   final String title;
@@ -400,6 +512,12 @@ class _ToolRowModel {
   final String? output;
   final bool outputIsError;
   final _RowState state;
+
+  /// The checkpoint this call recorded, or null when there is nothing to go back
+  /// to (ADR-0014). Only the two file-mutating tools are intercepted, so an
+  /// output that merely carries a `checkpoint` key from another tool — an MCP
+  /// server's, say — offers no pill rather than a promise the store cannot keep.
+  final String? checkpointId;
 
   bool get expandable => input != null || output != null;
 
@@ -430,7 +548,17 @@ class _ToolRowModel {
       output: output == null || output.isEmpty ? null : output,
       outputIsError: node.errorMessage != null,
       state: state,
+      checkpointId: variant == _RowVariant.write || variant == _RowVariant.edit
+          ? _checkpointOf(node.output)
+          : null,
     );
+  }
+
+  /// The id the write/edit tool put in its own output, if it put one there.
+  static String? _checkpointOf(Object? output) {
+    if (output is! Map) return null;
+    final id = output['checkpoint'];
+    return id is String && id.isNotEmpty ? id : null;
   }
 
   /// The first preferred string argument, then any string argument, then the

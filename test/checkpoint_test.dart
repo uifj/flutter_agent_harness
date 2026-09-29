@@ -284,6 +284,9 @@ void main() {
       expect(shown.map((file) => file.path), ['a.dart', 'b.dart']);
       expect(shown.first.blocked, isFalse);
       expect(shown.last.blocked, isTrue);
+      // The reason travels with the row: the confirmation is what the user
+      // judges, and "not going back" without "why" is not judgeable.
+      expect(shown.last.blockedBy, RewindSkipReason.changedOutsideAgent);
 
       final report = rewind(first.id);
       expect(report.restored, ['a.dart']);

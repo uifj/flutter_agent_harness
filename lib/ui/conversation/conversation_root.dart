@@ -21,12 +21,14 @@ import '../../l10n/locales.dart';
 import '../../model/approval_mode.dart';
 import '../../model/conversation.dart';
 import '../../model/workspace_index.dart';
+import '../../state/checkpoint_store.dart';
 import '../../state/conversation_controller.dart';
 import '../../state/model_directory.dart';
 import '../../state/streaming_tail.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../appearance_scope.dart';
+import '../tool/checkpoint_scope.dart';
 import 'approval_panel.dart';
 import 'chat_view.dart';
 import 'composer.dart';
@@ -97,6 +99,8 @@ class ConversationRoot extends StatefulWidget {
     this.workspaceRoot,
     this.onPickWorkspace,
     this.onOpenSettings,
+    this.onPreviewRewind,
+    this.onRewind,
   });
 
   final ConversationController conversation;
@@ -123,6 +127,13 @@ class ConversationRoot extends StatefulWidget {
   /// "模型管理" footer is the third entry point alongside the sidebar gear
   /// and the quick menu's bottom row.
   final VoidCallback? onOpenSettings;
+
+  /// The two halves of a rewind (ADR-0014 S3): what going back to a recorded
+  /// write would touch, and doing it. Absent leaves write cards without the
+  /// pill; `main` supplies both from `AppScope`, which is where the "no folder
+  /// open, nothing to go back to" guard already lives.
+  final List<RewindFile> Function(String checkpointId)? onPreviewRewind;
+  final RewindReport Function(String checkpointId)? onRewind;
 
   @override
   State<ConversationRoot> createState() => _ConversationRootState();
@@ -284,15 +295,24 @@ class _ConversationRootState extends State<ConversationRoot> {
     );
   }
 
+  /// The transcript, under the rewind scope when both halves were supplied.
+  /// The hero phase has no transcript and no call to rewind, which is why the
+  /// scope mounts here rather than at the column's root.
+  Widget _transcript() {
+    final view = ChatView(
+      conversation: widget.conversation,
+      tail: widget.tail,
+      bottomInset: _seatHeight,
+    );
+    final preview = widget.onPreviewRewind;
+    final rewind = widget.onRewind;
+    if (preview == null || rewind == null) return view;
+    return CheckpointScope(preview: preview, rewind: rewind, child: view);
+  }
+
   Widget _active() => Stack(
     children: [
-      Positioned.fill(
-        child: ChatView(
-          conversation: widget.conversation,
-          tail: widget.tail,
-          bottomInset: _seatHeight,
-        ),
-      ),
+      Positioned.fill(child: _transcript()),
       Positioned(
         left: 0,
         right: 0,
