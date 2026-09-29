@@ -19,9 +19,11 @@ import '../genkit/models_endpoint.dart';
 import '../host/project_folder_ops.dart';
 import '../host/terminal_manager.dart';
 import '../model/app_settings.dart' as cfg;
+import '../model/workspace.dart';
 import '../model/workspace_index.dart';
 import '../model/workbench_prefs.dart';
 import 'approval_rule_store.dart';
+import 'checkpoint_store.dart';
 import 'conversation_controller.dart';
 import 'details_selection.dart';
 import 'layout_controller.dart';
@@ -43,10 +45,14 @@ class AppScope {
     _sessionRoot = Directory('${support.path}/sessions')
       ..createSync(recursive: true);
     _approvals = ApprovalRuleStore.open(support);
+    _checkpoints = CheckpointStore.open(support);
     _runtime = _build(settings.value);
     // The saved approvals belong to a folder, so the book has to be pointed at
     // the open one before any tool can run.
     _approvals.useWorkspace(settings.value.workspaceRoot);
+    _checkpoints
+      ..useWorkspace(settings.value.workspaceRoot)
+      ..conversation = _conversationToken;
     // The model seat follows the document, not the runtime: a save that
     // rebuilds one re-points the other in the same write.
     _adoptModelDirectory(settings.value);
@@ -71,6 +77,12 @@ class AppScope {
       // also when the workbench layout built while composing that turn acquires
       // somewhere to be saved; see [WorkbenchController.bindSession].
       onSessionPersisted: (id) {
+        // The conversation finally has an id, so the checkpoints recorded
+        // under the placeholder take it too — otherwise a rewind scoped to
+        // "this conversation" would not recognize its own files after a save.
+        _checkpoints.adoptConversation(_conversationToken, id);
+        _conversationToken = id;
+        _checkpoints.conversation = id;
         _sessions.setActive(id);
         _sessions.refresh();
         _workbench.bindSession(id);
@@ -96,6 +108,52 @@ class AppScope {
 
   /// What the settings page lists so a saved decision can be revoked.
   ApprovalRuleStore get approvals => _approvals;
+
+  /// The recorded before-images of the agent's file writes, and the thing a
+  /// rewind is asked of. Opened here for the same reason as [_approvals].
+  late final CheckpointStore _checkpoints;
+
+  /// The id recorded changes get tagged with until the conversation earns a
+  /// real session id — see [CheckpointStore.adoptConversation].
+  String _conversationToken = 'unsaved-1';
+
+  /// Conversations started in one app run, counted so two of them cannot share
+  /// a placeholder id and therefore share an undo history.
+  int _conversationSequence = 1;
+
+  CheckpointStore get checkpoints => _checkpoints;
+
+  /// The files a rewind to [checkpointId] would touch, without touching them.
+  /// Empty when no folder is open: outside a workspace a recorded path means
+  /// nothing, and there is nothing to go back to.
+  List<RewindFile> previewRewind(String checkpointId) {
+    final workspace = _rewindWorkspace;
+    if (workspace == null) return const [];
+    return _checkpoints.previewRewind(
+      id: checkpointId,
+      workspace: workspace,
+      conversation: _conversationToken,
+    );
+  }
+
+  /// Goes back to before the change [checkpointId] recorded, for this
+  /// conversation only. The scope is not the user's choice to make here: a
+  /// rewind that also reverted another conversation's writes would undo work
+  /// the prompt never mentioned.
+  RewindReport rewindCheckpoint(String checkpointId) {
+    final workspace = _rewindWorkspace;
+    if (workspace == null) return RewindReport.empty;
+    return _checkpoints.rewindTo(
+      id: checkpointId,
+      workspace: workspace,
+      conversation: _conversationToken,
+    );
+  }
+
+  Workspace? get _rewindWorkspace {
+    final root = settings.value.workspaceRoot;
+    return root == null ? null : Workspace.of(root);
+  }
 
   late final Directory _sessionRoot;
   late AgentRuntime _runtime;
@@ -261,6 +319,7 @@ class AppScope {
     // The same book across a rebuild: a settings save that replaces the runtime
     // must not replace what the user already approved.
     approvalRules: _approvals.book,
+    checkpoints: _checkpoints,
   )..workspaceRoot = settings.workspaceRoot;
 
   /// Persists the edited settings, then brings the runtime in line with them.
@@ -276,6 +335,9 @@ class AppScope {
     if (next.workspaceRoot != previous.workspaceRoot) {
       // A different folder is a different set of things the user approved.
       _approvals.useWorkspace(next.workspaceRoot);
+      // A different folder has a different set of files to go back to; the
+      // history does not follow the conversation across.
+      _checkpoints.useWorkspace(next.workspaceRoot);
     }
     // The workbench reads the same folder as the tools, through the same guard,
     // so it moves whether or not the runtime is rebuilt.
@@ -354,6 +416,10 @@ class AppScope {
   /// is not "empty" — it is the unsaved conversation's own layout, which the next
   /// first turn will carry over.
   Future<void> newSession() async {
+    // A new conversation is a new owner for any file it overwrites, so its
+    // checkpoints must not be reachable from the previous one's rewind.
+    _conversationToken = 'unsaved-${++_conversationSequence}';
+    _checkpoints.conversation = _conversationToken;
     _conversation.startNewSession();
     _selection.clear();
     _sessions.setActive(null);
@@ -361,6 +427,8 @@ class AppScope {
   }
 
   Future<void> openSession(String id) async {
+    _conversationToken = id;
+    _checkpoints.conversation = id;
     await _conversation.openSession(id);
     _selection.clear();
     _sessions.setActive(id);
