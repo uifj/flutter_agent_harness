@@ -48,6 +48,8 @@ class _ComposerHost extends StatefulWidget {
     this.modelDirectory,
     this.onModelSelected,
     this.onLookupFiles,
+    this.width,
+    this.workspaceRoot,
   });
 
   final ApprovalMode mode;
@@ -63,6 +65,14 @@ class _ComposerHost extends StatefulWidget {
   final ModelDirectory? modelDirectory;
   final ValueChanged<String>? onModelSelected;
   final Future<List<FileEntry>> Function()? onLookupFiles;
+
+  /// The column the composer is given. Null is the host's own 748px ceiling;
+  /// the narrow-width tests hand it what a squeezed centre column would.
+  final double? width;
+
+  /// Set to exercise the status bar under the card, which only renders with a
+  /// picked workspace.
+  final String? workspaceRoot;
 
   @override
   State<_ComposerHost> createState() => _ComposerHostState();
@@ -82,7 +92,7 @@ class _ComposerHostState extends State<_ComposerHost> {
   @override
   Widget build(BuildContext context) => Center(
     child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 748),
+      constraints: BoxConstraints(maxWidth: widget.width ?? 748),
       child: Composer(
         hero: widget.hero,
         busy: widget.busy,
@@ -97,6 +107,8 @@ class _ComposerHostState extends State<_ComposerHost> {
         onNewSession: widget.withNewSession ? widget.onNewSession : null,
         modelDirectory: widget.modelDirectory,
         onModelSelected: widget.onModelSelected,
+        workspaceRoot: widget.workspaceRoot,
+        onPickWorkspace: widget.workspaceRoot == null ? null : () {},
         onLookupFiles: widget.onLookupFiles,
         onSubmit: widget.onSubmit,
         onStop: () {},
@@ -124,6 +136,8 @@ void main() {
     ModelDirectory? directory,
     ValueChanged<String>? onModelSelected,
     Future<List<FileEntry>> Function()? onLookupFiles,
+    double? width,
+    String? workspaceRoot,
     void Function(String text, List<AttachedImage> images, InputDelivery)?
     onSubmit,
   }) => tester.pumpWidget(
@@ -143,6 +157,8 @@ void main() {
           modelDirectory: directory,
           onModelSelected: onModelSelected,
           onLookupFiles: onLookupFiles,
+          width: width,
+          workspaceRoot: workspaceRoot,
         ),
       ),
     ),
@@ -617,6 +633,92 @@ void main() {
       // something instead of eating the keystroke.
       expect(find.text('Files'), findsOneWidget);
       expect(find.text('Searching the workspace…'), findsOneWidget);
+    });
+  });
+
+  group('the row in a narrow column', () {
+    // Report item 6 says the menus eat the input space on a narrow screen.
+    // What that really asks is what a person can still REACH once the centre
+    // column is squeezed, so the test is reachability plus the absence of a
+    // RenderFlex error, at widths the frame actually produces.
+    ModelDirectory seeded() => ModelDirectory(
+      current: const ModelSettings(apiKey: 'sk-live', model: defaultModel),
+    );
+
+    testWidgets('320px keeps both menus', (tester) async {
+      await pump(tester, width: 320, directory: seeded());
+
+      expect(tester.takeException(), isNull);
+      expect(find.byIcon(LucideIcons.paperclip), findsOneWidget);
+      expect(find.byIcon(LucideIcons.shield_question_mark), findsOneWidget);
+      expect(find.byIcon(LucideIcons.cpu), findsOneWidget);
+      expect(find.byIcon(LucideIcons.arrow_up), findsOneWidget);
+    });
+
+    testWidgets('the parked-draft chips fit beside both menus at 260px', (
+      tester,
+    ) async {
+      // The tightest real case: a turn is running, a draft is held, so the row
+      // carries attach + mode + queue + guide + model + send at once.
+      await pump(tester, width: 260, blocked: true, directory: seeded());
+      await tester.enterText(find.byType(TextField), 'a draft');
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      // Shed the labels, keep the doors — both deliveries must still be one tap
+      // away, which is the whole point of ADR-0013.
+      expect(find.byIcon(LucideIcons.cpu), findsOneWidget);
+      expect(find.byIcon(LucideIcons.list_end), findsOneWidget);
+      expect(find.byIcon(LucideIcons.route), findsOneWidget);
+    });
+
+    testWidgets('the parked-draft chips keep their labels at 420px', (
+      tester,
+    ) async {
+      await pump(tester, width: 420, blocked: true, directory: seeded());
+      await tester.enterText(find.byType(TextField), 'a draft');
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Queue'), findsOneWidget);
+      expect(find.text('Steer'), findsOneWidget);
+    });
+
+    testWidgets('below the seat floor the row gives up seats, not layout', (
+      tester,
+    ) async {
+      await pump(tester, width: 120, directory: seeded());
+
+      expect(tester.takeException(), isNull);
+      expect(find.byIcon(LucideIcons.paperclip), findsOneWidget);
+      expect(find.byIcon(LucideIcons.arrow_up), findsOneWidget);
+      expect(find.byIcon(LucideIcons.shield_question_mark), findsNothing);
+      expect(find.byIcon(LucideIcons.cpu), findsNothing);
+    });
+
+    testWidgets('a folder name too long for the bar does not overflow it', (
+      tester,
+    ) async {
+      // A real directory, because the bar reads the last path segment and the
+      // branch probe runs a real `git` — which the fake-async zone cannot host,
+      // hence runAsync. That the probe fails is part of the case too: the bar
+      // still has to render name-only.
+      final temp = Directory.systemTemp.createTempSync(
+        'a-markedly-long-project-name-that-nobody-would-choose',
+      );
+      try {
+        await tester.runAsync(
+          () => pump(tester, width: 300, workspaceRoot: temp.path),
+        );
+
+        expect(tester.takeException(), isNull);
+        // Ellipsised, not dropped: the bar still says which workspace this is.
+        final shown = tester.widget<Text>(find.text(p.basename(temp.path)));
+        expect(shown.overflow, TextOverflow.ellipsis);
+        expect(tester.getSize(find.byType(TextField)).width, lessThan(300));
+      } finally {
+        temp.deleteSync(recursive: true);
+      }
     });
   });
 }

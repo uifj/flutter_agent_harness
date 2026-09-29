@@ -804,7 +804,19 @@ class ComposerState extends State<Composer> {
         // point the chip gives up its seat rather than overflowing the card.
         // The mode lives on in the transcript's mode chips, so nothing is
         // lost that the conversation was not already saying.
-        final showChip = constraints.maxWidth >= 140;
+        //
+        // One floor for both menus. They each shed their label and stroke on
+        // their own well before this, so the model chip's second, earlier
+        // ceiling only made it disappear while there was still room for it as
+        // an icon — and a model you cannot change is not a degradation, it is
+        // a missing control.
+        final seatsFit = constraints.maxWidth >= 140;
+        // The parked-draft pair is the widest fixed content on this line, so it
+        // is the first to shed its labels: the icons already name the two
+        // destinations a draft can go, and the tooltip carries the words.
+        // Below this the row was overflowing by 67px with both menus and both
+        // chips labelled — measured, not guessed.
+        final actionsFit = constraints.maxWidth >= 360;
         // dsh's `.row`: space-between — the tools (attach, mode) on the left,
         // the trailing group (model seat, send) on the right. The model seat
         // rides `conversation.input.model` beside the primary action, NOT in
@@ -818,7 +830,7 @@ class ComposerState extends State<Composer> {
               onPaste: _pasteClipboardImage,
             ),
             const SizedBox(width: 4),
-            if (showChip) ...[
+            if (seatsFit) ...[
               // Flexible rather than fixed: the chip's label ellipsizes
               // before the row ever gets this tight.
               Flexible(
@@ -831,7 +843,7 @@ class ComposerState extends State<Composer> {
               ),
             ],
             const Spacer(),
-            if (widget.modelDirectory != null && constraints.maxWidth >= 220)
+            if (widget.modelDirectory != null && seatsFit)
               Flexible(
                 child: _ModelChip(
                   directory: widget.modelDirectory!,
@@ -839,9 +851,9 @@ class ComposerState extends State<Composer> {
                   onOpenSettings: widget.onOpenSettings,
                 ),
               ),
-            if (widget.modelDirectory != null && constraints.maxWidth >= 220)
+            if (widget.modelDirectory != null && seatsFit)
               const SizedBox(width: 8),
-            _deliverChips(color),
+            _deliverChips(color, tight: !actionsFit),
             _primary(color),
           ],
         );
@@ -879,7 +891,11 @@ class ComposerState extends State<Composer> {
   /// The two ways a draft leaves while the transcript is busy: park it behind
   /// the run, or steer the run with it. They show only then, because an idle
   /// composer already sends from its primary circle.
-  Widget _deliverChips(DswAlias color) {
+  ///
+  /// [tight] sheds the labels, not the controls: the tooltip and the semantic
+  /// label already carry the words, and a queue button that cannot be reached
+  /// because the row overflowed is not a degradation.
+  Widget _deliverChips(DswAlias color, {required bool tight}) {
     if (!widget.blocked || !_hasPayload) return const SizedBox.shrink();
     return Row(
       children: [
@@ -888,6 +904,7 @@ class ComposerState extends State<Composer> {
           icon: LucideIcons.list_end,
           label: context.tr('queueInput'),
           tip: context.tr('deliveryQueue'),
+          tight: tight,
           onTap: () => _submit(delivery: InputDelivery.queue),
         ),
         const SizedBox(width: 6),
@@ -896,6 +913,7 @@ class ComposerState extends State<Composer> {
           icon: LucideIcons.route,
           label: context.tr('guideNow'),
           tip: context.tr('deliveryGuide'),
+          tight: tight,
           onTap: () => _submit(delivery: InputDelivery.guide),
         ),
         const SizedBox(width: 8),
@@ -936,9 +954,18 @@ class ComposerState extends State<Composer> {
                 color: color.labelTertiary,
               ),
               const SizedBox(width: 6),
-              Text(
-                name,
-                style: DswType.xxs12.copyWith(color: color.labelSecondary),
+              // The two free-text parts share whatever the fixed parts leave,
+              // and each ellipsizes on its own. Without this the bar overflowed
+              // by 487px on a long folder name — the row would rather paint
+              // outside the card than shorten a name.
+              Flexible(
+                flex: 2,
+                child: Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: DswType.xxs12.copyWith(color: color.labelSecondary),
+                ),
               ),
               const SizedBox(width: 8),
               // The "本地" (local) indicator — Qoder shows it to distinguish
@@ -956,9 +983,13 @@ class ComposerState extends State<Composer> {
                   color: color.labelTertiary,
                 ),
                 const SizedBox(width: 4),
-                Text(
-                  branch,
-                  style: DswType.xxs12.copyWith(color: color.labelTertiary),
+                Flexible(
+                  child: Text(
+                    branch,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: DswType.xxs12.copyWith(color: color.labelTertiary),
+                  ),
                 ),
               ],
             ],
@@ -1444,38 +1475,55 @@ class _ModelChip extends StatelessWidget {
             directory.select(id);
             onSelect?.call(id);
           },
-          child: Container(
-            height: 24,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(DswShape.inner),
-              border: Border.all(color: color.borderL2),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(LucideIcons.cpu, size: 13, color: color.labelSecondary),
-                const SizedBox(width: 5),
-                Flexible(
-                  child: Text(
-                    directory.selectedModel,
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                    style: DswType.xxxs11.copyWith(
-                      color: color.labelSecondary,
-                      fontFamily: dswFontFamilyCode,
-                      fontFamilyFallback: dswFontFamilyCodeFallback,
-                    ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // The mode chip's rule, applied here too: a chip that cannot fit
+              // its label sheds the label and the stroke before the row gives
+              // up on the control entirely. The model is named by the menu's
+              // own checkmark, so an icon-only seat still says what it opens.
+              final tight = constraints.maxWidth < 64;
+              return Container(
+                height: 24,
+                padding: EdgeInsets.symmetric(horizontal: tight ? 0 : 8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(DswShape.inner),
+                  border: Border.all(
+                    color: tight ? Colors.transparent : color.borderL2,
                   ),
                 ),
-                const SizedBox(width: 4),
-                Icon(
-                  LucideIcons.chevron_down,
-                  size: 11,
-                  color: color.labelTertiary,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      LucideIcons.cpu,
+                      size: 13,
+                      color: color.labelSecondary,
+                    ),
+                    if (!tight) ...[
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text(
+                          directory.selectedModel,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          style: DswType.xxxs11.copyWith(
+                            color: color.labelSecondary,
+                            fontFamily: dswFontFamilyCode,
+                            fontFamilyFallback: dswFontFamilyCodeFallback,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        LucideIcons.chevron_down,
+                        size: 11,
+                        color: color.labelTertiary,
+                      ),
+                    ],
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ),
@@ -1666,6 +1714,7 @@ class _DeliverChip extends StatelessWidget {
     required this.label,
     required this.tip,
     required this.onTap,
+    this.tight = false,
   });
 
   final DswAlias color;
@@ -1673,6 +1722,10 @@ class _DeliverChip extends StatelessWidget {
   final String label;
   final String tip;
   final VoidCallback onTap;
+
+  /// The narrow-column tier: the words go, the stroke and the 28px height stay
+  /// so the two seats still read as the buttons on this line.
+  final bool tight;
 
   @override
   Widget build(BuildContext context) => Tooltip(
@@ -1686,7 +1739,7 @@ class _DeliverChip extends StatelessWidget {
         offset: const Offset(0, -2),
         child: Container(
           height: 28,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          padding: EdgeInsets.symmetric(horizontal: tight ? 6 : 8),
           decoration: BoxDecoration(
             color: hovered ? color.interactiveBgHover : null,
             border: Border.all(color: color.borderL2),
@@ -1695,11 +1748,13 @@ class _DeliverChip extends StatelessWidget {
           child: Row(
             children: [
               Icon(icon, size: 13, color: color.labelSecondary),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: DswType.xxs12.copyWith(color: color.labelPrimary),
-              ),
+              if (!tight) ...[
+                const SizedBox(width: 5),
+                Text(
+                  label,
+                  style: DswType.xxs12.copyWith(color: color.labelPrimary),
+                ),
+              ],
             ],
           ),
         ),
