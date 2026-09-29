@@ -79,16 +79,25 @@ class DisclosureRow extends StatelessWidget {
               child: Center(child: _leading(context, color, hovered)),
             ),
             const SizedBox(width: 6),
-            Text(
-              title,
-              style:
-                  titleStyle ??
-                  DswType.s14.copyWith(
-                    // dsh writes the header's leading literally rather than through
-                    // the 14/22 token, so the port does too.
-                    height: 24 / 14,
-                    color: color.labelSecondary,
-                  ),
+            // Flexible, not a bare Text: a non-flex child of a Row is laid out
+            // with an UNBOUNDED width, so `ellipsis` alone cannot save this line
+            // — the header would overflow the panel instead of shortening. Tool
+            // titles are model- and path-sized text, and this is the header every
+            // tool card and the reasoning row share.
+            Flexible(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style:
+                    titleStyle ??
+                    DswType.s14.copyWith(
+                      // dsh writes the header's leading literally rather than through
+                      // the 14/22 token, so the port does too.
+                      height: 24 / 14,
+                      color: color.labelSecondary,
+                    ),
+              ),
             ),
             if ((keepCollapsedWhenOpen || !open) && collapsed != null)
               Expanded(child: collapsed!),

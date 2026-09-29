@@ -829,6 +829,7 @@ class _FileHeaderState extends State<_FileHeader> {
               const SizedBox(width: 6),
             ],
             Expanded(
+              flex: 2,
               child: Text(
                 to,
                 style: DswType.xxsStrong12.copyWith(color: color.labelPrimary),
@@ -838,11 +839,17 @@ class _FileHeaderState extends State<_FileHeader> {
             ),
             if (from != to) ...[
               const SizedBox(width: 6),
-              Text(
-                '← $from',
-                style: DswType.xxxs11.copyWith(color: color.labelTertiary),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
+              // Flexible, not just ellipsized: the ellipsis only applies once
+              // the child is bounded, and a non-flex Row child is measured with
+              // an unbounded width — a long old path used to push this header
+              // past the panel instead of shortening it.
+              Flexible(
+                child: Text(
+                  '← $from',
+                  style: DswType.xxxs11.copyWith(color: color.labelTertiary),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
               ),
             ],
             if (tag != null) ...[

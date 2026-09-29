@@ -293,9 +293,19 @@ class _TerminalBlockState extends State<TerminalBlock> {
         // may well run somewhere else (a `cd` in the command is enough), so
         // repeating the label down the rows would assert a directory per line that
         // nothing here knows. Later rows keep a bare `$` to stay aligned.
-        Text(
-          !first || cwd == null ? '\$' : promptLabel(cwd, widget.home),
-          style: DswType.markdownCodeBlock.copyWith(color: color.labelTertiary),
+        // Flexible: the label is a directory's last segment, which is as long
+        // as whatever folder the call ran in. Left bare it would push the row
+        // past the panel — a non-flex Row child gets an unbounded width, so
+        // `ellipsis` on its own would not have helped.
+        Flexible(
+          child: Text(
+            !first || cwd == null ? '\$' : promptLabel(cwd, widget.home),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: DswType.markdownCodeBlock.copyWith(
+              color: color.labelTertiary,
+            ),
+          ),
         ),
         const SizedBox(width: 8),
         Expanded(
