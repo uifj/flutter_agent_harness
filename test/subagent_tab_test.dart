@@ -6,7 +6,10 @@
 // running card's kill takes two clicks and stops the turn, and that the empty
 // page explains itself. The vocabulary — names, dots, durations — is pinned
 // directly, since the source's equivalents live beside them in
-// `subagent-jobs.ts` and the shape is the contract.
+// `subagent-jobs.ts` and the shape is the contract. The last group adds the
+// other thing only a widget tree can answer: that no seat here cuts a label
+// once the system amplifies text (ADR-0017 S3 — this tab body is not on the
+// workbench's amplified-text walk).
 
 import 'dart:async';
 import 'dart:io';
@@ -25,6 +28,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'amplified_text_probe.dart';
 import 'fake_turn_source.dart';
 
 void main() {
@@ -147,28 +151,32 @@ void main() {
     /// The tab on its own, the way a unit harness would: no pane, no strip.
     /// The tab is therefore not its pane's active tab, which also keeps the
     /// per-second clock from starting — nothing here waits on it.
-    Future<void> pump(WidgetTester tester) => tester.pumpWidget(
-      MaterialApp(
-        theme: dswThemeData(Brightness.light),
-        home: Scaffold(
-          body: SizedBox(
-            width: 360,
-            height: 600,
-            child: SubagentHost(
-              conversation: conversation,
-              child: SubagentTab(
-                workbench: workbench,
-                tab: const SidebarTab(
-                  id: 'subagent:1',
-                  type: BuiltinTabType.subagent,
-                  title: 'Sub-agents',
+    Future<void> pump(WidgetTester tester, [double step = 1.0]) =>
+        tester.pumpWidget(
+          MaterialApp(
+            theme: dswThemeData(Brightness.light),
+            home: Scaffold(
+              body: SizedBox(
+                width: 360,
+                height: 600,
+                child: AmplifiedText(
+                  step: step,
+                  child: SubagentHost(
+                    conversation: conversation,
+                    child: SubagentTab(
+                      workbench: workbench,
+                      tab: const SidebarTab(
+                        id: 'subagent:1',
+                        type: BuiltinTabType.subagent,
+                        title: 'Sub-agents',
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ),
-    );
+        );
 
     /// Starts a turn and lets the frame that opens it settle. The send future
     /// stays pending until the turn finishes, which is why it is unawaited.
@@ -226,8 +234,9 @@ void main() {
       // is always paired with its elapsed time.
       expect(find.text('Running'), findsOneWidget);
       expect(find.textContaining('Running · '), findsOneWidget);
-      // One live card, announced in the header's badge.
-      expect(find.text('1 subagent · 1 running'), findsOneWidget);
+      // One live card, announced in the header's badge. The noun is in the
+      // section title, so the badge carries numbers only.
+      expect(find.text('1 of 1 running'), findsOneWidget);
       // A live card carries the kill affordance.
       expect(find.byIcon(LucideIcons.square), findsOneWidget);
       // Nothing is selected, so no dock.
@@ -324,5 +333,41 @@ void main() {
       // nothing pending.
       await tester.pump(const Duration(seconds: 3));
     });
+
+    // ADR-0017 S3. Measured, not looked at: a paragraph clipped by a fixed-height
+    // seat throws nothing, and a row that spills is sized to its constraint, so
+    // the only way to see either is to read the render tree. Two steps because
+    // one certifies only one number — a seat that is exactly one line at 1.8x is
+    // silent there and cuts at the next step up.
+    for (final (label, step) in const [
+      ('1.8x', amplifiedTextStep),
+      ('2.2x', nextTextStep),
+    ]) {
+      testWidgets('the topology, the armed kill and the dock keep their labels '
+          '($label)', (tester) async {
+        await pump(tester, step);
+        expect(textDefects(tester), isEmpty, reason: 'the empty topology');
+
+        await startTurn(tester);
+        await delegate(tester);
+        expect(textDefects(tester), isEmpty, reason: 'a running delegation');
+
+        await tester.tap(find.byIcon(LucideIcons.square));
+        await tester.pump();
+        expect(find.text('Confirm'), findsOneWidget);
+        expect(textDefects(tester), isEmpty, reason: 'the armed kill');
+        await tester.pump(const Duration(seconds: 3));
+
+        source.emit(
+          const ToolCallSucceeded(ref: 'r1', output: {'response': 'In lib/.'}),
+        );
+        await finishTurn(tester);
+        await tester.tap(find.text('Find the tests'));
+        await tester.pump();
+        expect(find.text('In lib/.'), findsOneWidget);
+        expect(textDefects(tester), isEmpty, reason: 'the dock open on a card');
+        expect(tester.takeException(), isNull);
+      });
+    }
   });
 }

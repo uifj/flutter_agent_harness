@@ -5,7 +5,9 @@
 // which files start expanded — is unit-tested without a repository. The widget
 // tests then cover what only exists once wired: which git command answers
 // which ref, the other-side fallback, the untracked full-file addition read
-// from disk, and the refresh that re-runs the load.
+// from disk, and the refresh that re-runs the load. The last group measures the
+// chrome under amplified text — this tab body is not on the workbench's
+// walk, and a seat clipped there throws nothing.
 
 import 'dart:io';
 
@@ -19,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
+import 'amplified_text_probe.dart';
 import 'fake_git.dart';
 
 const _sampleDiff = '''
@@ -268,18 +271,24 @@ void main() {
 
     String abs(String name) => p.join(support.path, name);
 
-    Future<void> pumpTab(WidgetTester tester, SidebarDiffRef ref) =>
-        tester.pumpWidget(
-          MaterialApp(
-            theme: dswThemeData(Brightness.light),
-            home: Scaffold(
-              body: GitHost(
-                runner: fake.runner,
-                child: DiffTab(workbench: workbench, tab: SidebarTab.diff(ref)),
-              ),
+    Future<void> pumpTab(
+      WidgetTester tester,
+      SidebarDiffRef ref, {
+      double step = 1.0,
+    }) => tester.pumpWidget(
+      MaterialApp(
+        theme: dswThemeData(Brightness.light),
+        home: Scaffold(
+          body: AmplifiedText(
+            step: step,
+            child: GitHost(
+              runner: fake.runner,
+              child: DiffTab(workbench: workbench, tab: SidebarTab.diff(ref)),
             ),
           ),
-        );
+        ),
+      ),
+    );
 
     Future<void> settle(WidgetTester tester) async {
       await tester.pump();
@@ -474,6 +483,33 @@ void main() {
         findsOneWidget,
       );
     });
+
+    // ADR-0017 S3, measured rather than looked at: a paragraph clipped by a
+    // pinned seat throws nothing, and a row that spills is sized to its own
+    // constraint. Two steps, because a seat that is exactly one line at the
+    // first step passes there while proving nothing.
+    for (final (label, step) in const [
+      ('1.8x', amplifiedTextStep),
+      ('2.2x', nextTextStep),
+    ]) {
+      testWidgets('the header, the path rows and the badges keep their labels '
+          '($label)', (tester) async {
+        fake.responses['diff --no-ext-diff --no-color -U3 -- a.dart'] =
+            _sampleDiff;
+        await pumpTab(
+          tester,
+          WorktreeDiff(path: abs('a.dart'), staged: false),
+          step: step,
+        );
+        await settle(tester);
+        expect(find.text('a.dart'), findsOneWidget);
+        // The sample patch carries the rename-only and binary sections too, so
+        // this one page lays out the file header, the hunk header, tinted rows
+        // and two badge kinds.
+        expect(textDefects(tester), isEmpty, reason: 'a loaded worktree diff');
+        expect(tester.takeException(), isNull);
+      });
+    }
   });
 }
 
