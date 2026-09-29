@@ -27,7 +27,7 @@
 
 - **是什么**：`agent_harness` —— 用 **Flutter + Google Genkit** 从零实现的 **桌面端 AI Agent 工作台**：两种工作区模式（**企划**：工作区内 .md 的本地 Markdown 工作台 + 看板/日程/表格扩展面板，ADR-0007；**代理**：对话流 + 工具调用投影 + 分栏 workbench（文件树 / 编辑器 / 终端 / git / diff / 浏览器 / 子 agent / side chat），工作台有右栏与下栏**两棵树**）。pubspec 自述："A Flutter desktop agent harness: chat UI, tool-call projection via Genkit, and a split-pane workbench."
 - **不是什么**：不是移动端/网页 App（三桌面平台 `macos/`+`windows/`+`linux/`，见 ADR-0003；无 `android/`/`ios/`/`web/`）；不是 dsh 的 fork（不吸收其代码，只取其设计思想重写）；不是发布物（`version: 0.0.1`，ad-hoc 签名，见 `build.md` §4）。
-- **规模**（2026-09-29 校准，会腐烂：引用前用 `find`/`wc` 现场重算）：`lib/` 123 个 Dart 文件 / ~37.6k 行，`test/` 62 个 `*_test.dart`（另有 3 个手写替身 + 1 个探针）；`spike/` 2 个可执行证据脚本，`tool/` 2 个脚本（对比度校验 + 架构门禁）与它的 baseline。
+- **规模**（2026-09-29 校准，会腐烂：引用前用 `find`/`wc` 现场重算）：`lib/` 123 个 Dart 文件 / ~38.2k 行，`test/` 63 个 `*_test.dart`（另有 3 个手写替身 + 2 个探针 `clipboard_probe.dart`·`amplified_text_probe.dart`）；`spike/` 2 个可执行证据脚本，`tool/` 2 个脚本（对比度校验 + 架构门禁）与它的 baseline。
 - **技术栈**：Dart SDK `^3.11.5` / Flutter 3.41.9 stable；运行时 `genkit` 0.16.1 + `genkit_openai` / `genkit_anthropic` / `genkit_google_genai` / `genkit_mcp` / `genkit_middleware`（**全是 0.x**）；状态管理 `flutter_riverpod` 3.2.1 + `riverpod_annotation` 4.0.2（ADR-0002 修订 1：注解模式，`*.g.dart` 入库）；组件库 `shadcn_ui` 0.56.3（迁移中）+ 入库本地包 `board_panel`（path 依赖，ADR-0007 D5）；宿主能力 `flutter_pty` + `xterm`（终端）、`flutter_inappwebview`（浏览器 tab）、`file_picker` + `path_provider`（工作区）、`pasteboard`（剪贴板）、`tray_manager` + `window_manager` + `hotkey_manager`（托盘/窗口/全局热键）、`desktop_drop`（拖拽入 composer）、`pdfrx`（PDF 与文档抽文本）；渲染与编辑 `gpt_markdown`（含 LaTeX 与 `flutter_mermaid` 围栏图）+ `re_editor` + `re_highlight`、`archive`（本地备份 zip）、`schemantic`（工具运行时 schema）、`flutter_lucide`（图标）。lint 只有 `flutter_lints`（`riverpod_lint` 因 SDK meta 约束暂不可装，见 ADR-0002 修订 1）。
 - **刻意不存在的机制**：genkit 工具输入保持 Map、schema 运行时构造（codegen 仅限 riverpod 注解，见 ADR-0002 修订 1）；没有 `intl` / `.arb` / `flutter_localizations`（i18n 自研，见 §3）；没有路由表（单窗口，界面靠 widget 组合与 scope 拼装）。
 
@@ -118,7 +118,7 @@ flutter build linux --release            # 需 GTK 工具链
 
 已知缺口的分类、优先级、状态一律看 [docs/debt-register.md](docs/debt-register.md)：`README.md` 与 `CHANGELOG.md` 仍是包模板、macOS 签名/公证缺口与 `.gitignore` 缺证书规则、版本仍 `0.0.1`、ADR-0005 那几项"仅持久化未接线"的偏好（`previewMode`/正文字体族/界面皮肤；`fontSize` 已由 ADR-0017 S3 接上，余下的是**非 AppFrame 那约 73 处紧座位在放大文本下仍未测**）。（`spike/runtime_smoke.dart` 那道"真实链路"门曾不可运行，已由 ADR-0015 修好并加进门禁；ADR-0012/0013/0014 的收尾现在只等一把 API key。）（i18n 双语对齐的守卫缺口已由 ADR-0008 闭环。）**修任何一个之前先按 `docs/README.md` 立 ADR 并置 ACCEPTED。**
 
-**测试基线（本机 macOS，2026-09-29）不是绝对全绿**：`flutter test` 得 `+836 -2`（2026-09-30 校准），两个既有失败（macOS temp 路径 `/var`↔`/private/var` 规范化、企划树 `find.text('notes')` 命中两处）已登记在债务表的待立 ADR 观察里。验收口径因此是**相对基线零新增失败**，不是"全绿"；通过条数会随加测试漂移，别把它当常数，也不要为了让套件变绿去改那两条断言。
+**测试基线（本机 macOS，2026-09-30 校准）不是绝对全绿**：`flutter test` 得 `+839 -2`，两个既有失败（macOS temp 路径 `/var`↔`/private/var` 规范化、企划树 `find.text('notes')` 命中两处）已登记在债务表的待立 ADR 观察里。验收口径因此是**相对基线零新增失败**，不是"全绿"；通过条数会随加测试漂移，别把它当常数，也不要为了让套件变绿去改那两条断言。
 
 **CI 已经有了**（`.github/workflows/`，commit `d09b92d`）：`pr-check.yml` 在 push/PR 到 `develop`·`main` 上跑 format + `dart analyze --fatal-infos` + `flutter test`；`build.yml` 是 `workflow_dispatch` 手动三平台出包并可选发 GitHub Release。**但它只保证门禁命令，不等于签名/公证已过**——CI 产物依旧 ad-hoc，见 `build.md` §4/§5。
 
