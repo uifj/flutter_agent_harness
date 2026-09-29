@@ -1,11 +1,11 @@
 # ADR-0017: 形状令牌契约（圆角按嵌套深度、选中态与 hover 分离）
 
-- **状态**: IN-PROGRESS @ `c2255c6`（S1+S2 已落并进门禁守卫）+ `74ab800`/`88b9f54`（同日：守卫改成读参数起始 token、4 处漏网字面量收回、侧栏品牌行并线 + 产品名进 i18n）；S3 文本缩放未动 · S2b 输入卡三态边已落 @ `b9684f4`
+- **状态**: IN-PROGRESS @ `c2255c6`（S1+S2 已落并进门禁守卫）+ `74ab800`/`88b9f54`（同日：守卫改成读参数起始 token、4 处漏网字面量收回、侧栏品牌行并线 + 产品名进 i18n）· S2b 输入卡三态边已落 @ `b9684f4` · **S3 文本缩放已落并带守卫 @ `3301165`/`5cbf566`/`bab3a0f`**，余该节末「没闭的口」两格：非 AppFrame 那几十处紧座位未测未改、真机四档走查待人工
 - **分类**: ARC
 - **优先级**: P1
 - **影响维度**: 生产功能（UI 一致性）/ 可维护性
 - **日期**: 2026-09-29
-- **修复 commit**: `c2255c6`（S1 形状令牌 + S2 选中态）· `74ab800`（侧栏品牌行并线与产品名）· `88b9f54`（守卫改读起始 token + 4 处漏网字面量）· `b9684f4`（S2b 输入卡三态边）；S3 待做
+- **修复 commit**: `c2255c6`（S1 形状令牌 + S2 选中态）· `74ab800`（侧栏品牌行并线与产品名）· `88b9f54`（守卫改读起始 token + 4 处漏网字面量）· `b9684f4`（S2b 输入卡三态边）· `3301165`（S3 缩放接线）· `5cbf566`（S3b 一行高的紧座位跟着步子长）· `bab3a0f`（1.8x 双向守卫）
 - **来源**: `docs/ui-production-audit-2026-09.md` §2 条 2b、§4.2、§4.6；ZCode `DESIGN.md` 的 radius-by-nesting 律
 
 ## 背景（Evidence）
@@ -27,7 +27,7 @@ grep -rn "BorderRadius.circular(" lib/ui lib/theme | grep -oE "circular\([0-9.]+
 
 **ZCode 的律是可抄的，它的"选中"做法也是。** `DESIGN.md:285-334` 给的是 radius 随嵌套深度递减（外层 `xl` → 内层 `sm`）加一张控件对照表；`TaskListItem.tsx:550` 的选中态是**独立的 `bg-selected` token（= 10% neutral-950）而不是 hover 色加深**，hover 只改亮度不改身份。**注意不要抄错**：ZCode 选中态**没有**左侧强调条（评估文档 §3 与本仓库初稿都误记过一次，audit §4.2 已更正）。
 
-**顺带欠账**：`grep -rn "textScaler|textScaleFactor|baseFontSize" lib/` = 0 命中，即 ADR-0005 登记"无文本缩放适配"那条仍然没做，ZCode 的解法是单一 `--ui-font-size: 14px` 派生 ±4/2/0/-1/-2/-4 标度且**绝不动 root font-size**（`styles.css:58,143-151`、`DESIGN.md:212`）。本 ADR 收下这条律但**把实施排在 S3**，因为它要动 `TextTheme` 与 `MediaQuery`，面比圆角大得多。
+**顺带欠账**：登记时 `grep -rn "textScaler|textScaleFactor|baseFontSize" lib/` = 0 命中，即 ADR-0005 登记"无文本缩放适配"那条仍然没做，ZCode 的解法是单一 `--ui-font-size: 14px` 派生 ±4/2/0/-1/-2/-4 标度且**绝不动 root font-size**（`styles.css:58,143-151`、`DESIGN.md:212`）。本 ADR 收下这条律并把实施排在 S3——**现已落地**（见下文 S3 节），且选的通道比"`TextTheme` 派生"更小：只把用户那一档合成进 `MediaQuery.textScaler`，`DswType` 那套 ramp 一个数都没动。
 
 ## 决策（Decision）
 
@@ -71,9 +71,34 @@ S2 说的是"两个状态两个 token"，同一条律在输入卡上一直没人
 
 守卫 `test/composer_test.dart` 的 `the card shows which surface has the keyboard`：autofocus → `Tab` 走开 → 指针进 → 指针出 → 点回字段，五段都读**画出来的** `BoxDecoration.border`（不是 widget 参数），末尾再断言三枚 token 互不相等——与 S2 的 `selected ≠ hover` 同形。反向验过：把三态换回一枚静置边即红（`Expected: brandPrimary … Actual: 0.06 black`）。
 
-### S3 文本缩放（排在后面，本 ADR 只立约不实施）
+### S3 文本缩放：把系统的步子接进来，并让一行高的容器跟着长（本批落地）
 
-一个 base scalar → `TextTheme` 全量派生 + `MediaQuery.textScaler` 接住系统缩放。**不许**动 root font-size（ZCode 明写这条，理由是它会让整页比例失衡）。做完即闭环 ADR-0005 的"无文本缩放适配"。
+接线之前的事实：字号偏好**两处都能改、能落盘**（`ui/settings/model_settings.dart:167,431,1098` 的全屏设置、`ui/settings/widgets/settings_quick_menu.dart:232-233` 的快捷菜单），`AppSettings.fontSize` 也照旧序列化，但**渲染端没有一个人读它**——`grep -rn "textScaler" lib/` 在改动前是 0 命中。这正是 ADR-0005 登记"仅持久化未接线"的三项里的字号一项，也是 design-audit A4（登记表"无文本缩放适配"）那一行。
+
+落地只做一件事，而且是乘法不是替换：`AppFontSize.scale`（small 0.9 / **medium 1.0** / large 1.15）乘在 `MediaQuery.textScalerOf(context).scale(1)` 上，在 `MaterialApp.builder` 的 `MediaQuery` 里合成，位置在 Navigator 之上，所以对话框与设置页同标。选 medium == 1.0 是这条的锚：**默认档必须什么都不改**，否则一个说不清来源的全局缩放会先出现在截图里、再由人猜。
+
+**不动 root font-size、不动 `TextTheme`**——ZCode 明写这条律（`styles.css:58,143-151`、`DESIGN.md:212`），本仓库的理由更具体：框架的 `textScaler` 已经乘进每一个 `Text`，`DswType` 保持它是纯 ramp 的原样。再造一条 base scalar 就会出现两处真值（ADR-0014 那条"两个必须相等的字段就是一种新的错法"）。
+
+**S3b 才是这条的牙齿**：把系统的步子接上，立刻把原来"没人缩放所以没人撞"的容器钉高变成实测裁字。同一条守卫量出来的 7 处（1.8x，macOS 辅助功能第二大档）：
+
+| 座位 | 需要的行高 | 给到的 | 裁的是什么 |
+| --- | --- | --- | --- |
+| `disclosure_row.dart` 表头 | 43.0 | 24.0 | 工具卡标题 `Read`，以及同一行里的路径摘要（它在表头自己的 `ClipRect` 后面） |
+| `chat_view.dart` 进行中行 | 40.0 | 26.0 | "Deep diving…" |
+| `sidebar.dart` New Session | 40.0 | 34.0 | 36 的框减去内衬后剩 34 |
+| `composer.dart` 模式 chip | 25.0 | 22.0 | 11/14 的"每次询问"标签 |
+| `capsule_button.dart` md/sm | 40.0 / 32.0 | 36.0 / 28.0 | 审批三键、队列 chip 两处 |
+
+律：**一行高的 chrome，它的高度取自文字那一步，不是钉死的像素**——`height: 36 * MediaQuery.textScalerOf(context).scale(1)`。设计档（1.0）下每个座位仍然是原来那个数，`disclosure_row_test.dart` 钉的 24 就是这条"零漂移"的证明。胶囊那里还多一层：shad 的 `height:` 同时写进 `ConstrainedBox` 的 min **和** max（`shadcn_ui-0.56.3/lib/src/components/button.dart:1130-1143`），所以它不是"最小高度"而是"钉"，缩放必须乘在这个参数上。
+
+**先试过的 `minHeight` 地板是错的，这条要记住**：把表头改成 `ConstrainedBox(minHeight: 24)` 后 `disclosure_row_test.dart` 立刻红——`collapsed` 槽位装的是**外部传进来的任意 widget**，一旦给它不设上限的行，那句 `Text('2 files changed')` 折成四行、把整行撑到 88px。这些座位的"就一行"本来就是语义（多行的摘要要裁剪，不是把行撑高），所以正确的形状是**跟着文字缩放的紧高度**，而不是地板。横向同理但相反：侧栏 New Session 的标签改 `Flexible`（截断才是想要的），审批三键改 `Wrap`（换行才是想要的）——量的都是同一件事，处置方向由"这个控件的内容能不能多占一格"决定。
+
+守卫两条，一条测几何一条测值：
+- `test/app_frame_test.dart` 的 `nothing spills when the system amplifies text`：把整副外壳在 1.8x 下摆五个阶段（hero／长标题会话／进行中的工具卡／三键审批面板／排队草稿），每个阶段查**两个方向**——横向把 `RenderFlex` 的子宽求和 vs `constraints.maxWidth`（溢出的 flex 自己被约束裁成等宽，所以只能加子节点），纵向用 `RenderParagraph.getMaxIntrinsicHeight(width)` vs 它拿到的 box 高度（被裁不报错，只能这么量）。反向验证：把表头与胶囊换回钉高即红，并指名 `"Read" 43.0 vs 24.0`。
+- `test/settings_test.dart` 的 `the text-size steps compose onto the platform scaler`：`medium == 1.0`、三档互不相等、默认文档落在 medium。
+
+**没闭的口（诚实）**：这条守卫只覆盖 `AppFrame` 这一棵树。`grep -rhoE "height: (2[0-9]|[3-9][0-9]|1[0-9][0-9])," lib/ui | wc -l` 现在仍是 **73 处** ≥20px 的紧座位（分布在 18 个文件；本批把它们其中 5 处接上了文字步子），工作台四棵树（文件树/编辑器/终端/git/diff）、全屏设置页、企划工作台那几十处放大文本下同样会裁，本批**既没测也没改**——把守卫挂到那些树上之前，它们只是"看起来没问题"。真机 macOS「放大文本」四档走查也仍待人工（本机无 Screen Recording 权限）。这两格按 ADR-0017 的口径留在登记表，不算这条已闭。
+
 
 ### 明确不做
 
@@ -93,11 +118,11 @@ S2 说的是"两个状态两个 token"，同一条律在输入卡上一直没人
   > **首版守卫是漏的，这条要记住**：它当时写的是 `Radius\.circular\([0-9]`——只认括号后紧跟数字。于是 `BorderRadius.circular(wide ? 12 : 999)`（侧栏 New Session 两处）与 `BorderRadius.circular(_dense ? 14 : 18)`（`capsule_button` 两处）**带着字面量从它眼皮底下过了 4 处**，"94 处清零"那句因此并不成立。改成"读参数起始 token"后，反向验证是做回去：把 `wide ? 12 : 999` 塞回侧栏，守卫立刻红并指名行号。**只认数字形状的正则，等于给"三元里的数字"开了后门**——这一条对任何 `grep` 式门禁都适用。
 - `interactiveSelected` 与 `interactiveBgHover` **必须不相等**（一条断言钉住"两个状态两个 token"，防止以后有人"顺手合并"）。S2b 同形：`composer_test.dart` 的 `the card shows which surface has the keyboard` 走 autofocus／`Tab`／指针进出／点回字段五段，读的是**画出来的** `BoxDecoration.border`，末尾断言三枚 token 互不相等；反向验过是把三态换回一枚静置边，红。
 - `dart tool/contrast_check.dart` 与 `test/theme_contrast_test.dart` 仍绿（ADR-0004 口径）：S2b 只动**边**不动正文色，`contrast_check` 的配对里本来就没有 `border*`，前后同为 9 对低于 4.5:1。
-- 门禁同口径：format / `--fatal-infos` analyze / `check_architecture` / `flutter test` 相对基线（本批 `+834 -2`）零新增失败。
+- 门禁同口径：format / `--fatal-infos` analyze / `check_architecture`（7 recorded, 0 new）/ `flutter test` 相对基线（本批 **`+836 -2`**，仍是登记的那两条既有失败）零新增失败。`dart tool/contrast_check.dart` 与 `test/theme_contrast_test.dart` 不受影响（9 对低于 4.5:1 全是 ADR-0004 方案 B 的 light 旧账，DARK 无回归）——本批一个颜色都没动。
 - 真机前后截图：侧栏（选中 vs 悬停）、composer 容器、代码块三处。终端无 Screen Recording 权限时标"待人工走查"。**S2b 之后这一条对 composer 只剩"好不好看"**：状态律本身已经可测并且已测，它不再依赖眼睛。
 
 ## 关联（Links）
 
 - 依据: `docs/ui-production-audit-2026-09.md` §2 条 2b、§4.2（ZCode 选中态与 rail）、§4.6（radius-by-nesting 与 4px 节奏）
-- 代码: `lib/theme/dsw_alias.dart:236,278,331,373` · `lib/theme/dsw_static.dart:1-22`（文件先例）· `lib/ui/sidebar/sidebar.dart:560,603,727,731` · `lib/ui/conversation/composer.dart:928` · `lib/ui/conversation/assistant_markdown.dart:106,115`
+- 代码: S3 的接线点 `lib/main.dart:181-197` · `lib/model/app_settings.dart`（`AppFontSize.scale`）· S3b 的六枚座位 `lib/ui/primitives/capsule_button.dart:82-87`、`lib/ui/primitives/disclosure_row.dart:70-105`、`lib/ui/sidebar/sidebar.dart:469-475`、`lib/ui/conversation/chat_view.dart:296-303`、`lib/ui/conversation/composer.dart:1650-1657`、`lib/ui/conversation/approval_panel.dart:212-240` · 原有：`lib/theme/dsw_alias.dart:236,278,331,373` · `lib/theme/dsw_static.dart:1-22`（文件先例）· `lib/ui/sidebar/sidebar.dart:560,603,727,731` · `lib/ui/conversation/composer.dart:928` · `lib/ui/conversation/assistant_markdown.dart:106,115`
 - 关联 ADR: ADR-0004（对比度豁免面，新底色要过它）· ADR-0005（欠的文本缩放，S3 收下）· ADR-0011（ratchet 先例；本 ADR 用绝对断言替代，因为存量一次清完）· ADR-0014（"两个必须相等的字段就是一种新的错法"，本 ADR 据此拒绝把形状塞进别名层）
