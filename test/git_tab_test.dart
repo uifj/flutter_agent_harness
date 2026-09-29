@@ -309,6 +309,21 @@ void main() {
         expect(find.text('Copy relative path'), findsOneWidget);
         expect(textDefects(tester), isEmpty, reason: 'the row menu');
         await close();
+
+        // The destructive confirm the row menu opens (`showConfirmDialog`, the
+        // one shell four call sites route through). It is a route, so until the
+        // step moved above the Navigator it had never been laid out amplified:
+        // its title, description and two buttons are the last chrome in this
+        // panel nobody had measured.
+        await tester.tap(find.text('unstaged.txt'), buttons: kSecondaryButton);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Discard changes'));
+        await tester.pumpAndSettle();
+        expect(find.text('Cancel'), findsOneWidget);
+        expect(textDefects(tester), isEmpty, reason: 'the confirm dialog');
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+        expect(find.text('Cancel'), findsNothing);
         expect(tester.takeException(), isNull);
       });
     }

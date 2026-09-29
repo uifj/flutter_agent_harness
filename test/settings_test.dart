@@ -616,6 +616,17 @@ void main() {
           await tester.tapAt(const Offset(4, 4));
           await tester.pumpAndSettle();
           expect(find.text('Dark'), findsNothing);
+
+          // The language chip is the same widget with the same three-row shape,
+          // but its own menu had never been opened: the two labels are a Chinese
+          // string and a proper noun, so its widths are not the theme menu's.
+          await tester.tap(find.text('Follow system').last);
+          await tester.pumpAndSettle();
+          expect(find.text('English'), findsOneWidget);
+          expect(textDefects(tester), isEmpty, reason: 'the language menu');
+          await tester.tapAt(const Offset(4, 4));
+          await tester.pumpAndSettle();
+          expect(find.text('English'), findsNothing);
         });
       }
     });
