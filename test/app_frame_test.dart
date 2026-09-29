@@ -403,71 +403,81 @@ void main() {
   // collapsed preview is a widget the caller hands over, and given an unbounded
   // line it wrapped to 88px and grew the whole row — `disclosure_row_test`
   // caught that.
-  testWidgets('nothing spills when the system amplifies text', (tester) async {
-    await pump(tester, scale: amplifiedTextStep);
-    expect(textDefects(tester), isEmpty, reason: 'hero');
+  // Two steps, not one: a seat can be exactly one line at 1.8x and still be cut
+  // at the next one (the session row's 36 passed 1.8 and clipped at 2.2), so a
+  // single step certifies a single number.
+  for (final (label, step) in const [
+    ('1.8x', amplifiedTextStep),
+    ('2.2x', nextTextStep),
+  ]) {
+    testWidgets('nothing spills when the system amplifies text ($label)', (
+      tester,
+    ) async {
+      await pump(tester, scale: step);
+      expect(textDefects(tester), isEmpty, reason: 'hero');
 
-    source.sessions = [
-      SessionSummary(
-        id: 'a-very-long-session-identifier',
-        updatedAt: DateTime(2026, 9, 30),
-        title: 'Refactor the workspace picker so recents open on one tap',
-      ),
-    ];
-    await index.refresh();
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(
-      textDefects(tester),
-      isEmpty,
-      reason: 'a session titled in two sentences',
-    );
-
-    unawaited(controller.send('hi'));
-    await tester.pump();
-    source.emit(
-      const ToolCallRequested(
-        ref: 'r1',
-        name: 'read',
-        arguments: {'file_path': 'lib/ui/conversation/composer.dart'},
-      ),
-    );
-    await tester.idle();
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(textDefects(tester), isEmpty, reason: 'a tool card mid-turn');
-
-    source.emit(
-      const ApprovalRequired(
-        ApprovalRequest(
-          ref: 'r1',
-          toolName: 'write',
-          arguments: {
-            'file_path': '/tmp/deeply/nested/path/notes.md',
-            'content': 'hi',
-          },
-          details: {
-            'kind': 'write',
-            'path': '/tmp/deeply/nested/path/notes.md',
-            'bytes': 2,
-            'exists': false,
-          },
+      source.sessions = [
+        SessionSummary(
+          id: 'a-very-long-session-identifier',
+          updatedAt: DateTime(2026, 9, 30),
+          title: 'Refactor the workspace picker so recents open on one tap',
         ),
-      ),
-    );
-    await tester.idle();
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(
-      textDefects(tester),
-      isEmpty,
-      reason: 'the approval panel with three answers',
-    );
+      ];
+      await index.refresh();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(
+        textDefects(tester),
+        isEmpty,
+        reason: 'a session titled in two sentences',
+      );
 
-    await controller.send('a queued follow-up draft for the line');
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(
-      textDefects(tester),
-      isEmpty,
-      reason: 'a draft waiting in the queue',
-    );
-    expect(tester.takeException(), isNull);
-  });
+      unawaited(controller.send('hi'));
+      await tester.pump();
+      source.emit(
+        const ToolCallRequested(
+          ref: 'r1',
+          name: 'read',
+          arguments: {'file_path': 'lib/ui/conversation/composer.dart'},
+        ),
+      );
+      await tester.idle();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(textDefects(tester), isEmpty, reason: 'a tool card mid-turn');
+
+      source.emit(
+        const ApprovalRequired(
+          ApprovalRequest(
+            ref: 'r1',
+            toolName: 'write',
+            arguments: {
+              'file_path': '/tmp/deeply/nested/path/notes.md',
+              'content': 'hi',
+            },
+            details: {
+              'kind': 'write',
+              'path': '/tmp/deeply/nested/path/notes.md',
+              'bytes': 2,
+              'exists': false,
+            },
+          ),
+        ),
+      );
+      await tester.idle();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(
+        textDefects(tester),
+        isEmpty,
+        reason: 'the approval panel with three answers',
+      );
+
+      await controller.send('a queued follow-up draft for the line');
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(
+        textDefects(tester),
+        isEmpty,
+        reason: 'a draft waiting in the queue',
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
 }

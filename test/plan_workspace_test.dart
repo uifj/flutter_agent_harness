@@ -179,17 +179,25 @@ void main() {
 
   // ADR-0017 S3, on the plan workspace (the other half of ADR-0007's mode
   // switch). The tree rows and the note toolbar are one-line chrome, so a step
-  // above the designed one either cut a label or wrapped it into the seat.
-  testWidgets('the workspace and its editor survive amplified text', (
-    tester,
-  ) async {
-    await pump(tester, scale: amplifiedTextStep);
-    await pumpUntil(tester, find.text('readme.md'));
-    expect(textDefects(tester), isEmpty, reason: 'the note tree');
+  // above the designed one either cut a label or wrapped it into the seat. Both
+  // steps, because one certifies only one number: at 2.2x the note row's 34.0
+  // seat scaled to 74.8 and its two lines still came out 0.2 taller.
+  for (final (label, step) in const [
+    ('1.8x', amplifiedTextStep),
+    ('2.2x', nextTextStep),
+  ]) {
+    testWidgets(
+      'the workspace and its editor survive amplified text ($label)',
+      (tester) async {
+        await pump(tester, scale: step);
+        await pumpUntil(tester, find.text('readme.md'));
+        expect(textDefects(tester), isEmpty, reason: 'the note tree');
 
-    await tester.tap(find.text('readme.md'));
-    await pumpUntil(tester, find.text('Save'));
-    expect(textDefects(tester), isEmpty, reason: 'an open note');
-    await settle(tester);
-  });
+        await tester.tap(find.text('readme.md'));
+        await pumpUntil(tester, find.text('Save'));
+        expect(textDefects(tester), isEmpty, reason: 'an open note');
+        await settle(tester);
+      },
+    );
+  }
 }

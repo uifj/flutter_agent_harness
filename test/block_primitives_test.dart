@@ -61,12 +61,13 @@ void main() {
   }
 
   /// Both regimes the audit named: the narrowest column the workbench can hand a
-  /// block, and the system's largest text step. Measured, not looked at - a cut
-  /// label and a spilled row are silent.
+  /// block, and the two largest text steps. Measured, not looked at - a cut label
+  /// and a spilled row are silent, and one step does not certify a seat.
   Future<void> fits(WidgetTester tester, Widget block, String reason) async {
     for (final (width, scale) in const [
       (260.0, 1.0),
       (420.0, amplifiedTextStep),
+      (420.0, nextTextStep),
     ]) {
       final label = '$reason at ${width.toInt()}px, step $scale';
       await pump(tester, block, width: width, scale: scale);

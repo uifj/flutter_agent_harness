@@ -204,44 +204,55 @@ void main() {
   });
 
   group('amplified text', () {
-    Future<void> pumpWide(WidgetTester tester, PlanExtensionView view) async {
-      // NOT awaited. A `testWidgets` body runs under FakeAsync, where a real file
-      // write never completes - awaiting the store's save here hangs the whole run
-      // with no failure and no stack. The list mutation happens before the await
-      // inside `add`, and the panels read `store.tasks` at build time, so the
-      // task is on screen regardless.
-      unawaited(
-        store.add(
-          'review the quarterly report draft and hand the summary to the owner',
-          dueDate: DateTime(2026, 10, 5),
-        ),
-      );
-      tester.view.physicalSize = const Size(1400, 1000);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-      await pump(tester, view, scale: amplifiedTextStep);
+    // One step does not certify a seat: a row can be exactly one line at 1.8x
+    // and cut the next line up at 2.2x, so every panel here is measured twice.
+    for (final (label, step) in const [
+      ('1.8x', amplifiedTextStep),
+      ('2.2x', nextTextStep),
+    ]) {
+      Future<void> pumpWide(WidgetTester tester, PlanExtensionView view) async {
+        // NOT awaited. A `testWidgets` body runs under FakeAsync, where a real
+        // file write never completes - awaiting the store's save here hangs the
+        // whole run with no failure and no stack. The list mutation happens
+        // before the await inside `add`, and the panels read `store.tasks` at
+        // build time, so the task is on screen regardless.
+        unawaited(
+          store.add(
+            'review the quarterly report draft and hand the summary to the owner',
+            dueDate: DateTime(2026, 10, 5),
+          ),
+        );
+        tester.view.physicalSize = const Size(1400, 1000);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await pump(tester, view, scale: step);
+      }
+
+      testWidgets('the add row and the table keep their labels ($label)', (
+        tester,
+      ) async {
+        await pumpWide(tester, PlanExtensionView.table);
+        expect(textDefects(tester), isEmpty, reason: 'the table');
+      });
+
+      testWidgets('the board keeps its columns and cards ($label)', (
+        tester,
+      ) async {
+        await pumpWide(tester, PlanExtensionView.board);
+        expect(textDefects(tester), isEmpty, reason: 'the board');
+      });
+
+      // The month grid is guarded too, since its cells are drawn here now: the
+      // package's own `FilledCell` seated every day number in a 22.0 circle,
+      // which at 1.8x wanted 36.0 ("31" 36.0 vs 22.0, one defect per visible
+      // day). `MonthView.cellBuilder` is the package's extension point, so the
+      // seat rides the step without touching the lint-excluded package.
+      testWidgets('the calendar keeps its days and its task rows ($label)', (
+        tester,
+      ) async {
+        await pumpWide(tester, PlanExtensionView.calendar);
+        expect(textDefects(tester), isEmpty, reason: 'the month grid');
+      });
     }
-
-    testWidgets('the add row and the table keep their labels', (tester) async {
-      await pumpWide(tester, PlanExtensionView.table);
-      expect(textDefects(tester), isEmpty, reason: 'the table');
-    });
-
-    testWidgets('the board keeps its columns and cards', (tester) async {
-      await pumpWide(tester, PlanExtensionView.board);
-      expect(textDefects(tester), isEmpty, reason: 'the board');
-    });
-
-    // The month grid is guarded too, since its cells are drawn here now: the
-    // package's own `FilledCell` seated every day number in a 22.0 circle, which
-    // at 1.8x wanted 36.0 ("31" 36.0 vs 22.0, one defect per visible day).
-    // `MonthView.cellBuilder` is the package's extension point, so the seat
-    // rides the step without touching the lint-excluded package.
-    testWidgets('the calendar keeps its days and its task rows', (
-      tester,
-    ) async {
-      await pumpWide(tester, PlanExtensionView.calendar);
-      expect(textDefects(tester), isEmpty, reason: 'the month grid');
-    });
   });
 }

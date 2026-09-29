@@ -340,7 +340,7 @@ void main() {
     await index.refresh();
     index.setActive('s1');
 
-    for (final step in const [amplifiedTextStep, 2.2]) {
+    for (final step in const [amplifiedTextStep, nextTextStep]) {
       await pump(tester, collapsed: false, scale: step);
       expect(
         textDefects(tester),

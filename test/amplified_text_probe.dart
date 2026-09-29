@@ -22,6 +22,14 @@ import 'package:flutter_test/flutter_test.dart';
 /// macOS's largest step short of XXL - the one that breaks chrome.
 const double amplifiedTextStep = 1.8;
 
+/// The step above it, because one step does not certify a seat.
+///
+/// A 36px line is exactly one line of 14/20 at 1.8 - the guard passes and says
+/// nothing. At this step the same seat cuts the label and the time next to it
+/// (`44.0 vs 36.0`, measured on the session row), which is how the seat law got
+/// its second number.
+const double nextTextStep = 2.2;
+
 /// Pumps [child] under [step] of the platform's own scaler.
 ///
 /// It is a `StatelessWidget` rather than a `Builder` assigned to the variable it

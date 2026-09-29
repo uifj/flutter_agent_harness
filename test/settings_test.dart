@@ -561,46 +561,53 @@ void main() {
     // nailed 32 left it, the action row's dense capsule wanted 32.0 in the 26.0
     // the 54px header allowed after its own padding, and a provider row wanted
     // 40.0 in 36.0. All three are one line of chrome, so each now rides the step.
+    // The step above 1.8x then named two more: the nav cells (48.0 in 40.0) and
+    // a provider name that was handed its row's whole width instead of yielding
+    // to the credential dot next to it.
     group('amplified text', () {
-      testWidgets('no section spills or cuts a label', (tester) async {
-        // Tall enough that the panel's whole content lays out at once: the
-        // sections are a single scroll list, so measuring one page would only
-        // ever see the first.
-        tester.view.physicalSize = const Size(1400, 6000);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.reset);
-
-        await pump(
+      for (final (label, step) in const [
+        ('1.8x', amplifiedTextStep),
+        ('2.2x', nextTextStep),
+      ]) {
+        testWidgets('no section spills or cuts a label ($label)', (
           tester,
-          settings: const AppSettings(model: ModelSettings(apiKey: 'k')),
-          onSave: (_) async {},
-          scale: amplifiedTextStep,
-        );
-        await tester.pumpAndSettle();
-        expect(textDefects(tester), isEmpty, reason: 'every section at once');
+        ) async {
+          // Tall enough that the panel's whole content lays out at once: the
+          // sections are a single scroll list, so measuring one page would only
+          // ever see the first.
+          tester.view.physicalSize = const Size(1400, 6000);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
 
-        // The provider rows expand on demand, so the panel has to be walked
-        // section by section: the first pass never laid out what a closed
-        // section keeps hidden.
-        // The provider rows and the workbench card expand on demand, so the
-        // panel has to be walked nav by nav: the pass above never laid out what
-        // a closed section keeps hidden.
-        for (final section in const [
-          'General',
-          'Appearance',
-          'Models',
-          'Workbench',
-          'Workspace',
-          'Extensions',
-          'Backup & Restore',
-        ]) {
-          // Both the nav cell and the section's own heading carry the label,
-          // and the tall viewport lays both out at once.
-          await tester.tap(find.text(section).first);
+          await pump(
+            tester,
+            settings: const AppSettings(model: ModelSettings(apiKey: 'k')),
+            onSave: (_) async {},
+            scale: step,
+          );
           await tester.pumpAndSettle();
-          expect(textDefects(tester), isEmpty, reason: section);
-        }
-      });
+          expect(textDefects(tester), isEmpty, reason: 'every section at once');
+
+          // The provider rows and the workbench card expand on demand, so the
+          // panel has to be walked nav by nav: the pass above never laid out
+          // what a closed section keeps hidden.
+          for (final section in const [
+            'General',
+            'Appearance',
+            'Models',
+            'Workbench',
+            'Workspace',
+            'Extensions',
+            'Backup & Restore',
+          ]) {
+            // Both the nav cell and the section's own heading carry the label,
+            // and the tall viewport lays both out at once.
+            await tester.tap(find.text(section).first);
+            await tester.pumpAndSettle();
+            expect(textDefects(tester), isEmpty, reason: section);
+          }
+        });
+      }
     });
   });
 }

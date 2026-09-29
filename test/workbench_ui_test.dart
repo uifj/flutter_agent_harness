@@ -568,56 +568,64 @@ void main() {
   // 32.0 in a 29.0 box, its rows 36.0 against a 22.0 `itemExtent`, the editor's
   // path 32.0 in 27.0, the side chat's title 40.0 in 35.0 and the browser's
   // address field 36.0 in 33.0. All five are one line of chrome, so each now
-  // takes its height from the same step the type does.
+  // takes its height from the same step the type does. The step above that named
+  // two more: the tab strip (40.0 for a title in the 33.5 a pinned 36 left) and
+  // the tree's own header (31.0 in 27.0).
   group('amplified text', () {
-    testWidgets('no tab body spills or cuts a label', (tester) async {
-      final step = amplifiedTextStep;
-      // The root is resolved because the tree canonicalises it, and an
-      // unresolved root makes every displayed path disagree with the disk.
-      final root = workspace();
-      Directory('${root.path}/deeply').createSync();
-      File(
-        '${root.path}/deeply/yet-another-nested-file-name.dart',
-      ).writeAsStringSync('void main() {}\n');
+    for (final (label, step) in const [
+      ('1.8x', amplifiedTextStep),
+      ('2.2x', nextTextStep),
+    ]) {
+      testWidgets('no tab body spills or cuts a label ($label)', (
+        tester,
+      ) async {
+        // The root is resolved because the tree canonicalises it, and an
+        // unresolved root makes every displayed path disagree with the disk.
+        final root = workspace();
+        Directory('${root.path}/deeply').createSync();
+        File(
+          '${root.path}/deeply/yet-another-nested-file-name.dart',
+        ).writeAsStringSync('void main() {}\n');
 
-      await pump(tester, null, const WorkbenchPrefs(), step);
-      expect(textDefects(tester), isEmpty, reason: 'an empty pane');
+        await pump(tester, null, const WorkbenchPrefs(), step);
+        expect(textDefects(tester), isEmpty, reason: 'an empty pane');
 
-      workbench.openGit();
-      await pump(tester, null, const WorkbenchPrefs(), step);
-      await tester.pumpAndSettle();
-      expect(textDefects(tester), isEmpty, reason: 'the git tab');
+        workbench.openGit();
+        await pump(tester, null, const WorkbenchPrefs(), step);
+        await tester.pumpAndSettle();
+        expect(textDefects(tester), isEmpty, reason: 'the git tab');
 
-      workbench.openTerminal();
-      await pump(tester, null, const WorkbenchPrefs(), step);
-      await tester.pumpAndSettle();
-      expect(textDefects(tester), isEmpty, reason: 'the terminal tab');
+        workbench.openTerminal();
+        await pump(tester, null, const WorkbenchPrefs(), step);
+        await tester.pumpAndSettle();
+        expect(textDefects(tester), isEmpty, reason: 'the terminal tab');
 
-      workbench.workspaceRoot = root.path;
-      workbench.openFolder(root.path);
-      await pump(tester, null, const WorkbenchPrefs(), step);
-      await pumpUntil(tester, find.text('deeply'));
-      expect(textDefects(tester), isEmpty, reason: 'the file tree');
+        workbench.workspaceRoot = root.path;
+        workbench.openFolder(root.path);
+        await pump(tester, null, const WorkbenchPrefs(), step);
+        await pumpUntil(tester, find.text('deeply'));
+        expect(textDefects(tester), isEmpty, reason: 'the file tree');
 
-      workbench.openFile(
-        '${root.path}/deeply/yet-another-nested-file-name.dart',
-      );
-      await pump(tester, null, const WorkbenchPrefs(), step);
-      await tester.pumpAndSettle();
-      expect(textDefects(tester), isEmpty, reason: 'an open file');
+        workbench.openFile(
+          '${root.path}/deeply/yet-another-nested-file-name.dart',
+        );
+        await pump(tester, null, const WorkbenchPrefs(), step);
+        await tester.pumpAndSettle();
+        expect(textDefects(tester), isEmpty, reason: 'an open file');
 
-      workbench.openSideChat();
-      await pump(tester, null, const WorkbenchPrefs(), step);
-      await tester.pumpAndSettle();
-      expect(textDefects(tester), isEmpty, reason: 'a side chat');
+        workbench.openSideChat();
+        await pump(tester, null, const WorkbenchPrefs(), step);
+        await tester.pumpAndSettle();
+        expect(textDefects(tester), isEmpty, reason: 'a side chat');
 
-      workbench.openBrowserUntitled();
-      await pump(tester, null, const WorkbenchPrefs(), step);
-      await tester.pumpAndSettle();
-      expect(textDefects(tester), isEmpty, reason: 'a browser tab');
-      // The web view arms a load timeout; left armed, the binding fails the test
-      // for a pending timer rather than for anything about the layout.
-      await tester.pump(const Duration(seconds: 31));
-    });
+        workbench.openBrowserUntitled();
+        await pump(tester, null, const WorkbenchPrefs(), step);
+        await tester.pumpAndSettle();
+        expect(textDefects(tester), isEmpty, reason: 'a browser tab');
+        // The web view arms a load timeout; left armed, the binding fails the
+        // test for a pending timer rather than for anything about the layout.
+        await tester.pump(const Duration(seconds: 31));
+      });
+    }
   });
 }
