@@ -21,6 +21,7 @@ import '../host/terminal_manager.dart';
 import '../model/app_settings.dart' as cfg;
 import '../model/workspace_index.dart';
 import '../model/workbench_prefs.dart';
+import 'approval_rule_store.dart';
 import 'conversation_controller.dart';
 import 'details_selection.dart';
 import 'layout_controller.dart';
@@ -41,7 +42,11 @@ class AppScope {
   }) : _support = support {
     _sessionRoot = Directory('${support.path}/sessions')
       ..createSync(recursive: true);
+    _approvals = ApprovalRuleStore.open(support);
     _runtime = _build(settings.value);
+    // The saved approvals belong to a folder, so the book has to be pointed at
+    // the open one before any tool can run.
+    _approvals.useWorkspace(settings.value.workspaceRoot);
     // The model seat follows the document, not the runtime: a save that
     // rebuilds one re-points the other in the same write.
     _adoptModelDirectory(settings.value);
@@ -60,6 +65,7 @@ class AppScope {
     _conversation = ConversationController(
       runtime: _runtime,
       tail: _tail,
+      approvals: _approvals,
       // A conversation gets its id from its first persisted turn, so this is when
       // a new session becomes listable — and when the sidebar can mark it. It is
       // also when the workbench layout built while composing that turn acquires
@@ -82,6 +88,14 @@ class AppScope {
 
   /// The workbench preferences, the same contract.
   final PrefsStore prefs;
+
+  /// The saved approval decisions, per workspace. Opened here rather than in
+  /// `main` because the document is small, live-editable and never a reason to
+  /// rebuild the runtime — `WorkbenchStore`'s reasoning.
+  late final ApprovalRuleStore _approvals;
+
+  /// What the settings page lists so a saved decision can be revoked.
+  ApprovalRuleStore get approvals => _approvals;
 
   late final Directory _sessionRoot;
   late AgentRuntime _runtime;
@@ -244,6 +258,9 @@ class AppScope {
     settings: settings,
     sessionRoot: _sessionRoot,
     support: _support,
+    // The same book across a rebuild: a settings save that replaces the runtime
+    // must not replace what the user already approved.
+    approvalRules: _approvals.book,
   )..workspaceRoot = settings.workspaceRoot;
 
   /// Persists the edited settings, then brings the runtime in line with them.
@@ -256,6 +273,10 @@ class AppScope {
   Future<void> save(cfg.AppSettings next) async {
     final previous = settings.value;
     await settings.save(next);
+    if (next.workspaceRoot != previous.workspaceRoot) {
+      // A different folder is a different set of things the user approved.
+      _approvals.useWorkspace(next.workspaceRoot);
+    }
     // The workbench reads the same folder as the tools, through the same guard,
     // so it moves whether or not the runtime is rebuilt.
     _workbench.workspaceRoot = next.workspaceRoot;

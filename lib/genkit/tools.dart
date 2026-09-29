@@ -25,6 +25,7 @@ import 'package:genkit/genkit.dart';
 import 'package:schemantic/schemantic.dart';
 
 import '../model/approval_mode.dart';
+import '../model/approval_rule.dart';
 import '../model/workspace.dart';
 import '../state/fs_revision.dart';
 import 'file_search.dart';
@@ -55,13 +56,18 @@ SchemanticType<Map<String, dynamic>> _objectSchema(
 /// Registration happens once, in [define]; the tools read [workspace] at call
 /// time, so opening a different folder does not mean re-registering anything.
 class WorkspaceTools {
-  WorkspaceTools(this._ai, {ApprovalModeHolder? approval})
+  WorkspaceTools(this._ai, {ApprovalModeHolder? approval, this.rules})
     : _approval = approval ?? ApprovalModeHolder();
 
   final Genkit _ai;
 
   /// How gated calls decide, read at call time so switching is live.
   final ApprovalModeHolder _approval;
+
+  /// Saved decisions, consulted before a writable call reaches the user. Null
+  /// when nothing is wired (the spike, a bare runtime in a test), which means
+  /// every gated call asks, exactly as it did before ADR-0012.
+  final ApprovalRuleBook? rules;
 
   /// Null until the user opens a folder — in which case every tool refuses,
   /// telling the model why.
@@ -89,6 +95,25 @@ class WorkspaceTools {
 
   /// Whether the approval interrupt should fire for this call.
   bool get shouldInterrupt => _approval.value == ApprovalMode.ask;
+
+  /// What the tools that touch anything are, and the delegation target's whole
+  /// allowance.
+  ///
+  /// Declared beside the registry rather than in the consumer: the gate and the
+  /// sub-agent used to keep two lists of this, which is how a newly added
+  /// read-only tool would be invisible to a sub-agent (ADR-0012 S1).
+  static const readOnlyToolNames = {'read', 'glob', 'grep'};
+
+  /// Whether [name] names a tool that touches nothing.
+  static bool isReadOnly(String name) => readOnlyToolNames.contains(name);
+
+  /// The one gate every writable call runs, in the one order that exists.
+  GateDecision gateFor(ApprovalSubjectKind kind, String subject) => decideGate(
+    mode: _approval.value,
+    subject: subject,
+    decided: rules?.decide(kind, subject),
+    modeRefusal: gateRefusal(),
+  );
 
   Workspace get _workspace {
     final ws = workspace;
@@ -214,9 +239,9 @@ class WorkspaceTools {
       }
 
       if (context.resumed == null) {
-        final refusal = gateRefusal();
-        if (refusal != null) return ToolResult.response(refusal);
-        if (shouldInterrupt) {
+        final gate = gateFor(ApprovalSubjectKind.filePath, ws.relative(path));
+        if (gate.refusal != null) return ToolResult.response(gate.refusal!);
+        if (gate.asks) {
           return ToolResult.interrupt({
             'kind': 'write',
             'path': ws.relative(path),
@@ -323,9 +348,9 @@ class WorkspaceTools {
       }
 
       if (context.resumed == null) {
-        final refusal = gateRefusal();
-        if (refusal != null) return ToolResult.response(refusal);
-        if (shouldInterrupt) {
+        final gate = gateFor(ApprovalSubjectKind.filePath, ws.relative(path));
+        if (gate.refusal != null) return ToolResult.response(gate.refusal!);
+        if (gate.asks) {
           return ToolResult.interrupt({
             'kind': 'edit',
             'path': ws.relative(path),
@@ -583,9 +608,9 @@ class WorkspaceTools {
       }
 
       if (context.resumed == null) {
-        final refusal = gateRefusal();
-        if (refusal != null) return ToolResult.response(refusal);
-        if (shouldInterrupt) {
+        final gate = gateFor(ApprovalSubjectKind.command, command);
+        if (gate.refusal != null) return ToolResult.response(gate.refusal!);
+        if (gate.asks) {
           return ToolResult.interrupt({
             'kind': 'bash',
             'command': command,
@@ -694,3 +719,51 @@ class WorkspaceTools {
     _ => null,
   };
 }
+
+/// The order a gated call decides in — the whole policy, one place, shared by
+/// the local writable tools and the external ones the middleware gates
+/// (ADR-0012).
+///
+/// `plan` refuses without asking; a deny rule refuses with the reason the model
+/// reads; an allow rule lets the call through unheard; `auto` runs it without
+/// asking; and only a call no mode and no rule speaks for interrupts.
+GateDecision decideGate({
+  required ApprovalMode mode,
+  required String subject,
+  ApprovalOutcome? decided,
+  Map<String, dynamic>? modeRefusal,
+}) {
+  if (modeRefusal != null) return GateDecision.refused(modeRefusal);
+  if (decided == ApprovalOutcome.deny) {
+    return GateDecision.refused({
+      'ok': false,
+      'error':
+          'The user has a standing rule that declines this: $subject. '
+          'Ask them to lift it if it is needed, and do not retry.',
+    });
+  }
+  if (decided == ApprovalOutcome.allow) {
+    return const GateDecision.proceed();
+  }
+  if (mode != ApprovalMode.ask) return const GateDecision.proceed();
+  return const GateDecision.ask();
+}
+
+/// What [decideGate] settled on.
+///
+/// Three outcomes because the call needs to know which of them it is: run,
+/// answer with a refusal the model reads, or pause and ask the user.
+class GateDecision {
+  const GateDecision.proceed() : outcome = GateOutcome.proceed, refusal = null;
+
+  const GateDecision.ask() : outcome = GateOutcome.ask, refusal = null;
+
+  const GateDecision.refused(this.refusal) : outcome = GateOutcome.refused;
+
+  final GateOutcome outcome;
+  final Map<String, dynamic>? refusal;
+
+  bool get asks => outcome == GateOutcome.ask;
+}
+
+enum GateOutcome { proceed, ask, refused }

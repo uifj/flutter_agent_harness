@@ -23,6 +23,7 @@ import 'package:path/path.dart' as p;
 
 import '../model/app_settings.dart';
 import '../model/approval_mode.dart';
+import '../model/approval_rule.dart';
 import '../model/attached_image.dart';
 import '../model/conversation.dart';
 import '../model/mention_expansion.dart';
@@ -109,12 +110,6 @@ needs files or commands the main thread can run instead. Be brief.
 const _mcpHostName = 'mcp';
 const _subagentName = 'general-purpose';
 const _sideName = 'dsh-side';
-
-/// The workspace tools the sub-agent is allowed: everything read-only. A
-/// sub-agent's approval interrupt cannot reach the UI — the delegation
-/// middleware resolves it as text — so it must not be able to reach a gated
-/// tool (write, edit, bash) in the first place.
-const _subagentTools = {'read', 'glob', 'grep'};
 
 /// How many times the tool loop may go round before the runtime gives up. High
 /// enough for real multi-step work, low enough to bound a runaway loop's cost.
@@ -345,10 +340,14 @@ const _toolAuditCapacity = 200;
 /// like a local write. A resumed call consults only its verdict: once the
 /// user has decided, the gate stays open for that call.
 class _ToolGate extends GenerateMiddleware {
-  _ToolGate(this._approval, this._audit);
+  _ToolGate(this._approval, this._audit, this._rules);
 
   final ApprovalModeHolder _approval;
   final List<ToolAuditRecord> _audit;
+
+  /// Saved decisions, so an external tool the user already approved does not
+  /// pause the turn again (ADR-0012).
+  final ApprovalRuleBook? _rules;
 
   @override
   Future<ToolResponsePart> tool(
@@ -369,23 +368,38 @@ class _ToolGate extends GenerateMiddleware {
     final approved = resumed is Map && resumed['approved'] == true;
 
     if (external && !approved) {
-      if (_approval.value == ApprovalMode.plan) {
-        _record(name, 0, ToolAuditOutcome.refused);
-        return _refusal(
-          request,
-          'Plan mode is on: external tools are disabled until the user approves '
-          'the plan.',
-        );
+      // The same order the local writable tools run, so an external call cannot
+      // be exempt from a rule the user believes applies to everything.
+      final decision = decideGate(
+        mode: _approval.value,
+        subject: name,
+        decided: _rules?.decide(ApprovalSubjectKind.tool, name),
+        modeRefusal: _approval.value == ApprovalMode.plan
+            ? const {
+                'ok': false,
+                'error':
+                    'Plan mode is on: external tools are disabled until the '
+                    'user approves the plan.',
+              }
+            : null,
+      );
+      switch (decision.outcome) {
+        case GateOutcome.refused:
+          _record(name, 0, ToolAuditOutcome.refused);
+          return _refusal(
+            request,
+            decision.refusal!['error'] as String? ?? 'Refused.',
+          );
+        case GateOutcome.ask:
+          _record(name, 0, ToolAuditOutcome.interrupted);
+          throw ToolInterruptException({
+            'kind': 'mcp',
+            'server': name.substring(0, name.indexOf('/')),
+            'tool': name.substring(name.indexOf('/') + 1),
+          });
+        case GateOutcome.proceed:
+          break;
       }
-      if (_approval.value == ApprovalMode.ask) {
-        _record(name, 0, ToolAuditOutcome.interrupted);
-        throw ToolInterruptException({
-          'kind': 'mcp',
-          'server': name.substring(0, name.indexOf('/')),
-          'tool': name.substring(name.indexOf('/') + 1),
-        });
-      }
-      // Auto mode: straight through, below.
     }
 
     return _timed(request, ctx, next);
@@ -437,10 +451,11 @@ class _ToolGate extends GenerateMiddleware {
 }
 
 class _ToolGatePlugin extends GenkitPlugin {
-  _ToolGatePlugin(this._approval, this._audit);
+  _ToolGatePlugin(this._approval, this._audit, this._rules);
 
   final ApprovalModeHolder _approval;
   final List<ToolAuditRecord> _audit;
+  final ApprovalRuleBook? _rules;
 
   @override
   String get name => _toolGateName;
@@ -449,7 +464,7 @@ class _ToolGatePlugin extends GenkitPlugin {
   List<GenerateMiddlewareDef> middleware() => [
     defineMiddleware<Map<String, dynamic>>(
       name: _toolGateName,
-      create: (config, ctx) => _ToolGate(_approval, _audit),
+      create: (config, ctx) => _ToolGate(_approval, _audit, _rules),
     ),
   ];
 }
@@ -527,6 +542,7 @@ class AgentRuntime implements TurnSource {
     required AppSettings settings,
     required Directory sessionRoot,
     required Directory support,
+    ApprovalRuleBook? approvalRules,
   }) {
     final model = settings.model;
     final stop = _StopFlag();
@@ -582,7 +598,7 @@ class AgentRuntime implements TurnSource {
         providerPlugin,
         _StopGatePlugin(stop),
         _UsagePlugin(usage),
-        _ToolGatePlugin(approval, toolAudit),
+        _ToolGatePlugin(approval, toolAudit, approvalRules),
         AgentsPlugin(),
         SkillsPlugin(),
       ],
@@ -609,13 +625,14 @@ class AgentRuntime implements TurnSource {
             ),
           );
 
-    final tools = WorkspaceTools(ai, approval: approval);
+    final tools = WorkspaceTools(ai, approval: approval, rules: approvalRules);
     final planTools = PlanTools(ai);
     final workspaceToolList = tools.define();
 
     // The delegation target, registered so the agents middleware can resolve
-    // it by name. Read-only by construction — see [_subagentTools]. No store:
-    // a sub-agent conversation is one task, not a session.
+    // it by name. Read-only by construction — the filter below keeps the
+    // writable tools out. No store: a sub-agent conversation is one task, not a
+    // session.
     //
     // It shares the parent's stop gate. Without it a delegation would keep
     // running to completion after the user pressed stop — its result then
@@ -633,7 +650,7 @@ class AgentRuntime implements TurnSource {
       system: _subagentPrompt,
       tools: [
         for (final tool in workspaceToolList)
-          if (_subagentTools.contains(tool.name)) tool,
+          if (WorkspaceTools.isReadOnly(tool.name)) tool,
       ],
       use: [
         middlewareRef<Map<String, dynamic>>(name: _stopGateName),

@@ -15,10 +15,12 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 
 import '../model/approval_mode.dart';
+import '../model/approval_rule.dart';
 import '../model/attached_image.dart';
 import '../model/conversation.dart';
 import '../model/turn_event.dart';
 import '../model/turn_source.dart';
+import 'approval_rule_store.dart';
 import 'streaming_tail.dart';
 
 class ConversationController extends ChangeNotifier {
@@ -26,11 +28,16 @@ class ConversationController extends ChangeNotifier {
     required TurnSource runtime,
     required StreamingTail tail,
     this.onSessionPersisted,
+    this.approvals,
   }) : _runtime = runtime,
        _tail = tail;
 
   TurnSource _runtime;
   final StreamingTail _tail;
+
+  /// Where an "always allow" answer is written. Null leaves the panel with the
+  /// two verdicts it always had.
+  final ApprovalRuleStore? approvals;
 
   /// Called with the session id once a turn has been persisted, so the session
   /// list can pick up a conversation that did not exist before.
@@ -192,9 +199,18 @@ class ConversationController extends ChangeNotifier {
   }
 
   /// Answers the pending approval and lets the paused turn continue.
-  Future<void> respondToApproval(bool approved) async {
+  Future<void> respondToApproval(bool approved, {bool remember = false}) async {
     final request = _pendingApproval;
     if (request == null || _isBusy) return;
+
+    // Written before the resume, not after: a turn can ask again for the next
+    // call, and a decision the user just made should already be in force by
+    // then. A remembered rejection would need its own review list first, so
+    // only an approval is offered as permanent.
+    final rule = approved && remember
+        ? request.ruleFor(ApprovalOutcome.allow)
+        : null;
+    if (rule != null) await approvals?.remember(rule);
 
     _pendingApproval = null;
     // Marked before the round trip so the card stops looking like a question the
