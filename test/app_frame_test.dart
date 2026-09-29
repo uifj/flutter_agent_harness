@@ -21,8 +21,6 @@ import 'package:agent_harness/ui/sidebar/sidebar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:agent_harness/ui/primitives/tappable.dart';
-
 import 'amplified_text_probe.dart';
 import 'fake_turn_source.dart';
 
@@ -491,40 +489,7 @@ void main() {
     for (final width in const [1400.0, 1100.0, 700.0]) {
       await pump(tester, width: width);
       await tester.pumpAndSettle();
-      final offenders = <String>[];
-      void check(String kind, Finder finder, String? Function(Finder) label) {
-        for (var i = 0; i < finder.evaluate().length; i++) {
-          final at = finder.at(i);
-          if (label(at) != null) continue;
-          bool any(Finder f) => f.evaluate().isNotEmpty;
-          if (any(find.descendant(of: at, matching: find.byType(Tooltip))) ||
-              any(find.ancestor(of: at, matching: find.byType(Tooltip)))) {
-            continue;
-          }
-          final iconOnly =
-              any(find.descendant(of: at, matching: find.byType(Icon))) &&
-              !any(find.descendant(of: at, matching: find.byType(Text)));
-          if (!iconOnly) continue;
-          final code = tester
-              .widgetList<Icon>(
-                find.descendant(of: at, matching: find.byType(Icon)),
-              )
-              .map((w) => w.icon?.codePoint.toRadixString(16))
-              .join('+');
-          offenders.add('$kind#$i u$code');
-        }
-      }
-
-      check(
-        'tap',
-        find.byType(DswHoverTap),
-        (f) => tester.widget<DswHoverTap>(f).semanticLabel,
-      );
-      check(
-        'iconButton',
-        find.byType(IconButton),
-        (f) => tester.widget<IconButton>(f).tooltip,
-      );
+      final offenders = unlabelledIconControls(tester);
       expect(offenders, isEmpty, reason: 'an icon-only control at $width');
     }
   });

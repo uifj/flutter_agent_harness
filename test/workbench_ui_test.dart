@@ -743,4 +743,44 @@ void main() {
       );
     }
   });
+  // The same tab sequence read for names instead of geometry: a control that
+  // is only a glyph has to say what it does. Opened in the order the bodies
+  // appear so each failure names the tab it belongs to.
+  testWidgets('every icon-only control in a tab body names itself', (
+    tester,
+  ) async {
+    final root = workspace();
+    Directory('${root.path}/deeply').createSync();
+    File(
+      '${root.path}/deeply/yet-another-nested-file-name.dart',
+    ).writeAsStringSync('void main() {}\n');
+
+    await pump(tester, null, const WorkbenchPrefs());
+    expect(unlabelledIconControls(tester), isEmpty, reason: 'an empty pane');
+
+    // Deliberately not the git tab: it arms a 30s process timeout when it opens
+    // a real repo, and the pending timer fails the test for a reason that has
+    // nothing to do with names. The geometry face covers git with the fake.
+
+    workbench.openTerminal();
+    await pump(tester, null, const WorkbenchPrefs());
+    await tester.pumpAndSettle();
+    expect(unlabelledIconControls(tester), isEmpty, reason: 'the terminal tab');
+
+    workbench.workspaceRoot = root.path;
+    workbench.openFolder(root.path);
+    await pump(tester, null, const WorkbenchPrefs());
+    await pumpUntil(tester, find.text('deeply'));
+    expect(unlabelledIconControls(tester), isEmpty, reason: 'the file tree');
+
+    workbench.openFile('${root.path}/deeply/yet-another-nested-file-name.dart');
+    await pump(tester, null, const WorkbenchPrefs());
+    await tester.pumpAndSettle();
+    expect(unlabelledIconControls(tester), isEmpty, reason: 'an open file');
+
+    workbench.openSideChat();
+    await pump(tester, null, const WorkbenchPrefs());
+    await tester.pumpAndSettle();
+    expect(unlabelledIconControls(tester), isEmpty, reason: 'a side chat');
+  });
 }

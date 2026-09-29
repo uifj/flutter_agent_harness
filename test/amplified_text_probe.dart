@@ -15,6 +15,7 @@
 // numbers and the owner's creator chain, because a guard that cannot name the
 // widget it rejected is a guard nobody can act on.
 
+import 'package:agent_harness/ui/primitives/tappable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -123,4 +124,47 @@ String _owner(WidgetTester tester, RenderObject ro, int depth) {
     if (el.renderObject == ro) return el.debugGetCreatorChain(depth);
   }
   return ro.toStringShort();
+}
+
+/// The other ruler: not geometry but **names**. An icon-only control says
+/// nothing to a screen reader unless it carries a label, a tooltip or a visible
+/// word, and nothing about a fixed-height seat proves that. Returns one entry
+/// per icon-only control that names itself with nothing, tagged with the icon's
+/// codepoint so the report survives the control moving in the tree.
+List<String> unlabelledIconControls(WidgetTester tester) {
+  final offenders = <String>[];
+  void check(String kind, Finder finder, String? Function(Finder) label) {
+    for (var i = 0; i < finder.evaluate().length; i++) {
+      final at = finder.at(i);
+      if (label(at) != null) continue;
+      bool any(Finder f) => f.evaluate().isNotEmpty;
+      if (any(find.descendant(of: at, matching: find.byType(Tooltip))) ||
+          any(find.ancestor(of: at, matching: find.byType(Tooltip)))) {
+        continue;
+      }
+      final iconOnly =
+          any(find.descendant(of: at, matching: find.byType(Icon))) &&
+          !any(find.descendant(of: at, matching: find.byType(Text)));
+      if (!iconOnly) continue;
+      final code = tester
+          .widgetList<Icon>(
+            find.descendant(of: at, matching: find.byType(Icon)),
+          )
+          .map((w) => w.icon?.codePoint.toRadixString(16))
+          .join('+');
+      offenders.add('$kind#$i u$code');
+    }
+  }
+
+  check(
+    'tap',
+    find.byType(DswHoverTap),
+    (f) => tester.widget<DswHoverTap>(f).semanticLabel,
+  );
+  check(
+    'iconButton',
+    find.byType(IconButton),
+    (f) => tester.widget<IconButton>(f).tooltip,
+  );
+  return offenders;
 }
