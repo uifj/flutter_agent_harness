@@ -195,6 +195,21 @@
 
 C 组全部挂到对应前置 ADR 之后，不在本轮。
 
+### 执行进度（2026-09-29，develop）
+
+| 项 | 落点 | ADR | commit | 状态 |
+| --- | --- | --- | --- | --- |
+| A2 指令注入 | `lib/genkit/instructions.dart` + `agent_runtime` 排队/排空 | ADR-0009 | 9019f3c | 已合入；带 key 的真实链路（模型确实收到该块）待确认 |
+| A8 能力位 | `model/known_models.dart` + `state/model_directory.dart` + composer 单门 | ADR-0010 | c34d1a7 · ac18647 · 4496677 | 已合入；**只做了 `supportsImage`**——PDF 本地抽文字、视频无通道，给没有消费者的能力位是凭空加抽象。顺带修掉两处同源缺陷（纯附件发不出、Windows 附件名） |
+| A6 架构检查器 | `tool/check_architecture.dart` + `tool/architecture_baseline.json` | ADR-0011 | f74417b | 已合入；5 条规则、7 条 baseline 债务、只拦新增。**没改 `.github/workflows/`**：`test/architecture_check_test.dart` 让 pr-check 的 `flutter test` 顺带跑它，加 CI 步骤就是第二份真值 |
+| A1 审批规则 / A3 工具元数据 / A4 队列 | 未开始 | 下一编号 ADR-0012 | — | 第 2 步。A1 与 A3 建议合并立 ADR（A3 的 `readOnly` 是 A1 判定的输入）；A1 落盘层级建议**先做 app 级**（`<support>/approvals.json`），把 ZCode 的"写进工作区"那一层留到确认 security-scoped bookmark 影响之后 |
+| B1 checkpoint/rewind | 未开始 | ADR-0015 预留 | — | 第 3 步 |
+
+移植时踩到的两条与文档判断不同的事实：
+
+1. **能力位不该一次做三个**（A8）。本仓库的附件只有一条 media 通道，`supportsPdf`/`supportsVideo` 今天没有消费者；照搬字段表就是死代码。
+2. **"规则即命令"最大的收益不是那三行 grep**（A6），而是把两条"文档里说过、从没查过"的约定（`lib/ui` 不直接 `dart:io`、riverpod 只在装配根）纳进来——前者当场量出 7 处真实违规，后者证明今天是干净的。
+
 ---
 
 ## 10. 证据索引（复核用）
