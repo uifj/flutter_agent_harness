@@ -31,6 +31,7 @@ import '../model/todo_state.dart';
 import '../model/turn_event.dart';
 import '../model/turn_source.dart';
 import '../model/workspace.dart';
+import 'instructions.dart';
 import 'plan_tools.dart';
 import 'tools.dart';
 
@@ -42,7 +43,7 @@ import 'tools.dart';
 /// a tool never describes it; there is one fixed tool set here, so they are
 /// inlined in the source's own order.
 const _systemPrompt = '''
-You are a focused coding and research assistant running on the user's Mac.
+You are a focused coding and research assistant running on the user's desktop.
 
 - Prefer using the tools over guessing about the workspace. Paths are relative to
   the workspace root.
@@ -726,8 +727,28 @@ class AgentRuntime implements TurnSource {
   /// Which folder the file tools may touch. Null means they all refuse.
   String? get workspaceRoot => _tools.workspace?.root;
 
-  set workspaceRoot(String? path) =>
-      _tools.workspace = path == null ? null : Workspace.of(path);
+  /// Changing the folder re-queues its instructions: the next message the user
+  /// sends carries the new workspace's `AGENTS.md` chain, not the old one's.
+  set workspaceRoot(String? path) {
+    _tools.workspace = path == null ? null : Workspace.of(path);
+    _queueInstructions();
+  }
+
+  /// The instruction block waiting to ride the next user message.
+  ///
+  /// Queued when a conversation starts or the workspace changes, and drained by
+  /// [send]. It is a context message rather than a system-prompt rewrite: this
+  /// agent is defined once and the workspace is a live setter, so per-folder
+  /// instructions cannot be baked into `system` (ADR-0009). A restored session
+  /// leaves it null — its own history already carries the block.
+  String? _pendingInstructions;
+
+  void _queueInstructions() {
+    _pendingInstructions = instructionsForWorkspace(
+      workspaceRoot: _tools.workspace?.root,
+      homeRoot: detectHomeRoot(),
+    );
+  }
 
   /// How the gated tools decide, live. Held in a holder the tools read at call
   /// time; this setter is the seam the conversation controller forwards to.
@@ -775,32 +796,26 @@ class AgentRuntime implements TurnSource {
       );
     }
     final chat = _chat ??= _agent.chat();
+    // The workspace's instructions ride the first message of a conversation,
+    // drained here so a queue set at startup or by a folder switch cannot be
+    // sent twice.
+    final instructions = _pendingInstructions;
+    _pendingInstructions = null;
     // dsh-at-file's pre-step, inline: every validated `@path` token in the
     // user's own words becomes an existence-only reference part ahead of the
     // body, so the model sees the pointer without the send being blocked on
     // it. Invalid tokens stay prose.
     final references = _mentionsIn(text);
     // Images ride the message as media parts — the data-URI form genkit's
-    // `Media.url` carries inline images as. Text-only sends keep the plain
+    // `Media.url` carries inline images as. A bare text send keeps the plain
     // string path, which is what a store round-trip preserves best.
-    if (images.isEmpty) {
-      if (references.isEmpty) {
-        return _drive((cancel) => chat.sendStream(text: text, cancel: cancel));
-      }
-      final message = Message(
-        role: Role.user,
-        content: [
-          for (final reference in references) TextPart(text: reference),
-          if (text.isNotEmpty) TextPart(text: text),
-        ],
-      );
-      return _drive(
-        (cancel) => chat.sendStream(message: message, cancel: cancel),
-      );
+    if (instructions == null && references.isEmpty && images.isEmpty) {
+      return _drive((cancel) => chat.sendStream(text: text, cancel: cancel));
     }
     final message = Message(
       role: Role.user,
       content: [
+        if (instructions != null) TextPart(text: instructions),
         for (final reference in references) TextPart(text: reference),
         if (text.isNotEmpty) TextPart(text: text),
         for (final image in images)
@@ -1092,6 +1107,7 @@ class AgentRuntime implements TurnSource {
     _chat = null;
     _pendingInterrupts.clear();
     _planTools.reset();
+    _queueInstructions();
   }
 
   /// Restores a persisted conversation and returns its transcript.
@@ -1104,6 +1120,9 @@ class AgentRuntime implements TurnSource {
     final chat = await _agent.loadChat(sessionId: id);
     _chat = chat;
     _pendingInterrupts.clear();
+    // The restored transcript already carries the instruction block it was
+    // started with; re-queueing would send the same folder brief twice.
+    _pendingInstructions = null;
     _planTools.restoreFrom(chat.messages);
     return projectMessages(chat.messages);
   }
