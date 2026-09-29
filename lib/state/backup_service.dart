@@ -52,8 +52,8 @@ class BackupService {
       }
     }
 
-    // Add directories (workbench, sessions, skills).
-    final dirs = <String>['workbench', 'sessions', 'skills'];
+    // Add directories (workbench, sessions, skills, checkpoints).
+    final dirs = <String>['workbench', 'sessions', 'skills', 'checkpoints'];
     var count = 0;
     for (final dirName in dirs) {
       final dir = Directory(p.join(support.path, dirName));
