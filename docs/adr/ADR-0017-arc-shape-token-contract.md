@@ -1,11 +1,11 @@
 # ADR-0017: 形状令牌契约（圆角按嵌套深度、选中态与 hover 分离）
 
-- **状态**: IN-PROGRESS @ `c2255c6`（S1+S2 已落并进门禁守卫）+ `74ab800`/`88b9f54`（同日：守卫改成读参数起始 token、4 处漏网字面量收回、侧栏品牌行并线 + 产品名进 i18n）· S2b 输入卡三态边已落 @ `b9684f4` · **S3 文本缩放已落并带守卫 @ `3301165`/`5cbf566`/`bab3a0f`/`20f38e6`/`0db9246`/`1e7b233`/`19949be`/`38ea405`：外壳、工作台 tab 正文（文件树/编辑器/侧聊/浏览器）、全屏设置页、企划工作台、企划的看板与表格面板、对话流的七个块（code/terminal/diff/grep/glob/pill/copy）六个面都在 1.8x 下量过并改绿**，余该节末「没闭的口」两格：`board_panel` 月网格的日期格（实测已记，修它要动入库包）、真机四档走查待人工
+- **状态**: IN-PROGRESS @ `c2255c6`（S1+S2 已落并进门禁守卫）+ `74ab800`/`88b9f54`（同日：守卫改成读参数起始 token、4 处漏网字面量收回、侧栏品牌行并线 + 产品名进 i18n）· S2b 输入卡三态边已落 @ `b9684f4` · **S3 文本缩放已落并带守卫 @ `3301165`/`5cbf566`/`bab3a0f`/`20f38e6`/`0db9246`/`1e7b233`/`19949be`/`38ea405`：外壳、工作台 tab 正文（文件树/编辑器/侧聊/浏览器）、全屏设置页、企划工作台、企划的看板/表格/日程三面面板、对话流的七个块（code/terminal/diff/grep/glob/pill/copy）六个面都在 1.8x 下量过并改绿 @ `b817fc0`/`7b323f8`/`21dc359`/`db18457`**，「没闭的口」只剩真机四档走查一格
 - **分类**: ARC
 - **优先级**: P1
 - **影响维度**: 生产功能（UI 一致性）/ 可维护性
 - **日期**: 2026-09-29
-- **修复 commit**: `c2255c6`（S1 形状令牌 + S2 选中态）· `74ab800`（侧栏品牌行并线与产品名）· `88b9f54`（守卫改读起始 token + 4 处漏网字面量）· `b9684f4`（S2b 输入卡三态边）· `3301165`（S3 缩放接线）· `5cbf566`（S3b 一行高的紧座位跟着步子长）· `bab3a0f`（1.8x 双向守卫）· `20f38e6`（工作台 tab 的五枚座位）· `0db9246`（探针抽成共用件 + 工作台/设置守卫）· `1e7b233`（设置页四枚座位 + 占位符/读数一行化）· `19949be`（企划工作台三枚座位）· `943ec84`（探针把溢出的那个孩子印出来）· `38ea405`（扩展面板：表格订阅 store + 座位与卡片随步子）· `b817fc0`/`7b323f8`（对话流七个块的首批测量：pill 随步子、终端 banner 不再被 chip 顶爆）
+- **修复 commit**: `c2255c6`（S1 形状令牌 + S2 选中态）· `74ab800`（侧栏品牌行并线与产品名）· `88b9f54`（守卫改读起始 token + 4 处漏网字面量）· `b9684f4`（S2b 输入卡三态边）· `3301165`（S3 缩放接线）· `5cbf566`（S3b 一行高的紧座位跟着步子长）· `bab3a0f`（1.8x 双向守卫）· `20f38e6`（工作台 tab 的五枚座位）· `0db9246`（探针抽成共用件 + 工作台/设置守卫）· `1e7b233`（设置页四枚座位 + 占位符/读数一行化）· `19949be`（企划工作台三枚座位）· `943ec84`（探针把溢出的那个孩子印出来）· `38ea405`（扩展面板：表格订阅 store + 座位与卡片随步子）· `b817fc0`/`7b323f8`（对话流七个块的首批测量：pill 随步子、终端 banner 不再被 chip 顶爆）· `21dc359`/`db18457`（日程月网格改由宿主画：日期座位随步子，网格吃面板约束）
 - **来源**: `docs/ui-production-audit-2026-09.md` §2 条 2b、§4.2、§4.6；ZCode `DESIGN.md` 的 radius-by-nesting 律
 
 ## 背景（Evidence）
@@ -99,12 +99,13 @@ S2 说的是"两个状态两个 token"，同一条律在输入卡上一直没人
 - `test/settings_test.dart` 的 `no section spills or cuts a label`（`1e7b233`）：一次展开全部区块 + 逐个走七个导航分区。量出的四枚座位：搜索框 **40.0 vs 30.0**（32 减掉自己的描边）、provider 行 40.0 vs 36.0、Edit/Close 32.0 vs 26.0、分区头部的标签被"54 减内衬后剩下的 26"裁断；另有两处不靠缩放解决——字段占位符与步进器读数**按设计就是一行**，改成 `maxLines: 1` + 裁剪。反向验证：把搜索框换回 `height: 32` 即红，报的正是 `"Search settings…" 40.0 vs 30.0`。同文件的 `the text-size steps compose onto the platform scaler` 守值：`medium == 1.0`、三档互不相等、默认文档落在 medium。
 - `test/plan_workspace_test.dart` 的 `the workspace and its editor survive amplified text`（`19949be`）：目录行 36.0 挤进 28.0，便签行的两行 Column 撑破 34.0 到 Flutter 画出条纹溢出，笔记工具条 44 装不下 1.8x 下变成 50.4 的 sm 胶囊。
 - `test/plan_extensions_view_test.dart` 的 `amplified text`（`38ea405`）：企划的三块扩展面板此前**一个测试都没有**（ADR-0007 的守卫只覆盖 store），第一批守卫就量出两处——表格里 120px 的日期列在 1.8x 把 `2026-09-20` 折成两行、要 72.0 挤进 36.0 的座位；看板卡片那一行五个孩子合计 122.3 对 108.0，框架自己报 `A RenderFlex overflowed by 14 pixels on the right`，标题被压到 0.0。
+- **日程月网格：不修入库包，改由宿主画格（`21dc359`/`db18457`）**。这一格原先写在"没闭的口"里，理由是修它要动 `packages/board_panel`（`analysis_options.yaml` 把 `packages/**` 排除在本仓库门禁之外）。真去量了一遍才发现**包不用动**：`MonthView` 有 `cellBuilder`，`FilledCell` 只是它的默认值。两条实测推翻默认：① 默认格把日期数字钉进 11.0 半径的 `CircleAvatar`（字号写死 12），1.8x 下每个可见日期都要 36.0 挤进 22.0（`"31" 36.0 vs 22.0`，一格一条）；② **它算网格尺寸用的是 `MediaQuery.size.width`**（`month_view.dart:391-395`），也就是**窗口宽**而不是面板宽，再乘 `cellAspectRatio` 0.55 得出六行高——800x600 的测试窗口里带日期的任务条实测落在 `Offset(742.9, 605.6)`：**在 widget 树里、在屏幕外**，探针量不到、鼠标点不到（`tester.tap` 只会打出一条"hit test 落空"警告，然后断言照常通过——这条要记住，静默的错位比红掉的守卫危险）。宿主侧改法是把两件事交回包自己的入参：`cellBuilder` 画 app 词汇的日期格（座位 `22 * step`、`DswType.xs13`/`xxxs11`、`DswAlias` 底色，任务条走 `DswHoverTap` → **日程面板第一次能勾选完成**，与看板·表格同一个动作），`LayoutBuilder` + `width`/`cellAspectRatio` 让六行正好吃掉面板给的高度。反向验过：摘掉 `cellBuilder`，守卫红成一条一格那串数字。同一批还删掉本文件里重复定义的 `the table projects every task, dated or not`（上一批 python 补丁留下的，两个同名 case 都在跑，计数因此虚高一条）。
 - `test/block_primitives_test.dart`（`7b323f8`）：**对话流那七个块**（code / terminal / diff / grep 卡 / glob 卡 / pill / copy）此前没有任何测试点名过它们，而它们同时渲染在会话与工作台 diff·搜索·终端 tab 里，一处裁字付两遍钱。每个块量两次：90 字符路径塞进 260px 列，再在 420px 列上跑 1.8x。七个里五个本来就干净，两个不是：
   - `Pill` 是**调用方给设计像素**的一行座位（24，终端里传 22 去和提示行对齐），1.8x 下它自己的 12px 标签要 32.0，被上下裁（``"review the quarterly report" 32.0 vs 24.0`），改成 `height * 那一步`。
   - **`b817fc0` 这条是新知识，值得单独记**：`RenderFlex` 给**非 flex 孩子**的是**整行的宽度**，不是「减掉兄弟之后剩下的」。所以状态 chip（`exit code 1` 自然宽 150.8）能越过 `Expanded` 的提示列把整行顶出去：`A RenderFlex overflowed by 12 pixels on the right`，提示列被压成 0.0，`$` 标签溢出卡片。修法不是把 chip 改成 `Flexible`（那会和提示列平分整行，两个都被裁），而是**让 chip 天生就短**（`exit 3` / `SIGTERM`，红点已经说明它是哪一种）——一行里的固定标签要按「它能占满整行」的最坏情况设计，而不是按剩下的空间。
   > **守卫为此改了一次探针，这条要记住**：`spillDefects` 原本只报"行合计 vs 行上限"，看不出是哪一个孩子不让步，而两种处置是相反的（给标签加 `Flexible`，还是把固定格随步子加宽）。探针现在把每个孩子印成 `"文本" 宽`，看板那条才从数字变成诊断：日期要 100.3，标题剩 0.0（`943ec84`）。顺带一条同类陷阱：`await store.add(...)` 写在 `testWidgets` 体内会**整轮挂死**（FakeAsync 从不把控制权交回真实事件循环，store 的原子写因此永不完成，没有失败也没有栈）——要么在 `setUp` 里 await，要么用 `runAsync` 排空（本仓库 `pumpUntil` 的既有写法）。
 
-**没闭的口（诚实）**：还剩两格。① **日程面板的月网格没修**：`packages/board_panel` 的 `MonthView` 把每格座位钉在 22.0，1.8x 下每个可见日期数字都要 36.0（实测串 `"31" 36.0 vs 22.0`，一格一条）。看板与表格是宿主自己的 widget，已按量到的数字改掉并进了门禁；月网格属于**入库本地包**（`analysis_options.yaml` 把 `packages/**` 排除在本仓库 format/analyze 之外），所以这一格留在守卫之外、在测试注释里写明"为什么不测"，而不是假装通过。② 真机 macOS「放大文本」四档走查仍待人工（本机无 Screen Recording 权限）。另外要说清口径：`grep -rhoE "height: (2[0-9]|[3-9][0-9]|1[0-9][0-9])," lib/ui | wc -l` 现在仍有 **60 处**（17 个文件）写死的 ≥20px 座位，它们**不等于**60 处会裁——里面多数装的是图标、分隔线或本来就能长高的内容；这六把守卫只证明了走到的那些格。"测到才改"是这条 ADR 的边界，也是它比"全仓库扫一遍字面量"值钱的原因。
+**没闭的口（诚实）**：只剩一格——真机 macOS「放大文本」四档走查仍待人工（本机无 Screen Recording 权限）。另外要说清口径：`grep -rhoE "height: (2[0-9]|[3-9][0-9]|1[0-9][0-9])," lib/ui | wc -l` 现在仍有 **60 处**（17 个文件）写死的 ≥20px 座位，它们**不等于**60 处会裁——里面多数装的是图标、分隔线或本来就能长高的内容；这六把守卫只证明了走到的那些格。"测到才改"是这条 ADR 的边界，也是它比"全仓库扫一遍字面量"值钱的原因。
 
 
 ### 明确不做
@@ -125,8 +126,8 @@ S2 说的是"两个状态两个 token"，同一条律在输入卡上一直没人
   > **首版守卫是漏的，这条要记住**：它当时写的是 `Radius\.circular\([0-9]`——只认括号后紧跟数字。于是 `BorderRadius.circular(wide ? 12 : 999)`（侧栏 New Session 两处）与 `BorderRadius.circular(_dense ? 14 : 18)`（`capsule_button` 两处）**带着字面量从它眼皮底下过了 4 处**，"94 处清零"那句因此并不成立。改成"读参数起始 token"后，反向验证是做回去：把 `wide ? 12 : 999` 塞回侧栏，守卫立刻红并指名行号。**只认数字形状的正则，等于给"三元里的数字"开了后门**——这一条对任何 `grep` 式门禁都适用。
 - `interactiveSelected` 与 `interactiveBgHover` **必须不相等**（一条断言钉住"两个状态两个 token"，防止以后有人"顺手合并"）。S2b 同形：`composer_test.dart` 的 `the card shows which surface has the keyboard` 走 autofocus／`Tab`／指针进出／点回字段五段，读的是**画出来的** `BoxDecoration.border`，末尾断言三枚 token 互不相等；反向验过是把三态换回一枚静置边，红。
 - `dart tool/contrast_check.dart` 与 `test/theme_contrast_test.dart` 仍绿（ADR-0004 口径）：S2b 只动**边**不动正文色，`contrast_check` 的配对里本来就没有 `border*`，前后同为 9 对低于 4.5:1。
-- 门禁同口径：format / `--fatal-infos` analyze / `check_architecture`（7 recorded, 0 new）/ `flutter test` 相对基线（本批 **`+854 -2`**，仍是登记的那两条既有失败）零新增失败。`dart tool/contrast_check.dart` 与 `test/theme_contrast_test.dart` 不受影响（9 对低于 4.5:1 全是 ADR-0004 方案 B 的 light 旧账，DARK 无回归）——本批一个颜色都没动。
-- 真机前后截图：侧栏（选中 vs 悬停）、composer 容器、代码块三处。终端无 Screen Recording 权限时标"待人工走查"。**S2b 之后这一条对 composer 只剩"好不好看"**：状态律本身已经可测并且已测，它不再依赖眼睛。
+- 门禁同口径：format / `--fatal-infos` analyze / `check_architecture`（7 recorded, 0 new）/ `flutter test` 相对基线（对话流七个块那批 **`+854 -2`**，日程月网格改由宿主画之后 **`+855 -2`**——净一条：新增 1.8x 日历守卫与"点日程里的任务条"两条，删掉一条同名重复 case；仍是登记的那两条既有失败）零新增失败。`dart tool/contrast_check.dart` 与 `test/theme_contrast_test.dart` 不受影响（9 对低于 4.5:1 全是 ADR-0004 方案 B 的 light 旧账，DARK 无回归）——本批一个颜色都没动。
+- 真机前后截图：侧栏（选中 vs 悬停）、composer 容器、代码块三处，**加上日程的月网格**（`21dc359` 把它从包的默认外观换成 app 自己的日期格，外观上有肉眼可见的变化：今天是一个实心圆、日期字号从写死的 12 变成 `DswType.xs13`、任务条不再是 `Colors.blue` 色块）。终端无 Screen Recording 权限时标"待人工走查"。**S2b 之后这一条对 composer 只剩"好不好看"**：状态律本身已经可测并且已测，它不再依赖眼睛。
 
 ## 关联（Links）
 
