@@ -626,6 +626,59 @@ void main() {
         // test for a pending timer rather than for anything about the layout.
         await tester.pump(const Duration(seconds: 31));
       });
+
+      // A menu is only in the tree while it is open, so nothing else in the
+      // walk measures its rows. The tree row menu pins each seat at 34, which
+      // is the one that had to learn to ride the text step; the tab strip's
+      // rows take Material's default height and only prove the label yields.
+      testWidgets('the tree row and tab strip menus keep their labels ($label)', (
+        tester,
+      ) async {
+        final root = workspace();
+        Directory('${root.path}/deeply').createSync();
+        workbench.workspaceRoot = root.path;
+        workbench.openFolder(root.path);
+        await pump(tester, null, const WorkbenchPrefs(), step);
+        await pumpUntil(tester, find.text('deeply'));
+
+        Future<void> rightClick(Finder target) async {
+          final gesture = await tester.startGesture(
+            tester.getCenter(target),
+            kind: PointerDeviceKind.mouse,
+            buttons: kSecondaryButton,
+          );
+          await gesture.up();
+          await tester.pumpAndSettle();
+        }
+
+        await rightClick(find.text('deeply'));
+        expect(find.text('Copy relative path'), findsOneWidget);
+        expect(textDefects(tester), isEmpty, reason: 'the tree row menu');
+
+        // Tap the barrier: a menu left open would cover the next stage.
+        await tester.tapAt(const Offset(2, 2));
+        await tester.pumpAndSettle();
+        expect(find.text('Copy relative path'), findsNothing);
+
+        // The folder tab the setup already opened — its chip is titled with the
+        // workspace's basename. git would have worked too, but its tab arms a
+        // 30s process timeout that outlives the test and fails the binding.
+        await rightClick(
+          find.descendant(
+            of: find.byType(WorkbenchTabBar),
+            matching: find.text('work'),
+          ),
+        );
+        expect(find.text('Close all'), findsOneWidget);
+        expect(textDefects(tester), isEmpty, reason: 'the tab strip menu');
+
+        // Same for this one: a menu still on screen when the test ends leaves
+        // its route's timer armed, and the binding fails the test for that.
+        await tester.tapAt(const Offset(2, 2));
+        await tester.pumpAndSettle();
+        expect(find.text('Close all'), findsNothing);
+        expect(tester.takeException(), isNull);
+      });
     }
   });
 }
