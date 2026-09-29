@@ -48,17 +48,14 @@ void main() {
         MaterialApp(
           theme: dswThemeData(Brightness.light),
           // The note-switch confirm dialog is a ShadDialog (reads the caller's
-          // ShadTheme) — mount the same ancestor main does.
+          // ShadTheme) — mount the same ancestor main does. The text step goes
+          // with it, above the Navigator, so the dialog and any menu are laid
+          // out at the step the walk claims to be measuring.
           builder: (context, child) => ShadTheme(
             data: dswShadTheme(Theme.of(context).brightness),
-            child: child!,
+            child: AmplifiedText(step: scale, child: child!),
           ),
-          home: Scaffold(
-            body: AmplifiedText(
-              step: scale,
-              child: PlanWorkspace(workspaceRoot: root.path),
-            ),
-          ),
+          home: Scaffold(body: PlanWorkspace(workspaceRoot: root.path)),
         ),
       );
 

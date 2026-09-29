@@ -38,14 +38,12 @@ void main() {
     void Function(bool approved, {bool remember})? onRespond,
   }) => tester.pumpWidget(
     MaterialApp(
+      builder: (context, child) => amplifiedAppBuilder(step, child),
       theme: dswThemeData(Brightness.light),
       home: Scaffold(
-        body: AmplifiedText(
-          step: step,
-          child: ApprovalPanel(
-            request: request,
-            onRespond: onRespond ?? (approved, {remember = false}) {},
-          ),
+        body: ApprovalPanel(
+          request: request,
+          onRespond: onRespond ?? (approved, {remember = false}) {},
         ),
       ),
     ),

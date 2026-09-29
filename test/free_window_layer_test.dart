@@ -57,18 +57,16 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
       MaterialApp(
+        builder: (context, child) => amplifiedAppBuilder(step, child),
         theme: dswThemeData(Brightness.light),
         home: Scaffold(
           body: SizedBox(
             width: 1200,
             height: 800,
-            child: AmplifiedText(
-              step: step,
-              child: FreeWindowLayer(
-                workbench: workbench,
-                conversation: conversation,
-                terminals: terminals.manager(),
-              ),
+            child: FreeWindowLayer(
+              workbench: workbench,
+              conversation: conversation,
+              terminals: terminals.manager(),
             ),
           ),
         ),

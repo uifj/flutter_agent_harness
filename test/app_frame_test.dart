@@ -66,30 +66,28 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
       MaterialApp(
+        builder: (context, child) => amplifiedAppBuilder(scale ?? 1.0, child),
         theme: dswThemeData(Brightness.light),
-        home: AmplifiedText(
-          step: scale ?? 1.0,
-          child: Scaffold(
-            body: AppFrame(
-              layout: layout,
-              sidebarBuilder: (context, collapsed, width) => Sidebar(
-                collapsed: collapsed,
-                width: width,
-                sessions: index,
-                onNewSession: () {},
-                onToggle: layout.toggleSidebar,
-                onOpenSession: (_) {},
-                onOpenSettings: () {},
-                onToggleDetails: layout.toggleDetails,
-                detailsOpen: layout.details != 0,
-              ),
-              center:
-                  center ??
-                  ConversationRoot(conversation: controller, tail: tail),
-              details: details,
-              workbench: workbench,
-              bottom: bottom,
+        home: Scaffold(
+          body: AppFrame(
+            layout: layout,
+            sidebarBuilder: (context, collapsed, width) => Sidebar(
+              collapsed: collapsed,
+              width: width,
+              sessions: index,
+              onNewSession: () {},
+              onToggle: layout.toggleSidebar,
+              onOpenSession: (_) {},
+              onOpenSettings: () {},
+              onToggleDetails: layout.toggleDetails,
+              detailsOpen: layout.details != 0,
             ),
+            center:
+                center ??
+                ConversationRoot(conversation: controller, tail: tail),
+            details: details,
+            workbench: workbench,
+            bottom: bottom,
           ),
         ),
       ),

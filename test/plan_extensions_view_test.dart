@@ -53,15 +53,14 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: dswThemeData(Brightness.light),
+        // Both the shad bridge and the text step belong above the Navigator: a
+        // step set inside `home:` leaves every dialog and menu at 1.0.
         builder: (context, child) => ShadTheme(
           data: dswShadTheme(Theme.of(context).brightness),
-          child: child!,
+          child: AmplifiedText(step: scale, child: child!),
         ),
         home: Scaffold(
-          body: AmplifiedText(
-            step: scale,
-            child: PlanExtensionsView(store: store, view: view),
-          ),
+          body: PlanExtensionsView(store: store, view: view),
         ),
       ),
     );

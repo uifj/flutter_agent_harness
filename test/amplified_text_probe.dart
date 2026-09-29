@@ -52,6 +52,17 @@ class AmplifiedText extends StatelessWidget {
   );
 }
 
+/// A host's `MaterialApp.builder` for a walk at [step].
+///
+/// The step has to be composed **above the Navigator** - which is exactly where
+/// `main.dart` composes the user's font step - because a `MediaQuery` under the
+/// Navigator does not reach an overlay route. Measured: a `PopupMenuButton`
+/// opened from a subtree wrapped in [AmplifiedText] still read 1.0, so a host
+/// that wraps inside `home:` has been measuring every popup, menu and drag
+/// feedback at the designed step and calling that a pass.
+Widget amplifiedAppBuilder(double step, Widget? child) =>
+    AmplifiedText(step: step, child: child!);
+
 /// Rows whose children together want more width than the row was given.
 List<String> spillDefects(WidgetTester tester) {
   final found = <String>[];

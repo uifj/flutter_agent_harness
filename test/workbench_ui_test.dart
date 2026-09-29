@@ -84,21 +84,22 @@ void main() {
     double? scale,
   ]) => tester.pumpWidget(
     MaterialApp(
+      // Above the Navigator, like the app's own composition: this walk opens
+      // menus and a drag feedback, and a step set under the Navigator leaves
+      // every overlay route at 1.0.
+      builder: (context, child) => amplifiedAppBuilder(scale ?? 1.0, child),
       theme: dswThemeData(Brightness.light),
       home: Scaffold(
         body: SizedBox(
           width: 460,
           height: 600,
-          child: AmplifiedText(
-            step: scale ?? 1.0,
-            child: WorkbenchPrefsScope(
-              prefs: prefs,
-              child: Workbench(
-                workbench: controller ?? workbench,
-                conversation: conversation,
-                terminals: pool,
-                onClose: () => closed++,
-              ),
+          child: WorkbenchPrefsScope(
+            prefs: prefs,
+            child: Workbench(
+              workbench: controller ?? workbench,
+              conversation: conversation,
+              terminals: pool,
+              onClose: () => closed++,
             ),
           ),
         ),
@@ -679,6 +680,67 @@ void main() {
         expect(find.text('Close all'), findsNothing);
         expect(tester.takeException(), isNull);
       });
+
+      // The strip's two pointer-only surfaces: the `+` opener's menu (it is in
+      // the tree only while open) and the chip that follows the pointer during a
+      // tab drag - `_Feedback`, which pins itself at 24 for a 12px label. Neither
+      // exists for a walk that only taps things, so both had never been under the
+      // ruler even though the strip around them had.
+      testWidgets(
+        'the + opener menu and the drag chip keep their labels ($label)',
+        (tester) async {
+          final root = workspace();
+          workbench.workspaceRoot = root.path;
+          workbench.openFolder(root.path);
+          await pump(tester, null, const WorkbenchPrefs(), step);
+          await pumpUntil(tester, find.text('work'));
+
+          final chip = find.descendant(
+            of: find.byType(WorkbenchTabBar),
+            matching: find.text('work'),
+          );
+          // Two moves with a pump between them: a `Draggable`'s pan recognizer
+          // needs the slop crossed *after* the arena settles, and one jump of 26px
+          // is under it - the drag never starts and the ruler measures an idle
+          // strip and passes for the wrong reason.
+          final drag = await tester.startGesture(tester.getCenter(chip));
+          await tester.pump();
+          await drag.moveBy(const Offset(0, 20));
+          await tester.pump();
+          await drag.moveBy(const Offset(30, 0));
+          await tester.pump();
+          expect(
+            // The feedback lives in the overlay, not in the strip, so this counts
+            // the copies of the label rather than looking inside the bar.
+            find.text('work'),
+            findsAtLeastNWidgets(2),
+            reason:
+                'the feedback is a second copy of the chip, so it is on screen',
+          );
+          expect(
+            textDefects(tester),
+            isEmpty,
+            reason: 'the chip that follows the pointer',
+          );
+          await drag.up();
+          await tester.pumpAndSettle();
+
+          await tester.tap(
+            find.descendant(
+              of: find.byType(WorkbenchTabBar),
+              matching: find.byIcon(LucideIcons.plus),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(find.text('Terminal'), findsOneWidget);
+          expect(textDefects(tester), isEmpty, reason: 'the + opener menu');
+
+          await tester.tapAt(const Offset(2, 2));
+          await tester.pumpAndSettle();
+          expect(find.text('Terminal'), findsNothing);
+          expect(tester.takeException(), isNull);
+        },
+      );
     }
   });
 }

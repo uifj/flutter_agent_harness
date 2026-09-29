@@ -44,14 +44,13 @@ void main() {
   }) async {
     await tester.pumpWidget(
       MaterialApp(
+        builder: (context, child) => amplifiedAppBuilder(scale, child),
         theme: dswThemeData(Brightness.light),
         home: Scaffold(
           body: Center(
             child: SizedBox(
               width: width,
-              child: SingleChildScrollView(
-                child: AmplifiedText(step: scale, child: block),
-              ),
+              child: SingleChildScrollView(child: block),
             ),
           ),
         ),

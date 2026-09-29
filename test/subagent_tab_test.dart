@@ -154,22 +154,20 @@ void main() {
     Future<void> pump(WidgetTester tester, [double step = 1.0]) =>
         tester.pumpWidget(
           MaterialApp(
+            builder: (context, child) => amplifiedAppBuilder(step, child),
             theme: dswThemeData(Brightness.light),
             home: Scaffold(
               body: SizedBox(
                 width: 360,
                 height: 600,
-                child: AmplifiedText(
-                  step: step,
-                  child: SubagentHost(
-                    conversation: conversation,
-                    child: SubagentTab(
-                      workbench: workbench,
-                      tab: const SidebarTab(
-                        id: 'subagent:1',
-                        type: BuiltinTabType.subagent,
-                        title: 'Sub-agents',
-                      ),
+                child: SubagentHost(
+                  conversation: conversation,
+                  child: SubagentTab(
+                    workbench: workbench,
+                    tab: const SidebarTab(
+                      id: 'subagent:1',
+                      type: BuiltinTabType.subagent,
+                      title: 'Sub-agents',
                     ),
                   ),
                 ),

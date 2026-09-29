@@ -277,14 +277,12 @@ void main() {
       double step = 1.0,
     }) => tester.pumpWidget(
       MaterialApp(
+        builder: (context, child) => amplifiedAppBuilder(step, child),
         theme: dswThemeData(Brightness.light),
         home: Scaffold(
-          body: AmplifiedText(
-            step: step,
-            child: GitHost(
-              runner: fake.runner,
-              child: DiffTab(workbench: workbench, tab: SidebarTab.diff(ref)),
-            ),
+          body: GitHost(
+            runner: fake.runner,
+            child: DiffTab(workbench: workbench, tab: SidebarTab.diff(ref)),
           ),
         ),
       ),

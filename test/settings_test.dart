@@ -172,16 +172,13 @@ void main() {
         // sits in a `Scaffold`. The text fields need that Material ancestor, so
         // the harness supplies the same one rather than a lighter wrapper.
         home: Scaffold(
-          body: AmplifiedText(
-            step: scale,
-            child: SettingsPanel(
-              settings: settings,
-              onSave: onSave,
-              onClose: onClose ?? () {},
-              onPickFolder: onPickFolder ?? (_) async => null,
-              workbenchPrefs: workbenchPrefs,
-              onPrefsChange: onPrefsChange,
-            ),
+          body: SettingsPanel(
+            settings: settings,
+            onSave: onSave,
+            onClose: onClose ?? () {},
+            onPickFolder: onPickFolder ?? (_) async => null,
+            workbenchPrefs: workbenchPrefs,
+            onPrefsChange: onPrefsChange,
           ),
         ),
       ),

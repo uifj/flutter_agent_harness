@@ -31,29 +31,27 @@ void main() {
     OverlayEntry? entry;
     await tester.pumpWidget(
       MaterialApp(
+        builder: (context, child) => amplifiedAppBuilder(step, child),
         theme: dswThemeData(Brightness.light),
         home: Scaffold(
-          body: AmplifiedText(
-            step: step,
-            child: Align(
-              alignment: Alignment.bottomLeft,
-              child: CompositedTransformTarget(
-                link: link,
-                child: Builder(
-                  builder: (context) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (!context.mounted || entry != null) return;
-                      entry = showSettingsQuickMenu(
-                        context: context,
-                        link: link,
-                        initial: const settings.AppSettings(),
-                        onChanged: onChanged ?? (_) {},
-                        onOpenSettings: () {},
-                      );
-                    });
-                    return const SizedBox(width: 120, height: 40);
-                  },
-                ),
+          body: Align(
+            alignment: Alignment.bottomLeft,
+            child: CompositedTransformTarget(
+              link: link,
+              child: Builder(
+                builder: (context) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!context.mounted || entry != null) return;
+                    entry = showSettingsQuickMenu(
+                      context: context,
+                      link: link,
+                      initial: const settings.AppSettings(),
+                      onChanged: onChanged ?? (_) {},
+                      onOpenSettings: () {},
+                    );
+                  });
+                  return const SizedBox(width: 120, height: 40);
+                },
               ),
             ),
           ),

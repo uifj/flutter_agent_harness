@@ -63,6 +63,7 @@ void main() {
     UserProfile? profile,
   }) => tester.pumpWidget(
     MaterialApp(
+      builder: (context, child) => amplifiedAppBuilder(scale, child),
       theme: dswThemeData(Brightness.light),
       home: Scaffold(
         body: Row(
@@ -70,24 +71,21 @@ void main() {
             ClipRect(
               child: SizedBox(
                 width: collapsed ? sidebarCollapsed : sidebarDefault,
-                child: AmplifiedText(
-                  step: scale,
-                  child: Sidebar(
-                    collapsed: collapsed,
-                    width: collapsed ? sidebarCollapsed : sidebarDefault,
-                    sessions: index,
-                    mode: mode,
-                    onSelectMode: mode == null ? null : (_) {},
-                    extensionView: PlanExtensionView.calendar,
-                    onToggleExtension: (_) {},
-                    profile: profile,
-                    onNewSession: () {},
-                    onToggle: () {},
-                    onOpenSession: (_) {},
-                    onOpenSettings: () {},
-                    onToggleDetails: () {},
-                    detailsOpen: false,
-                  ),
+                child: Sidebar(
+                  collapsed: collapsed,
+                  width: collapsed ? sidebarCollapsed : sidebarDefault,
+                  sessions: index,
+                  mode: mode,
+                  onSelectMode: mode == null ? null : (_) {},
+                  extensionView: PlanExtensionView.calendar,
+                  onToggleExtension: (_) {},
+                  profile: profile,
+                  onNewSession: () {},
+                  onToggle: () {},
+                  onOpenSession: (_) {},
+                  onOpenSettings: () {},
+                  onToggleDetails: () {},
+                  detailsOpen: false,
                 ),
               ),
             ),

@@ -42,13 +42,9 @@ void main() {
   Future<void> pump(WidgetTester tester, {double step = 1.0}) async {
     await tester.pumpWidget(
       MaterialApp(
+        builder: (context, child) => amplifiedAppBuilder(step, child),
         theme: dswThemeData(Brightness.light),
-        home: Scaffold(
-          body: AmplifiedText(
-            step: step,
-            child: _QueueHost(conversation: controller),
-          ),
-        ),
+        home: Scaffold(body: _QueueHost(conversation: controller)),
       ),
     );
   }
