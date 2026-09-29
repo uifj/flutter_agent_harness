@@ -665,7 +665,10 @@ class _GitTabState extends State<GitTab> {
   Widget _header(BuildContext context) {
     final current = _status?.branch;
     return Container(
-      height: 36,
+      // One row of chrome holding the branch chip, so the row can't stay
+      // shorter than the chip inside it (pinned at 36 it squeezed the scaled
+      // chip's name down to 34 of the 40 it wanted at 2.2x).
+      height: 36 * MediaQuery.textScalerOf(context).scale(1),
       padding: const EdgeInsets.only(left: 12, right: 8),
       child: Row(
         children: [
@@ -748,6 +751,12 @@ class _GitTabState extends State<GitTab> {
                 style: DswType.xs13.copyWith(color: color.labelPrimary),
                 placeholder: Text(
                   context.tr('commitPlaceholder'),
+                  // The hint is the one thing in this box that may be cut: the
+                  // message the user types is what has to fit. Left to itself
+                  // at 1.8x it wrapped to a second line this field then
+                  // clipped (measured: 72.0 wanted, 36.0 given).
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: DswType.xs13.copyWith(color: color.labelCaption),
                 ),
                 onChanged: (_) => setState(() {}),
@@ -876,8 +885,11 @@ class _FileRow extends StatelessWidget {
                 child: Row(
                   children: [
                     Container(
-                      width: 20,
-                      height: 16,
+                      // A one-glyph square, so both sides ride the text step:
+                      // pinned at 16 it cut its own letter (25.0 wanted at 1.8,
+                      // 31.0 at 2.2) while the row it sits in grew around it.
+                      width: 20 * MediaQuery.textScalerOf(context).scale(1),
+                      height: 16 * MediaQuery.textScalerOf(context).scale(1),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: color.interactiveBgHover,
@@ -1032,7 +1044,9 @@ class _BranchSelect extends StatelessWidget {
         for (final name in branches)
           PopupMenuItem(
             value: name,
-            height: 32,
+            // One line of the picker, so the row rides the step the branch
+            // name is drawn at.
+            height: 32 * MediaQuery.textScalerOf(context).scale(1),
             child: Text(
               name,
               style: DswType.xs13.copyWith(color: color.labelPrimary),
@@ -1041,7 +1055,9 @@ class _BranchSelect extends StatelessWidget {
           ),
       ],
       child: Container(
-        height: 26,
+        // The chip and its menu are the same seat at the same step: 26 pinned
+        // this 12px name down to one clipped line (32.0 wanted at 1.8).
+        height: 26 * MediaQuery.textScalerOf(context).scale(1),
         padding: const EdgeInsets.symmetric(horizontal: 6),
         decoration: BoxDecoration(
           color: color.bgBase,
@@ -1145,7 +1161,9 @@ class _CommitButtonState extends State<_CommitButton> {
       builder: (context, hovered, _) => Opacity(
         opacity: widget.enabled ? 1 : 0.45,
         child: Container(
-          height: 26,
+          // Grows with the input it stands beside: the label is one line of
+          // 12px, and 26 pinned cut it (32.0 wanted at 1.8).
+          height: 26 * MediaQuery.textScalerOf(context).scale(1),
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             color: hovered && widget.enabled
