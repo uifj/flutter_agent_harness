@@ -1,6 +1,8 @@
 # 项目工作流规则（workflow）
 
-本项目 `agent_harness`：用 Flutter + Genkit 从零实现的 **macOS 桌面端 AI Agent 工作台**（chat UI + tool-call 投影 + 分栏 workbench），设计思想分别取自 dsh（Runtime 内核）与 better-sidebar（工作台交互），不 fork 二者代码。
+本项目 `agent_harness`：用 Flutter + Genkit 从零实现的**桌面端 AI Agent 工作台**（chat UI + tool-call 投影 + 分栏 workbench；macOS/Windows/Linux 三桌面目标，见 ADR-0003），设计思想分别取自 dsh（Runtime 内核）与 better-sidebar（工作台交互），不 fork 二者代码。
+
+顶层形态是**两种工作区模式**（ADR-0007）：**企划**（当前工作区内 .md 的本地工作台 + 看板/日程/表格扩展面板）与**代理**（对话 + 工具环 + 双树工作台）。
 
 所有编码任务遵循 `.trae/rules/ponytail.md` 的懒惰阶梯：先问是否需要构建、是否已有现成实现，再写最少的代码。以下规则在此基础上补充本仓库的实操约定。凡是命中下方关键词，直接加载对应 skill / 工具执行，不再向用户确认。
 
@@ -25,9 +27,15 @@
 | 「这个 API 怎么用」「genkit 新版有什么变化」「XX 包最新写法」 | 按 §6：以磁盘上 pub-cache 里的包源码为准，配合 `spike/agent_spike.dart` 的 FINDINGS 回答 |
 | 「genkit 升版」「把 genkit 从 0.16.1 升到 X」 | 按 §3 第一条：先重跑 spike，核对 FINDINGS，再改 `lib/genkit/` |
 | 「加一个 agent 工具」「给工具改 schema」「工具审批怎么串」 | 按 §3 第二条（`lib/genkit/tools.dart` → `lib/model/` → `agent_runtime.dart` → `lib/ui/tool/tool_card.dart`） |
-| 「加一种工作台 tab」「新面板怎么挂进 tab 条」 | 按 §3 第三条（`TabType` → `tabs/xxx_tab.dart` → `workbench.dart` 里 `registerTab`） |
-| 「加个文案」「这句中文怎么改」「也要英文」 | 按 §3 第四条：`lib/l10n/locales.dart` 双字典同键增改。仓库里**没有**也**不该有** `flutter-setup-localization`（见 §2） |
-| 「改颜色」「间距/阴影/动效令牌」 | 按 §3 第五条：只在 `lib/theme/dsw_*` 上加令牌 |
+| 「加一种工作台 tab」「新面板怎么挂进 tab 条」 | 按 §3 第三条（`BuiltinTabType` 字符串常量 → `tabs/xxx_tab.dart` → `workbench.dart` 里 `registerTab`），并确认它落在哪个面板（§3 第四条双树） |
+| 「切换企划/代理」「工作区模式」「企划笔记/看板/日程/表格」 | 按 §3 第五条（ADR-0007 链路：`state/workspace_mode_controller.dart` → `app_providers.dart` 的 `workspaceModeProvider` → `ui/plan/`，数据走 `plan_task_store.dart`，面板用入库本地包 `packages/board_panel`） |
+| 「设置页怎么加一节」「快捷菜单」「用户 Profile」 | 全屏设置 = `ui/settings/model_settings.dart`，级联快捷菜单 = `ui/settings/widgets/settings_quick_menu.dart`（ADR-0006）；偏好字段先进 `lib/model/*_settings.dart` + `AppSettings`，再在快捷菜单与设置页两处同时接，否则两处真值分叉 |
+| 「公式/Mermaid 图渲染不出来」 | `ui/conversation/assistant_markdown.dart`（`useDollarSignsForLatex` + mermaid 围栏），回归用例在 `test/markdown_rendering_test.dart` |
+| 「拖文件进对话」「PDF/文档抽文本」 | `ui/conversation/conversation_root.dart`（`desktop_drop`）+ `state/document_extractor.dart`（`pdfrx`） |
+| 「全局热键」「系统托盘」 | `state/hotkey_service.dart` / `state/tray_service.dart`（都在首帧后由 `main.dart` 接线，因为要等 `window_manager` 拿到窗口句柄）。修饰键按平台取：macOS 用 `meta`、其他用 `control`；两级别混——`Cmd/Ctrl+Shift+H` 是 **system-scope**（应用后台也生效，用来切窗口显示/隐藏），`Cmd/Ctrl+N` 新会话与 `Cmd/Ctrl+,` 打开设置是 **in-app** |
+| 「本地备份/恢复」 | `state/backup_service.dart`（`archive` 打 zip：settings/prefs/tasks/layouts/sessions/skills），入口在设置页 Backup 节 |
+| 「加个文案」「这句中文怎么改」「也要英文」 | 按 §3 第六条：`lib/l10n/locales.dart` 双字典同键增改。仓库里**没有**也**不该有** `flutter-setup-localization`（见 §2） |
+| 「改颜色」「间距/阴影/动效令牌」 | 按 §3 第七条：只在 `lib/theme/dsw_*` 上加令牌；改对比度相关色值后跑 `dart tool/contrast_check.dart` + `test/theme_contrast_test.dart`（ADR-0004） |
 | 「RenderFlex overflowed」「布局溢出」「窗口拉小被挤爆」 | `flutter-fix-layout-issues` |
 | 「支持不同窗口宽度自适应」「侧栏收起怎么算」 | `flutter-build-responsive-layout`（本仓库的约束求解在 `ui/layout/columns.dart`，先看它） |
 | 「加个 widget 测试」「给这个按钮写测试」 | `flutter-add-widget-test`，遵守 §4 的仓库约定 |
@@ -46,11 +54,11 @@
 | 已移除 | 为什么在本仓库有害 | 要用回来的前提 |
 | --- | --- | --- |
 | `flutter-setup-localization` | 本仓库有自研 i18n（`lib/l10n/locales.dart`）。按它引入 `flutter_localizations` + `intl` + `.arb` + 生成代码，会顶掉双字典与 `context.tr()`，并让 widget 测试失去"无 scope 即英文"的确定性 | 先立 ARC 类 ADR 论证替换自研方案 |
-| `flutter-setup-declarative-routing` | 没有命名路由表，也没有页面级 `Navigator.push` / `GoRouter` / `onGenerateRoute`：单窗口桌面壳，界面由 widget 组合与 scope 拼装（见 `lib/main.dart`）。现存仅有的 `Navigator` 用法是 4 处 `Navigator.pop(context, bool)`（`tabs/editor_tab.dart:274,278`、`tabs/git_tab.dart:410,414`），用途是对话框返回结果，不是要"迁移"的导航层 | 出现真正的多窗口/深链需求 |
+| `flutter-setup-declarative-routing` | 没有命名路由表，也没有页面级 `Navigator.push` / `GoRouter` / `onGenerateRoute`：单窗口桌面壳，界面由 widget 组合与 scope 拼装（见 `lib/main.dart`），全屏设置也是视图态切换而非路由（ADR-0006 明确"改为全屏视图但**仍不引入 Navigator 路由**"）。现存仅有的 `Navigator` 用法是 5 处 **pop 返回结果**：`primitives/confirm_dialog.dart:41,45` 与 `ui/plan/plan_workspace.dart`（3 处 `Navigator.of(context).pop(...)`），用途是对话框返回值，不是要"迁移"的导航层 | 出现真正的多窗口/深链需求 |
 | `dart-generate-test-mocks` | mockito 的生成路线与测试替身约定冲突：本仓库替身一律手写 `test/fake_*.dart`。codegen 在本仓库仅限 riverpod 注解（ADR-0002 修订 1），mockito 不在放行范围 | 同时立 ADR 接受 mockito 测试路线 |
 | `dart-use-ffigen` / `dart-setup-ffi-assets` | 无 C/C++ 资产；宿主能力（PTY、剪贴板、文件系统）全部走已装插件 | 真要接自研原生库 |
 | `dart-migrate-to-checks-package` | dev 依赖只有 `flutter_test`，没有 `test`/`checks`；"迁移"等于加依赖 | 同时接受引入 `checks` |
-| `flutter-add-integration-test` | 未配置 `integration_test`，也没有 golden 基线；集成测试要真机/模拟器驱动 + 稳定截图，属独立工程投入（本机已能跑 Windows 桌面，但仍未接这套） | 决定投入集成测试 + 立 ADR |
+| `flutter-add-integration-test` | 未配置 `integration_test`，也没有 golden 基线；集成测试要真机/模拟器驱动 + 稳定截图，属独立工程投入（CI 已能跑三平台构建，但仍未接这套） | 决定投入集成测试 + 立 ADR |
 
 **组件库现状（ADR-0002 实施中）**：`shadcn_ui` 0.56.3 已是 `pubspec.yaml` 的直接依赖，`lib/main.dart` 经 `theme/dsw_shad_bridge.dart` 挂载 `ShadTheme`（colour 仍全部来自 `DswAlias`），`capsule_button` 与块原语（`primitives/tappable.dart` 的 `DswHoverTap`）已用上 shad 的按钮/焦点/语义机制。`shadcn-ui-flutter` skill 从"守卫项"转为**正当的组件参考**。不变的约束：颜色/字号只从 `lib/theme/dsw_*` 取，不要 `import 'package:shadcn_ui/...'` 去读它的调色板配色——组件用 shad、配色用 dsw。`packages/flutter-shadcn-ui/` 仍是 gitignore 的本地源码镜像（ADR-0001）。
 
@@ -60,39 +68,49 @@
 
 **加/改一个 agent 工具。** 顺序是：`lib/genkit/tools.dart`（`WorkspaceTools` 只注册一次，工具在调用时读 workspace，换文件夹不重注册）→ 需要新事件形状时在 `lib/model/turn_event.dart` / `conversation.dart` 里表达 → `lib/genkit/agent_runtime.dart` 做投影 → UI 侧 `lib/ui/tool/tool_card.dart`。会写文件/执行命令的工具要走 `lib/model/approval_mode.dart` 的审批回路（interrupt → resume）。工具的 description 与返回给模型的 error 文本**不进 i18n**：那是模型读的，不是 UI 文案。验收：`dart run spike/runtime_smoke.dart`（离线跑 no-key / 空 store 路径；带 `DEEPSEEK_API_KEY` 则真跑一轮流式 + 工具环 + 审批 + 恢复）。
 
-**加一个工作台 tab。** 三步：`lib/model/sidebar_tab.dart` 的 `TabType` → 新建 `lib/ui/workbench/tabs/xxx_tab.dart` → 在 `lib/ui/workbench/workbench.dart` 里 `registerTab(TabDescriptor(...))`。registry 按 `TabType` 字符串为键；`tab_registry.dart` 头部写明了为什么只保留 4 个字段（源项目 `TabDescriptor` 的 `single`/`available`/`badge`/`urlTarget` 等在别处已有答案或无消费者），别回去补那十二个字段。
+**加一个工作台 tab。** 三步：`lib/model/sidebar_tab.dart` 的 `BuiltinTabType` 加一个字符串常量（`TabType` 是 `String` typedef，**不是封闭 enum**，registry 接受任意键，所以新增类型不必改这个文件之外的地方）→ 新建 `lib/ui/workbench/tabs/xxx_tab.dart` → 在 `lib/ui/workbench/workbench.dart` 的 `_registerBuiltinTabs()` 里 `registerTab(TabDescriptor(...))`。`tab_registry.dart` 头部写明了为什么只保留 4 个字段（源项目 `TabDescriptor` 的 `single`/`available`/`badge`/`urlTarget` 等在别处已有答案或无消费者），别回去补那十二个字段。
 
-**文案。** 新增或修改 UI 字符串必须**同时**进 `lib/l10n/locales.dart` 的 `enStrings` 与 `zhStrings`，键完全一致（**不记死条数**——它随加键漂移，是典型的会腐烂的断言；对齐才是不变量）。en 是先写的源语言，zh 逐键回退到 en（`translate()`：`zhStrings[key] ?? enStrings[key] ?? key`），两边都缺则把键本身渲染出来，好让缺口可见。取值走 `context.tr(key, params)`，`{name}` 占位符插值。**注意**：`locales.dart` 头部注释声称"en 在测试期对照校验"，但仓库里目前**没有任何测试引用这两个字典**——双语对齐只能靠手动核对，这是已存在的缺口，别假设它会被 `flutter test` 拦下（要补就按 §7 立 TST 类 ADR）。**不挂 `AppLocaleScope` 即退化成英文**，这是 widget 测试不关心 i18n 的前提，别改这个 fallback。不做 i18n 的两类内容：持久化进 layout 的 tab 标题（数据不能随语言翻），以及单例 tab 的显示名（在渲染时由类型派生）。
+**双树工作台（一布局，两面板）。** `SidebarState` 持有**两棵树**：`tree`（右栏）与 `bottomTree`（下栏），`lib/model/sidebar_state.dart:99-139`。三条必须记住的性质：① 两棵树共用**一个** pane id mint 计数器，所以一个 id 全局唯一地命名一个 pane——别给下栏另起计数器；② `activePane` 是**单个全局**（最后被触碰的 pane，不分树），新 tab 落它；③ 面板的开合与尺寸**只归 `LayoutController`**（`panelOpen`/`width`/`bottomOpen`/`bottomHeight`），`SidebarState` 不复制第二份真值。跨树拖拽/右键移动走 `lib/model/split_node.dart` 的 `takeTabFrom`（`:451`）与 `moveTabBetweenTrees` / `moveTabBetweenTreesToEdge`（`:486,:510`）；UI 侧用 `workbench.dart:120` 的 `enum WorkbenchPanel { right, bottom }` 指明目标面板。布局事实（Layout audit `c53af9e`）：下栏只挤压中列，tab 条本身就是顶部 chrome（带 `+` opener 菜单），面板切换按钮聚在视口右上角，条高 34px。持久化在 `state/workbench_store.dart`：每会话一个文件、写盘按会话防抖 200ms，`bottomTree` 与 `tree` 一同存。回归面：`test/sidebar_state_test.dart`、`split_node_test.dart`、`workbench_ui_test.dart`。
 
-**主题。** 颜色/字号/动效/阴影只从 `lib/theme/dsw_*` 取：别名令牌在 `dsw_alias.dart`，绑定与 elevation ramp 在 `dsw_theme.dart`，排版在 `dsw_typography.dart`。新增令牌加在 alias 层，让 widget 通过 `context` 拿。抄 dsh 的 CSS 阴影值必须换算——CSS blur 与 `BoxShadow.blurRadius` 不是一回事（见 `DswShadow._blur`）。
+**工作区模式（企划/代理）与企划扩展面板（ADR-0007）。** 开关是 `lib/state/workspace_mode_controller.dart`，经 `app_providers.dart` 的 `workspaceModeProvider` 前置。两条设计约束别漏：① 模式是**视图状态，刻意不持久化**——重启回到代理模式（该决定写在 controller 头部注释里）；② 它是 `ChangeNotifier` 而不是 riverpod `Notifier`，因为 riverpod import 只允许出现在 `main.dart` + `app_providers.dart`。企划侧的 Markdown 工作台在 `lib/ui/plan/plan_workspace.dart`，扩展面板（看板/日程/表格）在 `lib/ui/plan/plan_extensions_view.dart`，用入库本地包 `packages/board_panel`（path 依赖；ADR-0007 D5 明确它是 ADR-0001"vendored 不入库"的记录在案例外，别再往 `packages/` 里塞第二个入库镜像）。任务数据走 `lib/state/plan_task_store.dart`（`planTaskStoreProvider`，`main`/测试里必须 override）+ `lib/model/plan_task.dart` 的手写序列化。回归面：`test/workspace_mode_test.dart`、`plan_workspace_test.dart`、`plan_task_store_test.dart`。
 
-**riverpod 读缝（bridge）。** 把 `ChangeNotifier`/store 桥成**函数式** provider 时，值变更用 `ref.invalidateSelf()`（重跑 body 取新值），**绝不用** `ref.notifyListeners()`——后者对函数式 provider 只重通知旧缓存、不重跑 body，会静默不刷新（且运行日志无异常，只有真机能发现；见 `state/app_providers.dart` 的 `settingsDocument`/`workbenchPrefs`）。
+**文案。** 新增或修改 UI 字符串必须**同时**进 `lib/l10n/locales.dart` 的 `enStrings` 与 `zhStrings`，键完全一致（**不记死条数**——它随加键漂移，是典型的会腐烂的断言；对齐才是不变量，现由 `test/l10n_parity_test.dart` 断言两个方向的键集差集为空，ADR-0008）。en 是先写的源语言，zh 逐键回退到 en（`translate()`：`zhStrings[key] ?? enStrings[key] ?? key`），两边都缺则把键本身渲染出来，好让缺口可见。取值走 `context.tr(key, params)`，`{name}` 占位符插值。**守卫只管键不管值**：zh 是否真的翻译过、译得对不对，仍是人眼的事；`{name}` 占位符名两侧是否一致也没进守卫（要加就再立 TST 类 ADR）。**不挂 `AppLocaleScope` 即退化成英文**，这是 widget 测试不关心 i18n 的前提，别改这个 fallback。不做 i18n 的两类内容：持久化进 layout 的 tab 标题（数据不能随语言翻），以及单例 tab 的显示名（在渲染时由类型派生）。
 
-**持久化。** 手写 `toJson`/`fromJson` + `dart:convert`（`lib/model/` 里那批 settings/state 模型即范例）。写盘沿用 `lib/state/settings_store.dart`、`prefs_store.dart` 的 tmp + rename 原子写。工作区访问靠 security-scoped bookmark，恢复必须发生在任何读文件之前（`main()` 里的 `restoreWorkspaceAccess`）。
+**主题。** 颜色/字号/动效/阴影只从 `lib/theme/dsw_*` 取：别名令牌在 `dsw_alias.dart`，绑定与 elevation ramp 在 `dsw_theme.dart`，排版在 `dsw_typography.dart`，shad 桥在 `dsw_shad_bridge.dart`（DswAlias → ShadColorScheme，反向取 shad 配色即违规）。新增令牌加在 alias 层，让 widget 通过 `context` 拿。抄 dsh 的 CSS 阴影值必须换算——CSS blur 与 `BoxShadow.blurRadius` 不是一回事（见 `DswShadow._blur`）。**对比度是 ADR-0004 的显式豁免面**：动正文级颜色前先 `dart tool/contrast_check.dart`（确定性三求值，只依赖 dart:io/dart:math）并保证 `test/theme_contrast_test.dart` 仍绿；该 ADR 采纳的是"方案 B 显式豁免"，所以低于 AA 的令牌是**决策**而不是待修 bug，别顺手"提亮"。
+
+**riverpod 读缝（bridge）。** 把 `ChangeNotifier`/store 桥成**函数式** provider 时，值变更用 `ref.invalidateSelf()`（重跑 body 取新值），**绝不用** `ref.notifyListeners()`——后者对函数式 provider 只重通知旧缓存、不重跑 body，会静默不刷新（且运行日志无异常，只有真机能发现；见 `state/app_providers.dart` 的 `settingsDocument`/`workbenchPrefs`）。该文件现有 19 个 `@Riverpod` 声明；`planTaskStore` 之类默认体直接 `throw UnimplementedError`，是**逼调用方在 `main`/测试里 override**，别把兜底塞回 provider。
+
+**持久化。** 手写 `toJson`/`fromJson` + `dart:convert`（`lib/model/` 里那批 settings/state 模型即范例）。写盘沿用 `lib/state/settings_store.dart`、`prefs_store.dart` 的 tmp + rename 原子写；工作台布局是**每会话一个文件** + 200ms 防抖（`workbench_store.dart` 头部说明了为什么不合并成一份文档）。设置类偏好的真值入口是 `AppSettings` / model 里的 settings 类，新增字段要同时接住全屏设置页与底部快捷菜单（ADR-0006），只接一处就是分叉。工作区访问靠 security-scoped bookmark，恢复必须发生在任何读文件之前（`main()` 里的 `restoreWorkspaceAccess`）。跨机搬迁走 `state/backup_service.dart`（zip 打包 settings/prefs/tasks/layouts/sessions/skills）。
 
 ## 4. 测试约定
 
-- 一律 `flutter test`。dev 依赖只有 `flutter_test`，`dart test` 跑不起来（39 个 `*_test.dart` 全部 import `package:flutter_test`，包括纯逻辑的 `test/file_search_test.dart`；`test/` 下另外 4 个文件是辅助替身/探针，不是测试）。
+- 一律 `flutter test`。dev 依赖只有 `flutter_test`，`dart test` 跑不起来（52 个 `*_test.dart` 全部 import `package:flutter_test`，包括纯逻辑的 `test/file_search_test.dart`；`test/` 下另外 4 个文件是辅助替身/探针，不是测试）。
+- **CI 已经在跑这套门禁**（`.github/workflows/pr-check.yml`，push/PR 到 `develop`·`main`）：`dart format --set-exit-if-changed lib test tool spike` + `dart analyze --fatal-infos lib test tool spike` + `flutter test`。本地三条命令与它同口径，`--fatal-infos` 意味着 info 级提示也会拦下你。
+- **当前基线不是绝对全绿**：2026-09-29 在 macOS 开发机首跑 `flutter test` 得 +699 -2，2 个失败已登记在债务表（`app_scope_test` 的 `/var`↔`/private/var` 路径规范化、`plan_workspace_test` 的 `find.text('notes')` 命中两个 widget），都与代理配置改动无关。交付前跑一次记下失败集，只对"零新增失败"负责，别把它们说成自己改坏的，也别顺手改测试断言。
 - 替身手写，命名 `test/fake_*.dart`（现成三个：`fake_turn_source.dart`、`fake_git.dart`、`fake_terminal_process.dart`；`clipboard_probe.dart` 是探针不是测试）。文件系统类测试走真实临时目录，因为要验的是 mtime 排序、跳过 VCS 元数据、二进制早退这类**文件系统事实**，fake 证不出来。
 - 每个测试文件头部用注释写清"本文件要守住的那句话"以及它存在的理由（参考 `test/conversation_controller_test.dart`、`test/file_search_test.dart`）。
 - widget 测试不挂 `AppLocaleScope`，直接断言英文文案。
 - 流式拆分是本项目唯一的性能契约：token delta 只能通知 tail 的 notifier，不得通知 conversation controller（由 `flutter test test/conversation_controller_test.dart` 守着）。
+- 已有**专门守卫**的不变量，改相关面时必跑：双树/布局 `sidebar_state_test.dart`·`split_node_test.dart`·`workbench_ui_test.dart`·`app_frame_test.dart`；工作区模式与企划 `workspace_mode_test.dart`·`plan_workspace_test.dart`·`plan_task_store_test.dart`；主题令牌与对比度 `theme_token_test.dart`·`theme_contrast_test.dart`；markdown 渲染（LaTeX/Mermaid）`markdown_rendering_test.dart`；`DswHoverTap` 的指针/键盘/语义/右键四性 `dsw_hover_tap_test.dart`；i18n 双语键集 `l10n_parity_test.dart`（ADR-0008——它只拦键，不拦译 quality）。
 
 ## 5. Git 提交（强制）
 
 - 新建 commit 一律用 `git-commit` skill 生成 Conventional Commits 消息：`<type>[scope]: <description>`。
 - type 取：feat / fix / refactor / perf / test / docs / build / chore / revert。
-- scope 用本仓库的顶层归属名：`genkit`、`model`、`state`、`ui`、`theme`、`l10n`、`host`、`workbench`、`macos`、`deps`；仓库级配置（`.qoder/`、`.trae/`、`AGENTS.md`、`.gitignore`、`repomix.config.json`）用 `config`；ADR 与登记表用 `adr` 或 `docs`。
+- scope 用本仓库的顶层归属名：`genkit`、`model`、`state`、`ui`、`theme`、`l10n`、`host`、`workbench`、`plan`、`macos`、`deps`；`packages/board_panel` 内的改动用 `board_panel`；仓库级配置（`.qoder/`、`.trae/`、`AGENTS.md`、`.gitignore`、`repomix.config.json`、`tool/`）用 `config`；CI 工作流用 `ci`；ADR 与登记表用 `adr` 或 `docs`。
 - description 用**英文**现在时祈使句，≤72 字符（与既有历史一致：`C4: the tab strip's right-click menu`）。里程碑式改动可保留早期那种阶段编号前缀，但仍要带 type。
 - 破坏性变更用 `feat!:` 或 `BREAKING CHANGE:` footer。
+- **主干工作分支是 `develop`**（ADR-0002 的改造面），`main` 可能落后于它；动手前 `git rev-parse --abbrev-ref HEAD` 现场确认，别信任何文档里写死的分支。
 - 安全红线（skill 内已申明，此处重申）：永不改 git config、永不 force push / hard reset、永不用 `--no-verify`；钩子失败后修复并**新建** commit，绝不 amend 已存在的提交；一次提交只含一个逻辑变更，按文件/模式分组 add。
-- 不提交：`repomix-output.*`、`dart_sources.md`、`.workbuddy/`、`pubspec.lock`（库型包约定，已在 `.gitignore`）、以及任何 API key。
+- 不提交：`repomix-output.*`、`dart_sources.md`、`.workbuddy/`、`pubspec.lock`（库型包约定，已在 `.gitignore`）、`_archive_project/`（本地归档的第三方参考源码，约 88 MB，2026-09-29 起进 `.gitignore`）、以及任何 API key。`.gitignore` 仍**没有** `*.p12`/`*.cer`/`*.mobileprovision`——引入证书之前先补这几条（`build.md` §4）。
 
 ## 6. 文档 / API 时效性
 
 - genkit-dart 及伴生包是 0.x，**以包源码为准**，不要信记忆里的写法。实际解析版本用 `flutter pub deps` 现场核对；要读实现就去 pub cache 下的对应目录（默认 `~/.pub-cache/hosted/<mirror>/<pkg>-<version>/`，`PUB_CACHE` 环境变量可覆盖）。两篇技术文档记录的审读基线是 genkit 0.16.1 + `genkit_openai` 0.4.1 / `genkit_anthropic` 0.3.1 / `genkit_mcp` 0.3.1 / `genkit_middleware` 0.6.1。注意 `pubspec.lock` 不入库，锁文件里的版本对别人不是事实，命令输出才是。
 - 根目录两篇长文是现成的评估证据，回答"还能借哪些能力 / 该放弃哪些幻想"前先查它们：`技术文档-agent_harness基于genkit-dart的可落地增强路线.md`、`对标技术文章-agent_harness与dsh生态横向对比.md`。
 - context7 之类的文档 MCP 可作辅助，但本仓库**尚未**配置 `.mcp.json`；没有它就不要声称查过最新文档。
+- **版本基线现在有两处真值**：`pubspec.yaml` 的 `environment.sdk` 与 `.github/workflows/{pr-check,build}.yml` 的 `FLUTTER_VERSION: '3.41.9'`。换 SDK/Flutter 必须同时改并让 pr-check 绿，否则本地与 CI 各跑一个版本（CFG 类漂移，按 §7 立 ADR）。
+- 本仓库文档里的**文件数/行数/测试数/键数都是快照**（校准于 2026-09-29，HEAD `8a2b8f2`）。它们会腐烂：引用前用 `find`/`wc`/`grep -c` 现场重算，发现对不上先改文档再动手，别把过期数字当事实。
 - 需要把整仓库交给 AI 理解时跑 `repomix`（配置 `repomix.config.json`，产物 `repomix-output.xml` 不入库）。它已经把 `packages/flutter-shadcn-ui` 的实现源码排除了；而按 ADR-0001，该目录本身也被 `.gitignore` 排除，**新 clone 不会有它**——要读该库实现，先从上游 `nank1ro/flutter-shadcn-ui` 取 `0.56.3`，否则只读入库的 `.qoder/skills/shadcn-ui-flutter/` 组件文档。
 
 ## 7. 技术债与缺陷记录（ADR）
@@ -101,4 +119,5 @@
 - 分类：SEC 安全 / CFG 配置漂移 / DEF 缺陷 / ARC 架构 / DEP 依赖 / DEBT 技术债 / TST 测试。优先级 P0（安全红线或评估阻断）> P1（影响真实使用）> P2（债务与优化）。
 - 状态机：`PROPOSED → ACCEPTED → IN-PROGRESS → RESOLVED`（分支 DEFERRED / SUPERSEDED 须注明原因）。
 - 纪律：动手修复已登记问题前，对应 ADR 必须先置 ACCEPTED；修复合入后置 RESOLVED 并回填 commit hash；新审计发现先补 ADR 再改代码；「背景」必须带证据（`文件:行号`、grep/构建/测试输出），禁止无证据登记。
-- 本项目特别需要立 ADR 的三类动作：踩 §0 不变量的、动 `macos/Runner/Release.entitlements` 的、引入新依赖或代码生成器的。
+- 本项目特别需要立 ADR 的动作：踩 §0 不变量的、动 `macos/Runner/Release.entitlements` 的、引入新依赖或代码生成器的、**再往 `packages/` 塞一个入库本地包的**（`board_panel` 是 ADR-0001 的个案例外，不是新惯例）、**增删桌面平台目标的**（ADR-0003 的先例）、**动 ADR-0004 对比度豁免面之外的正文级配色**的。
+- 现存台账（截至 2026-09-29）：ADR-0001 vendored shadcn 不入库（RESOLVED）· ADR-0002 riverpod + shadcn 迁移（IN-PROGRESS，仅余 macOS 真机验收）· ADR-0003 Windows/Linux 目标（RESOLVED）· ADR-0004 亮色对比度 AA 显式豁免（ACCEPTED，方案 B 决策性关闭；登记表此前误记 PROPOSED，已拍平）· ADR-0005 starkins 设置页重建（RESOLVED）· ADR-0006 全屏设置 + 级联快捷菜单 + Profile（RESOLVED，Supabase 仅留接缝）· ADR-0007 工作区模式 + 企划 Markdown + 扩展面板（ACCEPTED，分阶段实施中）· ADR-0008 i18n 双语键集守卫（RESOLVED）。下一编号是 **ADR-0009**。**行号/编号/状态都以 `docs/debt-register.md` 与 `ls docs/adr/` 现场为准**，别抄这一行。
