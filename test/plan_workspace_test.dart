@@ -12,6 +12,7 @@ import 'dart:io';
 import 'package:agent_harness/theme/dsw_shad_bridge.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
 import 'package:agent_harness/ui/plan/plan_workspace.dart';
+import 'amplified_text_probe.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -42,18 +43,24 @@ void main() {
     }
   });
 
-  Future<void> pump(WidgetTester tester) => tester.pumpWidget(
-    MaterialApp(
-      theme: dswThemeData(Brightness.light),
-      // The note-switch confirm dialog is a ShadDialog (reads the caller's
-      // ShadTheme) — mount the same ancestor main does.
-      builder: (context, child) => ShadTheme(
-        data: dswShadTheme(Theme.of(context).brightness),
-        child: child!,
-      ),
-      home: Scaffold(body: PlanWorkspace(workspaceRoot: root.path)),
-    ),
-  );
+  Future<void> pump(WidgetTester tester, {double scale = 1.0}) =>
+      tester.pumpWidget(
+        MaterialApp(
+          theme: dswThemeData(Brightness.light),
+          // The note-switch confirm dialog is a ShadDialog (reads the caller's
+          // ShadTheme) — mount the same ancestor main does.
+          builder: (context, child) => ShadTheme(
+            data: dswShadTheme(Theme.of(context).brightness),
+            child: child!,
+          ),
+          home: Scaffold(
+            body: AmplifiedText(
+              step: scale,
+              child: PlanWorkspace(workspaceRoot: root.path),
+            ),
+          ),
+        ),
+      );
 
   /// Hands the event loop real time until [finder] matches — the vault index is
   /// a compute isolate, which a fake-async pump alone never completes.
@@ -167,6 +174,22 @@ void main() {
     await tester.tap(find.widgetWithText(ShadButton, 'Discard changes'));
     await pumpUntilGone(tester, find.text('Unsaved changes'));
     expect(File('${root.path}/readme.md').readAsStringSync(), '# Readme\n');
+    await settle(tester);
+  });
+
+  // ADR-0017 S3, on the plan workspace (the other half of ADR-0007's mode
+  // switch). The tree rows and the note toolbar are one-line chrome, so a step
+  // above the designed one either cut a label or wrapped it into the seat.
+  testWidgets('the workspace and its editor survive amplified text', (
+    tester,
+  ) async {
+    await pump(tester, scale: amplifiedTextStep);
+    await pumpUntil(tester, find.text('readme.md'));
+    expect(textDefects(tester), isEmpty, reason: 'the note tree');
+
+    await tester.tap(find.text('readme.md'));
+    await pumpUntil(tester, find.text('Save'));
+    expect(textDefects(tester), isEmpty, reason: 'an open note');
     await settle(tester);
   });
 }

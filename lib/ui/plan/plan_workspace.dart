@@ -589,7 +589,10 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
   /// Filename, the unsaved chip, the Source/Preview toggle, and Save.
   Widget _toolbar(DswAlias color, String selected) {
     return SizedBox(
-      height: 44,
+      // Holds the scale's tallest button, so the bar scales with it: the sm
+      // capsule is 28 at the designed step and 50.4 at 1.8x, which a fixed 44
+      // would have cut in half.
+      height: 44 * MediaQuery.textScalerOf(context).scale(1),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
@@ -665,7 +668,9 @@ class _DirRow extends StatelessWidget {
     return DswHoverTap(
       onTap: onToggle,
       builder: (context, hovered, _) => Container(
-        height: 28,
+        // One label per row, so the row rides the text step: at 1.8x the folder
+        // name wanted 36.0 and got 28.0.
+        height: 28 * MediaQuery.textScalerOf(context).scale(1),
         padding: EdgeInsets.only(left: indent, right: 8),
         decoration: BoxDecoration(
           color: hovered ? color.interactiveBgHover : null,
@@ -723,7 +728,9 @@ class _NoteRowState extends State<_NoteRow> {
       onTap: widget.onTap,
       toggled: widget.selected ? true : null,
       builder: (context, hovered, _) => Container(
-        height: 34,
+        // Two label lines per row, and both scale, so the seat does: at 1.8x the
+        // pair overflowed its 34.0 box and Flutter drew a striped error.
+        height: 34 * MediaQuery.textScalerOf(context).scale(1),
         padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
           color: widget.selected || hovered ? color.interactiveBgHover : null,
