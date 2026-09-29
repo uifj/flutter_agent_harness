@@ -374,6 +374,9 @@ class _DshAppState extends ConsumerState<DshApp> {
       // The endpoint interrogation behind "Test connection" and the model
       // quick-select: one HTTP fetcher, shared by both.
       modelsFetcher: const HttpModelsEndpointFetcher(),
+      // The saved approvals are listed where they can be revoked — the panel's
+      // "Always allow" is not the only place they can be seen (ADR-0012).
+      approvals: scope.approvals,
     );
   }
 }

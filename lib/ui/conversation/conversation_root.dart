@@ -432,7 +432,8 @@ class _ConversationRootState extends State<ConversationRoot> {
             ),
       _ => ApprovalPanel(
         request: approval,
-        onRespond: widget.conversation.respondToApproval,
+        onRespond: (approved, {remember = false}) =>
+            widget.conversation.respondToApproval(approved, remember: remember),
       ),
     };
 

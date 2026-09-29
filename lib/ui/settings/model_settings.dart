@@ -29,9 +29,11 @@ import '../../genkit/models_endpoint.dart';
 import '../../l10n/locales.dart';
 import '../../model/app_settings.dart' hide ThemeMode;
 import '../../model/app_settings.dart' as settings;
+import '../../model/approval_rule.dart';
 import '../../model/mcp_settings.dart';
 import '../../model/model_settings.dart';
 import '../../model/workbench_prefs.dart';
+import '../../state/approval_rule_store.dart';
 import '../../state/backup_service.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
@@ -49,6 +51,7 @@ enum _Section {
   workspace,
   workbench,
   extensions,
+  approvals,
   backup,
 }
 
@@ -62,6 +65,7 @@ class SettingsPanel extends StatefulWidget {
     this.workbenchPrefs = const WorkbenchPrefs(),
     this.onPrefsChange,
     this.modelsFetcher,
+    this.approvals,
   });
 
   final AppSettings settings;
@@ -91,6 +95,11 @@ class SettingsPanel extends StatefulWidget {
   /// Commits a workbench preference change. Null leaves the section read-only,
   /// which is what a host that never wired the prefs store wants.
   final ValueChanged<WorkbenchPrefs>? onPrefsChange;
+
+  /// The saved approval decisions for the open folder, listed here so a
+  /// decision taken in a hurry can be taken back. Null hides the section
+  /// entirely — the same contract as [onPrefsChange] (ADR-0012).
+  final ApprovalRuleStore? approvals;
 
   @override
   State<SettingsPanel> createState() => _SettingsPanelState();
@@ -215,6 +224,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
   @override
   void initState() {
     super.initState();
+    // A rule removed from this list is the same list the panel shows, so the
+    // store's own notification is what repaints it.
+    widget.approvals?.addListener(_onEdited);
     final controllers = [
       _key,
       _baseUrl,
@@ -304,6 +316,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
 
   @override
   void dispose() {
+    widget.approvals?.removeListener(_onEdited);
     final controllers = [
       _key,
       _baseUrl,
@@ -511,6 +524,12 @@ class _SettingsPanelState extends State<SettingsPanel> {
         context.tr('settingsBackup'),
         LucideIcons.database_backup,
       ),
+      if (widget.approvals != null)
+        _NavItem(
+          _Section.approvals,
+          context.tr('approvalsTitle'),
+          LucideIcons.shield_check,
+        ),
     ];
     final filtered = query.isEmpty
         ? items
@@ -643,6 +662,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     _Section.workbench => _workbenchSection(color),
                     _Section.extensions => _extensionsSection(color),
                     _Section.backup => _backupSection(color),
+                    _Section.approvals => _approvalsSection(color),
                   },
                 ],
               ),
@@ -1172,6 +1192,59 @@ class _SettingsPanelState extends State<SettingsPanel> {
       code: true,
     ),
   ];
+
+  /// The decisions the approval panel's "Always allow" saved for this folder,
+  /// each with the way to take it back. A rule nobody can see or revoke is not
+  /// a permission but a hidden bypass, which is why the list ships with the
+  /// button that writes it (ADR-0012).
+  List<Widget> _approvalsSection(DswAlias color) {
+    final store = widget.approvals!;
+    final rules = store.saved;
+    return [
+      _heading(
+        color,
+        context.tr('approvalsTitle'),
+        context.tr('approvalsNote'),
+      ),
+      const SizedBox(height: 12),
+      if (rules.isEmpty)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+          child: Text(
+            context.tr('approvalsEmpty'),
+            style: DswType.xs13.copyWith(color: color.labelTertiary),
+          ),
+        )
+      else
+        SettingsCard(
+          dividers: true,
+          children: [
+            for (final rule in rules)
+              _ActionRow(
+                title: rule.display,
+                description: rule.outcome == ApprovalOutcome.allow
+                    ? context.tr('approvalAllowed')
+                    : context.tr('approvalDenied'),
+                button: CapsuleButton(
+                  label: context.tr('forget'),
+                  onTap: () => store.forget(rule),
+                ),
+              ),
+            _ActionRow(
+              title: context.tr('forgetWorkspaceApprovals'),
+              description: context.tr('approvalsNote'),
+              button: CapsuleButton(
+                label: context.tr('forget'),
+                danger: true,
+                onTap: () =>
+                    store.forgetWorkspace(widget.settings.workspaceRoot),
+              ),
+              last: true,
+            ),
+          ],
+        ),
+    ];
+  }
 
   /// Backup & Restore: export all persistent data to a zip archive, or restore
   /// from one. The operations are fire-and-forget — the file picker handles the

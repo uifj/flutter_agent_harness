@@ -14,6 +14,7 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/locales.dart';
+import '../../model/approval_rule.dart';
 import '../../model/conversation.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_theme.dart';
@@ -31,9 +32,9 @@ class ApprovalPanel extends StatefulWidget {
 
   final ApprovalRequest request;
 
-  /// The verdict. The runtime resumes the interrupted call with it, which is why
-  /// the panel does not need to know anything about the tool.
-  final void Function(bool approved) onRespond;
+  /// The verdict. [remember] asks the host to save it for this subject, so the
+  /// same call does not interrupt again in this folder.
+  final void Function(bool approved, {bool remember}) onRespond;
 
   @override
   State<ApprovalPanel> createState() => _ApprovalPanelState();
@@ -52,9 +53,9 @@ class _ApprovalPanelState extends State<ApprovalPanel> {
     if (old.request.ref != widget.request.ref) _answered = false;
   }
 
-  void _answer(bool approved) {
+  void _answer(bool approved, {bool remember = false}) {
     setState(() => _answered = true);
-    widget.onRespond(approved);
+    widget.onRespond(approved, remember: remember);
   }
 
   @override
@@ -202,25 +203,40 @@ class _ApprovalPanelState extends State<ApprovalPanel> {
 
   /// A card-level row, outside the scroll region: 14px above and below, which
   /// reproduces the metrics the row had when it was body content.
-  Widget _actions(DswAlias color) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        CapsuleButton(
-          label: context.tr('reject'),
-          enabled: !_answered,
-          danger: true,
-          onTap: () => _answer(false),
-        ),
-        const SizedBox(width: 8),
-        CapsuleButton(
-          label: context.tr('allowOnce'),
-          enabled: !_answered,
-          variant: CapsuleVariant.primary,
-          onTap: () => _answer(true),
-        ),
-      ],
-    ),
-  );
+  ///
+  /// The middle button appears only when the call has a subject a rule could
+  /// speak about — it writes the exact string shown above it, so a call whose
+  /// target the panel could not name has nothing to remember.
+  Widget _actions(DswAlias color) {
+    final rememberable = widget.request.ruleFor(ApprovalOutcome.allow) != null;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          CapsuleButton(
+            label: context.tr('reject'),
+            enabled: !_answered,
+            danger: true,
+            onTap: () => _answer(false),
+          ),
+          if (rememberable) ...[
+            const SizedBox(width: 8),
+            CapsuleButton(
+              label: context.tr('alwaysAllow'),
+              enabled: !_answered,
+              onTap: () => _answer(true, remember: true),
+            ),
+          ],
+          const SizedBox(width: 8),
+          CapsuleButton(
+            label: context.tr('allowOnce'),
+            enabled: !_answered,
+            variant: CapsuleVariant.primary,
+            onTap: () => _answer(true),
+          ),
+        ],
+      ),
+    );
+  }
 }
