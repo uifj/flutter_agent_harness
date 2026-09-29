@@ -42,18 +42,28 @@ class _ToolCardState extends State<ToolCard> {
   /// attention, not about the call. Its *starting* value, though, is the
   /// appearance preference (ADR-0005) — a newly-shown call opens to match how
   /// the user likes tool blocks presented, then the reader is free to fold it.
-  late bool _expanded;
+  bool _expanded = false;
+
+  /// Whether the preference has already been consulted. Collapsed is the value
+  /// before the first frame, so the guard is what keeps "only on mount" true even
+  /// though `didChangeDependencies` runs again whenever the scope changes.
+  bool _preferenceRead = false;
 
   /// `.root:hover`, which is what reveals the Inspect pill — the whole call,
   /// title row included, not just the body the pill sits under.
   bool _hovered = false;
 
+  /// The starting expansion comes from an ancestor, so it is read here rather
+  /// than in `initState`: establishing an inherited dependency while the state
+  /// is still locked is an assertion Flutter raises on the spot, and a tool card
+  /// is mounted under `AppearanceScope` in every conversation the app has.
   @override
-  void initState() {
-    super.initState();
-    // Only the initial mount consults the preference; a later preference change
-    // must not yank a card the reader already toggled. No scope (tests) →
-    // collapsed, the pre-ADR default.
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_preferenceRead) return;
+    _preferenceRead = true;
+    // One read per mount: a later preference change must not yank a card the
+    // reader already toggled. No scope (tests) → collapsed, the pre-ADR default.
     _expanded = AppearanceScope.expandToolCallsOf(context);
   }
 
