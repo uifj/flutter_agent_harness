@@ -31,6 +31,8 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../model/mention_expansion.dart' show workspaceReferenceTag;
+
 /// Where an instruction file came from.
 enum InstructionOrigin { user, project }
 
@@ -149,6 +151,24 @@ List<InstructionFile> discoverInstructions({
   return found;
 }
 
+/// The opening tag of the injected block. A constant because a surface that
+/// shows what the user typed has to recognise and skip it — see
+/// [isInjectedPart].
+const instructionsOpenTag = '<project-instructions>';
+
+/// True for text the runtime put into the user's message on the user's behalf:
+/// the workspace instruction block (ADR-0009) and the `@` file references.
+///
+/// Both ride the first user message as their own text parts, so anything that
+/// reads that message to describe the conversation to a human — a session
+/// title, primarily — must drop them. They are model-facing prose, and they
+/// spend the whole title budget before the user's own sentence begins.
+bool isInjectedPart(String text) {
+  final head = text.trimLeft();
+  return head.startsWith(instructionsOpenTag) ||
+      head.startsWith(workspaceReferenceTag);
+}
+
 /// The block injected ahead of the user's own words, or null when there is
 /// nothing to inject.
 ///
@@ -157,7 +177,7 @@ List<InstructionFile> discoverInstructions({
 String? renderInstructions(List<InstructionFile> files) {
   if (files.isEmpty) return null;
   final buffer = StringBuffer()
-    ..writeln('<project-instructions>')
+    ..writeln(instructionsOpenTag)
     ..writeln(
       'Instruction files the user maintains for these directories. Follow '
       'them. Something the user says in this conversation outranks a file; '

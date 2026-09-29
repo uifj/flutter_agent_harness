@@ -194,6 +194,11 @@ Future<void> main() async {
   File(
     '${workspace.path}/notes.md',
   ).writeAsStringSync('# Notes\n\nnothing yet\n');
+  // ADR-0009 injects this into the first user message as its own text part. It
+  // must not become the session's title, nor the user's own bubble on restore.
+  File('${workspace.path}/AGENTS.md').writeAsStringSync(
+    '# Smoke workspace\n\nAnswer in one short sentence when asked.\n',
+  );
   stdout.writeln('sessions: ${sessions.path}\nworkspace: ${workspace.path}');
 
   final key = Platform.environment['DEEPSEEK_API_KEY'];
@@ -320,12 +325,24 @@ Future<void> main() async {
   // =========================================================================
   final sessionId = runtime.sessionId;
   stdout.writeln('  listed sessions:');
-  for (final summary in await runtime.listSessions()) {
+  final summaries = await runtime.listSessions();
+  for (final summary in summaries) {
     stdout.writeln(
       '    ${summary.id}  ${summary.updatedAt.toIso8601String()}  '
       '${summary.title}',
     );
   }
+  // The title is what the sidebar shows. If the injected brief leaks in here,
+  // every session in the list reads `<project-instructions> …`.
+  final leaked = [
+    for (final s in summaries)
+      if (s.title?.trimLeft().startsWith('<project-instructions>') ?? false) s,
+  ];
+  stdout.writeln(
+    '  ${leaked.isEmpty ? 'ok' : '!!'}: no session is titled after the '
+    'injected instruction block',
+  );
+  if (leaked.isNotEmpty) exitCode = 1;
   await runtime.dispose();
 
   if (sessionId != null) {

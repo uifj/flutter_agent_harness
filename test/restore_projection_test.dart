@@ -165,4 +165,61 @@ void main() {
     expect(tools.todos[1].status, TodoStatus.inProgress);
     expect(tools.plan, '1. one\n2. two');
   });
+
+  test('an injected instruction block is not restored as the user\'s words', () {
+    // ADR-0009 rides the workspace instructions and the `@` references in the
+    // SAME user message as the user's sentence, each as its own text part.
+    // `message.text` joins them, so a reopened session used to print the whole
+    // block as prose the user had typed.
+    final nodes = AgentRuntime.projectMessages([
+      Message(
+        role: Role.user,
+        content: [
+          TextPart(text: '<project-instructions>\n### AGENTS.md (directory)\n'),
+          TextPart(
+            text: '<workspace-reference path="lib/main.dart" kind="file" />',
+          ),
+          TextPart(text: 'why does main.dart take so long to start?'),
+        ],
+      ),
+    ]);
+    expect(nodes, hasLength(1));
+    final user = nodes.single as UserMessageNode;
+    expect(user.text, 'why does main.dart take so long to start?');
+    expect(user.text, isNot(contains('project-instructions')));
+    expect(user.text, isNot(contains('workspace-reference')));
+  });
+
+  test('a session is titled after what the user said, not the brief', () {
+    final withInjection = [
+      Message(
+        role: Role.user,
+        content: [
+          TextPart(
+            text:
+                '<project-instructions>\nInstruction files the user maintains '
+                'for these directories. Follow them.\n</project-instructions>',
+          ),
+          TextPart(text: 'rename the harness package'),
+        ],
+      ),
+    ];
+    expect(
+      AgentRuntime.sessionTitle(withInjection),
+      'rename the harness package',
+    );
+    // A message that is ONLY injection has nothing to name the session after;
+    // inventing a title from model-facing prose is the bug this guards.
+    expect(
+      AgentRuntime.sessionTitle([
+        Message(
+          role: Role.user,
+          content: [TextPart(text: '<project-instructions>\nonly prose')],
+        ),
+      ]),
+      isNull,
+    );
+    // The plain path still titles off the first user message.
+    expect(AgentRuntime.sessionTitle([_user('hello there')]), 'hello there');
+  });
 }

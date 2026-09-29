@@ -79,12 +79,17 @@ List<Mention> resolveMentions(String text, Workspace workspace) {
   return out;
 }
 
+/// The opening tag of a [`referenceForm`] element, as a constant so a caller
+/// that has to tell injected text from the user's own words does not have to
+/// re-type the literal.
+const workspaceReferenceTag = '<workspace-reference';
+
 /// The existence-only reference form the model receives — the plugin's
 /// `referenceForm`, XML-escaped so a path with `&`/`<` cannot break out of
 /// the attribute.
 String referenceForm(Mention mention) {
   final kind = mention.isDirectory ? 'directory' : 'file';
-  return '<workspace-reference path="${_escapeAttribute(mention.relative)}"'
+  return '$workspaceReferenceTag path="${_escapeAttribute(mention.relative)}"'
       ' kind="$kind" />';
 }
 

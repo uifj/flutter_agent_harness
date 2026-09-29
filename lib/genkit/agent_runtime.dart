@@ -1366,7 +1366,7 @@ class AgentRuntime implements TurnSource {
             updatedAt:
                 DateTime.tryParse(snapshot.updatedAt ?? '') ??
                 entry.statSync().modified,
-            title: _titleOf(snapshot.messages),
+            title: sessionTitle(snapshot.messages),
           ),
         );
       } catch (_) {
@@ -1378,16 +1378,33 @@ class AgentRuntime implements TurnSource {
     return summaries;
   }
 
-  /// The first user message, collapsed to a single line.
-  static String? _titleOf(List<Message> messages) {
+  /// The session's display title: the user's own first sentence, one line.
+  ///
+  /// Public and static for the same reason `projectMessages` is — the rule that
+  /// keeps the injected instruction block out of it is the part most likely to
+  /// regress, and it is only observable from a message list.
+  static String? sessionTitle(List<Message> messages) {
     for (final message in messages) {
       if (message.role.value != 'user') continue;
-      final text = message.text.replaceAll(RegExp(r'\s+'), ' ').trim();
+      final text = _userWords(message).replaceAll(RegExp(r'\s+'), ' ').trim();
       if (text.isEmpty) continue;
       return text.length <= 80 ? text : '${text.substring(0, 79)}…';
     }
     return null;
   }
+
+  /// What the user actually typed in [message].
+  ///
+  /// Not `message.text`: that joins every text part, and ADR-0009's instruction
+  /// block plus the `@` file references are parts of this same message. Reading
+  /// them as the title gave every session a name like
+  /// `<project-instructions> Instruction files the user maintains…`, which spent
+  /// the whole 80-character budget on prose the user never wrote.
+  static String _userWords(Message message) => message.content
+      .where((part) => part.isText)
+      .map((part) => part.text!)
+      .where((text) => !isInjectedPart(text))
+      .join();
 
   /// Rebuilds a transcript from a persisted message list — the snapshot's own
   /// `state.messages`, which unlike a live chat's list carries the tool turns
@@ -1408,7 +1425,11 @@ class AgentRuntime implements TurnSource {
       // `Role.user` is a getter rather than a constant, and cannot be a pattern.
       switch (message.role.value) {
         case 'user':
-          final text = message.text.trim();
+          // `_userWords`, not `message.text`: the reopened bubble would
+          // otherwise print the whole instruction block as if the user had
+          // typed it, which is the same defect that named every session
+          // `<project-instructions> …`.
+          final text = _userWords(message).trim();
           if (text.isNotEmpty) {
             nodes.add(UserMessageNode(id: 'm$i', text: text));
           }
