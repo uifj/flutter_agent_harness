@@ -1026,6 +1026,10 @@ class AgentRuntime implements TurnSource {
               ],
               cancel: cancel,
             ),
+      // Only a restart runs the tool, so only a restart has an unsent result to
+      // recover. A decline is answered on the tool's behalf and the card already
+      // reads `denied`.
+      approvedRef: approved ? ref : null,
     );
   }
 
@@ -1047,9 +1051,12 @@ class AgentRuntime implements TurnSource {
   final Map<String, AgentInterrupt> _pendingInterrupts = {};
 
   /// Runs [start] and projects its chunks into [TurnEvent]s.
+  ///
+  /// [approvedRef] names the tool this turn restarted after an approval, if any.
   Stream<TurnEvent> _drive(
-    AgentTurn<dynamic> Function(CancellationToken cancel) start,
-  ) async* {
+    AgentTurn<dynamic> Function(CancellationToken cancel) start, {
+    String? approvedRef,
+  }) async* {
     if (_turn != null) {
       yield const TurnFinished(
         outcome: TurnOutcome.failed,
@@ -1072,6 +1079,9 @@ class AgentRuntime implements TurnSource {
     // carrying the interrupt payload — so both need deduping by ref.
     final announced = <String>{};
     final asked = <String>{};
+    // Refs whose result this turn projected, so the one a restart never
+    // streams can be recovered below rather than assumed missing.
+    final settled = <String>{};
     var stopped = false;
 
     // The stats line's clock: turn entry stamped here, first token stamped at
@@ -1086,7 +1096,7 @@ class AgentRuntime implements TurnSource {
           stopped = true;
           break;
         }
-        final events = _project(chunk, announced, asked);
+        final events = _project(chunk, announced, asked, settled);
         if (ttftMs == null && events.isNotEmpty) {
           ttftMs = watch.elapsedMilliseconds;
         }
@@ -1127,6 +1137,23 @@ class AgentRuntime implements TurnSource {
         );
       }
 
+      // A restarted tool's output is folded into the next model request by
+      // genkit (`generate.dart`'s `coreGenerate`) and never sent as a chunk, so
+      // this is the only way the card learns the call is over — and the only way
+      // a write's `checkpoint` id reaches the tool card in the turn that made
+      // it. ADR-0016.
+      if (approvedRef != null &&
+          !settled.contains(approvedRef) &&
+          response.snapshotId != null) {
+        final recorded = await _restartedOutputs(
+          ref: approvedRef,
+          snapshotId: response.snapshotId!,
+        );
+        if (recorded.isNotEmpty) {
+          yield _toolResult(approvedRef, recorded.first);
+        }
+      }
+
       yield TurnFinished(
         outcome: _outcomeOf(response.finishReason),
         sessionId: response.sessionId ?? _chat?.sessionId,
@@ -1161,6 +1188,7 @@ class AgentRuntime implements TurnSource {
     AgentChunk<dynamic> chunk,
     Set<String> announced,
     Set<String> asked,
+    Set<String> settled,
   ) {
     final events = <TurnEvent>[];
     final modelChunk = chunk.raw.modelChunk;
@@ -1211,10 +1239,33 @@ class AgentRuntime implements TurnSource {
       final response = part.toolResponse!;
       final ref = response.ref;
       if (ref == null) continue;
+      settled.add(ref);
       events.add(_toolResult(ref, response.output));
     }
 
     return events;
+  }
+
+  /// The output a restarted tool produced, read back out of the snapshot the
+  /// turn just wrote.
+  ///
+  /// genkit runs an approved tool without streaming its result, and a live
+  /// chat's `messages` only accumulate model messages (`_applyOutput`), so the
+  /// persisted state is the one place that holds it — the same place a session
+  /// reload reads from, which is what keeps the live card and the reopened one
+  /// telling the same story. A list because a tool may answer with `null`;
+  /// emptiness is the only reliable absence.
+  Future<List<Object?>> _restartedOutputs({
+    required String ref,
+    required String snapshotId,
+  }) async {
+    final snapshot = await _agent.getSnapshot(snapshotId: snapshotId);
+    return [
+      for (final message in snapshot?.messages ?? const <Message>[])
+        for (final part in message.content)
+          if (part.isToolResponse && part.toolResponse?.ref == ref)
+            part.toolResponse!.output,
+    ];
   }
 
   /// Tools report recoverable trouble as `{ok: false, error: ...}` rather than
