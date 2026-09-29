@@ -51,17 +51,27 @@ List<String> spillDefects(WidgetTester tester) {
     if (ro.direction != Axis.horizontal) continue;
     final max = ro.constraints.maxWidth;
     if (max >= double.infinity) continue;
-    final sum = ro.getChildrenAsList().whereType<RenderBox>().fold<double>(
-      0,
-      (a, b) => a + b.size.width,
-    );
+    final children = ro.getChildrenAsList().whereType<RenderBox>().toList();
+    final sum = children.fold<double>(0, (a, b) => a + b.size.width);
     if (sum <= max + 0.5) continue;
+    // The row alone is not actionable: which child would not yield is the
+    // difference between "give the label a Flexible" and "the fixed cell is
+    // too narrow for the step".
     found.add(
       '${sum.toStringAsFixed(1)} vs ${max.toStringAsFixed(1)} '
+      '[${children.map(_describe).join(' + ')}] '
       ':: ${_owner(tester, ro, 8)}',
     );
   }
   return found;
+}
+
+String _describe(RenderBox box) {
+  final ro = box;
+  final label = ro is RenderParagraph
+      ? '"${ro.text.toPlainText()}"'
+      : ro.toStringShort();
+  return '$label ${box.size.width.toStringAsFixed(1)}';
 }
 
 /// Labels the seat they sit in is too short to show.
