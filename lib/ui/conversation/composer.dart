@@ -1241,6 +1241,13 @@ class _ImageChip extends StatelessWidget {
 
 /// The paperclip. A popup rather than a direct pick: the clipboard paste is the
 /// other half of the affordance, and the only way to offer both is a menu.
+/// The label cell of an attach-menu row. `Row` hands a non-flex child the whole
+/// width it was given, so at the 2.2x text step 'Attach documents (PDF, text)…'
+/// wanted 896.1 of the 760.0 the screen left the menu and the row spilled 158.0;
+/// the label is what yields there, not the glyph.
+Widget _menuLabel(String text) =>
+    Expanded(child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis));
+
 class _AttachButton extends StatelessWidget {
   const _AttachButton({
     required this.onPick,
@@ -1276,7 +1283,7 @@ class _AttachButton extends StatelessWidget {
                   color: color.labelSecondary,
                 ),
                 const SizedBox(width: 8),
-                Text(context.tr('chooseImages')),
+                _menuLabel(context.tr('chooseImages')),
               ],
             ),
           ),
@@ -1291,7 +1298,7 @@ class _AttachButton extends StatelessWidget {
                   color: color.labelSecondary,
                 ),
                 const SizedBox(width: 8),
-                Text(context.tr('chooseDocuments')),
+                _menuLabel(context.tr('chooseDocuments')),
               ],
             ),
           ),
@@ -1306,7 +1313,7 @@ class _AttachButton extends StatelessWidget {
                   color: color.labelSecondary,
                 ),
                 const SizedBox(width: 8),
-                Text(context.tr('pasteImage')),
+                _menuLabel(context.tr('pasteImage')),
               ],
             ),
           ),

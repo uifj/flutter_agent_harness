@@ -147,10 +147,18 @@ class _QuickMenuOverlayState extends State<_QuickMenuOverlay> {
                       border: Border.all(color: color.borderL2),
                     ),
                     clipBehavior: Clip.antiAlias,
-                    child: _QuickMenu(
-                      initial: widget.initial,
-                      onChanged: widget.onChanged,
-                      onOpenSettings: widget.onOpenSettings,
+                    // Scrollable: the cascade's four groups are one line of
+                    // chrome each and every seat rides the text step, so at 1.8x
+                    // they wanted 979.0 in the 882.0 the window left above the
+                    // footer - and at 2.2x, 1267.0. A menu the user cannot reach
+                    // the bottom of is not a menu; a scroll view is what keeps
+                    // the last row (Open settings) available at every step.
+                    child: SingleChildScrollView(
+                      child: _QuickMenu(
+                        initial: widget.initial,
+                        onChanged: widget.onChanged,
+                        onOpenSettings: widget.onOpenSettings,
+                      ),
                     ),
                   ),
                 ),

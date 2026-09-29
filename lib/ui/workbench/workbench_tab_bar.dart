@@ -620,7 +620,10 @@ class _Feedback extends StatelessWidget {
   Widget build(BuildContext context) => Opacity(
     opacity: 0.9,
     child: Container(
-      height: 24,
+      // One line of chrome, and the ruler only reaches it from above the
+      // Navigator: a nailed 24 left 22.0 inside the border for a label that
+      // wants 32.0 at 1.8x and 40.0 at 2.2x.
+      height: 24 * MediaQuery.textScalerOf(context).scale(1),
       constraints: const BoxConstraints(maxWidth: 160),
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
