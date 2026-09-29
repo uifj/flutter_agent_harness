@@ -15,6 +15,7 @@
 | ADR-0007 | 工作区模式切换（企划/代理）+ 企划 Markdown 工作台 + 扩展面板（board_panel） | ARC | P1 | ACCEPTED（S1–S5 待实施；board_panel 入库为 ADR-0001 先例的记录在案例外） | 2026-09-16 | [链接](adr/ADR-0007-arc-workspace-modes-extensions.md) |
 | ADR-0008 | i18n 双语键集对齐加机器守卫 | TST | P2 | RESOLVED @ 5c14ec8（`test/l10n_parity_test.dart`；反向验证实测过：单侧插一个键即失败并指名缺哪个） | 2026-09-29 | [链接](adr/ADR-0008-tst-i18n-key-parity.md) |
 | ADR-0009 | 工作区指令注入（AGENTS.md → 上下文消息） | ARC | P1 | IN-PROGRESS @ 9019f3c（S1 已落：`lib/genkit/instructions.dart` + 11 例单测 + `send()` 排队/排空；顺带修掉 `_systemPrompt` 的 "on the user's Mac" 平台硬编码。带 key 的真实链路注入仍待确认） | 2026-09-29 | [链接](adr/ADR-0009-arc-workspace-instructions.md) |
+| ADR-0010 | 图片附件按模型能力门控（含纯附件发不出、Windows 附件名两处缺陷） | DEF | P1 | IN-PROGRESS @ c34d1a7/ac18647/4496677（能力表 + composer 单门 + 两处同源缺陷已修，7 例测试绿；余 macOS 真机贴一张 deepseek 下的图走查） | 2026-09-29 | [链接](adr/ADR-0010-def-image-capability-gate.md) |
 
 > 2026-09-15 设计层审计（方法：design-review 插件手动审查模型）产出了完整证据链，见 [design-audit-2026-09.md](design-audit-2026-09.md)。阻断级/ majors 的处置归属：键盘无障碍（A1/A3）与表单控件缺口（C1）并入 ADR-0002 实施；A2（对比度）与文本缩放留下方观察表。
 
