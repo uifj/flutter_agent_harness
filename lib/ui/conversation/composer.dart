@@ -1515,7 +1515,10 @@ class _ModelChip extends StatelessWidget {
               // own checkmark, so an icon-only seat still says what it opens.
               final tight = constraints.maxWidth < 64;
               return Container(
-                height: 24,
+                // The same one-line seat as the mode chip below it: pinned at 24
+                // this cut the model's own name as soon as the system amplified
+                // text (25.0 wanted at 1.8, 31.0 at 2.2).
+                height: 24 * MediaQuery.textScalerOf(context).scale(1),
                 padding: EdgeInsets.symmetric(horizontal: tight ? 0 : 8),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(DswShape.inner),
@@ -1770,10 +1773,13 @@ class _DeliverChip extends StatelessWidget {
       onTap: onTap,
       semanticLabel: tip,
       builder: (context, hovered, _) => Transform.translate(
-        // Same seat as the primary circle, two pixels up from the chip row.
+        // The same seat as the primary circle, two pixels up from the chip row.
         offset: const Offset(0, -2),
         child: Container(
-          height: 28,
+          // 28 is the seat's floor, not its height: this row owns its one line,
+          // and nailing it cut the word as soon as the system amplified text
+          // (32.0 wanted at 1.8). At the designed step it stays exactly 28.
+          constraints: const BoxConstraints(minHeight: 28),
           padding: EdgeInsets.symmetric(horizontal: tight ? 6 : 8),
           decoration: BoxDecoration(
             color: hovered ? color.interactiveBgHover : null,
