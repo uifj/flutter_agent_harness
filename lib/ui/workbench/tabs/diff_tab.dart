@@ -709,7 +709,10 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = context.dsw;
     return Container(
-      height: 36,
+      // One line of chrome, so the title's own step sets the height: this 12px
+      // title's 18px line box measured 40.0 against the 35.0 the seat left at
+      // the system's 2.2x.
+      height: 36 * MediaQuery.textScalerOf(context).scale(1),
       padding: const EdgeInsets.only(left: 12, right: 8),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: color.borderL1)),

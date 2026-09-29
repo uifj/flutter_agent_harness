@@ -351,24 +351,34 @@ class _Header extends StatelessWidget {
     final color = context.dsw;
     final noun = count == 1 ? 'subagent' : 'subagents';
     return Container(
-      height: 36,
+      // One line of chrome, so the title's own step sets the height: the 14/22
+      // here needed 40.0 in the 36.0 this seat pinned, and 48.0 one step up.
+      height: 36 * MediaQuery.textScalerOf(context).scale(1),
       padding: const EdgeInsets.only(left: 12, right: 8),
       child: Row(
         children: [
-          Expanded(
-            child: Text(
-              'Sub-agents',
-              style: DswType.s14.copyWith(color: color.labelSecondary),
-              overflow: TextOverflow.ellipsis,
-            ),
+          // The section name is the label and the count is the hint, so the name
+          // takes its natural width and the count is what yields. The old
+          // `Expanded` here did the opposite: the badge is a non-flex child, so
+          // it was handed the row's whole width (measured 441.1 for
+          // "1 subagent · 1 running" at 1.8x) and crushed the title to 0.0.
+          Text(
+            'Sub-agents',
+            style: DswType.s14.copyWith(color: color.labelSecondary),
           ),
-          if (count > 0)
-            Text(
-              liveCount > 0
-                  ? '$count $noun · $liveCount running'
-                  : '$count $noun',
-              style: DswType.xxxs11.copyWith(color: color.labelTertiary),
+          if (count > 0) ...[
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                // The noun is in the title already; repeating it cost the row a
+                // third of its width at the designed step.
+                liveCount > 0 ? '$liveCount of $count running' : '$count $noun',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: DswType.xxxs11.copyWith(color: color.labelTertiary),
+              ),
             ),
+          ],
         ],
       ),
     );
@@ -716,7 +726,9 @@ class _KillButtonState extends State<_KillButton> {
       return DswHoverTap(
         onTap: widget.onTap,
         builder: (context, _, _) => Container(
-          height: 20,
+          // One line of label, so the seat rides the step: pinned at 20 the
+          // 11px "Confirm" wanted 25.0 at 1.8x and 31.0 one step above it.
+          height: 20 * MediaQuery.textScalerOf(context).scale(1),
           padding: const EdgeInsets.symmetric(horizontal: 8),
           margin: const EdgeInsets.only(right: 4),
           alignment: Alignment.center,
@@ -814,9 +826,11 @@ class _OutputDock extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // `.jobsPaneHeader`
+          // `.jobsPaneHeader` — one line of chrome (agent, status, close), so the
+          // seat rides the step: pinned at 28 its 11px labels wanted 31.0 of the
+          // 27.0 left inside it at 2.2x.
           Container(
-            height: 28,
+            height: 28 * MediaQuery.textScalerOf(context).scale(1),
             padding: const EdgeInsets.only(left: 10, right: 4),
             decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: color.borderL1)),
