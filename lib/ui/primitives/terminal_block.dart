@@ -104,8 +104,12 @@ String promptLabel(String cwd, String? home) {
 /// cleanly (exit 0, no signal) and needs no pill — the same distinction the bash
 /// tool's own exit-status markers draw.
 String? statusText(int? exitCode, String? signal) {
-  if (signal != null) return 'signal $signal';
-  if (exitCode != null && exitCode != 0) return 'exit code $exitCode';
+  // The chip is a non-flex row child, so its intrinsic width comes straight off
+  // the command column: at 260px 'exit code 1' measured 150.8 of a 246.0 row and
+  // pushed the banner past its own width (`RenderFlex overflowed by 12 pixels`).
+  // A status chip stays short.
+  if (signal != null) return signal;
+  if (exitCode != null && exitCode != 0) return 'exit $exitCode';
   return null;
 }
 
@@ -198,6 +202,9 @@ class _TerminalBlockState extends State<TerminalBlock> {
         ? widget.command.substring(0, widget.command.length - 1)
         : widget.command;
     final commandLines = command.split('\n');
+    // The dot's row and the pill are one-line seats, and the banner cap is counted
+    // in those lines, so all three ride the text step (ADR-0017 S3).
+    final step = MediaQuery.textScalerOf(context).scale(1);
 
     return Container(
       padding: const EdgeInsets.only(right: 14, top: 9, bottom: 9),
@@ -220,7 +227,7 @@ class _TerminalBlockState extends State<TerminalBlock> {
             label: stateLabel,
             child: SizedBox(
               width: _gutter,
-              height: _lineHeight,
+              height: _lineHeight * step,
               child: Align(
                 // `left: calc(-1 * gutter + 8px)` — 8 from the card's own edge.
                 alignment: Alignment.centerLeft,
@@ -237,7 +244,7 @@ class _TerminalBlockState extends State<TerminalBlock> {
           ),
           Expanded(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: _bannerMaxHeight),
+              constraints: BoxConstraints(maxHeight: _bannerMaxHeight * step),
               // The source scrolls the whole banner and keeps the pill and the
               // copy control sticky inside it; here only the prompt column
               // scrolls, which puts those two in the same place without a sticky
@@ -264,7 +271,7 @@ class _TerminalBlockState extends State<TerminalBlock> {
             const SizedBox(width: 12),
             Pill(
               label: status,
-              height: _lineHeight,
+              height: _lineHeight * step,
               color: color.stateErrorPrimary,
             ),
           ],

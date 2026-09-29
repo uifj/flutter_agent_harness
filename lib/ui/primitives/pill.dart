@@ -30,7 +30,10 @@ class Pill extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = context.dsw;
     return Container(
-      height: height,
+      // The caller's number is a design-px line (24 here, 22 for the terminal's
+      // prompt row), so it rides the text step: at 1.8x the 12px label wanted 32.0
+      // inside the 24.0 seat and was cut top and bottom (ADR-0017 S3).
+      height: height * MediaQuery.textScalerOf(context).scale(1),
       padding: const EdgeInsets.symmetric(horizontal: 8),
       alignment: Alignment.center,
       decoration: BoxDecoration(
