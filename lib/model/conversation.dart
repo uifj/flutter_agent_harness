@@ -7,6 +7,7 @@
 //
 // A grep for `package:genkit` should only ever match `lib/genkit/`.
 
+import 'approval_rule.dart';
 import 'attached_image.dart';
 
 /// Where a tool call has got to.
@@ -55,6 +56,31 @@ class ApprovalRequest {
   /// Whatever the tool passed to its interrupt call — free-form, for the panel
   /// to explain what is about to happen.
   final Map<String, dynamic> details;
+
+  /// The rule that would spare this question next time, or null when this call
+  /// has no subject a rule could speak about.
+  ///
+  /// The subject is the exact string the panel just showed the user — the path
+  /// for the two file tools, the command for bash, `server/tool` for an external
+  /// call. A rule about something other than what was looked at is a rule the
+  /// user never agreed to, which is why this reads the interrupt payload rather
+  /// than re-deriving it.
+  ApprovalRule? ruleFor(ApprovalOutcome outcome) {
+    final kind = switch (details['kind']) {
+      'bash' => ApprovalSubjectKind.command,
+      'write' || 'edit' => ApprovalSubjectKind.filePath,
+      'mcp' => ApprovalSubjectKind.tool,
+      _ => null,
+    };
+    if (kind == null) return null;
+    final subject = switch (kind) {
+      ApprovalSubjectKind.command => details['command'] ?? arguments['command'],
+      ApprovalSubjectKind.filePath => details['path'] ?? arguments['file_path'],
+      ApprovalSubjectKind.tool => '${details['server']}/${details['tool']}',
+    };
+    if (subject is! String || subject.isEmpty) return null;
+    return ApprovalRule(kind: kind, value: subject, outcome: outcome);
+  }
 }
 
 /// One entry in the transcript.
