@@ -10,14 +10,16 @@
 // So the contract here is coarse: put the rail in each form, pump the frames
 // between them, and assert nothing was thrown.
 //
-// The last test is not about the collapse. It pins the one line every control
-// in the column shares, and the product name the brand row wears.
+// The last two tests are not about the collapse. One pins the line every
+// control in the column shares and the product name the brand row wears; the
+// other pins that the footer's controls are not nested inside each other.
 
 import 'package:agent_harness/model/conversation.dart';
 import 'package:agent_harness/state/session_index.dart';
 import 'package:agent_harness/theme/dsw_shape.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
 import 'package:agent_harness/ui/layout/columns.dart';
+import 'package:agent_harness/ui/primitives/tappable.dart';
 import 'package:agent_harness/ui/sidebar/sidebar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
@@ -175,5 +177,54 @@ void main() {
         reason: '$label is off the column inset',
       );
     }
+  });
+
+  // Audit 2c ③. The gear and the panel toggle used to live *inside* the profile
+  // row's own hit target, so the "orphaned settings button" was literally a
+  // button nested in a bigger one: hovering the gear lit the whole row, and a
+  // tap in the empty middle opened the quick menu. Being neighbours at one gap
+  // is the only way two controls can read as a group; sharing a hit area is not
+  // grouping, it is nesting.
+  testWidgets('the footer controls are neighbours, not nested targets', (
+    tester,
+  ) async {
+    await pump(tester, collapsed: false);
+
+    final trigger = find.byWidgetPredicate(
+      (widget) =>
+          widget is DswHoverTap && widget.semanticLabel == 'Quick preferences',
+    );
+    final gear = find.byIcon(LucideIcons.settings);
+    expect(trigger, findsOneWidget);
+    expect(gear, findsOneWidget);
+    // The column carries `panel_right` twice (the header's own control and this
+    // one), so scope the search to the footer row — the innermost Row that
+    // contains the gear.
+    final footer = find.ancestor(of: gear, matching: find.byType(Row)).first;
+    final toggle = find.descendant(
+      of: footer,
+      matching: find.byIcon(LucideIcons.panel_right),
+    );
+    expect(toggle, findsOneWidget);
+
+    final row = tester.getRect(trigger);
+    final gearBox = tester.getRect(gear);
+    final toggleBox = tester.getRect(toggle);
+
+    expect(
+      row.right,
+      lessThanOrEqualTo(gearBox.left),
+      reason: 'the gear is not part of the quick-menu trigger',
+    );
+    expect(
+      row.right,
+      lessThanOrEqualTo(toggleBox.left),
+      reason: 'nor is the panel toggle',
+    );
+    expect(
+      gearBox.center.dy,
+      moreOrLessEquals(toggleBox.center.dy, epsilon: 0.5),
+      reason: 'the two controls share one centre line — that is the grouping',
+    );
   });
 }

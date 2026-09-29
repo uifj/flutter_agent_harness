@@ -597,70 +597,82 @@ class _SidebarState extends State<Sidebar> {
           ),
   );
 
-  /// Wide footer: profile + settings gear + details toggle in a single row.
-  /// The settings button is icon-only (no "设置" text) — the gear is
-  /// universally recognizable and the row stays compact.
+  /// Wide footer: the profile row is the quick-menu trigger, and the gear and
+  /// the panel toggle are targets of their own.
+  ///
+  /// The two controls used to sit *inside* the trigger, which is what made the
+  /// gear read as orphaned (audit 2c ③): hovering it lit the whole row up, a tap
+  /// in the empty middle opened the menu, and the semantics tree showed one
+  /// button containing two. Grouping them by nesting was the wrong grouping —
+  /// they share a baseline and a 4px gap, not a hit area.
   Widget _footerWide(DswAlias color) {
     final profile = widget.profile;
     final canMenu = _canMenu;
-    return CompositedTransformTarget(
-      link: _menuLink,
-      child: DswHoverTap(
-        onTap: canMenu ? _openQuickMenu : null,
-        semanticLabel: context.tr('quickPreferences'),
-        builder: (context, hovered, _) => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          decoration: BoxDecoration(
-            color: hovered && canMenu ? color.interactiveBgHover : null,
-            borderRadius: BorderRadius.circular(DswShape.control),
-          ),
-          child: Row(
-            children: [
-              _UserAvatar(profile: profile, color: color),
-              const SizedBox(width: 8),
-              if (profile != null)
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        profile.displayName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: DswType.s14.copyWith(color: color.labelPrimary),
-                      ),
-                      Text(
-                        profile.email,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: DswType.xxs12.copyWith(
-                          color: color.labelTertiary,
+    return Row(
+      children: [
+        Expanded(
+          child: CompositedTransformTarget(
+            link: _menuLink,
+            child: DswHoverTap(
+              onTap: canMenu ? _openQuickMenu : null,
+              semanticLabel: context.tr('quickPreferences'),
+              builder: (context, hovered, _) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: hovered && canMenu ? color.interactiveBgHover : null,
+                  borderRadius: BorderRadius.circular(DswShape.control),
+                ),
+                child: Row(
+                  children: [
+                    _UserAvatar(profile: profile, color: color),
+                    const SizedBox(width: 8),
+                    if (profile != null)
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              profile.displayName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: DswType.s14.copyWith(
+                                color: color.labelPrimary,
+                              ),
+                            ),
+                            Text(
+                              profile.email,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: DswType.xxs12.copyWith(
+                                color: color.labelTertiary,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              const Spacer(),
-              _Pressable(
-                onTap: _openSettingsSafe,
-                borderRadius: BorderRadius.circular(DswShape.control),
-                child: Container(
-                  height: 28,
-                  width: 28,
-                  alignment: Alignment.center,
-                  child: Icon(
-                    LucideIcons.settings,
-                    size: 16,
-                    color: color.labelSecondary,
-                  ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 4),
-              _detailsToggle(color, wide: true),
-            ],
+            ),
           ),
         ),
-      ),
+        _Pressable(
+          onTap: _openSettingsSafe,
+          borderRadius: BorderRadius.circular(DswShape.control),
+          child: Container(
+            height: 28,
+            width: 28,
+            alignment: Alignment.center,
+            child: Icon(
+              LucideIcons.settings,
+              size: 16,
+              color: color.labelSecondary,
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        _detailsToggle(color, wide: true),
+      ],
     );
   }
 
