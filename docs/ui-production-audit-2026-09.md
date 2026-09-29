@@ -129,7 +129,7 @@ ZCode 是 Apache-2.0，但它的 `NOTICE.md:70` §4 明写：**Apache-2.0 不覆
 | 批 | 内容 | 归属 | 验收 |
 | --- | --- | --- | --- |
 | **P0 先修坏掉的东西** | §3-B 文字重叠、§3-C 中列疑似未居中（先复现）、2a 会话标题被指令块污染、§3-A 产品名统一 | DEF（各立 ADR 或并入登记表） | 复现→最小化→修→截图前后对照 |
-| **P1 令牌与身份** | ADR-0017（radius 律 + base 字号标度 + 选中/hover 分离）、3A 产品名统一并进 i18n | ARC/UI | `theme_token_test.dart` 新守卫 + `l10n_parity_test.dart` + `contrast_check` |
+| **P1 令牌与身份** | ADR-0017（radius 律 + base 字号标度 + 选中/hover 分离）、3A 产品名统一并进 i18n | ARC/UI | `theme_token_test.dart` 新守卫 + `l10n_parity_test.dart` + `contrast_check`。**部分完成 @ `c2255c6`**：radius 律与 4px 节奏已落地（94 处字面量清零、4 例守卫反向验过）、选中/hover 已分离（`interactiveSelected`，light 0.10 / dark 0.12）；**余** base 字号标度（ADR-0017 S3）与产品名统一（§3-A） |
 | **P2 chrome** | ADR-0018（标题栏决策）、侧栏品牌行留白与底部簇成组、2b 选中态 | ARC/UI | `app_frame_test.dart`、`sidebar_state_test.dart` + 真机截图 |
 | **P3 会话区层级** | 条 3（inline code/列表/段落节奏） | UI | `markdown_rendering_test.dart` 扩展 + 截图对照 |
 | **P4 响应式可达性** | 条 5/6/7：rail 展开可达、键盘等价、composer 窄屏降级、代码块横滚 | UI | 900/700/520px 三档截图 + 420px composer 不溢出的 widget 测试 |
