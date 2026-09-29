@@ -292,9 +292,135 @@ class _CalendarViewState extends State<_CalendarView> {
 
   @override
   Widget build(BuildContext context) {
+    final step = MediaQuery.textScalerOf(context).scale(1);
     return CalendarControllerProvider<PlanTask>(
       controller: _events,
-      child: const MonthView<PlanTask>(),
+      // Two facts about `MonthView`'s defaults, both measured here rather than
+      // read off the package: its own cell seats the day number in an 11.0-radius
+      // `CircleAvatar` with a hardcoded 12px font, so at 1.8x every visible number
+      // is cut (`"31" 36.0 vs 22.0`, one defect per cell); and it sizes its grid
+      // from `MediaQuery.size.width` over which `cellAspectRatio` it was given
+      // (`month_view.dart:391-395`), so in a panel it lays six full-window-wide
+      // rows and runs off-screen - a dated task's chip measured `Offset(742.9,
+      // 605.6)` in an 800x600 window, in the tree but unreachable. `cellBuilder`
+      // and `width`/`cellAspectRatio` are the package's own extension points, so
+      // the fix stays in the host: the cell is drawn with the app's labels and a
+      // seat that rides the step, and the grid gets the panel's constraints.
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final rowHeight = constraints.maxHeight / 6;
+          return MonthView<PlanTask>(
+            width: constraints.maxWidth,
+            cellAspectRatio: rowHeight <= 0
+                ? 0.55
+                : constraints.maxWidth / 7 / rowHeight,
+            cellBuilder: (date, events, isToday, isInMonth, position) =>
+                _DayCell(
+                  date: date,
+                  events: events,
+                  isToday: isToday,
+                  isInMonth: isInMonth,
+                  step: step,
+                  store: widget.store,
+                ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// One day of the month grid, drawn in the app's vocabulary (see `_CalendarViewState.build`).
+class _DayCell extends StatelessWidget {
+  const _DayCell({
+    required this.date,
+    required this.events,
+    required this.isToday,
+    required this.isInMonth,
+    required this.step,
+    required this.store,
+  });
+
+  final DateTime date;
+  final List<CalendarEventData<PlanTask>> events;
+  final bool isToday;
+  final bool isInMonth;
+  final double step;
+  final PlanTaskStore store;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.dsw;
+    final number = Text(
+      '${date.day}',
+      style: DswType.xs13.copyWith(
+        color: isToday
+            ? color.brandPrimaryInvert
+            : isInMonth
+            ? color.labelPrimary
+            : color.labelDimmed,
+      ),
+    );
+    return ColoredBox(
+      color: isInMonth ? color.bgBase : color.bgLayer1,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(4, 2, 4, 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              width: 22 * step,
+              height: 22 * step,
+              child: isToday
+                  ? DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: color.brandPrimary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(child: number),
+                    )
+                  : Center(child: number),
+            ),
+            if (events.isNotEmpty)
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final event in events) _chip(context, event),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// The task row inside a day. `DswHoverTap` rather than the grid's own
+  /// `onEventTap`, so the toggle is keyboard- and screen-reader-reachable like
+  /// every other interactive surface here.
+  Widget _chip(BuildContext context, CalendarEventData<PlanTask> event) {
+    final color = context.dsw;
+    final task = event.event;
+    if (task == null) return Text(event.title, style: DswType.xxxs11);
+    return DswHoverTap(
+      onTap: () => store.toggleDone(task.id),
+      toggled: task.done,
+      builder: (context, hovered, focused) => ColoredBox(
+        color: (hovered || focused) ? color.interactiveBgHover : color.bgBase,
+        child: Text(
+          event.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: DswType.xxxs11.copyWith(
+            color: task.done ? color.labelTertiary : color.labelPrimary,
+            decoration: task.done ? TextDecoration.lineThrough : null,
+            decorationColor: color.labelTertiary,
+          ),
+        ),
+      ),
     );
   }
 }
