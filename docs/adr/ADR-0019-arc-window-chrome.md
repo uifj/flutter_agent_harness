@@ -65,7 +65,11 @@
   两者皆无＝null／长句让位后目录仍在。`flutter test` = `+897 -2`（那两条既有失败未变），
   analyze `--fatal-infos` 无告警，`check_architecture` 新增两文件后仍 0 new（126 个 lib 文件）。
 - **仍未闭环的一半**：`windowManager.setTitle` 是平台通道调用，widget 测不到；
-  本机无 Screen Recording 权限截不到系统标题栏。所以 ③ 的**观感**要用户在 macOS 上
+  本机既截不到系统标题栏（无 Screen Recording 权限），也读不到它——
+  `osascript ... get name of windows` 直接报 `-1728 "osascript" 不允许辅助访问`。
+  所以这台机器能给的最好证据是：`flutter build macos --debug` 通过
+  （`✓ Built build/macos/Build/Products/Debug/Agent Harness.app`），且 `open` 之后进程存活 12s
+  以上无异常日志（首帧后的 `setTitle` 接线没有把应用打崩）；再加纯函数单测。标题字符串本身对不对，只能由用户在真机上看。所以 ③ 的**观感**要用户在 macOS 上
   看一眼（打开任意会话，标题栏应读作"那句话 — 目录名"），①/② 维持 DEFERRED
   的理由不变（平台分叉 + 同样看不见就不能签收）。
 
