@@ -1,5 +1,5 @@
-// The sentence this file holds: the three hard invariants hold today, and the
-// ratchet only ever fails on something new.
+// The sentence this file holds: the invariants that carry no accepted debt hold
+// today, and the ratchet only ever fails on something new.
 //
 // `tool/check_architecture.dart` is the executable form of `AGENTS.md` §3. The
 // invariants themselves are asserted against the real tree (that is what makes
@@ -51,11 +51,14 @@ void main() {
   group('the repo as it stands', () {
     final report = checkRepo();
 
-    test('the three hard invariants have no findings to launder', () {
+    test('the invariants with no accepted debt have no findings to launder', () {
       const invariants = {
         'genkit-stays-in-lib-genkit',
         'model-stays-framework-free',
         'state-does-not-import-ui',
+        // ADR-0015: a Flutter import in the runtime is invisible until the one
+        // gate that needs no Flutter stops compiling, so it stays at zero.
+        'runtime-reaches-neither-flutter-nor-state',
       };
       final tripped = report.found
           .map((violation) => violation.rule)

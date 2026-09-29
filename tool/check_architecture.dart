@@ -123,6 +123,17 @@ final rules = [
     skip: ['lib/main.dart', 'lib/state/app_providers.dart'],
     pattern: RegExp(r"^import 'package:flutter_riverpod"),
   ),
+  Rule(
+    name: 'runtime-reaches-neither-flutter-nor-state',
+    description:
+        "lib/genkit/ imports neither package:flutter nor lib/state/ (ADR-0015) "
+        '— a Flutter import is invisible until the one gate that needs no '
+        'Flutter (`dart run spike/runtime_smoke.dart`) stops compiling',
+    appliesTo: ['lib/genkit/'],
+    pattern: RegExp(
+      r"^import '(?:package:flutter|package:agent_harness/state|\.\./state)",
+    ),
+  ),
 ];
 
 /// Files past this line count are reported as a warning, never a failure.
