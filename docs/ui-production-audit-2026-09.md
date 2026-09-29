@@ -28,7 +28,7 @@
 | 1 | 标题栏：系统按钮与标题间距过近 | **本仓库没有自绘标题栏**：`macos/` 全仓 `grep titleBarStyle\|titleVisibility\|styleMask` = 0 命中，`MainFlutterWindow.swift:4` 只用默认 `NSWindow`。截图里那行"Agent Harness"是** macOS 原生标题栏**，间距由系统决定 | **不成立（作为我们的 bug）** | 这不是"加 padding"能修的。要呼吸感只有两条路：① `titleBarStyle = .hiddenInset` + 自绘一行应用内 chrome（能放面包屑/窗口标题，代价是要自己处理拖动区与全屏行为）；② 保持原生、把标题留空（`windowManager.setTitle('')`），让那行只剩系统按钮。**决策进 ADR-0018**，不偷偷选 ① |
 | 2a | 会话列表文字截断 | `sidebar.dart:738-742` 是 `maxLines: 1 + TextOverflow.ellipsis`——**截断策略本身是对的**。真正的问题在标题内容：`agent_runtime.dart:1382-1390` 的 `_titleOf()` 取"第一条 user 消息的文本"，而 ADR-0009 的指令注入（`instructions.dart`）正是把 `<project-instructions>` 块作为**同一条消息的前置 TextPart** 发出去的（`agent_runtime.dart:961-972`）。于是每条会话标题都以 `<project-instructions> …` 开头，80 字预算被注入块吃光 | **部分成立（症状真、归因错）** | **这是 ADR-0009 引入的回归**，且是 DEF 级：用户看到的会话名是模型读的散文，不是自己说的话。修法：`_titleOf` 跳过指令块（按块的起始标记识别），或标题改由控制器在**用户原文**上生成并持久化。**这条优先于所有美化项**。**2026-09-29 已修**：`_userWords()` 单点过滤注入 part，标题与重开气泡两处同时改，姊妹缺陷（重开会话把整块指令画成用户发言）一并闭掉；`test/restore_projection_test.dart` 两例 + `spike/runtime_smoke.dart` 一条真链守卫 |
 | 2b | 无活跃状态指示 | **有**，但和 hover 是同一个颜色：`sidebar.dart:729-732` `color: selected ? color.interactiveBgHover : null`，而 hover 态用的也是 `interactiveBgHover`（`:560`、`:603`、`:731`） | **部分成立** | 选中与悬停共用一个 token ⇒ 鼠标划过谁，谁就像"当前会话"。缺的不是指示器，是**第二个状态语义**。目标：**一个与 hover 不同的独立选中 token**（ZCode 用 `bg-selected` = 10% neutral-950，见 §4.2），hover 只改亮度不改身份；行首再留一个状态圆点槽位。**不加左侧强调条**——那不是 ZCode 的做法，初稿写错已在 §4.2 更正 |
-| 2c | Logo 与按钮留白不足；底部设置按钮孤立 | 品牌行 `sidebar.dart:374-377`：`EdgeInsets.only(left: 4, top: 8, bottom: 8)`——4px 左、8px 上下，确实紧。且 `:397` 把文案**硬编码成 `'DSH'`**（截图里侧栏是 DSH，窗口标题是 Agent Harness） | **成立，且比报告说的严重** | ① 留白按 §4 的间距标度重定；② `'DSH'` 是**第三方产品名残留在我们的 UI 上**，商用不可接受，必须换成产品名并进 i18n（`locales.dart` 双键）；③ 底部三件套（头像/齿轮/侧栏开关）要成为一个视觉组，而不是三个散落图标 |
+| 2c | Logo 与按钮留白不足；底部设置按钮孤立 | 品牌行 `sidebar.dart:374-377`：`EdgeInsets.only(left: 4, top: 8, bottom: 8)`——4px 左、8px 上下，确实紧。且 `:397` 把文案**硬编码成 `'DSH'`**（截图里侧栏是 DSH，窗口标题是 Agent Harness） | **成立，且比报告说的严重** | ① 留白按 §4 的间距标度重定；② `'DSH'` 是**第三方产品名残留在我们的 UI 上**，商用不可接受，必须换成产品名并进 i18n（`locales.dart` 双键）；③ 底部三件套（头像/齿轮/侧栏开关）要成为一个视觉组，而不是三个散落图标。**① ② 2026-09-29 已修**：复现出的真因不是"上下 8px 太小"，而是**品牌行自己多加了一层 4px**——整列已经被 `Padding(horizontal: 12)` 内缩，于是 logo 是唯一不与下方列表对齐的那一行；现已并成 `DswShape.sidebarInset` 单点真值，New Session 条也去掉它自己的 2px 侧缩（它是唯一比邻居窄 4px 的控件），品牌行与模式开关的间距从 4 提到 12。`_logoRow` 里那对 `top/bottom: 8` 是**死内缩**（行高被外层 `SizedBox(height: 60)` 钉住、内容居中，对称内缩不改变任何像素），已随包装一起删。**③ 仍在 P2** |
 | 3 | 对话区代码块与路径堆成文字墙，缺层级；段落间距模糊 | `assistant_markdown.dart` 已有 h1–h6 与 code block 的完整样式映射（`:80-86`、`:103-124`），圆角 6/12 混用（`:106`、`:115`），`fontSizeFactor: 0.875` | **部分成立** | 排版**令牌存在**，缺的是**层级差**：正文与 inline code 的视觉权重几乎相同（截图里满屏反引号包裹的 `run-raw-sql`、`create-bucket`），列表项无呼吸。目标：inline code 降饱和 + 底色、段落/列表间距走统一标度、圆角收敛到 §4 的嵌套律。**必须用截图这一屏做前后对照验收**，不许只改常量 |
 | 4 | 输入框控件拥挤、对齐不精准、缺容器质感 | `composer.dart:7` 自述"控制行是 dsh 的 toolbar"，attach/mode/model/send 一行排开；`_deliverChips`（`:881-903`）在忙时**再往同一行塞两枚**（排队/转向），间距 6/8 硬编码 | **成立** | 拥挤是**忙时**才出现的：两枚投递 chip 与三枚既有控件抢同一基线。目标：控制行统一高度与基线、chip 间距走标度、忙时溢出策略见 §2 条 6。**注意**：`composer_test.dart` 已有"blocked composer offers the two deliveries"用例，改布局不许把它改松 |
 
@@ -44,7 +44,7 @@
 
 | # | 发现 | 证据 | 级别 |
 | --- | --- | --- | --- |
-| A | **产品名在 UI 里自相矛盾**：侧栏写 `DSH`，窗口标题写 `Agent Harness`，bundle id 是 `com.stow.agentHarness` | `sidebar.dart:397`；`macos/Runner/Configs/AppInfo.xcconfig` | DEF·商用阻断 |
+| A | **产品名在 UI 里自相矛盾**：侧栏写 `DSH`，窗口标题写 `Agent Harness`，bundle id 是 `com.stow.agentHarness` | `sidebar.dart:397`；`macos/Runner/Configs/AppInfo.xcconfig` | DEF·商用阻断。**2026-09-29 已修**：品牌行走 `context.tr('appName')`，`en`/`zh` 双键同为 `Agent Harness`（名字不译），`sidebar_test.dart` 一条用例同时断言"我们的名字在、`DSH` 不在" |
 | B | **正文出现文字重叠**：截图里"和 4 次"压在 `SDK returns {ok, error}` 之上（两个 widget 画在同一区域）。候选因：turn 统计行 / 滚动到底按钮所在的 `Stack` 覆盖层没有底色遮挡（scrim），末条消息滚到底时会与它叠画 | 用户截图 1176×812，滚动到底按钮附近 | DEF·**待复现**（先定位是哪个覆盖层，再谈修） |
 | C | **中列正文看起来未居中**：截图里正文贴右、左侧留出一条空白。**但居中逻辑是存在的**：`chat_view.dart:176-178` 取 `available = maxWidth - 2*side` 与 `contentWidth` 的较小者，`:210` 用 `Center` 包；对照同一张截图，composer（320–1100）确实居中，正文块（520–1050）中心偏右约 66px | 截图 + `chat_view.dart:176-178,210` | DEF·**待复现**，两个候选因：① `side` 只在一侧生效；② 消息块自带左缩进而 `Center` 按外层算。**不要在复现前写成结论** |
 
@@ -129,12 +129,12 @@ ZCode 是 Apache-2.0，但它的 `NOTICE.md:70` §4 明写：**Apache-2.0 不覆
 | 批 | 内容 | 归属 | 验收 |
 | --- | --- | --- | --- |
 | **P0 先修坏掉的东西** | §3-B 文字重叠、§3-C 中列疑似未居中（先复现）、2a 会话标题被指令块污染、§3-A 产品名统一 | DEF（各立 ADR 或并入登记表） | 复现→最小化→修→截图前后对照 |
-| **P1 令牌与身份** | ADR-0017（radius 律 + base 字号标度 + 选中/hover 分离）、3A 产品名统一并进 i18n | ARC/UI | `theme_token_test.dart` 新守卫 + `l10n_parity_test.dart` + `contrast_check`。**部分完成 @ `c2255c6`**：radius 律与 4px 节奏已落地（94 处字面量清零、4 例守卫反向验过）、选中/hover 已分离（`interactiveSelected`，light 0.10 / dark 0.12）；**余** base 字号标度（ADR-0017 S3）与产品名统一（§3-A） |
+| **P1 令牌与身份** | ADR-0017（radius 律 + base 字号标度 + 选中/hover 分离）、3A 产品名统一并进 i18n | ARC/UI | `theme_token_test.dart` 新守卫 + `l10n_parity_test.dart` + `contrast_check`。**部分完成 @ `c2255c6`**：radius 律与 4px 节奏已落地（94 处转换、4 例守卫反向验过）、选中/hover 已分离（`interactiveSelected`，light 0.10 / dark 0.12）。本批（`74ab800` + `88b9f54`）补上：3A 产品名（`appName` 双键 + 品牌行取之）与 2c 的品牌行内缩已闭，`sidebarInset` 成为侧栏唯一的水平基准线；radius 守卫**换掉了只认数字的写法**——`c2255c6` 那句"清零"当时并不成立，`BorderRadius.circular(wide ? 12 : 999)` 这种三元字面量从 `circular\([0-9]` 的眼皮底下过了 **4 处**（侧栏 New Session 两条、`capsule_button` 两条 `14/18`）。现在要求括号后的第一个非空 token 必须是 `DswShape.`，4 处全部收回；`capsule` 的 14/18 本就是它自己高度的一半，写成 `DswShape.pill` 是**同像素**的替换。**余** base 字号标度（ADR-0017 S3） |
 | **P2 chrome** | ADR-0018（标题栏决策）、侧栏品牌行留白与底部簇成组、2b 选中态 | ARC/UI | `app_frame_test.dart`、`sidebar_state_test.dart` + 真机截图 |
 | **P3 会话区层级** | 条 3（inline code/列表/段落节奏） | UI | `markdown_rendering_test.dart` 扩展 + 截图对照 |
 | **P4 响应式可达性** | 条 5/6/7：rail 展开可达、键盘等价、composer 窄屏降级、代码块横滚 | UI | 900/700/520px 三档截图 + 420px composer 不溢出的 widget 测试 |
 
-**批次纪律**：每批结束跑 `dart format --set-exit-if-changed lib test tool spike` → `dart analyze --fatal-infos lib test tool spike` → `dart tool/check_architecture.dart` → `flutter test`（基线 `+814 -2`，只许那两条失败），并按 `git-commit` skill 分逻辑提交。UI 改动**没有截图就不算验收**——本会话里终端无 Screen Recording 权限，需要用户在系统设置里放行，或由用户本人走查。
+**批次纪律**：每批结束跑 `dart format --set-exit-if-changed lib test tool spike` → `dart analyze --fatal-infos lib test tool spike` → `dart tool/check_architecture.dart` → `flutter test`（2026-09-29 P1 批之后是 `+821 -2`，只许 `app_scope_test` 的 `/var`↔`/private/var` 与 `plan_workspace_test` 的 `find.text('notes')` 那两条失败），并按 `git-commit` skill 分逻辑提交。UI 改动**没有截图就不算验收**——本会话里终端无 Screen Recording 权限，需要用户在系统设置里放行，或由用户本人走查。
 
 ## 6. 明确不做
 
