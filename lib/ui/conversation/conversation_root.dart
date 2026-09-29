@@ -87,6 +87,12 @@ const composerTextMaxHeight = 336.0;
 
 /// The fade band at the top of the seat, in pixels rather than a fraction: a
 /// growing draft must widen the solid region, not stretch the fade.
+///
+/// It is also the seat's content inset — [_Masked] starts its child below this
+/// line, because inside the band the transcript is still partly visible. The
+/// stats caption used to be the seat's first row, i.e. painted onto the
+/// see-through part, so any scroll position that left a reply line under the
+/// seat drew two texts on top of each other (audit §3-B).
 const composerMaskHeight = 36.0;
 
 class ConversationRoot extends StatefulWidget {
@@ -519,15 +525,21 @@ class _ConversationRootState extends State<ConversationRoot> {
 }
 
 /// Paints the seat's backdrop: transparent at the top edge, the base background
-/// from 36px down.
+/// from [composerMaskHeight] down — and keeps the seat's own content out of the
+/// transparent part, which is the whole point of the band.
 class _Masked extends StatelessWidget {
   const _Masked({required this.child});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context) =>
-      CustomPaint(painter: _MaskPainter(context.dsw.bgBase), child: child);
+  Widget build(BuildContext context) => CustomPaint(
+    painter: _MaskPainter(context.dsw.bgBase),
+    child: Padding(
+      padding: const EdgeInsets.only(top: composerMaskHeight),
+      child: child,
+    ),
+  );
 }
 
 class _MaskPainter extends CustomPainter {

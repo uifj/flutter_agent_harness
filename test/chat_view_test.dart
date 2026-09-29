@@ -212,4 +212,36 @@ void main() {
     expect(find.textContaining('No API key set.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  // Audit §3-B. The band at the top of the seat is see-through on purpose — that
+  // is how a reply dissolves as it scrolls under the composer. The stats caption
+  // used to be the seat's first row, i.e. painted *inside* that band, so any
+  // scroll position that left a reply line under the seat drew two texts on top
+  // of each other. The user's screenshot shows exactly that: the caption's CJK
+  // glyphs across `SDK returns {data, error}`.
+  testWidgets('the seat caption stays below the see-through band', (
+    tester,
+  ) async {
+    await pump(tester);
+    await startTurn(tester, 'hi');
+    await finish(tester);
+
+    // The caption is the only text in this column that says "turns" (the fake
+    // source emits no deltas here). Its nearest CustomPaint ancestor is the
+    // seat's scrim — `Material` paints one too, and ancestors come back
+    // innermost-first, so take the first and pin it by size: the scrim is the
+    // seat, not the window.
+    final caption = find.textContaining('turns', findRichText: true);
+    expect(caption, findsOneWidget);
+    final band = find
+        .ancestor(of: caption, matching: find.byType(CustomPaint))
+        .first;
+    expect(tester.getSize(band).height, lessThan(600));
+
+    expect(
+      tester.getRect(caption).top - tester.getRect(band).top,
+      greaterThanOrEqualTo(composerMaskHeight),
+      reason: 'inside the band the transcript is still partly visible',
+    );
+  });
 }
