@@ -941,6 +941,19 @@ class AgentRuntime implements TurnSource {
         ),
       );
     }
+    // A turn that paused on an approval left an unanswered tool request in the
+    // history; sending over it gets a bare 400 from the provider. The controller
+    // already blocks this, so the guard is for every other caller.
+    if (_pendingInterrupts.isNotEmpty) {
+      return Stream.value(
+        const TurnFinished(
+          outcome: TurnOutcome.failed,
+          errorMessage:
+              'An approval is still waiting for your answer. Answer it before '
+              'sending a new message.',
+        ),
+      );
+    }
     final chat = _chat ??= _agent.chat();
     // The workspace's instructions ride the first message of a conversation,
     // drained here so a queue set at startup or by a folder switch cannot be
