@@ -34,6 +34,7 @@ import 'state/plan_task_store.dart';
 import 'state/prefs_store.dart';
 import 'state/settings_store.dart';
 import 'state/tray_service.dart';
+import 'state/window_title_service.dart';
 import 'state/workspace_mode_controller.dart';
 import 'theme/dsw_shad_bridge.dart';
 import 'theme/dsw_theme.dart';
@@ -105,6 +106,9 @@ class _DshAppState extends ConsumerState<DshApp> {
   /// System tray service. Initialized alongside hotkeys after the first frame.
   TrayService? _tray;
 
+  /// The window's own title line, pushed after the frame (ADR-0019).
+  WindowTitleService? _windowTitles;
+
   @override
   void initState() {
     super.initState();
@@ -116,6 +120,7 @@ class _DshAppState extends ConsumerState<DshApp> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initHotkeys();
       _initTray();
+      _initWindowTitle();
     });
   }
 
@@ -134,6 +139,13 @@ class _DshAppState extends ConsumerState<DshApp> {
     _tray!.init();
   }
 
+  void _initWindowTitle() {
+    final scope = ref.read(appScopeProvider);
+    _windowTitles = WindowTitleService(sessions: scope.sessions)
+      ..setWorkspace(ref.read(settingsDocumentProvider).workspaceRoot)
+      ..init();
+  }
+
   Future<void> _toggleWindow() async {
     final isVisible = await windowManager.isVisible();
     if (isVisible) {
@@ -148,6 +160,7 @@ class _DshAppState extends ConsumerState<DshApp> {
   void dispose() {
     _hotkeys?.dispose();
     _tray?.dispose();
+    _windowTitles?.dispose();
     super.dispose();
   }
 
@@ -156,6 +169,12 @@ class _DshAppState extends ConsumerState<DshApp> {
     // Data: read seams. The document a save commits (theme, locale, workspace,
     // model) and the workbench prefs rebuild this frame in the same write.
     final doc = ref.watch(settingsDocumentProvider);
+    // The title bar is painted by the system, so the two facts it reads are
+    // pushed to the service instead of composed in the tree (ADR-0019).
+    ref.listen<String?>(
+      settingsDocumentProvider.select((d) => d.workspaceRoot),
+      (_, next) => _windowTitles?.setWorkspace(next),
+    );
     final prefs = ref.watch(workbenchPrefsProvider);
     // Actions: the scope handle. Save, session commands, folder picks —
     // imperative verbs that were never data.
