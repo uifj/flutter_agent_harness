@@ -309,65 +309,87 @@ class _TableView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _row(
-            color,
-            children: [
-              const SizedBox(width: 40),
-              _head(color, context.tr('planColumnTask')),
-              _head(color, context.tr('planColumnDue'), width: 120),
-              const SizedBox(width: 28),
-            ],
-          ),
-          Divider(height: 1, thickness: 1, color: color.borderL1),
-          for (final task in store.tasks)
+    // A row here is one line of chrome, so BOTH its seat and the width of the
+    // fixed cell inside it ride the text step: at 1.8x the ISO date wanted 72.0
+    // in a 36.0 seat (it wrapped onto a clipped second line) because 120px was
+    // never going to hold ten glyphs at that step.
+    final step = MediaQuery.textScalerOf(context).scale(1);
+    final dueWidth = 120 * step;
+    // The table used to render `store.tasks` without subscribing to the store:
+    // only the board and the calendar listened, so an add, a toggle or a remove
+    // changed the data and left these rows stale until something else rebuilt
+    // the pane. Measured, not guessed - the panel kept showing two rows for a
+    // store that already held three.
+    return ListenableBuilder(
+      listenable: store,
+      builder: (context, _) => SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             _row(
               color,
+              step,
               children: [
-                SizedBox(
-                  width: 40,
-                  child: _DoneToggle(task: task, store: store),
-                ),
-                Expanded(
-                  child: Text(
-                    task.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: DswType.xs13.copyWith(
-                      color: task.done
-                          ? color.labelTertiary
-                          : color.labelPrimary,
-                      decoration: task.done ? TextDecoration.lineThrough : null,
-                      decorationColor: color.labelTertiary,
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  width: 120,
-                  child: Text(
-                    task.dueDate == null
-                        ? context.tr('planNoDue')
-                        : task.dueDateIso,
-                    style: DswType.xs13.copyWith(color: color.labelSecondary),
-                  ),
-                ),
-                SizedBox(
-                  width: 28,
-                  child: _RemoveIcon(store: store, id: task.id),
-                ),
+                const SizedBox(width: 40),
+                _head(color, context.tr('planColumnTask')),
+                _head(color, context.tr('planColumnDue'), width: dueWidth),
+                const SizedBox(width: 28),
               ],
             ),
-        ],
+            Divider(height: 1, thickness: 1, color: color.borderL1),
+            for (final task in store.tasks)
+              _row(
+                color,
+                step,
+                children: [
+                  SizedBox(
+                    width: 40,
+                    child: _DoneToggle(task: task, store: store),
+                  ),
+                  Expanded(
+                    child: Text(
+                      task.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: DswType.xs13.copyWith(
+                        color: task.done
+                            ? color.labelTertiary
+                            : color.labelPrimary,
+                        decoration: task.done
+                            ? TextDecoration.lineThrough
+                            : null,
+                        decorationColor: color.labelTertiary,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: dueWidth,
+                    child: Text(
+                      task.dueDate == null
+                          ? context.tr('planNoDue')
+                          : task.dueDateIso,
+                      maxLines: 1,
+                      style: DswType.xs13.copyWith(color: color.labelSecondary),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 28,
+                    child: _RemoveIcon(store: store, id: task.id),
+                  ),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _row(DswAlias color, {required List<Widget> children}) =>
-      SizedBox(height: 36, child: Row(children: children));
+  Widget _row(DswAlias color, double step, {required List<Widget> children}) =>
+      SizedBox(
+        height: 36 * step,
+        child: Row(children: children),
+      );
 
   Widget _head(DswAlias color, String label, {double? width}) {
     final text = Text(
@@ -428,26 +450,41 @@ class _Card extends StatelessWidget {
           borderRadius: BorderRadius.circular(DswShape.control),
           border: Border.all(color: color.borderL2),
         ),
+        // The date sits under the title, not beside it. Measured reason: at the
+        // system's largest step the card column is 108.0 wide, and one line
+        // cannot hold a title plus `09-20` plus the × - the row spilled by 14
+        // pixels (`A RenderFlex overflowed by 14 pixels on the right`) and the
+        // title was squeezed to 0.0. A card is content, so it takes the second
+        // line; a `Flexible` date would have ellipsised the day away instead.
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Text(
-                task.title,
-                style: DswType.xs13.copyWith(
-                  color: task.done ? color.labelTertiary : color.labelPrimary,
-                  decoration: task.done ? TextDecoration.lineThrough : null,
-                  decorationColor: color.labelTertiary,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    task.title,
+                    style: DswType.xs13.copyWith(
+                      color: task.done
+                          ? color.labelTertiary
+                          : color.labelPrimary,
+                      decoration: task.done ? TextDecoration.lineThrough : null,
+                      decorationColor: color.labelTertiary,
+                    ),
+                  ),
+                  if (task.dueDate != null)
+                    Text(
+                      task.dueDateIso.substring(5),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: DswType.xxxs11.copyWith(
+                        color: color.labelTertiary,
+                      ),
+                    ),
+                ],
               ),
             ),
-            if (task.dueDate != null) ...[
-              const SizedBox(width: 6),
-              Text(
-                task.dueDateIso.substring(5),
-                style: DswType.xxxs11.copyWith(color: color.labelTertiary),
-              ),
-            ],
             const SizedBox(width: 4),
             _RemoveIcon(store: store, id: task.id),
           ],
