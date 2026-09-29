@@ -15,6 +15,7 @@
 | [docs/migration-log.md](docs/migration-log.md) | ADR-0002/0003/0004 迁移执行台账：阶段·commit·门禁·待人签收清单 | 接手迁移时 |
 | [docs/starkins-settings-migration-analysis.md](docs/starkins-settings-migration-analysis.md) | 从 starkins_app 迁移设置页的分析：逐项 可迁/改造/不迁 判定 + 不变量冲突（待拍板） | 做该迁移前 |
 | [repomix.config.json](repomix.config.json) | 全仓库打包配置（产物 `repomix-output.xml` 不入库；已排除 vendored UI 库实现） | 按需 |
+| [docs/zcode-vs-agent-harness-2026-09.md](docs/zcode-vs-agent-harness-2026-09.md) | ZCode-main（Apache-2.0 桌面 agent 产品，86.1 万行）逐维度对比与移植评估：UI 布局 / agent 能力 / 功能面 / 工程治理，含 A/B/C 分级路线图与红线检查表 | 判断"要不要搬 ZCode 的某个能力"前 |
 | `技术文档-agent_harness基于genkit-dart的可落地增强路线.md` | genkit-dart 0.16.1 逐文件审读：能借哪些能力、要绕哪些限制、该放弃哪些幻想 | 动运行时前 |
 | `对标技术文章-agent_harness与dsh生态横向对比.md` | 与 dsh / better-sidebar 的十维度对比与完成度评估 | 判断"该不该做"前 |
 

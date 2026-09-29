@@ -108,9 +108,10 @@
 
 - genkit-dart 及伴生包是 0.x，**以包源码为准**，不要信记忆里的写法。实际解析版本用 `flutter pub deps` 现场核对；要读实现就去 pub cache 下的对应目录（默认 `~/.pub-cache/hosted/<mirror>/<pkg>-<version>/`，`PUB_CACHE` 环境变量可覆盖）。两篇技术文档记录的审读基线是 genkit 0.16.1 + `genkit_openai` 0.4.1 / `genkit_anthropic` 0.3.1 / `genkit_mcp` 0.3.1 / `genkit_middleware` 0.6.1。注意 `pubspec.lock` 不入库，锁文件里的版本对别人不是事实，命令输出才是。
 - 根目录两篇长文是现成的评估证据，回答"还能借哪些能力 / 该放弃哪些幻想"前先查它们：`技术文档-agent_harness基于genkit-dart的可落地增强路线.md`、`对标技术文章-agent_harness与dsh生态横向对比.md`。
+- 第三份现成评估证据：`docs/zcode-vs-agent-harness-2026-09.md`——对 ZCode-main（本地归档 `_archive_project/ZCode-main`，**已在 `.gitignore` 里，新 clone 没有它**）的 UI/agent/功能/治理逐维度对比与 A/B/C 移植分级。回答"ZCode 有没有这个能力、该不该搬"先查它，别重新调研整个归档。
 - context7 之类的文档 MCP 可作辅助，但本仓库**尚未**配置 `.mcp.json`；没有它就不要声称查过最新文档。
 - **版本基线现在有两处真值**：`pubspec.yaml` 的 `environment.sdk` 与 `.github/workflows/{pr-check,build}.yml` 的 `FLUTTER_VERSION: '3.41.9'`。换 SDK/Flutter 必须同时改并让 pr-check 绿，否则本地与 CI 各跑一个版本（CFG 类漂移，按 §7 立 ADR）。
-- 本仓库文档里的**文件数/行数/测试数/键数都是快照**（校准于 2026-09-29，HEAD `8a2b8f2`）。它们会腐烂：引用前用 `find`/`wc`/`grep -c` 现场重算，发现对不上先改文档再动手，别把过期数字当事实。
+- 本仓库文档里的**文件数/行数/测试数/键数都是快照**（校准于 2026-09-29，HEAD `45dee4e`）。它们会腐烂：引用前用 `find`/`wc`/`grep -c` 现场重算，发现对不上先改文档再动手，别把过期数字当事实。
 - 需要把整仓库交给 AI 理解时跑 `repomix`（配置 `repomix.config.json`，产物 `repomix-output.xml` 不入库）。它已经把 `packages/flutter-shadcn-ui` 的实现源码排除了；而按 ADR-0001，该目录本身也被 `.gitignore` 排除，**新 clone 不会有它**——要读该库实现，先从上游 `nank1ro/flutter-shadcn-ui` 取 `0.56.3`，否则只读入库的 `.qoder/skills/shadcn-ui-flutter/` 组件文档。
 
 ## 7. 技术债与缺陷记录（ADR）
