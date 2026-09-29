@@ -19,11 +19,16 @@
 //   * A danger `outline` hover keeps its stroke. shad varies background and
 //     foreground by state but not the border, and dropping the stroke was a
 //     cosmetic flourish the fill wash already carries.
+//   * The stroke radius is spelled [DswShape.pill] rather than the CSS's 18/14.
+//     Flutter clamps a radius to half the box, so on a 36px / 28px tall capsule
+//     it paints the same r18 / r14 — and a tier name is what ADR-0017's guard
+//     can check, where a bare number is not.
 
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../theme/dsw_shad_bridge.dart';
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 
@@ -100,9 +105,9 @@ class CapsuleButton extends StatelessWidget {
           border: variant == CapsuleVariant.outline
               ? ShadBorder.fromBorderSide(
                   ShadBorderSide(color: color.borderL2, width: 1),
-                  radius: BorderRadius.circular(_dense ? 14 : 18),
+                  radius: BorderRadius.circular(DswShape.pill),
                 )
-              : ShadBorder(radius: BorderRadius.circular(_dense ? 14 : 18)),
+              : ShadBorder(radius: BorderRadius.circular(DswShape.pill)),
         ),
         leading: icon == null ? null : Icon(icon, size: _dense ? 12 : 14),
         child: Text(label, style: _dense ? DswType.xxs12 : DswType.s14),

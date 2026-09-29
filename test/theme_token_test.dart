@@ -167,20 +167,30 @@ void main() {
   // failure they guard is "someone added a 13th radius", which no fixed
   // assertion can catch.
   group('shape token contract', () {
-    final literal = RegExp(r'\b(?:Border)?Radius\.circular\([0-9]');
-
     test('no widget picks its own radius', () {
+      // Not a digit-only check: `wide ? 12 : 999` is a widget picking two radii
+      // with no tier names in sight, and it reads as a ternary to a regex that
+      // only looks for `[0-9]` right after the paren.
+      final circular = RegExp(r'Radius\.circular\(\s*');
       final offenders = <String>[];
       for (final entry in Directory('lib/ui').listSync(recursive: true)) {
         if (entry is! File || !entry.path.endsWith('.dart')) continue;
-        final lines = entry.readAsLinesSync();
-        for (var i = 0; i < lines.length; i++) {
-          if (literal.hasMatch(lines[i])) {
-            offenders.add('${entry.path}:${i + 1}  ${lines[i].trim()}');
-          }
+        final source = entry.readAsStringSync();
+        for (final match in circular.allMatches(source)) {
+          final argument = source.substring(match.end);
+          if (argument.startsWith('DswShape.')) continue;
+          final line =
+              '\n'.allMatches(source.substring(0, match.start)).length + 1;
+          offenders.add(
+            '${entry.path}:$line  ${argument.split('\n').first.trim()}',
+          );
         }
       }
-      expect(offenders, isEmpty, reason: 'use a DswShape tier instead');
+      expect(
+        offenders,
+        isEmpty,
+        reason: 'a radius must name a DswShape tier (ADR-0017)',
+      );
     });
 
     test('the radius scale decreases inward, and pill is last', () {
