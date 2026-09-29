@@ -153,4 +153,44 @@ void main() {
       expect(notifications, 0);
     });
   });
+
+  group('image capability', () {
+    ModelDirectory at(LlmProvider provider, String model) => ModelDirectory(
+      current: ModelSettings(
+        apiKey: 'sk-live',
+        provider: provider,
+        model: model,
+      ),
+    );
+
+    test('the shipped default refuses images', () {
+      // DeepSeek's chat model is the out-of-box selection, and it has no image
+      // channel: the composer has to know before it takes the file.
+      expect(at(LlmProvider.openai, defaultModel).acceptsImages, isFalse);
+    });
+
+    test('a catalogued vision model takes them', () {
+      expect(at(LlmProvider.openai, 'gpt-4o').acceptsImages, isTrue);
+      expect(at(LlmProvider.openai, 'gpt-4o-2024-11-20').acceptsImages, isTrue);
+      expect(
+        at(LlmProvider.anthropic, 'claude-sonnet-4-5').acceptsImages,
+        isTrue,
+      );
+    });
+
+    test('an id the catalog does not know falls back to its family', () {
+      expect(at(LlmProvider.anthropic, 'next-claude').acceptsImages, isTrue);
+      expect(at(LlmProvider.google, 'ai-2.5-pro').acceptsImages, isTrue);
+      // An OpenAI-compatible endpoint may be serving anything, including a
+      // text-only relay, so the unknown there is not assumed to see.
+      expect(
+        at(LlmProvider.openai, 'some-private-gateway').acceptsImages,
+        isFalse,
+      );
+    });
+
+    test('a vision marker in the name beats the family floor', () {
+      expect(at(LlmProvider.openai, 'qwen3-vl-plus').acceptsImages, isTrue);
+    });
+  });
 }

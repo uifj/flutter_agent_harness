@@ -87,6 +87,11 @@ class ModelDirectory extends ChangeNotifier {
   /// The provider the whole directory describes.
   LlmProvider get provider => _provider;
 
+  /// Whether the current selection can be sent an image. The composer asks this
+  /// before it takes an image from the picker, the clipboard or a drop, so the
+  /// refusal happens while the user still has the file (ADR-0010).
+  bool get acceptsImages => modelAcceptsImages(_provider, _selected);
+
   /// The last refresh's failure, or null. Null while loading, too: an
   /// in-flight refresh is not an error.
   String? get loadError => _loadError;
