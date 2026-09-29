@@ -1,11 +1,11 @@
 # ADR-0013: 忙时输入队列与中途转向（A4）
 
-- **状态**: ACCEPTED（2026-09-29 拍板，按下方决策实施）
+- **状态**: IN-PROGRESS（2026-09-29：S1–S4 的代码与测试均已合入，781 例通过、相对基线零新增失败；余"带 API key 的真实链路里跑一次忙时排队 + 转向"的人工签收）
 - **分类**: ARC
 - **优先级**: P1
 - **影响维度**: 生产功能 / 认知障碍
 - **日期**: 2026-09-29
-- **修复 commit**: —
+- **修复 commit**: ff85999（模型层 + `TurnSource` 缝）· c916316（运行时注入 + spike probe G）· 850be2a（控制器队列与排空）· 480a1f6（composer 两枚投递钮 + 队列面板 + 双语键）
 - **来源**: `docs/zcode-vs-agent-harness-2026-09.md` §7 A4（§9 第 2 步的第三件，也是最后一件）
 
 ## 背景（Context）
@@ -64,21 +64,22 @@ List<QueuedInput> takeUndeliveredGuides();
 - `guide(input)`：`_runOpen`（`_turn != null || _pendingInterrupts.isNotEmpty`，**审批暂停也算在跑**）时把 input 放进 holder 并返回 true，否则返回 false。
 - `_GuideCapture.model(request, ctx, next)`：`takeAll()` 排空 holder，非空则按上文"追加到最后一条 user/tool 消息的 content，否则新开 user 消息"注入，然后 `next(request, ctx)`。空队列时**一个字节都不改**。
 - 中间件只挂在主 `dsh` agent 的 `use` 上，**不挂**委托目标与 side chat：否则子 agent 的一次模型调用会把父会话的转向吃掉。
-- `stop()`/新会话/`openSession()`：holder 里剩下的必须由调用方取回（S3），不许就地丢弃。
+- 运行结束时没被读走的，由控制器在排空点取回（S3）；**换会话**（`startNewSession()`/`openSession()`）则直接清空 holder——那属于一个正在被丢弃的会话，留着会把上一个文件夹的话注入到下一个文件夹的第一次模型调用里。
 
 ### S3 控制器：FIFO 归它，排空点在 `_consume` 之后
 
 - `send()` 不再因 blocked 而 return：**blocked 时进队列**（`queue` 语义为默认），空闲时行为与今天完全一致。
-- `submit(text, {images, delivery})`：`guide` 且 `_runtime.guide(...)` 返回 true → 立即在 transcript 里落一条 `UserMessageNode`（用户必须看得见自己说了什么）；返回 false 则回落到队列头，等排空时当 turn 发。
-- **排空点唯一**：`await _consume(...)` 返回之后调用 `_drain()`（`send` 与 `respondToApproval` 两条路径都有）。先 `takeUndeliveredGuides()` 把头插回队列并改成 `queue`，再按 FIFO 逐条 `_startTurn`。`_draining` 标志防递归。
+- `send(text, {images, delivery})`（不另起 `submit`：已有的 6 处调用点不必改名字，`delivery` 默认 `queue` 就是旧行为）：`guide` 且 `_runtime.guide(...)` 返回 true → 立即在 transcript 里落一条 `UserMessageNode`（用户必须看得见自己说了什么）；返回 false 则按下面的门落进队列或直接成为 turn。
+- **排空点唯一**：`await _consume(...)` 返回之后调用 `_drain()`（`send` 与 `respondToApproval` 两条路径都有）。先 `takeUndeliveredGuides()` 整批插回队首并改成 `queue`，再按 FIFO 逐条发。递归由"只有 `_send` 会被循环调用、而 `_send` 不排空"挡掉，不需要额外标志位。
+- **`stop()` 停车而不是放行**：按下停止的人不期望紧接着发出下一条排队消息，所以 `stop()` 置 `_queueHeld`，`_drain` 见到它就停下（队列仍在面板上可见、可改、可删）；用户**再次 send** 时清掉该标志，新消息先发、排队的跟在它后面。
 - 不在 `_handle(TurnFinished)` 里排空：那时旧 subscription 还没 settle，`_consume` 会覆盖 `_subscription` 并把新流的通知权弄丢。
 - `_reset()`（切会话 / `adoptRuntime` / `startNewSession`）清空队列：**队列属于这个会话**，跨会话残留会把上一文件夹的话发到下一文件夹里。队列不落盘——它是草稿，不是历史（与 ADR-0007"模式刻意不持久化"同理）。
 
 ### S4 UI：composer 的门 + 队列条
 
 - `lib/ui/conversation/input_queue_panel.dart`：composer 上方一条紧凑列表，`ReorderableListView`（拖拽改序）+ 每行显示投递语义与可点切换（"排在后面"/"立刻转向"）+ 移除按钮。空则整条不占位。
-- `composer.dart` 的发送门改一处：blocked 且有内容时，主按钮从"停止"语义里分出"排队"，并提供"转向"次按钮；两个动作都走 `submit(...)`。
-- 文案照 §3 规矩同时进 `lib/l10n/locales.dart` 双语字典。
+- `composer.dart` 的发送门改一处：`_submit` 不再 `if (widget.blocked) return`，而是带 `delivery` 交给控制器——**忙时输入不是拒绝，是排队**。blocked 且草稿非空时，主圆圈左边出现两枚带边框的小钮（"排队"/"转向"），主圆圈本身照旧在 busy 时是停止键。`onSubmit` 因此多收一个 `InputDelivery`，全仓库 6 处签名一起改。
+- 文案照 §3 规矩同时进 `lib/l10n/locales.dart` 双语字典（`inputQueue`/`queueInput`/`guideNow`/`deliveryQueue`/`deliveryGuide`/`dragToReorder`；移除按钮复用已有的 `removeAttachment`）。
 
 ### 明确不做
 
@@ -88,15 +89,16 @@ List<QueuedInput> takeUndeliveredGuides();
 
 ## 后果（Consequences）
 
-- **正面**: 忙时输入不再被吞；一条 agent 长回合内可以说"停，先看那个测试"；`guide` 借 genkit 的循环历史一路走到本轮结束并被持久化，模型下一轮仍记得。
-- **负面/风险**: 中间件写 `ModelRequest.messages` 依赖 genkit 0.x 的内部形状（`generate.dart:417` 从"被改过的请求"派生下一轮）——升版可能把它变成"每轮重建请求"，届时注入仍在但只影响一次调用。这条依据写进 `spike/agent_spike.dart` 的 FINDINGS，升版必查。转向的可见时机是"下一次模型调用"，纯长回答（无工具调用）里它会等到本轮结束才落地，此时 `guide` 与 `queue` 等价。
+- **正面**: 忙时输入不再被吞；一条 agent 长回合内可以说"停，先看那个测试"；`guide` 借 genkit 的循环历史一路走到本轮结束并被持久化，模型下一轮仍记得。实测证据（`dart run spike/agent_spike.dart` probe G，2026-09-29）：`per model call, did the request carry the marker: {0: false, 1: true}`、`snapshot files containing the marker: 1`、`chat history carries the marker: false`。
+- **负面/风险**: **重启后那条转向不再显示为用户行**（它持久在 `tool` 角色消息里，而 `projectMessages` 只把 `Role.user` 投影成用户节点；`lib/genkit/agent_runtime.dart:1330-1390`）。刻意不去补这条投影：一旦在 `tool` 分支里读文本，任何返回文本 content 的 MCP 工具都会被伪造出一条用户消息。模型侧不受影响——快照里有它。另一个代价是"下一次模型调用"这个时机：纯长回答里 `guide` 与 `queue` 等价。中间件写 `ModelRequest.messages` 依赖 genkit 0.x 的内部形状（`generate.dart:417` 从"被改过的请求"派生下一轮）——升版可能把它变成"每轮重建请求"，届时注入仍在但只影响一次调用。这条依据写进 `spike/agent_spike.dart` 的 FINDINGS，升版必查。转向的可见时机是"下一次模型调用"，纯长回答（无工具调用）里它会等到本轮结束才落地，此时 `guide` 与 `queue` 等价。
 - **中性**: `TurnSource` 从 6 个成员长到 8 个，`FakeTurnSource` 跟着补；队列条是 composer 的第一块外部 chrome，为后续（B1 rewind 的入口）腾出位置。
 
 ## 验证（Verification）
 
 - `dart run spike/agent_spike.dart`：新增一段用脚本化 model + 工具循环 + `model()` 中间件改 `messages` 的证据，断言第 2 次模型调用收到注入文本、第 1 次没有，且循环把注入带进最终历史。
-- `flutter test test/input_queue_test.dart`：忙时 `send` 入队不发 turn；settle 后按 FIFO 发出；`guide` 在无 turn 时降级为队列头；未读走的 guide 在 settle 时回到队首而非丢失；切会话清空队列；`guide` 立即落一条用户节点。
-- `flutter test test/input_queue_panel_test.dart`：行渲染、拖拽改序、切换投递语义、移除。
+- `flutter test test/input_queue_test.dart`（14 例，已跑通）：忙时 `send` 入队不发 turn；settle 后按 FIFO 发出；审批暂停时排空停下；`stop` 停车 / 再次 send 放行且顺序为"新的先发、排队的在后"；未读走的 guide 回到队首而非丢失；切会话清空队列；空草稿不进队；`guide` 立即落一条用户节点、无 turn 时降级为普通发送；队列行改语义会自己交接；`moveQueued` 的 off-by-one 与越界索引。
+- `flutter test test/input_queue_panel_test.dart`（5 例，已跑通）：空队列不显示标题、每行一条、行可切换投递语义、行可移除、拖拽确实改序（面板不持有自己的列表，一切以控制器为准）。
+- `flutter test test/composer_test.dart`：原"blocked 拒发"一条改为三条实况——圆圈在 blocked 时不发（它是停止键）、排队/转向两枚各自投递正确的语义、空闲时两枚都不出现。
 - 门禁同口径：`dart format --set-exit-if-changed lib test tool spike`、`dart analyze --fatal-infos lib test tool spike`、`dart tool/check_architecture.dart`（新增文件不得引入 `lib/ui` 直接 `dart:io`）、`flutter test` 相对基线零新增失败。
 - `dart run spike/runtime_smoke.dart`（带 `DEEPSEEK_API_KEY`）：真链路里跑一次"忙时排队 + 转向"，待有 key 时人工签收。
 

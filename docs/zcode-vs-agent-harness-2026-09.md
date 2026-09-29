@@ -203,7 +203,7 @@ C 组全部挂到对应前置 ADR 之后，不在本轮。
 | A8 能力位 | `model/known_models.dart` + `state/model_directory.dart` + composer 单门 | ADR-0010 | c34d1a7 · ac18647 · 4496677 | 已合入；**只做了 `supportsImage`**——PDF 本地抽文字、视频无通道，给没有消费者的能力位是凭空加抽象。顺带修掉两处同源缺陷（纯附件发不出、Windows 附件名） |
 | A6 架构检查器 | `tool/check_architecture.dart` + `tool/architecture_baseline.json` | ADR-0011 | f74417b | 已合入；5 条规则、7 条 baseline 债务、只拦新增。**没改 `.github/workflows/`**：`test/architecture_check_test.dart` 让 pr-check 的 `flutter test` 顺带跑它，加 CI 步骤就是第二份真值 |
 | A3 只读集单点声明 / A1 免问审批规则 | `model/approval_rule.dart` + `genkit/tools.dart` 的 `decideGate` + `state/approval_rule_store.dart` + 面板"总是允许" + 设置页 `approvals` 节 | ADR-0012 | b51ad6a · bca42ce · 15a0ae6 | 已合入；本地可写工具与 MCP 外部工具共用同一判定顺序（plan 拒 → deny → allow → 非 ask 放行 → interrupt），`readOnlyToolNames` 成为只读的唯一声明，`_subagentTools` 消失。**与评估文档不同的两处瘦身**：① 落盘只做 app 级 `<support>/approvals.json`（按工作区分键），没有写进工作区；② ZCode 的会话级规则与 deny 的面板创建入口都没做——前者没有消费者，后者面板上没有"永久拒绝"这个动词。余带 key 的真实链路确认免问生效 |
-| A4 队列 | 未开始 | 下一编号 ADR-0013 | — | 第 2 步的最后一件。落点 `state/conversation_controller.dart` + `model/turn_event.dart`；按评估文档的明确瘦身：每会话 FIFO、run settle 时排空、`queue`/`guide` 两种投递语义，不做 epoch/CAS/LRU |
+| A4 队列 + 中途转向 | `model/queued_input.dart` + `genkit/agent_runtime.dart` 的 `_GuideInjector` + `state/conversation_controller.dart` + `ui/conversation/input_queue_panel.dart` | ADR-0013 | ff85999 · c916316 · 850be2a · 480a1f6 | 已合入；FIFO、settle 排空、`queue`/`guide` 两种语义都做了，**没做** epoch/CAS/LRU（照原瘦身）。与评估文档的两处不同：① 落点没有 `turn_event.dart`——队列不需要新事件形状，控制器自己落用户节点即可；② `guide` 不是"另开一条消息"，而是把文本追加进最后一条 user/tool 消息，让 provider 只看到一个 turn（spike probe G 实测：标记进了持久化快照，模型下一轮仍读得到；代价是重启后那条转向不再显示为用户行）。第 2 步到此收口 |
 | B1 checkpoint/rewind | 未开始 | ADR-0015 预留 | — | 第 3 步 |
 
 移植时踩到的两条与文档判断不同的事实：
