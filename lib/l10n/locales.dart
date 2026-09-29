@@ -169,6 +169,14 @@ const enStrings = <String, String>{
   'stop': 'Stop',
   'deepDiving': 'Deep diving...',
 
+  // The busy-time input queue (ADR-0013)
+  'inputQueue': 'Waiting to send',
+  'queueInput': 'Queue',
+  'guideNow': 'Steer',
+  'deliveryQueue': 'After this turn',
+  'deliveryGuide': 'Steer this turn',
+  'dragToReorder': 'Drag to reorder',
+
   // The composer's tool row
   'attachImage': 'Attach images',
   'attach': 'Attach',
@@ -611,6 +619,13 @@ const zhStrings = <String, String>{
   'send': '发送',
   'stop': '停止',
   'deepDiving': '深入思考中...',
+
+  'inputQueue': '等待发送',
+  'queueInput': '排队',
+  'guideNow': '转向',
+  'deliveryQueue': '本轮结束后',
+  'deliveryGuide': '转向本轮',
+  'dragToReorder': '拖拽改序',
 
   // The composer's tool row
   'attachImage': '添加图片',

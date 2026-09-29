@@ -26,6 +26,7 @@ import '../../model/approval_mode.dart';
 import '../../model/attached_image.dart';
 import '../../model/file_search_rank.dart';
 import '../../model/known_models.dart';
+import '../../model/queued_input.dart';
 import '../../model/workspace_index.dart';
 import '../../state/document_extractor.dart';
 import '../../state/model_directory.dart';
@@ -68,8 +69,16 @@ class Composer extends StatefulWidget {
   /// How gated tool calls will decide; the chip both reads and writes it.
   final ApprovalMode approvalMode;
 
-  /// Sends [text] with any [images] the row is holding.
-  final void Function(String text, List<AttachedImage> images) onSubmit;
+  /// Sends [text] with any [images] the row is holding, at [delivery]'s pace:
+  /// behind the running turn, or into it (ADR-0013). The row does not know
+  /// whether a turn is running — it always hands the input over, and the
+  /// controller decides whether that becomes a turn or a queue row.
+  final void Function(
+    String text,
+    List<AttachedImage> images,
+    InputDelivery delivery,
+  )
+  onSubmit;
 
   final VoidCallback onStop;
 
@@ -349,8 +358,7 @@ class ComposerState extends State<Composer> {
     return KeyEventResult.handled;
   }
 
-  void _submit() {
-    if (widget.blocked) return;
+  void _submit({InputDelivery delivery = InputDelivery.queue}) {
     var text = _controller.text.trim();
     if (text.isEmpty && _images.isEmpty && _documents.isEmpty) return;
     _controller.clear();
@@ -367,7 +375,7 @@ class ComposerState extends State<Composer> {
     if (docBlocks.isNotEmpty) {
       text = text.isEmpty ? docBlocks : '$docBlocks\n\n$text';
     }
-    widget.onSubmit(text, images);
+    widget.onSubmit(text, images, delivery);
   }
 
   void _onPrimary() {
@@ -832,6 +840,7 @@ class ComposerState extends State<Composer> {
               ),
             if (widget.modelDirectory != null && constraints.maxWidth >= 220)
               const SizedBox(width: 8),
+            _deliverChips(color),
             _primary(color),
           ],
         );
@@ -842,11 +851,7 @@ class ComposerState extends State<Composer> {
   /// The 34px send / stop circle. Both states share the button, so the toggle is
   /// a glyph swap rather than a layout change.
   Widget _primary(DswAlias color) {
-    // `_wasEmpty` tracks the draft, but a draft of just an image or a document
-    // is still something to send — the guard `_submit` applies is on all three.
-    final hasPayload =
-        !_wasEmpty || _images.isNotEmpty || _documents.isNotEmpty;
-    final enabled = widget.busy || (!widget.blocked && hasPayload);
+    final enabled = widget.busy || (!widget.blocked && _hasPayload);
     return Tooltip(
       message: widget.busy ? context.tr('stop') : context.tr('send'),
       waitDuration: const Duration(milliseconds: 500),
@@ -861,6 +866,39 @@ class ComposerState extends State<Composer> {
           color: Colors.white,
         ),
       ),
+    );
+  }
+
+  /// A draft is something to do with even while a turn holds the transcript.
+  /// `_wasEmpty` tracks the text, but an image or document alone counts too —
+  /// the same three-way guard `_submit` applies.
+  bool get _hasPayload =>
+      !_wasEmpty || _images.isNotEmpty || _documents.isNotEmpty;
+
+  /// The two ways a draft leaves while the transcript is busy: park it behind
+  /// the run, or steer the run with it. They show only then, because an idle
+  /// composer already sends from its primary circle.
+  Widget _deliverChips(DswAlias color) {
+    if (!widget.blocked || !_hasPayload) return const SizedBox.shrink();
+    return Row(
+      children: [
+        _DeliverChip(
+          color: color,
+          icon: LucideIcons.list_end,
+          label: context.tr('queueInput'),
+          tip: context.tr('deliveryQueue'),
+          onTap: () => _submit(delivery: InputDelivery.queue),
+        ),
+        const SizedBox(width: 6),
+        _DeliverChip(
+          color: color,
+          icon: LucideIcons.route,
+          label: context.tr('guideNow'),
+          tip: context.tr('deliveryGuide'),
+          onTap: () => _submit(delivery: InputDelivery.guide),
+        ),
+        const SizedBox(width: 8),
+      ],
     );
   }
 
@@ -1610,6 +1648,57 @@ class _PrimaryButtonState extends State<_PrimaryButton> {
             shape: BoxShape.circle,
           ),
           child: widget.child,
+        ),
+      ),
+    ),
+  );
+}
+
+/// The bordered pill the two busy-time deliveries use: a glyph, a word, and the
+/// tooltip that says what the word means in this row.
+class _DeliverChip extends StatelessWidget {
+  const _DeliverChip({
+    required this.color,
+    required this.icon,
+    required this.label,
+    required this.tip,
+    required this.onTap,
+  });
+
+  final DswAlias color;
+  final IconData icon;
+  final String label;
+  final String tip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: tip,
+    waitDuration: const Duration(milliseconds: 500),
+    child: DswHoverTap(
+      onTap: onTap,
+      semanticLabel: tip,
+      builder: (context, hovered, _) => Transform.translate(
+        // Same seat as the primary circle, two pixels up from the chip row.
+        offset: const Offset(0, -2),
+        child: Container(
+          height: 28,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            color: hovered ? color.interactiveBgHover : null,
+            border: Border.all(color: color.borderL2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 13, color: color.labelSecondary),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: DswType.xxs12.copyWith(color: color.labelPrimary),
+              ),
+            ],
+          ),
         ),
       ),
     ),

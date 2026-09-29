@@ -31,6 +31,7 @@ import 'approval_panel.dart';
 import 'chat_view.dart';
 import 'composer.dart';
 import 'hero_workspace_picker.dart';
+import 'input_queue_panel.dart';
 import 'plan_review_panel.dart';
 
 /// dsh's `formatDuration`: 45.2s under a minute, 2m42s from there on. Shared
@@ -426,8 +427,11 @@ class _ConversationRootState extends State<ConversationRoot> {
               workspaceRoot: widget.workspaceRoot,
               onPickWorkspace: widget.onPickWorkspace,
               onOpenSettings: widget.onOpenSettings,
-              onSubmit: (text, images) =>
-                  widget.conversation.send(text, images: images),
+              onSubmit: (text, images, delivery) => widget.conversation.send(
+                text,
+                images: images,
+                delivery: delivery,
+              ),
               onStop: widget.conversation.stop,
             ),
       _ => ApprovalPanel(
@@ -442,9 +446,18 @@ class _ConversationRootState extends State<ConversationRoot> {
       children: [
         // The stats row rides above whatever card is up — it describes the
         // session, not the input, so an approval or review card does not
-        // displace it. HERO phase renders nothing: dsh's dock belongs to an
-        // active session, and an empty conversation has no figures anyway.
+        // displace it.
         if (!hero) _statsLine(),
+        // What is waiting sits between the session's figures and the box the
+        // next one is typed into. It shows during an approval takeover too:
+        // those inputs were typed before the agent asked, and hiding them then
+        // would make the queue look like it had eaten them.
+        InputQueuePanel(
+          items: widget.conversation.pendingInputs,
+          onRemove: widget.conversation.removeQueued,
+          onReorder: widget.conversation.moveQueued,
+          onDelivery: widget.conversation.setQueuedDelivery,
+        ),
         card,
       ],
     );

@@ -20,6 +20,7 @@ import 'dart:io';
 import 'package:agent_harness/model/approval_mode.dart';
 import 'package:agent_harness/model/attached_image.dart';
 import 'package:agent_harness/model/model_settings.dart';
+import 'package:agent_harness/model/queued_input.dart';
 import 'package:agent_harness/model/workspace_index.dart';
 import 'package:agent_harness/state/model_directory.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
@@ -52,7 +53,8 @@ class _ComposerHost extends StatefulWidget {
   final ApprovalMode mode;
   final ValueChanged<ApprovalMode> onMode;
   final VoidCallback onNewSession;
-  final void Function(String text, List<AttachedImage> images) onSubmit;
+  final void Function(String text, List<AttachedImage> images, InputDelivery)
+  onSubmit;
   final bool hero;
   final bool busy;
   final bool blocked;
@@ -122,7 +124,8 @@ void main() {
     ModelDirectory? directory,
     ValueChanged<String>? onModelSelected,
     Future<List<FileEntry>> Function()? onLookupFiles,
-    void Function(String text, List<AttachedImage> images)? onSubmit,
+    void Function(String text, List<AttachedImage> images, InputDelivery)?
+    onSubmit,
   }) => tester.pumpWidget(
     MaterialApp(
       theme: dswThemeData(Brightness.light),
@@ -131,7 +134,7 @@ void main() {
           mode: mode,
           onMode: (next) => mode = next,
           onNewSession: () => newSession++,
-          onSubmit: onSubmit ?? (text, images) {},
+          onSubmit: onSubmit ?? (text, images, delivery) {},
           hero: hero,
           busy: busy,
           blocked: blocked,
@@ -220,7 +223,7 @@ void main() {
       await pump(
         tester,
         directory: serving(defaultModel),
-        onSubmit: (text, images) => sent = images,
+        onSubmit: (text, images, _) => sent = images,
       );
 
       card(tester).addDroppedFiles([png.path]);
@@ -239,7 +242,7 @@ void main() {
       await pump(
         tester,
         directory: serving('gpt-4o'),
-        onSubmit: (text, images) => sent = images,
+        onSubmit: (text, images, _) => sent = images,
       );
 
       card(tester).addDroppedFiles([png.path]);
@@ -447,17 +450,51 @@ void main() {
   });
 
   group('the primary action', () {
-    testWidgets('a blocked composer refuses to send', (tester) async {
+    testWidgets('a blocked composer does not send from its circle', (
+      tester,
+    ) async {
       var sent = 0;
-      await pump(tester, blocked: true, onSubmit: (_, _) => sent++);
+      await pump(tester, blocked: true, onSubmit: (_, _, _) => sent++);
 
       await tester.enterText(find.byType(TextField), 'hello');
       await tester.tap(find.byIcon(LucideIcons.arrow_up));
       await tester.pump();
 
+      // The circle belongs to the running turn (it stops it) while the
+      // transcript is busy; nothing is lost either way (ADR-0013).
       expect(sent, 0);
-      // The draft survives: blocked is a refusal, not a swallow.
       expect(find.widgetWithText(TextField, 'hello'), findsOneWidget);
+    });
+
+    testWidgets('a blocked composer offers the two deliveries', (tester) async {
+      var sent = const <Object>[];
+      await pump(
+        tester,
+        blocked: true,
+        onSubmit: (text, images, delivery) => sent = [delivery],
+      );
+
+      await tester.enterText(find.byType(TextField), 'hello');
+      await tester.pump();
+      await tester.tap(find.text('Queue'));
+      await tester.pump();
+      expect(sent, [InputDelivery.queue]);
+
+      await tester.enterText(find.byType(TextField), 'hello');
+      await tester.pump();
+      await tester.tap(find.text('Steer'));
+      await tester.pump();
+      expect(sent, [InputDelivery.guide]);
+    });
+
+    testWidgets('an idle composer offers neither', (tester) async {
+      await pump(tester);
+
+      await tester.enterText(find.byType(TextField), 'hello');
+      await tester.pump();
+
+      expect(find.text('Queue'), findsNothing);
+      expect(find.text('Steer'), findsNothing);
     });
   });
 
