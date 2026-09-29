@@ -18,6 +18,8 @@
 
 第一条还有一个人工放行例外：`test/restore_projection_test.dart` 是全仓库唯一在 `lib/genkit/` 之外 import `package:genkit` 的测试文件（它要构造持久化形状）。这个例外是刻意的，别"顺手清理"掉。
 
+这三条 grep 现在是**可执行门禁**（ADR-0011）：`dart tool/check_architecture.dart` 五条规则（三条不变量 + `lib/ui` 不直接 `dart:io` + riverpod 只在 `main.dart`/`app_providers.dart`）按**指纹 baseline + 只拦新增**运作，`tool/architecture_baseline.json` 是今日实况而非豁免清单——债务修掉了要 `--update` 把 baseline 缩小。`test/architecture_check_test.dart` 调同一段代码，所以 `flutter test`（= CI）已经在跑它，**不必往 `.github/workflows/` 里加步骤**。
+
 ## 1. 关键词自动路由（命中即用）
 
 | 用户说的话（举例） | 自动动作 |
@@ -93,7 +95,7 @@
 - 每个测试文件头部用注释写清"本文件要守住的那句话"以及它存在的理由（参考 `test/conversation_controller_test.dart`、`test/file_search_test.dart`）。
 - widget 测试不挂 `AppLocaleScope`，直接断言英文文案。
 - 流式拆分是本项目唯一的性能契约：token delta 只能通知 tail 的 notifier，不得通知 conversation controller（由 `flutter test test/conversation_controller_test.dart` 守着）。
-- 已有**专门守卫**的不变量，改相关面时必跑：双树/布局 `sidebar_state_test.dart`·`split_node_test.dart`·`workbench_ui_test.dart`·`app_frame_test.dart`；工作区模式与企划 `workspace_mode_test.dart`·`plan_workspace_test.dart`·`plan_task_store_test.dart`；主题令牌与对比度 `theme_token_test.dart`·`theme_contrast_test.dart`；markdown 渲染（LaTeX/Mermaid）`markdown_rendering_test.dart`；`DswHoverTap` 的指针/键盘/语义/右键四性 `dsw_hover_tap_test.dart`；i18n 双语键集 `l10n_parity_test.dart`（ADR-0008——它只拦键，不拦译 quality）。
+- 已有**专门守卫**的不变量，改相关面时必跑：双树/布局 `sidebar_state_test.dart`·`split_node_test.dart`·`workbench_ui_test.dart`·`app_frame_test.dart`；工作区模式与企划 `workspace_mode_test.dart`·`plan_workspace_test.dart`·`plan_task_store_test.dart`；主题令牌与对比度 `theme_token_test.dart`·`theme_contrast_test.dart`；markdown 渲染（LaTeX/Mermaid）`markdown_rendering_test.dart`；`DswHoverTap` 的指针/键盘/语义/右键四性 `dsw_hover_tap_test.dart`；i18n 双语键集 `l10n_parity_test.dart`（ADR-0008——它只拦键，不拦译 quality）；附件能力门 `composer_test.dart` 的 `the attach gate` + `model_directory_test.dart` 的 `image capability`（ADR-0010）；三条硬不变量 `architecture_check_test.dart`（ADR-0011，等价于 `dart tool/check_architecture.dart`）。
 
 ## 5. Git 提交（强制）
 
@@ -123,4 +125,4 @@
 - 状态机：`PROPOSED → ACCEPTED → IN-PROGRESS → RESOLVED`（分支 DEFERRED / SUPERSEDED 须注明原因）。
 - 纪律：动手修复已登记问题前，对应 ADR 必须先置 ACCEPTED；修复合入后置 RESOLVED 并回填 commit hash；新审计发现先补 ADR 再改代码；「背景」必须带证据（`文件:行号`、grep/构建/测试输出），禁止无证据登记。
 - 本项目特别需要立 ADR 的动作：踩 §0 不变量的、动 `macos/Runner/Release.entitlements` 的、引入新依赖或代码生成器的、**再往 `packages/` 塞一个入库本地包的**（`board_panel` 是 ADR-0001 的个案例外，不是新惯例）、**增删桌面平台目标的**（ADR-0003 的先例）、**动 ADR-0004 对比度豁免面之外的正文级配色**的。
-- 现存台账（截至 2026-09-29）：ADR-0001 vendored shadcn 不入库（RESOLVED）· ADR-0002 riverpod + shadcn 迁移（IN-PROGRESS，仅余 macOS 真机验收）· ADR-0003 Windows/Linux 目标（RESOLVED）· ADR-0004 亮色对比度 AA 显式豁免（ACCEPTED，方案 B 决策性关闭；登记表此前误记 PROPOSED，已拍平）· ADR-0005 starkins 设置页重建（RESOLVED）· ADR-0006 全屏设置 + 级联快捷菜单 + Profile（RESOLVED，Supabase 仅留接缝）· ADR-0007 工作区模式 + 企划 Markdown + 扩展面板（ACCEPTED，分阶段实施中）· ADR-0008 i18n 双语键集守卫（RESOLVED）· ADR-0009 工作区指令注入（IN-PROGRESS @ 9019f3c）· ADR-0010 图片附件能力门控（IN-PROGRESS，余真机走查）。下一编号是 **ADR-0011**。**行号/编号/状态都以 `docs/debt-register.md` 与 `ls docs/adr/` 现场为准**，别抄这一行。
+- 现存台账（截至 2026-09-29）：ADR-0001 vendored shadcn 不入库（RESOLVED）· ADR-0002 riverpod + shadcn 迁移（IN-PROGRESS，仅余 macOS 真机验收）· ADR-0003 Windows/Linux 目标（RESOLVED）· ADR-0004 亮色对比度 AA 显式豁免（ACCEPTED，方案 B 决策性关闭；登记表此前误记 PROPOSED，已拍平）· ADR-0005 starkins 设置页重建（RESOLVED）· ADR-0006 全屏设置 + 级联快捷菜单 + Profile（RESOLVED，Supabase 仅留接缝）· ADR-0007 工作区模式 + 企划 Markdown + 扩展面板（ACCEPTED，分阶段实施中）· ADR-0008 i18n 双语键集守卫（RESOLVED）· ADR-0009 工作区指令注入（IN-PROGRESS @ 9019f3c）· ADR-0010 图片附件能力门控（IN-PROGRESS，余真机走查）· ADR-0011 架构门禁（`tool/check_architecture.dart`）。下一编号是 **ADR-0012**。**行号/编号/状态都以 `docs/debt-register.md` 与 `ls docs/adr/` 现场为准**，别抄这一行。

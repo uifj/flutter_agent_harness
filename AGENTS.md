@@ -44,7 +44,7 @@
 | `lib/theme/` | 6 | 1.0k | `dsw_alias`（令牌）→ `dsw_theme`（挂到 `ThemeData` + `DswShadow` elevation ramp）→ `dsw_typography` / `dsw_motion` / `dsw_static` / `dsw_shad_bridge`（DswAlias→ShadColorScheme） |
 | `lib/l10n/` | 1 | 0.9k | `locales.dart`：en/zh 双字典（键集对齐由 `test/l10n_parity_test.dart` 守卫，ADR-0008；条数不写死）+ `AppLocaleScope` + `context.tr()`，zh 逐键回退 en |
 | `spike/` | 2 | — | `agent_spike.dart`（genkit 真实形状的可执行证据，头部 FINDINGS）、`runtime_smoke.dart`（命令行驱动 runtime 的验收门） |
-| `tool/` | 1 | — | `contrast_check.dart`：对 `dsw_static` + `dsw_alias` 做 WCAG 对比度三求值（dart:io/dart:math only），`dart tool/contrast_check.dart` |
+| `tool/` | 2 | — | `contrast_check.dart`：对 `dsw_static` + `dsw_alias` 做 WCAG 对比度三求值（dart:io/dart:math only），`dart tool/contrast_check.dart`；`check_architecture.dart`：五条架构规则的指纹 baseline 门禁（ADR-0011），baseline 落 `tool/architecture_baseline.json` |
 | `packages/board_panel/` | — | — | **入库的本地包**（path 依赖，ADR-0007 D5 记录为 ADR-0001"vendored 不入库"的例外）：看板/日程/表格扩展面板，由 `ui/plan/plan_extensions_view.dart` 消费，数据来自 `state/plan_task_store.dart` |
 | `packages/flutter-shadcn-ui/` | — | — | **vendored 源码镜像，`.gitignore` 排除**（ADR-0001）。`shadcn_ui` 0.56.3 已是 pubspec 依赖（ADR-0002 实施中），但配色仍走 `dsw_*`（经 `theme/dsw_shad_bridge.dart`）。查组件 API 用入库的 `.qoder/skills/shadcn-ui-flutter/`；读实现看此目录或上游 `nank1ro/flutter-shadcn-ui` `0.56.3` |
 | `docs/` | — | — | `README.md`（ADR 规范）+ `debt-register.md`（状态源）+ `migration-log.md` + `adr/`（模板 + ADR-0001…0008）+ 审计报告与优化方案 |
@@ -60,6 +60,8 @@ grep -rn "\.\./ui/" lib/state/                            # 只有 layout_contro
 
 Genkit 变更只应砸 `lib/genkit/` 两个文件，而不是穿过 widget 树；`lib/model/` 是运行时与 UI 之间的唯一词汇表。唯一被放行的例外是 `test/restore_projection_test.dart`（它要构造持久化形状），别顺手清掉。完整表述与例外登记见 `.qoder/rules/workflow.md` §0。
 
+这三行 grep 现在有一条命令代替：**`dart tool/check_architecture.dart`**（ADR-0011）。它按五条规则（三条不变量 + `lib/ui` 不直接 `dart:io` + riverpod 只在装配根）用**指纹 baseline + 只拦新增**运作，并由 `test/architecture_check_test.dart` 跟着 `flutter test` 一起在 CI 上跑。`tool/architecture_baseline.json` 是今日实况，不是豁免清单。
+
 ## 4. 环境与命令
 
 ```
@@ -69,6 +71,7 @@ dart analyze --fatal-infos lib test tool spike           # 与 CI 同一口径�
 flutter test               # 只有 flutter test；dev 依赖没有 package:test，dart test 跑不起来
 flutter test test/conversation_controller_test.dart     # 守住流式拆分这条性能契约
 dart tool/contrast_check.dart            # 主题令牌 WCAG 对比度三求值（ADR-0004 的门禁）
+dart tool/check_architecture.dart        # 架构门禁（ADR-0011）；--update 只在债务减少时跑
 dart run spike/agent_spike.dart          # genkit 升版后必跑，核对头部 FINDINGS
 dart run spike/runtime_smoke.dart        # 离线冒烟；带 DEEPSEEK_API_KEY 真跑工具环与审批
 flutter build macos --release            # 需 macOS + Xcode + CocoaPods
