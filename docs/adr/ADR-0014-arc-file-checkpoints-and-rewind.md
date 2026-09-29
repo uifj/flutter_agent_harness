@@ -1,6 +1,6 @@
 # ADR-0014: 文件级 checkpoint 与 rewind（B1）
 
-- **状态**: IN-PROGRESS（2026-09-29：S1/S2/S3 的代码与测试均已合入，`flutter test` 得 `+814 -2`（仍是那两条既有失败）、format/analyze/check_architecture 全清；余"带 API key 的真实链路里跑一次 write → 用户改文件 → rewind 被闸门挡住"的人工签收。**本轮另实测**：文档规定的 `dart run spike/runtime_smoke.dart` 在本机编译不过，原因先于本 ADR 存在，已单开登记行）
+- **状态**: IN-PROGRESS（2026-09-29：S1/S2/S3 的代码与测试均已合入，`flutter test` 得 `+814 -2`（仍是那两条既有失败）、format/analyze/check_architecture 全清；余"带 API key 的真实链路里跑一次 write → 用户改文件 → rewind 被闸门挡住"的人工签收。**本轮另实测**：文档规定的 `dart run spike/runtime_smoke.dart` 当时在本机编译不过（原因先于本 ADR 存在），已立并闭环 ADR-0015 修好，所以这条签收现在只差一把 key）
 - **分类**: ARC
 - **优先级**: P1
 - **影响维度**: 生产功能 / 安全合规（rewind 会改磁盘，误用即毁数据）
@@ -99,7 +99,7 @@ abstract interface class CheckpointSink {
 - 真实临时目录（而非替身）跑文件系统事实：mtime 之外的存在性/字节级断言，遵 workflow.md §4 的既有约定。
 - `write`/`edit` 的工具级测试带出 `checkpoint` 字段；`tool_card` 的 pill 与确认框走 widget 测试（不挂 `AppLocaleScope`，断言英文）。
 - 门禁同口径：`dart format --set-exit-if-changed lib test tool spike`、`dart analyze --fatal-infos lib test tool spike`、`dart tool/check_architecture.dart`（新文件不得引入 `lib/ui` 直接 `dart:io`、`lib/model` 不得碰 flutter）、`flutter test` 相对基线（`+781 -2`）零新增失败。
-- 带 key 的真实链路：`dart run spike/runtime_smoke.dart` 里跑一次 write → 用户改文件 → 审批 → rewind 被冲突闸门挡住的顺序，待有 key 时人工签收。
+- 带 key 的真实链路：`dart run spike/runtime_smoke.dart` 里跑一次 write → 用户改文件 → 审批 → rewind 被冲突闸门挡住的顺序，待有 key 时人工签收。（该命令本身的可运行性由 ADR-0015 恢复；离线路径已实测跑通。）
 
 ## 实施记录（与决策段的偏差）
 

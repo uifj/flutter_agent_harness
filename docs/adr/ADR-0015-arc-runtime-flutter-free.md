@@ -1,11 +1,11 @@
 # ADR-0015: 把文件系统版本号从 Flutter 里拿出来，恢复"真实链路"这道门
 
-- **状态**: ACCEPTED（2026-09-29 拍板，按下方两段实施）
+- **状态**: RESOLVED（2026-09-29 两段全落，`dart run spike/runtime_smoke.dart` 重新可跑，规则 6 已在门禁里；余下的只是"带 key 的真实链路"本身需要一把 key）
 - **分类**: ARC
 - **优先级**: P1
 - **影响维度**: 评估阻断（三份 ADR 的验收都挂在它上面）/ 生产功能
 - **日期**: 2026-09-29
-- **修复 commit**: —
+- **修复 commit**: eb17573（本 ADR）· c2b7c49（S1 计数器迁到 `lib/model`）· 3af1317（S2 第 6 条规则 + 测试并入无债务不变量集合）
 - **来源**: ADR-0014 落地期间的实测；已作为 ARC/P1 观察行登记在 `docs/debt-register.md` 的"待立 ADR 的观察"表
 
 ## 背景（Context）
@@ -102,6 +102,16 @@ IN-PROGRESS，出包清单第 3 条也只能空着。
 - 门禁同口径：`dart format --set-exit-if-changed lib test tool spike`、`dart analyze --fatal-infos lib test tool spike`。
 - 规则与登记：workflow.md §3 与 build.md §5 第 3 条那句"当前在本机编译不过"的警告随本 ADR 闭环改写；
   登记表观察行移入 RESOLVED 并回填 commit。
+
+## 实施记录（实测证据）
+
+- 迁移前：`dart run spike/runtime_smoke.dart` → `Error: Dart library 'dart:ui' is not available on this platform`。
+- 迁移后同一条命令（不带 key）跑完离线路径并打印：`sessions in an empty store: 0` / `finished: failed session=null snapshot=null error=No API key set. Open settings and paste the provider API key.`——门恢复了，剩下的只等一把 key。
+- 规则 6 的反向验证实测：往 `lib/genkit/read_window.dart` 临时加一行 `import 'package:flutter/foundation.dart';` →
+  `NEW VIOLATION runtime-reaches-neither-flutter-nor-state`、退出码 1；撤销后 `architecture OK: 7 recorded, 0 new (122 files, 6 rules)`。
+- `grep -rn "import '..\/state/" lib/genkit/` 为空；`grep -rln "package:flutter" lib/model/` 为空；baseline 仍是 7 条既有债务（本 ADR 没有新增豁免，也没消掉旧债务，故未 `--update`）。
+- 全量 `flutter test`：`+814 -2`，与 ADR-0014 落地后的基线一致（那两条既有失败未变）。
+- 与决策段一致，无偏差：三个调用点（`bumpFsRevision` / `fsRevision.addListener` / `resetFsRevisionForTest`）形状未变，只换 import 路径。
 
 ## 关联（Links）
 
