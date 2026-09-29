@@ -36,7 +36,7 @@
 | 路径 | 文件 | 行 | 职责 |
 | --- | --- | --- | --- |
 | `lib/main.dart` | 1 | ~240 | 纯装配：开 store → 恢复工作区授权 → 建 riverpod container（override stores）→ 挂树；并接 `window_manager` / `tray_service` / `hotkey_service`。**不做业务决策** |
-| `lib/genkit/` | 8 | 3.1k | Genkit 唯一的家：`agent_runtime`（投影 + 系统提示 + 审批回路）、`tools`（`WorkspaceTools`）、`shell_run` / `text_edit` / `read_window` / `plan_tools` / `file_search` / `models_endpoint` |
+| `lib/genkit/` | 9 | 3.4k | Genkit 唯一的家：`agent_runtime`（投影 + 系统提示 + 审批回路 + 指令注入）、`tools`（`WorkspaceTools`）、`instructions`（工作区 `AGENTS.md` 发现与合并，ADR-0009，纯 Dart）、`shell_run` / `text_edit` / `read_window` / `plan_tools` / `file_search` / `models_endpoint` |
 | `lib/model/` | 21 | 4.1k | 纯 Dart 领域词汇：`conversation` / `turn_event` / `turn_source` / `approval_mode` / `sidebar_tab`（+ `sidebar_state` 双树）/ `split_node` / `workbench` / `workspace` / `plan_task` / `user_profile` / `known_models` / `mcp_settings` / 各 settings。手写 `toJson`/`fromJson` |
 | `lib/state/` | 21 | 4.0k | 控制器与持久化：`app_providers`（+ 唯一入库生成件 `app_providers.g.dart`，19 个 provider：stores、read seams、per-controller provider，ADR-0002）、`app_scope`（组合根：runtime 热替换链仍在其中）、`conversation_controller`、`workbench_controller` / `workbench_store`（双树持久化）、`layout_controller`、`workspace_mode_controller`（企划/代理，ADR-0007）、`plan_task_store`、`model_directory`、`session_index`、`backup_service`、`tray_service`、`hotkey_service`、`document_extractor`、`settings_store` / `prefs_store`（原子写）、`streaming_tail` |
 | `lib/host/` | 4 | 0.8k | 宿主能力：`git`、`terminal_manager`、`project_folder_ops`（security-scoped bookmark）、`profile_repository`（ADR-0006 S1，用户 Profile） |
