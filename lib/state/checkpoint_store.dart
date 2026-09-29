@@ -26,8 +26,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 import '../model/checkpoint.dart';
+import '../model/fs_revision.dart';
 import '../model/workspace.dart';
-import 'fs_revision.dart';
 
 /// Whether a rewind covers one conversation's changes or the whole folder's.
 enum RewindScope { conversation, workspace }

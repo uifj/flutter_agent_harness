@@ -18,6 +18,7 @@ import 'dart:io';
 
 import 'package:agent_harness/host/terminal_manager.dart';
 import 'package:agent_harness/model/workbench_prefs.dart';
+import 'package:agent_harness/model/fs_revision.dart';
 import 'package:agent_harness/model/sidebar_tab.dart';
 import 'package:agent_harness/state/workbench_controller.dart';
 import 'package:agent_harness/state/workbench_store.dart';
@@ -25,7 +26,6 @@ import 'package:agent_harness/ui/workbench/workbench.dart';
 import 'package:agent_harness/ui/workbench/workbench_prefs_scope.dart';
 import 'package:agent_harness/ui/workbench/workbench_tab_bar.dart';
 import 'package:agent_harness/state/conversation_controller.dart';
-import 'package:agent_harness/state/fs_revision.dart';
 import 'package:agent_harness/state/streaming_tail.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
 import 'package:flutter/gestures.dart';

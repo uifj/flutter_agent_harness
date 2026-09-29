@@ -29,8 +29,8 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../l10n/locales.dart';
+import '../../../model/fs_revision.dart';
 import '../../../model/workspace.dart';
-import '../../../state/fs_revision.dart';
 import '../../../theme/dsw_alias.dart';
 import '../../../theme/dsw_motion.dart';
 import '../../../theme/dsw_theme.dart';
