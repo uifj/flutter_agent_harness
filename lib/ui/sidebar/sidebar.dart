@@ -516,6 +516,9 @@ class _SidebarState extends State<Sidebar> {
       alignment: AlignmentDirectional.topStart,
       child: _Pressable(
         onTap: widget.onNewSession,
+        // The rail's form sheds the words, so it has to keep the name: without
+        // this the only thing a screen reader got was an unlabelled button.
+        semanticLabel: wide ? null : context.tr('newSession'),
         hoverColor: wide ? color.buttonFloatingHover : color.interactiveBgHover,
         borderRadius: _barRadius(wide),
         // Deliberately not animated. The two forms differ in width, and the wide
@@ -727,6 +730,9 @@ class _SidebarState extends State<Sidebar> {
         ),
         _Pressable(
           onTap: _openSettingsSafe,
+          // Same gap in the wide footer's gear — icon-only, no label, no
+          // tooltip, so the audit could only name it by codepoint.
+          semanticLabel: context.tr('settings'),
           borderRadius: BorderRadius.circular(DswShape.control),
           child: Container(
             height: 28,
