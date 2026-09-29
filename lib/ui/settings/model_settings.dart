@@ -992,22 +992,46 @@ class _SettingsPanelState extends State<SettingsPanel> {
         // `editorActions` + inline `error` shape. Absent entirely when no
         // fetcher was wired — a test control without a network is a lie.
         if (widget.modelsFetcher != null)
-          Row(
-            children: [
-              Expanded(
-                child: _ModelProbeStatus(
-                  loading: _modelsLoading,
-                  error: _probeError,
-                  count: _probeCount,
-                ),
-              ),
-              CapsuleButton(
+          LayoutBuilder(
+            builder: (context, box) {
+              final status = _ModelProbeStatus(
+                loading: _modelsLoading,
+                error: _probeError,
+                count: _probeCount,
+              );
+              final button = CapsuleButton(
                 label: context.tr('testConnection'),
                 size: CapsuleSize.sm,
                 enabled: !_modelsLoading,
                 onTap: _testConnection,
-              ),
-            ],
+              );
+              // The capsule is the unshrinkable half — its label is its name —
+              // so the sentence keeps a floor beside it and the button drops
+              // under the sentence when the card cannot hold both: measured at
+              // 700px wide and 2.2x, the row spilled 16px past the card.
+              final beside =
+                  _oneLineWidth(context, button.label, DswType.xxs12) +
+                  20 +
+                  160;
+              if (beside <= box.maxWidth) {
+                return Row(
+                  children: [
+                    Expanded(child: status),
+                    button,
+                  ],
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  status,
+                  SizedBox(
+                    height: 12 * MediaQuery.textScalerOf(context).scale(1),
+                  ),
+                  button,
+                ],
+              );
+            },
           ),
       ],
     ),
@@ -1422,6 +1446,18 @@ class _SettingsPanelState extends State<SettingsPanel> {
 ///
 /// The pill is the one thing that most differs from this panel's other
 /// controls: 36px tall, radius 18, NO border, the module fill — the shape
+/// [text] on one line, at the ambient text step. Both narrow-form decisions in
+/// this file read their room from these instead of a breakpoint table: the same
+/// card is roomy in English at 1.0x and tight in Chinese at 2.2x.
+double _oneLineWidth(BuildContext context, String text, TextStyle style) {
+  final painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: Directionality.of(context),
+    textScaler: MediaQuery.textScalerOf(context),
+  )..layout();
+  return painter.width;
+}
+
 /// dsh's own `LanguageRow`/`AppearanceRow` selectors take. A bordered box
 /// here would read as one of the form inputs, which a preference is not.
 class _SettingCellRow<T> extends StatefulWidget {
@@ -1458,9 +1494,95 @@ class _SettingCellRow<T> extends StatefulWidget {
 class _SettingCellRowState<T> extends State<_SettingCellRow<T>> {
   bool _hovered = false;
 
+  Widget _menu(DswAlias color) => PopupMenuButton<T>(
+    position: PopupMenuPosition.under,
+    constraints: const BoxConstraints(minWidth: 160),
+    initialValue: widget.value,
+    onSelected: widget.onChanged,
+    itemBuilder: (context) => [
+      for (final entry in widget.labels.entries)
+        PopupMenuItem(
+          value: entry.key,
+          child: Text(
+            entry.value,
+            style: DswType.xs13.copyWith(color: color.labelPrimary),
+          ),
+        ),
+    ],
+    child: MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: DswMotion.respecting(context, DswMotion.fast),
+        // One line of chrome, so the seat follows the text step: 36 gave
+        // this row's 14/22 label 36.0 where 40.0 was needed at 1.8x. A floor
+        // rather than a height because the label takes a second line only when
+        // even the whole card cannot hold it on one (2.2x in a 430px card).
+        constraints: BoxConstraints(
+          minHeight: 36 * MediaQuery.textScalerOf(context).scale(1),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: _hovered ? color.interactiveBgHover : color.bgModulePlatform,
+          borderRadius: BorderRadius.circular(DswShape.float),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                widget.labels[widget.value]!,
+                style: DswType.s14.copyWith(color: color.labelPrimary),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Icon(
+              LucideIcons.chevron_down,
+              size: 14,
+              color: color.labelTertiary,
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
+    final titleStyle = DswType.s14.copyWith(color: color.labelPrimary);
+    final leading = <Widget>[
+      if (widget.leading != null) ...[
+        Icon(widget.leading, size: 16, color: color.labelTertiary),
+        const SizedBox(width: 12),
+      ],
+    ];
+    final text = Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(widget.title, style: titleStyle),
+          const SizedBox(height: 4),
+          Text(
+            widget.description,
+            style: DswType.xxs12.copyWith(color: color.labelTertiary),
+          ),
+        ],
+      ),
+    );
+    // The pill is the unshrinkable half: its one-word value is the preference
+    // itself, and a squeezed pill reads as a form input. In a 700px window at
+    // 2.2x the row form gave the title column 0.0px and spilled 64px past the
+    // card, so under one line of room for title plus pill the pill moves
+    // below the label instead.
+    final beside =
+        (widget.leading == null ? 0.0 : 28.0) +
+        _oneLineWidth(context, widget.title, titleStyle) +
+        8 +
+        _oneLineWidth(context, widget.labels[widget.value]!, titleStyle) +
+        12 +
+        14 +
+        28;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
@@ -1468,78 +1590,27 @@ class _SettingCellRowState<T> extends State<_SettingCellRow<T>> {
             ? null
             : Border(bottom: BorderSide(color: color.borderL2)),
       ),
-      child: Row(
-        children: [
-          if (widget.leading != null) ...[
-            Icon(widget.leading, size: 16, color: color.labelTertiary),
-            const SizedBox(width: 12),
-          ],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: LayoutBuilder(
+        builder: (context, box) {
+          if (beside <= box.maxWidth) {
+            return Row(
               children: [
-                Text(
-                  widget.title,
-                  style: DswType.s14.copyWith(color: color.labelPrimary),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  widget.description,
-                  style: DswType.xxs12.copyWith(color: color.labelTertiary),
-                ),
+                ...leading,
+                text,
+                const SizedBox(width: 8),
+                _menu(color),
               ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          PopupMenuButton<T>(
-            position: PopupMenuPosition.under,
-            constraints: const BoxConstraints(minWidth: 160),
-            initialValue: widget.value,
-            onSelected: widget.onChanged,
-            itemBuilder: (context) => [
-              for (final entry in widget.labels.entries)
-                PopupMenuItem(
-                  value: entry.key,
-                  child: Text(
-                    entry.value,
-                    style: DswType.xs13.copyWith(color: color.labelPrimary),
-                  ),
-                ),
+            );
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [...leading, text]),
+              SizedBox(height: 12 * MediaQuery.textScalerOf(context).scale(1)),
+              _menu(color),
             ],
-            child: MouseRegion(
-              onEnter: (_) => setState(() => _hovered = true),
-              onExit: (_) => setState(() => _hovered = false),
-              child: AnimatedContainer(
-                duration: DswMotion.respecting(context, DswMotion.fast),
-                // One line of chrome, so the seat follows the text step: 36 gave
-                // this row's 14/22 label 36.0 where 40.0 was needed at 1.8x.
-                height: 36 * MediaQuery.textScalerOf(context).scale(1),
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: _hovered
-                      ? color.interactiveBgHover
-                      : color.bgModulePlatform,
-                  borderRadius: BorderRadius.circular(DswShape.float),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      widget.labels[widget.value]!,
-                      style: DswType.s14.copyWith(color: color.labelPrimary),
-                    ),
-                    const SizedBox(width: 12),
-                    Icon(
-                      LucideIcons.chevron_down,
-                      size: 14,
-                      color: color.labelTertiary,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
