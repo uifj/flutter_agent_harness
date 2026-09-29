@@ -606,6 +606,19 @@ void main() {
             await tester.pumpAndSettle();
             expect(textDefects(tester), isEmpty, reason: section);
           }
+
+          // The General rows are chips that open menus, and a menu is in no
+          // one's tree until it is opened — the walk above only ever measured
+          // the closed chip.
+          await tester.tap(find.text('General').first);
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Follow system').first);
+          await tester.pumpAndSettle();
+          expect(find.text('Dark'), findsWidgets);
+          expect(textDefects(tester), isEmpty, reason: 'the theme menu');
+          await tester.tapAt(const Offset(4, 4));
+          await tester.pumpAndSettle();
+          expect(find.text('Dark'), findsNothing);
         });
       }
     });

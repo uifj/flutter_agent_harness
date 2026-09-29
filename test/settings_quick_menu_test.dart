@@ -16,6 +16,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'amplified_text_probe.dart';
+
 void main() {
   /// Pumps a host with the menu opened after the first frame; returns the
   /// menu's overlay entry (the caller owns it — the audit-F2 contract) and
@@ -23,6 +25,7 @@ void main() {
   Future<OverlayEntry> pumpMenu(
     WidgetTester tester, {
     void Function(settings.AppSettings)? onChanged,
+    double step = 1.0,
   }) async {
     final link = LayerLink();
     OverlayEntry? entry;
@@ -30,24 +33,27 @@ void main() {
       MaterialApp(
         theme: dswThemeData(Brightness.light),
         home: Scaffold(
-          body: Align(
-            alignment: Alignment.bottomLeft,
-            child: CompositedTransformTarget(
-              link: link,
-              child: Builder(
-                builder: (context) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (!context.mounted || entry != null) return;
-                    entry = showSettingsQuickMenu(
-                      context: context,
-                      link: link,
-                      initial: const settings.AppSettings(),
-                      onChanged: onChanged ?? (_) {},
-                      onOpenSettings: () {},
-                    );
-                  });
-                  return const SizedBox(width: 120, height: 40);
-                },
+          body: AmplifiedText(
+            step: step,
+            child: Align(
+              alignment: Alignment.bottomLeft,
+              child: CompositedTransformTarget(
+                link: link,
+                child: Builder(
+                  builder: (context) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!context.mounted || entry != null) return;
+                      entry = showSettingsQuickMenu(
+                        context: context,
+                        link: link,
+                        initial: const settings.AppSettings(),
+                        onChanged: onChanged ?? (_) {},
+                        onOpenSettings: () {},
+                      );
+                    });
+                    return const SizedBox(width: 120, height: 40);
+                  },
+                ),
               ),
             ),
           ),
@@ -100,5 +106,31 @@ void main() {
     await tester.pump();
     expect(entry.mounted, isFalse);
     expect(find.text('Open settings'), findsNothing);
+  });
+
+  // The menu is anchored to the bottom-left and opens upward, so an amplified
+  // text step stresses it in two ways at once: every chip's seat, and whether
+  // the whole panel still fits above the edge it hangs from.
+  group('amplified text', () {
+    for (final (label, step) in const [
+      ('1.8x', amplifiedTextStep),
+      ('2.2x', nextTextStep),
+    ]) {
+      testWidgets('the cascade keeps its chips and stays on screen ($label)', (
+        tester,
+      ) async {
+        // The menu's own height is the fact at stake, and a panel taller than
+        // the window would be clipped rather than reported.
+        tester.view.physicalSize = const Size(1200, 900);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+
+        await pumpMenu(tester, step: step);
+        expect(find.text('Open settings'), findsOneWidget);
+        final panel = tester.getRect(find.text('Open settings'));
+        expect(panel.top, greaterThanOrEqualTo(0), reason: 'the panel fits');
+        expect(textDefects(tester), isEmpty, reason: 'the quick menu');
+      });
+    }
   });
 }
