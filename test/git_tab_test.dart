@@ -5,6 +5,11 @@
 // tabs, that the stage/unstage/commit gestures send their commands and
 // refresh, that a non-repo says so, and that destructive actions only run
 // behind their confirm dialog.
+//
+// It is also the only place this tab is pumped *with a repo*: the workbench
+// walk opens it over a bare temp directory, so it can never see a branch name,
+// a status badge, or the two menus those make room for — which is what the
+// amplified-text face at the bottom of this file measures.
 
 import 'dart:io';
 
@@ -20,6 +25,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadTheme, ShadButton, ShadInput;
 
+import 'amplified_text_probe.dart';
 import 'clipboard_probe.dart';
 import 'fake_git.dart';
 
@@ -45,23 +51,27 @@ void main() {
     support.dispose();
   });
 
-  Future<void> pumpTab(WidgetTester tester) => tester.pumpWidget(
-    MaterialApp(
-      theme: dswThemeData(Brightness.light),
-      // Mirrors main's MaterialApp.builder: the confirm dialog is a
-      // ShadDialog, which reads ShadTheme off the caller context.
-      builder: (context, child) => ShadTheme(
-        data: dswShadTheme(Theme.of(context).brightness),
-        child: child!,
-      ),
-      home: Scaffold(
-        body: GitHost(
-          runner: fake.runner,
-          child: GitTab(workbench: workbench, tab: SidebarTab.git),
+  Future<void> pumpTab(WidgetTester tester, {double step = 1.0}) =>
+      tester.pumpWidget(
+        MaterialApp(
+          theme: dswThemeData(Brightness.light),
+          // Mirrors main's MaterialApp.builder: the confirm dialog is a
+          // ShadDialog, which reads ShadTheme off the caller context.
+          builder: (context, child) => ShadTheme(
+            data: dswShadTheme(Theme.of(context).brightness),
+            child: child!,
+          ),
+          home: Scaffold(
+            body: AmplifiedText(
+              step: step,
+              child: GitHost(
+                runner: fake.runner,
+                child: GitTab(workbench: workbench, tab: SidebarTab.git),
+              ),
+            ),
+          ),
         ),
-      ),
-    ),
-  );
+      );
 
   /// The tab's futures are sync-resolving fakes, so a frame is enough for each
   /// hop; two covers the open→refresh chain.
@@ -260,6 +270,48 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(clipboard.text, 'staged.txt');
+  });
+
+  // The panel's own seats, and the two menus that only exist once opened.
+  //
+  // The workbench walk already pumps this tab, but over a directory that is
+  // not a repo: no branch, no rows, nothing with a label to cut. The fake
+  // supplies both, which is what makes the branch chip (26px, one 12px line)
+  // and the row menu measurable.
+  group('amplified text', () {
+    for (final (label, step) in const [
+      ('1.8x', amplifiedTextStep),
+      ('2.2x', nextTextStep),
+    ]) {
+      testWidgets('the panel and its two menus keep their labels ($label)', (
+        tester,
+      ) async {
+        Future<void> close() async {
+          // A menu left on screen covers the next face, and a route nobody
+          // popped leaves its timer armed for the binding to fail on.
+          await tester.tapAt(const Offset(4, 4));
+          await tester.pumpAndSettle();
+        }
+
+        await pumpTab(tester, step: step);
+        await settle(tester);
+        expect(find.text('staged.txt'), findsOneWidget);
+        expect(textDefects(tester), isEmpty, reason: 'the source panel');
+
+        await tester.tap(find.byType(PopupMenuButton<String>));
+        await tester.pumpAndSettle();
+        expect(find.text('dev'), findsOneWidget);
+        expect(textDefects(tester), isEmpty, reason: 'the branch menu');
+        await close();
+
+        await tester.tap(find.text('staged.txt'), buttons: kSecondaryButton);
+        await tester.pumpAndSettle();
+        expect(find.text('Copy relative path'), findsOneWidget);
+        expect(textDefects(tester), isEmpty, reason: 'the row menu');
+        await close();
+        expect(tester.takeException(), isNull);
+      });
+    }
   });
 }
 
