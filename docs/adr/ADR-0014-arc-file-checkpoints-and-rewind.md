@@ -100,6 +100,8 @@ abstract interface class CheckpointSink {
 - `write`/`edit` 的工具级测试带出 `checkpoint` 字段；`tool_card` 的 pill 与确认框走 widget 测试（不挂 `AppLocaleScope`，断言英文）。
 - 门禁同口径：`dart format --set-exit-if-changed lib test tool spike`、`dart analyze --fatal-infos lib test tool spike`、`dart tool/check_architecture.dart`（新文件不得引入 `lib/ui` 直接 `dart:io`、`lib/model` 不得碰 flutter）、`flutter test` 相对基线（`+781 -2`）零新增失败。
 - 带 key 的真实链路：`dart run spike/runtime_smoke.dart` 里跑一次 write → 用户改文件 → 审批 → rewind 被冲突闸门挡住的顺序，待有 key 时人工签收。（该命令本身的可运行性由 ADR-0015 恢复；离线路径已实测跑通。）
+  - **2026-09-29 带 key 首跑后的更正**：这行原文写的是**做不到的事**。`CheckpointStore` 是 `ChangeNotifier`，`import` 它就会把 `dart:ui` 拖进 `dart run`（实测报错），而 ADR-0015 的全部意义就是让这条命令**不依赖 Flutter**。所以"闸门挡住 rewind"这半段**不可能**出现在这个脚本里，它由 `test/checkpoint_test.dart` 在真实临时目录上守（镜像、闸门、两种范围、预算淘汰）。
+  - 脚本实际守的是另一半、也是此前没人验过的那半：**真模型 + 真审批之下，覆盖写之前到底有没有把对的字节交给 sink**。现在断言三件事——before 等于写前盘上字节、after 指纹等于写后盘上字节、工具返回里带着 `checkpoint` id。首跑就是靠第三条抓出了 ADR-0016：镜像明明截到了（`checkpoint r0: notes.md modified (21 → 49 bytes)`），id 却进不了工具卡片，于是**回退 pill 当轮不出现，要重开会话才有**。`ebcdd45` 修好，`EXIT=0`。
 
 ## 实施记录（与决策段的偏差）
 
