@@ -3,7 +3,9 @@
 //
 // The approval panel replaces the input card while a call is paused, so its two
 // properties that matter to a user are that every button says which decision it
-// makes, and that pressing twice does not answer twice.
+// makes, that pressing twice does not answer twice, and that the row still reads
+// whole when the system amplifies text — the last is what the bottom group
+// measures, over a command, a long path, and a call with no subject at all.
 
 import 'package:agent_harness/model/conversation.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
@@ -11,6 +13,8 @@ import 'package:agent_harness/ui/conversation/approval_panel.dart';
 import 'package:agent_harness/ui/primitives/capsule_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'amplified_text_probe.dart';
 
 void main() {
   const bashAsk = ApprovalRequest(
@@ -30,14 +34,18 @@ void main() {
   Future<void> pump(
     WidgetTester tester, {
     ApprovalRequest request = bashAsk,
+    double step = 1.0,
     void Function(bool approved, {bool remember})? onRespond,
   }) => tester.pumpWidget(
     MaterialApp(
       theme: dswThemeData(Brightness.light),
       home: Scaffold(
-        body: ApprovalPanel(
-          request: request,
-          onRespond: onRespond ?? (approved, {remember = false}) {},
+        body: AmplifiedText(
+          step: step,
+          child: ApprovalPanel(
+            request: request,
+            onRespond: onRespond ?? (approved, {remember = false}) {},
+          ),
         ),
       ),
     ),
@@ -149,5 +157,55 @@ void main() {
     await tester.pump();
 
     expect(answered, 2);
+  });
+
+  // The panel is the one surface that must stay readable while the user is
+  // being asked to say yes — and its three buttons are capsule seats with a
+  // subject line of model-produced text (a command, a path) above them.
+  group('amplified text', () {
+    for (final (label, step) in const [
+      ('1.8x', amplifiedTextStep),
+      ('2.2x', nextTextStep),
+    ]) {
+      testWidgets('the subject and the three buttons keep their labels ($label)', (
+        tester,
+      ) async {
+        await pump(tester, step: step);
+        expect(find.text('Allow once'), findsOneWidget);
+        expect(textDefects(tester), isEmpty, reason: 'a bash ask');
+
+        // A path is the widest subject the file tools can put on this row.
+        await pump(
+          tester,
+          step: step,
+          request: const ApprovalRequest(
+            ref: 'r3',
+            toolName: 'write',
+            arguments: {
+              'file_path':
+                  'lib/src/features/a-markedly-long-directory-name/another_long_one/approval_panel.dart',
+            },
+            details: {
+              'kind': 'file',
+              'path':
+                  'lib/src/features/a-markedly-long-directory-name/another_long_one/approval_panel.dart',
+            },
+          ),
+        );
+        expect(
+          textDefects(tester),
+          isEmpty,
+          reason: 'a file ask with a long path',
+        );
+
+        // No subject at all: the row then carries only the three buttons.
+        await pump(tester, step: step, request: noSubjectAsk);
+        expect(
+          textDefects(tester),
+          isEmpty,
+          reason: 'an ask with nothing to remember',
+        );
+      });
+    }
   });
 }

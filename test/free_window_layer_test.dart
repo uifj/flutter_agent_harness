@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'amplified_text_probe.dart';
 import 'fake_terminal_process.dart';
 import 'fake_turn_source.dart';
 
@@ -48,7 +49,7 @@ void main() {
     support.deleteSync(recursive: true);
   });
 
-  Future<void> pump(WidgetTester tester) async {
+  Future<void> pump(WidgetTester tester, {double step = 1.0}) async {
     // The default 800x600 test viewport would clamp every window to an 800px
     // wide layer and swallow half the geometry assertions.
     tester.view.physicalSize = const Size(1400, 900);
@@ -61,10 +62,13 @@ void main() {
           body: SizedBox(
             width: 1200,
             height: 800,
-            child: FreeWindowLayer(
-              workbench: workbench,
-              conversation: conversation,
-              terminals: terminals.manager(),
+            child: AmplifiedText(
+              step: step,
+              child: FreeWindowLayer(
+                workbench: workbench,
+                conversation: conversation,
+                terminals: terminals.manager(),
+              ),
             ),
           ),
         ),
@@ -161,5 +165,40 @@ void main() {
     workbench.floatTab('terminal:1', 600, 400, 1200, 800);
     await pump(tester);
     expect(workbench.state.floats.single.tab.type, BuiltinTabType.terminal);
+  });
+
+  // A free window is chrome the pane walk never lays out: its own title bar,
+  // its own resize grip, and a header menu that only exists once right-clicked.
+  group('amplified text', () {
+    for (final (label, step) in const [
+      ('1.8x', amplifiedTextStep),
+      ('2.2x', nextTextStep),
+    ]) {
+      testWidgets('the window and its header menu keep their labels ($label)', (
+        tester,
+      ) async {
+        // A terminal over the fake spawner: the git tab would arm a 30s process
+        // timeout that outlives the test.
+        workbench.openTerminal();
+        workbench.floatTab(workbench.state.tabs.last.id, 60, 60, 520, 360);
+        await pump(tester, step: step);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Terminal 1'), findsOneWidget);
+        expect(textDefects(tester), isEmpty, reason: 'the window frame');
+
+        await tester.tapAt(
+          tester.getTopLeft(find.text('Terminal 1')) + const Offset(4, 4),
+          buttons: kSecondaryButton,
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Dock to sidebar'), findsOneWidget);
+        expect(textDefects(tester), isEmpty, reason: 'the header menu');
+
+        await tester.tapAt(const Offset(4, 4));
+        await tester.pumpAndSettle();
+        expect(find.text('Dock to sidebar'), findsNothing);
+      });
+    }
   });
 }

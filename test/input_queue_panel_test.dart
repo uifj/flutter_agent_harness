@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'amplified_text_probe.dart';
 import 'fake_turn_source.dart';
 
 void main() {
@@ -38,11 +39,16 @@ void main() {
     tail.dispose();
   });
 
-  Future<void> pump(WidgetTester tester) async {
+  Future<void> pump(WidgetTester tester, {double step = 1.0}) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: dswThemeData(Brightness.light),
-        home: Scaffold(body: _QueueHost(conversation: controller)),
+        home: Scaffold(
+          body: AmplifiedText(
+            step: step,
+            child: _QueueHost(conversation: controller),
+          ),
+        ),
       ),
     );
   }
@@ -111,6 +117,47 @@ void main() {
 
     expect(queuedTexts(), ['beta', 'alpha', 'gamma']);
     expect(find.text('alpha'), findsOneWidget);
+  });
+
+  // The panel is a strip of rows the user reads in a hurry while a turn is
+  // still running, so a cut preview or a lost delivery tag is a real loss.
+  group('amplified text', () {
+    for (final (label, step) in const [
+      ('1.8x', amplifiedTextStep),
+      ('2.2x', nextTextStep),
+    ]) {
+      testWidgets(
+        'the rows and their delivery tags keep their labels ($label)',
+        (tester) async {
+          await pump(tester, step: step);
+          expect(find.text('Waiting to send'), findsOneWidget);
+          expect(textDefects(tester), isEmpty, reason: 'three short rows');
+
+          // One unbreakable token longer than the strip: what a pasted path
+          // does to a queue row. The short rows go first because the strip
+          // caps itself at 152px over a lazy list — at this step the row that
+          // lands last is below the fold and never built, and a ruler aimed at
+          // a row the tree didn't build passes for the wrong reason.
+          for (final input in controller.pendingInputs.toList()) {
+            controller.removeQueued(input.id);
+          }
+          controller.send(
+            'a-very-long-single-token-draft-that-nobody-can-break-' * 3,
+          );
+          await tester.pump();
+          // Assert the row is really on screen before trusting the ruler.
+          expect(
+            find.textContaining('a-very-long-single-token'),
+            findsOneWidget,
+          );
+          expect(
+            textDefects(tester),
+            isEmpty,
+            reason: 'a row of one long token',
+          );
+        },
+      );
+    }
   });
 }
 
