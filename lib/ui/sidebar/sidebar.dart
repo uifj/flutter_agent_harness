@@ -33,6 +33,13 @@ import '../layout/columns.dart';
 /// Wide-content unmount delay; matches the 150ms wide-content fade-out.
 const _collapseSettle = Duration(milliseconds: 150);
 
+/// The New Session bar's round: a 12px card expanded, a full circle on the rail.
+///
+/// Spelled once because the hover wash and the fill draw the same round — two
+/// copies of that decision is a seam where they can disagree.
+BorderRadius _barRadius(bool wide) =>
+    DswShape.radius(wide ? DswShape.shell : DswShape.pill);
+
 class Sidebar extends StatefulWidget {
   const Sidebar({
     super.key,
@@ -175,7 +182,10 @@ class _SidebarState extends State<Sidebar> {
             // Rail geometry: 36x36 controls centred in the 56px rail (10px sides),
             // 18px from the rail top to the first control.
             padding: wide
-                ? const EdgeInsets.symmetric(horizontal: 12, vertical: 8)
+                ? const EdgeInsets.symmetric(
+                    horizontal: DswShape.sidebarInset,
+                    vertical: DswShape.sm,
+                  )
                 : const EdgeInsets.fromLTRB(10, 18, 10, 8),
             child: Column(
               crossAxisAlignment: wide
@@ -184,13 +194,13 @@ class _SidebarState extends State<Sidebar> {
               children: [
                 _logoRow(color, wide: wide),
                 if (widget.onSelectMode != null) ...[
-                  const SizedBox(height: 4),
+                  SizedBox(height: wide ? DswShape.md : DswShape.xs),
                   _modeSwitch(color, wide: wide),
                   // The plan workspace's extension panels (ADR-0007 D4) —
                   // starkins's `_ExtensionGroup` shape: visible only in 企划,
                   // each row its own toggle.
                   if (widget.mode == WorkspaceMode.plan) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: DswShape.sm),
                     _extensionGroup(color, wide: wide),
                   ],
                 ],
@@ -370,85 +380,81 @@ class _SidebarState extends State<Sidebar> {
 
   /// 60px expanded, 36px on the rail. Expanded, the brand doubles as a New
   /// Session shortcut and the toggle sits at the right edge.
+  ///
+  /// No horizontal inset of its own: the column already pads by
+  /// [DswShape.sidebarInset], and adding a second offset here is what put the
+  /// logo four pixels off the line every row below it starts on.
   Widget _logoRow(DswAlias color, {required bool wide}) => SizedBox(
     height: wide ? 60 : 36,
-    child: Padding(
-      padding: wide
-          ? const EdgeInsets.only(left: 4, top: 8, bottom: 8)
-          : EdgeInsets.zero,
-      child: Row(
-        mainAxisAlignment: wide
-            ? MainAxisAlignment.spaceBetween
-            : MainAxisAlignment.start,
-        children: [
-          if (wide)
-            Expanded(
-              child: _Pressable(
-                onTap: widget.onNewSession,
-                child: Row(
-                  children: [
-                    Icon(
-                      LucideIcons.droplet,
-                      size: 24,
-                      color: color.labelPrimary,
-                    ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        'DSH',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        // 18px/24px, weight 600, letter-spacing 0.04em — the one
-                        // place dsh sets type outside the token scale.
-                        style: DswType.l20.copyWith(
-                          fontSize: 18,
-                          height: 24 / 18,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 18 * 0.04,
-                          color: color.labelPrimary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          _IconButton(
-            onTap: widget.onToggle,
-            wide: wide,
-            tooltip: widget.collapsed
-                ? context.tr('openSidebar')
-                : context.tr('collapseSidebar'),
-            // On the rail the toggle rests as the brand mark and reveals the
-            // panel icon on hover — that swap *is* the expand affordance.
-            builder: (hovered) => wide || hovered
-                ? Icon(
-                    LucideIcons.panel_right,
-                    size: wide ? 16 : 18,
-                    color: wide ? color.labelSecondary : color.labelPrimary,
-                  )
-                : Icon(
+    child: Row(
+      mainAxisAlignment: wide
+          ? MainAxisAlignment.spaceBetween
+          : MainAxisAlignment.start,
+      children: [
+        if (wide)
+          Expanded(
+            child: _Pressable(
+              onTap: widget.onNewSession,
+              child: Row(
+                children: [
+                  Icon(
                     LucideIcons.droplet,
                     size: 24,
                     color: color.labelPrimary,
                   ),
+                  const SizedBox(width: DswShape.sm),
+                  Flexible(
+                    child: Text(
+                      context.tr('appName'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      // 18px/24px, weight 600, letter-spacing 0.04em — the one
+                      // place dsh sets type outside the token scale.
+                      style: DswType.l20.copyWith(
+                        fontSize: 18,
+                        height: 24 / 18,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 18 * 0.04,
+                        color: color.labelPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ],
-      ),
+        _IconButton(
+          onTap: widget.onToggle,
+          wide: wide,
+          tooltip: widget.collapsed
+              ? context.tr('openSidebar')
+              : context.tr('collapseSidebar'),
+          // On the rail the toggle rests as the brand mark and reveals the
+          // panel icon on hover — that swap *is* the expand affordance.
+          builder: (hovered) => wide || hovered
+              ? Icon(
+                  LucideIcons.panel_right,
+                  size: wide ? 16 : 18,
+                  color: wide ? color.labelSecondary : color.labelPrimary,
+                )
+              : Icon(LucideIcons.droplet, size: 24, color: color.labelPrimary),
+        ),
+      ],
     ),
   );
 
   /// A 38px bar with a 12px radius expanded; a plain rail control collapsed.
   Widget _newSessionButton(DswAlias color, {required bool wide}) => Padding(
-    padding: wide
-        ? const EdgeInsets.fromLTRB(2, 0, 2, 10)
-        : const EdgeInsets.only(bottom: 12),
+    // No side inset: this bar sits between the mode switch and the session
+    // list, both of which fill the column, and being 4px narrower than the
+    // two controls it is stacked between is what read as "misaligned".
+    padding: const EdgeInsets.only(bottom: DswShape.md),
     child: Align(
       alignment: AlignmentDirectional.topStart,
       child: _Pressable(
         onTap: widget.onNewSession,
         hoverColor: wide ? color.buttonFloatingHover : color.interactiveBgHover,
-        borderRadius: BorderRadius.circular(wide ? 12 : 999),
+        borderRadius: _barRadius(wide),
         // Deliberately not animated. The two forms differ in width, and the wide
         // one hugs its label, so the pair is a finite width against an unbounded
         // one — `AnimatedContainer` lerps its constraints and cannot interpolate
@@ -465,7 +471,7 @@ class _SidebarState extends State<Sidebar> {
           decoration: BoxDecoration(
             color: wide ? color.buttonElevatedFill : Colors.transparent,
             border: wide ? Border.all(color: color.borderL2) : null,
-            borderRadius: BorderRadius.circular(wide ? 12 : 999),
+            borderRadius: _barRadius(wide),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,

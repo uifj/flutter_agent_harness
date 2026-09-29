@@ -9,13 +9,18 @@
 //
 // So the contract here is coarse: put the rail in each form, pump the frames
 // between them, and assert nothing was thrown.
+//
+// The last test is not about the collapse. It pins the one line every control
+// in the column shares, and the product name the brand row wears.
 
 import 'package:agent_harness/model/conversation.dart';
 import 'package:agent_harness/state/session_index.dart';
+import 'package:agent_harness/theme/dsw_shape.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
 import 'package:agent_harness/ui/layout/columns.dart';
 import 'package:agent_harness/ui/sidebar/sidebar.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_turn_source.dart';
@@ -128,5 +133,47 @@ void main() {
     await pump(tester, collapsed: true);
     await cross(tester);
     expect(tester.takeException(), isNull);
+  });
+
+  /// The brand row starts on the same line as the controls under it, and it
+  /// wears this product's name.
+  ///
+  /// Both were wrong at once. The row added its own `left: 4` on top of the
+  /// column's inset, which made the logo the one thing in the sidebar not
+  /// lining up with the list below it; and it spelled the initials of the
+  /// project this one was written after, which is not a thing to ship.
+  testWidgets('the brand row lines up and wears our name', (tester) async {
+    source.sessions = [
+      SessionSummary(
+        id: 's1',
+        updatedAt: DateTime(2026, 8, 25),
+        title: 'Session 1',
+      ),
+    ];
+    await index.refresh();
+    await pump(tester, collapsed: false);
+
+    expect(find.text('Agent Harness'), findsOneWidget);
+    expect(find.text('DSH'), findsNothing);
+
+    // Everything the column stretches has to begin on its inset, so a second
+    // offset anywhere in a row is now a failing test rather than a sighted
+    // reviewer's job.
+    final left = DswShape.sidebarInset;
+    expect(tester.getTopLeft(find.byIcon(LucideIcons.droplet)).dx, left);
+    for (final label in ['New Session', 'Session 1']) {
+      expect(
+        tester
+            .getTopLeft(
+              find.ancestor(
+                of: find.text(label),
+                matching: find.byType(AnimatedContainer),
+              ),
+            )
+            .dx,
+        left,
+        reason: '$label is off the column inset',
+      );
+    }
   });
 }

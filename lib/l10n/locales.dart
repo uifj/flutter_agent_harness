@@ -31,6 +31,11 @@ enum AppLocaleId { en, zh }
 
 /// English — the source language every string was written in first.
 const enStrings = <String, String>{
+  // The product name in the sidebar brand row. It was the literal 'DSH' — the
+  // name of the project this one was written after, which is not a thing to
+  // ship. Not translated: a name is a name in either language.
+  'appName': 'Agent Harness',
+
   // Common
   'close': 'Close',
   'cancel': 'Cancel',
@@ -496,6 +501,8 @@ const enStrings = <String, String>{
 /// at lookup, so a half-added string renders in English rather than as its
 /// key.
 const zhStrings = <String, String>{
+  'appName': 'Agent Harness',
+
   // Common
   'close': '关闭',
   'cancel': '取消',

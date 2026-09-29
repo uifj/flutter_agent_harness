@@ -62,8 +62,12 @@ abstract final class DswShape {
   static const gapMd = EdgeInsets.all(md);
   static const gapLg = EdgeInsets.all(lg);
 
-  /// The horizontal inset shared by sidebar rows, so the brand row, the mode
-  /// toggle and the session list all start on the same line.
+  /// The sidebar's single horizontal inset. Every row — brand, mode toggle,
+  /// new-session, the session list — starts on this line because the whole
+  /// column is padded by it once. It was 12 on the column plus 4 more on the
+  /// brand row, which is how a logo ended up not lining up with its own list.
+  static const sidebarInset = 12.0;
+
   static const rowInset = EdgeInsets.symmetric(horizontal: sm, vertical: xs);
 
   // --- sizes ----------------------------------------------------------------
