@@ -1,0 +1,12 @@
+{
+  "_comment": "Today's accepted architecture violations. check_architecture fails only on a fingerprint absent here, so a rule cannot be re-broken. Shrink it with: dart tool/check_architecture.dart --update",
+  "violations": [
+    "ui-owns-no-direct-io|lib/ui/conversation/composer.dart|import 'dart:io' show Platform, Process;",
+    "ui-owns-no-direct-io|lib/ui/plan/plan_workspace.dart|import 'dart:io';",
+    "ui-owns-no-direct-io|lib/ui/settings/model_settings.dart|import 'dart:io' show Directory, HttpException, SocketException;",
+    "ui-owns-no-direct-io|lib/ui/workbench/tabs/browser_tab.dart|import 'dart:io';",
+    "ui-owns-no-direct-io|lib/ui/workbench/tabs/diff_tab.dart|import 'dart:io';",
+    "ui-owns-no-direct-io|lib/ui/workbench/tabs/editor_tab.dart|import 'dart:io';",
+    "ui-owns-no-direct-io|lib/ui/workbench/tabs/file_tree_tab.dart|import 'dart:io';"
+  ]
+}
