@@ -42,7 +42,9 @@ import 'workbench_prefs_scope.dart';
 import '../primitives/tappable.dart';
 
 /// Strip height — tall enough that the 32px circular controls sit in it
-/// comfortably, matching the sidebar session row rhythm.
+/// comfortably, matching the sidebar session row rhythm. One line of chrome, so
+/// the seat rides the text step: pinned at 36 the tab title wanted 40.0 of the
+/// 33.5 left inside it once the system amplified text past 1.8x.
 const tabBarHeight = 36.0;
 
 /// What a tab drag carries: enough to run [SidebarState.moveTab] without asking
@@ -81,7 +83,7 @@ class WorkbenchTabBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = context.dsw;
     return Container(
-      height: tabBarHeight,
+      height: tabBarHeight * MediaQuery.textScalerOf(context).scale(1),
       decoration: BoxDecoration(
         color: color.bgLayer1,
         border: Border(bottom: BorderSide(color: color.borderL1)),
@@ -234,7 +236,7 @@ class _NewTabButton extends StatelessWidget {
       ],
       child: Container(
         width: 30,
-        height: tabBarHeight,
+        height: tabBarHeight * MediaQuery.textScalerOf(context).scale(1),
         color: Colors.transparent,
         child: Icon(LucideIcons.plus, size: 14, color: color.labelSecondary),
       ),
@@ -349,7 +351,7 @@ class _TabChipState extends State<_TabChip> {
     final body = AnimatedContainer(
       duration: DswMotion.respecting(context, DswMotion.fast),
       curve: DswMotion.easeInOut,
-      height: tabBarHeight,
+      height: tabBarHeight * MediaQuery.textScalerOf(context).scale(1),
       constraints: const BoxConstraints(maxWidth: 160),
       padding: const EdgeInsets.only(left: 8, right: 4),
       decoration: BoxDecoration(
@@ -594,7 +596,7 @@ class _AppendTargetState extends State<_AppendTarget> {
       },
       builder: (context, candidate, rejected) => Container(
         width: 24,
-        height: tabBarHeight,
+        height: tabBarHeight * MediaQuery.textScalerOf(context).scale(1),
         color: _dropping ? color.interactiveBgHover : Colors.transparent,
       ),
     );
@@ -712,7 +714,7 @@ class _StripButton extends StatelessWidget {
           );
           return Container(
             width: 22,
-            height: tabBarHeight,
+            height: tabBarHeight * MediaQuery.textScalerOf(context).scale(1),
             color: hovered ? color.interactiveBgHover : Colors.transparent,
             child: Center(
               child: rotated

@@ -864,11 +864,18 @@ class _SettingsPanelState extends State<SettingsPanel> {
             Expanded(
               child: Row(
                 children: [
-                  Text(
-                    _providerName(context, provider),
-                    style: DswType.s14.copyWith(
-                      color: color.labelPrimary,
-                      fontWeight: FontWeight.w500,
+                  // The dot keeps its seat, so the name is what yields: a bare
+                  // Text here is handed the row's whole width and spills past it
+                  // once the system amplifies text.
+                  Flexible(
+                    child: Text(
+                      _providerName(context, provider),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: DswType.s14.copyWith(
+                        color: color.labelPrimary,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                   if (_savedProvider == provider) ...[
@@ -1806,7 +1813,9 @@ class _NavCellState extends State<_NavCell> {
       toggled: widget.active ? true : null,
       builder: (context, hovered, _) => AnimatedContainer(
         duration: DswMotion.respecting(context, DswMotion.fast),
-        height: 40,
+        // One line of nav, so the seat rides the text step: pinned at 40 the
+        // label wanted 48.0 in it at the system's 1.8x and above.
+        height: 40 * MediaQuery.textScalerOf(context).scale(1),
         padding: const EdgeInsets.only(left: 12, right: 16),
         decoration: BoxDecoration(
           color: widget.active

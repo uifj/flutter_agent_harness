@@ -728,9 +728,13 @@ class _NoteRowState extends State<_NoteRow> {
       onTap: widget.onTap,
       toggled: widget.selected ? true : null,
       builder: (context, hovered, _) => Container(
-        // Two label lines per row, and both scale, so the seat does: at 1.8x the
-        // pair overflowed its 34.0 box and Flutter drew a striped error.
-        height: 34 * MediaQuery.textScalerOf(context).scale(1),
+        // Two label lines per row, so the row is sized by what they need with 34
+        // as the floor rather than a pinned seat: at the system's 1.8x a pinned
+        // pair overflowed its box, and scaling that box still came out 0.2 short
+        // at 2.2x because the scaled line heights round up.
+        constraints: BoxConstraints(
+          minHeight: 34 * MediaQuery.textScalerOf(context).scale(1),
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
           color: widget.selected || hovered ? color.interactiveBgHover : null,

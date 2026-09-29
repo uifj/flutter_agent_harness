@@ -242,7 +242,9 @@ class _BoardViewState extends State<_BoardView> {
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        height: 40,
+        // One line of column chrome, so the seat rides the text step: pinned at
+        // 40 the group name wanted 48.0 in it once the system amplified text.
+        height: 40 * MediaQuery.textScalerOf(context).scale(1),
       ),
     );
   }

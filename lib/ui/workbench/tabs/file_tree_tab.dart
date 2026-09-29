@@ -447,7 +447,9 @@ class _FileTreeTabState extends State<FileTreeTab> {
   }
 
   Widget _header(DswAlias color) => Container(
-    height: 28,
+    // One line of chrome, so the seat rides the text step: pinned at 28 the
+    // workspace name wanted 31.0 of the 27.0 left inside it at 2.2x.
+    height: 28 * MediaQuery.textScalerOf(context).scale(1),
     padding: const EdgeInsets.only(left: 10, right: 4),
     decoration: BoxDecoration(
       color: color.bgLayer1,
