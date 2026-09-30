@@ -15,7 +15,7 @@
 
 | # | 面（截图证据） | 现状 | 判定 | 换成 / 理由 | 批次 |
 | --- | --- | --- | --- | --- | --- |
-| 1 | 企划/代理分段控件（`5dfe47f3` 侧栏） | `sidebar.dart:256` 手画 Container+Row | 封装 | shad 无 ToggleGroup；新 `primitives/segmented.dart`：轨道 + 选中格，皮取 `bgLayer1`/`bgLayer2`+`borderL2`，点击格走 `DswHoverTap` | B8 |
+| 1 | 企划/代理分段控件（`5dfe47f3` 侧栏） | `sidebar.dart:256` 手画 Container+Row | **保留**（试过，回退） | shad 无 ToggleGroup，所以按决策 2 抽了 `primitives/segmented.dart`（轨道 + 两枚 `ShadButton.ghost`）并把宽栏接上去：**放大文本守卫当场红**，`amplified_text_probe` 在 shad 的 decorator 造出的 render box 上撞到 `hasSize` 断言（`render_box.dart:2251`），去掉自算座位高度也一样，说明是库那层 `CustomPaint`/`MouseArea` 链与探针的走法冲突，不是座位数学。四条点击性质 `DswHoverTap` 已给足，标签让位律与两档守卫都已在 sidebar 上量过并有断言；而全应用只有这一枚分段控件——一枚没有第二个读者的原语正是 ADR-0025 拦的那种。要真做，先立 ADR 说清探针怎么穿过 shad 的 decorator | — |
 | 2 | 新会话（`5dfe47f3`） | `sidebar.dart:507` `_Pressable`+Container | **保留**（判定改） | 指针／键盘／语义／焦点四条 ADR-0021 已满足（`DswHoverTap` 本就是放行的一支），换 `ShadButton` 得不到任何新性质；而它的两档形态（宽栏 hug 标签 ／ rail 36 见方）与刻意不做动画的理由（`AnimatedContainer` 在有限宽与无界宽之间无法插值，注释已写）都要往 shad 的固定座位里硬塞 | — |
 | 3 | 会话行（`5dfe47f3`/`86e0bd57` 选中态） | `sidebar.dart:809` | 封装（沿用） | shad 无 list 组件；`DswHoverTap` 行，selected/hover 皮已在令牌（ADR-0017 S2） | — |
 | 4 | 图标钮族：logo 折叠、页脚齿轮/详情、外壳右上两钮、详情栏关闭 | `sidebar.dart:447,624,681`；`app_frame.dart:529,536,550`；`details_panel.dart:215` | shad（经原语） | `DswIconButton` 的**身体**改 `ShadIconButton`（ADR-0036 决策 3；wrapper 仍管 tooltip=语义名、半径按盒、色阶、动效） | B8 |
@@ -48,7 +48,7 @@
 | 31 ✅ | git 面板三把菜单（同族） | `git_tab.dart:462,525,1036` | shad | 选项类 `ShadSelect` / 行右键 `ShadContextMenuRegion` | B6 |
 | 32 | tab chip 与拖拽 / pane 欢迎页 | `workbench_tab_bar.dart:272`；`pane.dart:232,331` | 保留 / shad | chip 可拖拽重排，shad Tabs 无 reorder → 保留；欢迎页动作卡 → `ShadCard`+`ShadButton.outline` | B8 |
 | 33 ✅ | 静态标签 pill | `primitives/pill.dart:15` | shad | `ShadBadge` | B7 |
-| 34 | 图标钮原语身体 | `primitives/icon_button.dart:26` | shad（身体） | `ShadIconButton` | B8 |
+| 34 ✅ | 图标钮原语身体 | `primitives/icon_button.dart:26` | shad（身体） | `ShadIconButton.ghost`：焦点环／`disabledOpacity`／按压语义由库给，wrapper 继续只管 tooltip=语义名、半径按盒推、三档色阶（一条被反向验过的断言钉着：挪错一档即红）；`icon_button_test` 新增一条身体类型断言（正+反） | B8 |
 | 35 | CapsuleButton wrapper | `primitives/capsule_button.dart:42` | 已 shad | 调用点迁完后删 wrapper（可选收尾，登记不强制） | — |
 | 36 | 内容块 code/read/diff/search/terminal、state_dot、row_sweep | `primitives/*` | 保留 | bespoke 内容面，非组件层 | — |
 
