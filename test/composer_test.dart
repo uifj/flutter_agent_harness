@@ -133,6 +133,13 @@ class _ComposerHostState extends State<_ComposerHost> {
   );
 }
 
+/// What a field holds. A `ShadInput` renders its text through an `EditableText`
+/// and not a `Text`, so `find.text`/`widgetWithText` cannot see the draft at
+/// all — the controller the field is built on is the one place the string is.
+/// (ADR-0036 batch B7 moved the field off Material.)
+String fieldText(WidgetTester tester) =>
+    tester.widget<EditableText>(find.byType(EditableText)).controller.text;
+
 void main() {
   late ApprovalMode mode;
   var newSession = 0;
@@ -400,7 +407,7 @@ void main() {
       tester,
     ) async {
       await pump(tester);
-      await tester.enterText(find.byType(TextField), '/');
+      await tester.enterText(find.byType(EditableText), '/');
       await tester.pump();
 
       expect(find.text('Commands'), findsOneWidget);
@@ -413,7 +420,7 @@ void main() {
       tester,
     ) async {
       await pump(tester, withNewSession: false);
-      await tester.enterText(find.byType(TextField), '/');
+      await tester.enterText(find.byType(EditableText), '/');
       await tester.pump();
 
       expect(find.text('Start a new session'), findsNothing);
@@ -421,7 +428,7 @@ void main() {
 
     testWidgets('the token filters the list', (tester) async {
       await pump(tester);
-      await tester.enterText(find.byType(TextField), '/pl');
+      await tester.enterText(find.byType(EditableText), '/pl');
       await tester.pump();
 
       expect(find.text('Switch to plan mode'), findsOneWidget);
@@ -431,7 +438,7 @@ void main() {
 
     testWidgets('a space after the token closes the menu', (tester) async {
       await pump(tester);
-      await tester.enterText(find.byType(TextField), '/pl ');
+      await tester.enterText(find.byType(EditableText), '/pl ');
       await tester.pump();
 
       expect(find.text('Commands'), findsNothing);
@@ -441,7 +448,7 @@ void main() {
       tester,
     ) async {
       await pump(tester);
-      await tester.enterText(find.byType(TextField), '/pl');
+      await tester.enterText(find.byType(EditableText), '/pl');
       await tester.pump();
 
       await tester.tap(find.text('Switch to plan mode'));
@@ -450,7 +457,7 @@ void main() {
       expect(mode, ApprovalMode.plan);
       // The draft was consumed by the command, menu and all.
       expect(find.text('Commands'), findsNothing);
-      expect(find.widgetWithText(TextField, '/pl'), findsNothing);
+      expect(fieldText(tester), isEmpty);
       // And the chip reflects the flip.
       expect(find.text('Plan first'), findsOneWidget);
     });
@@ -459,7 +466,7 @@ void main() {
       tester,
     ) async {
       await pump(tester);
-      await tester.enterText(find.byType(TextField), '/ne');
+      await tester.enterText(find.byType(EditableText), '/ne');
       await tester.pump();
 
       await tester.tap(find.text('Start a new session'));
@@ -473,7 +480,7 @@ void main() {
       tester,
     ) async {
       await pump(tester);
-      await tester.enterText(find.byType(TextField), '/');
+      await tester.enterText(find.byType(EditableText), '/');
       await tester.pump();
 
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
@@ -481,12 +488,12 @@ void main() {
       expect(find.text('Commands'), findsNothing);
 
       // A different token reopens it — the dismissal was for '/' alone.
-      await tester.enterText(find.byType(TextField), '/p');
+      await tester.enterText(find.byType(EditableText), '/p');
       await tester.pump();
       expect(find.text('Commands'), findsOneWidget);
 
       // And typing back to the dismissed token keeps it closed.
-      await tester.enterText(find.byType(TextField), '/');
+      await tester.enterText(find.byType(EditableText), '/');
       await tester.pump();
       expect(find.text('Commands'), findsNothing);
     });
@@ -499,14 +506,14 @@ void main() {
       var sent = 0;
       await pump(tester, blocked: true, onSubmit: (_, _, _) => sent++);
 
-      await tester.enterText(find.byType(TextField), 'hello');
+      await tester.enterText(find.byType(EditableText), 'hello');
       await tester.tap(find.byIcon(LucideIcons.arrow_up));
       await tester.pump();
 
       // The circle belongs to the running turn (it stops it) while the
       // transcript is busy; nothing is lost either way (ADR-0013).
       expect(sent, 0);
-      expect(find.widgetWithText(TextField, 'hello'), findsOneWidget);
+      expect(fieldText(tester), 'hello');
     });
 
     testWidgets('a blocked composer offers the two deliveries', (tester) async {
@@ -517,13 +524,13 @@ void main() {
         onSubmit: (text, images, delivery) => sent = [delivery],
       );
 
-      await tester.enterText(find.byType(TextField), 'hello');
+      await tester.enterText(find.byType(EditableText), 'hello');
       await tester.pump();
       await tester.tap(find.text('Queue'));
       await tester.pump();
       expect(sent, [InputDelivery.queue]);
 
-      await tester.enterText(find.byType(TextField), 'hello');
+      await tester.enterText(find.byType(EditableText), 'hello');
       await tester.pump();
       await tester.tap(find.text('Steer'));
       await tester.pump();
@@ -533,7 +540,7 @@ void main() {
     testWidgets('an idle composer offers neither', (tester) async {
       await pump(tester);
 
-      await tester.enterText(find.byType(TextField), 'hello');
+      await tester.enterText(find.byType(EditableText), 'hello');
       await tester.pump();
 
       expect(find.text('Queue'), findsNothing);
@@ -555,7 +562,7 @@ void main() {
       tester,
     ) async {
       await pump(tester, onLookupFiles: lookup);
-      await tester.enterText(find.byType(TextField), '@');
+      await tester.enterText(find.byType(EditableText), '@');
       await tester.pump();
 
       expect(find.text('Files'), findsOneWidget);
@@ -567,7 +574,7 @@ void main() {
 
     testWidgets('without a lookup the @ types as plain text', (tester) async {
       await pump(tester);
-      await tester.enterText(find.byType(TextField), '@main.dart');
+      await tester.enterText(find.byType(EditableText), '@main.dart');
       await tester.pump();
 
       expect(find.text('Files'), findsNothing);
@@ -576,7 +583,7 @@ void main() {
 
     testWidgets('the token filters the candidates', (tester) async {
       await pump(tester, onLookupFiles: lookup);
-      await tester.enterText(find.byType(TextField), '@ut');
+      await tester.enterText(find.byType(EditableText), '@ut');
       await tester.pump();
 
       expect(find.text('util.dart'), findsOneWidget);
@@ -587,14 +594,14 @@ void main() {
       tester,
     ) async {
       await pump(tester, onLookupFiles: lookup);
-      await tester.enterText(find.byType(TextField), '@main');
+      await tester.enterText(find.byType(EditableText), '@main');
       await tester.pump();
 
       await tester.tap(find.text('main.dart'));
       await tester.pump();
 
       // The token became the readable mention, closed by the trailing space.
-      expect(find.widgetWithText(TextField, '@src/main.dart '), findsOneWidget);
+      expect(fieldText(tester), '@src/main.dart ');
       expect(find.text('Files'), findsNothing);
     });
 
@@ -602,7 +609,7 @@ void main() {
       tester,
     ) async {
       await pump(tester, onLookupFiles: lookup);
-      await tester.enterText(find.byType(TextField), '@sr');
+      await tester.enterText(find.byType(EditableText), '@sr');
       await tester.pump();
 
       await tester.tap(find.text('src'));
@@ -610,7 +617,7 @@ void main() {
 
       // `@src/` stays an open token: the menu now offers the directory's
       // contents, the plugin's continuation flow.
-      expect(find.widgetWithText(TextField, '@src/'), findsOneWidget);
+      expect(fieldText(tester), '@src/');
       expect(find.text('Files'), findsOneWidget);
       expect(find.text('main.dart'), findsOneWidget);
       expect(find.text('util.dart'), findsOneWidget);
@@ -620,7 +627,7 @@ void main() {
 
     testWidgets('a space after the token closes the menu', (tester) async {
       await pump(tester, onLookupFiles: lookup);
-      await tester.enterText(find.byType(TextField), '@main ');
+      await tester.enterText(find.byType(EditableText), '@main ');
       await tester.pump();
 
       expect(find.text('Files'), findsNothing);
@@ -630,7 +637,7 @@ void main() {
       tester,
     ) async {
       await pump(tester, onLookupFiles: lookup);
-      await tester.enterText(find.byType(TextField), '@ma');
+      await tester.enterText(find.byType(EditableText), '@ma');
       await tester.pump();
 
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
@@ -638,12 +645,12 @@ void main() {
       expect(find.text('Files'), findsNothing);
 
       // A different token reopens it — the dismissal was for 'ma' alone.
-      await tester.enterText(find.byType(TextField), '@ut');
+      await tester.enterText(find.byType(EditableText), '@ut');
       await tester.pump();
       expect(find.text('Files'), findsOneWidget);
 
       // And typing back to the dismissed token keeps it closed.
-      await tester.enterText(find.byType(TextField), '@ma');
+      await tester.enterText(find.byType(EditableText), '@ma');
       await tester.pump();
       expect(find.text('Files'), findsNothing);
     });
@@ -653,7 +660,7 @@ void main() {
         tester,
         onLookupFiles: () => Completer<List<FileEntry>>().future,
       );
-      await tester.enterText(find.byType(TextField), '@');
+      await tester.enterText(find.byType(EditableText), '@');
       await tester.pump();
 
       // A pending fetch still shows the menu's chrome — the `@` visibly did
@@ -688,7 +695,7 @@ void main() {
       // The tightest real case: a turn is running, a draft is held, so the row
       // carries attach + mode + queue + guide + model + send at once.
       await pump(tester, width: 260, blocked: true, directory: seeded());
-      await tester.enterText(find.byType(TextField), 'a draft');
+      await tester.enterText(find.byType(EditableText), 'a draft');
       await tester.pump();
 
       expect(tester.takeException(), isNull);
@@ -703,7 +710,7 @@ void main() {
       tester,
     ) async {
       await pump(tester, width: 420, blocked: true, directory: seeded());
-      await tester.enterText(find.byType(TextField), 'a draft');
+      await tester.enterText(find.byType(EditableText), 'a draft');
       await tester.pump();
 
       expect(tester.takeException(), isNull);
@@ -732,7 +739,7 @@ void main() {
       // lands outside the viewport is a door that cannot be opened.
       await pump(tester, width: 260, directory: seeded());
 
-      final field = tester.getRect(find.byType(TextField));
+      final field = tester.getRect(find.byType(EditableText));
       final screen = Rect.fromLTWH(
         0,
         0,
@@ -754,7 +761,7 @@ void main() {
           reason: 'the $firstRow menu',
         );
         expect(
-          tester.getRect(find.byType(TextField)),
+          tester.getRect(find.byType(EditableText)),
           field,
           reason: '$firstRow re-laid the row out',
         );
@@ -802,7 +809,7 @@ void main() {
         // Ellipsised, not dropped: the bar still says which workspace this is.
         final shown = tester.widget<Text>(find.text(p.basename(temp.path)));
         expect(shown.overflow, TextOverflow.ellipsis);
-        expect(tester.getSize(find.byType(TextField)).width, lessThan(300));
+        expect(tester.getSize(find.byType(EditableText)).width, lessThan(300));
       } finally {
         temp.deleteSync(recursive: true);
       }
@@ -883,12 +890,12 @@ void main() {
         await pumpCard(tester);
         expect(textDefects(tester), isEmpty, reason: 'the composer card');
 
-        await tester.enterText(find.byType(TextField), '/');
+        await tester.enterText(find.byType(EditableText), '/');
         await tester.pump();
         expect(find.text('Commands'), findsOneWidget);
         expect(textDefects(tester), isEmpty, reason: 'the command menu');
 
-        await tester.enterText(find.byType(TextField), '@');
+        await tester.enterText(find.byType(EditableText), '@');
         await tester.pump();
         expect(find.text('Files'), findsOneWidget);
         expect(textDefects(tester), isEmpty, reason: 'the mention menu');
@@ -898,7 +905,7 @@ void main() {
         tester,
       ) async {
         await pump(tester, step: step, blocked: true);
-        await tester.enterText(find.byType(TextField), 'hello');
+        await tester.enterText(find.byType(EditableText), 'hello');
         await tester.pumpAndSettle();
         expect(find.text('Queue'), findsOneWidget);
         expect(find.text('Steer'), findsOneWidget);
@@ -935,7 +942,7 @@ void main() {
 
     await pump(tester);
     await tester.pumpAndSettle();
-    final color = tester.element(find.byType(TextField)).dsw;
+    final color = tester.element(find.byType(EditableText)).dsw;
     expect(
       stroke(),
       color.brandPrimary,
@@ -947,7 +954,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(stroke(), color.borderL2DarkmodeThin, reason: 'idle, pointer away');
 
-    await pointer.moveTo(tester.getCenter(find.byType(TextField)));
+    await pointer.moveTo(tester.getCenter(find.byType(EditableText)));
     await tester.pumpAndSettle();
     expect(stroke(), color.borderL3, reason: 'hover, pointer on the card');
 
@@ -955,7 +962,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(stroke(), color.borderL2DarkmodeThin, reason: 'back to idle');
 
-    await tester.tapAt(tester.getCenter(find.byType(TextField)));
+    await tester.tapAt(tester.getCenter(find.byType(EditableText)));
     await tester.pumpAndSettle();
     expect(
       stroke(),

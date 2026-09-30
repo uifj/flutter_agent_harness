@@ -24,6 +24,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadTheme, ShadInput;
 
+/// A settings field, and not the panel's own search box. Since ADR-0036 B7 the
+/// search box is a `ShadInput` too and it sits above every section, so "the
+/// first input in the tree" no longer means "the field under test".
+Finder settingsField({int index = 0}) {
+  final fields = find.byWidgetPredicate(
+    (w) => w is ShadInput && w.key != const ValueKey('settings-search'),
+  );
+  return index == 0 ? fields : fields.at(index);
+}
+
 void main() {
   group('AppSettings', () {
     test('round-trips through JSON', () {
@@ -206,7 +216,7 @@ void main() {
       // The panel opens on General; the key lives in Models.
       await tester.tap(find.text('Models'));
       await tester.pump();
-      await tester.enterText(find.byType(ShadInput).first, '  sk-new\n');
+      await tester.enterText(settingsField(), '  sk-new\n');
       await tester.pump();
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
@@ -232,7 +242,7 @@ void main() {
 
       await tester.tap(find.text('Workspace'));
       await tester.pump();
-      await tester.enterText(find.byType(ShadInput).first, '');
+      await tester.enterText(settingsField(), '');
       await tester.pump();
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
@@ -254,7 +264,7 @@ void main() {
 
       await tester.tap(find.text('Models'));
       await tester.pump();
-      await tester.enterText(find.byType(ShadInput).first, 'sk-typed');
+      await tester.enterText(settingsField(), 'sk-typed');
       await tester.pump();
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pump();
@@ -361,7 +371,7 @@ void main() {
       expect(find.text('OpenAI-compatible'), findsOneWidget);
       expect(find.text('Anthropic'), findsOneWidget);
       expect(find.text('Google'), findsOneWidget);
-      expect(find.byType(ShadInput), findsOneWidget);
+      expect(settingsField(), findsOneWidget);
       expect(find.text('Customized'), findsOneWidget);
 
       // The advanced fields hide behind the disclosure until it is opened.
@@ -381,14 +391,14 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Edit').first);
       await tester.pump();
-      expect(find.byType(ShadInput), findsOneWidget);
+      expect(settingsField(), findsOneWidget);
       expect(find.text('Customized'), findsOneWidget);
 
       // The moved card still carries the advanced fields behind its own
       // disclosure.
       await tester.tap(find.text('Customized'));
       await tester.pump();
-      expect(find.byType(ShadInput), findsNWidgets(3));
+      expect(settingsField(), findsNWidgets(3));
 
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
@@ -565,10 +575,7 @@ void main() {
 
       // The family commits on submit — a half-typed font stack is not a
       // preference.
-      await tester.enterText(
-        find.byType(ShadInput),
-        "'JetBrains Mono', monospace",
-      );
+      await tester.enterText(settingsField(), "'JetBrains Mono', monospace");
       await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pump();
       expect(changes.last.terminalFontFamily, "'JetBrains Mono', monospace");

@@ -140,7 +140,7 @@ void main() {
       tester,
     ) async {
       await pumpTab(tester);
-      await tester.enterText(find.byType(TextField), 'https:///oops');
+      await tester.enterText(find.byType(EditableText), 'https:///oops');
       await tester.tap(find.byIcon(LucideIcons.arrow_right));
       await tester.pump();
 
@@ -152,7 +152,7 @@ void main() {
       tester,
     ) async {
       await pumpTab(tester);
-      await tester.enterText(find.byType(TextField), 'ftp://example.com');
+      await tester.enterText(find.byType(EditableText), 'ftp://example.com');
       await tester.tap(find.byIcon(LucideIcons.arrow_right));
       await tester.pump();
 
@@ -164,7 +164,10 @@ void main() {
 
     testWidgets('loopback is refused with its own words', (tester) async {
       await pumpTab(tester);
-      await tester.enterText(find.byType(TextField), 'http://127.0.0.1:8080');
+      await tester.enterText(
+        find.byType(EditableText),
+        'http://127.0.0.1:8080',
+      );
       await tester.tap(find.byIcon(LucideIcons.arrow_right));
       await tester.pump();
 

@@ -53,6 +53,13 @@ class FakeSideSource implements SideTurnSource {
   void reset() => resets++;
 }
 
+/// What a field holds. A `ShadInput` renders its text through an `EditableText`
+/// and not a `Text`, so `find.text`/`widgetWithText` cannot see the draft at
+/// all — the controller the field is built on is the one place the string is.
+/// (ADR-0036 batch B7 moved the field off Material.)
+String fieldText(WidgetTester tester) =>
+    tester.widget<EditableText>(find.byType(EditableText)).controller.text;
+
 void main() {
   group('the controller', () {
     late SideChatController chat;
@@ -209,7 +216,7 @@ void main() {
     ) async {
       await pumpTab(tester);
 
-      await tester.enterText(find.byType(TextField), 'quick one');
+      await tester.enterText(find.byType(EditableText), 'quick one');
       await tester.tap(find.byIcon(LucideIcons.send));
       await tester.pump();
 
@@ -225,12 +232,12 @@ void main() {
       expect(find.text('Thinking…'), findsNothing);
 
       // The composer was cleared by the send.
-      expect(find.widgetWithText(TextField, 'quick one'), findsNothing);
+      expect(fieldText(tester), isEmpty);
     });
 
     testWidgets('the new-side-chat button resets the exchange', (tester) async {
       await pumpTab(tester);
-      await tester.enterText(find.byType(TextField), 'quick one');
+      await tester.enterText(find.byType(EditableText), 'quick one');
       await tester.tap(find.byIcon(LucideIcons.send));
       await tester.pump();
       source.emit(const TurnFinished(outcome: TurnOutcome.completed));

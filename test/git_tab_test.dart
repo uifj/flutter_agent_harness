@@ -30,6 +30,13 @@ import 'amplified_text_probe.dart';
 import 'clipboard_probe.dart';
 import 'fake_git.dart';
 
+/// What a field holds. A `ShadInput` renders its text through an `EditableText`
+/// and not a `Text`, so `find.text`/`widgetWithText` cannot see the draft at
+/// all — the controller the field is built on is the one place the string is.
+/// (ADR-0036 batch B7 moved the field off Material.)
+String fieldText(WidgetTester tester) =>
+    tester.widget<EditableText>(find.byType(EditableText)).controller.text;
+
 void main() {
   late DirectoryFixture support;
   late WorkbenchController workbench;
@@ -189,7 +196,7 @@ void main() {
     await settle(tester);
 
     expect(fake.commands, contains('commit -m a committed message'));
-    expect(find.widgetWithText(TextField, 'a committed message'), findsNothing);
+    expect(fieldText(tester), isEmpty);
   });
 
   testWidgets('the branch selector switches branches', (tester) async {
