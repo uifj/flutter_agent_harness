@@ -898,7 +898,6 @@ class ComposerState extends State<Composer> {
     final enabled = widget.busy || (!widget.blocked && _hasPayload);
     return Tooltip(
       message: widget.busy ? context.tr('stop') : context.tr('send'),
-      waitDuration: const Duration(milliseconds: 500),
       child: _PrimaryButton(
         color: color,
         enabled: enabled,
@@ -1774,7 +1773,6 @@ class _DeliverChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Tooltip(
     message: tip,
-    waitDuration: const Duration(milliseconds: 500),
     child: DswHoverTap(
       onTap: onTap,
       semanticLabel: tip,

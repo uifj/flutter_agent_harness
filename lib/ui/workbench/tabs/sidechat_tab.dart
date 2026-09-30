@@ -383,7 +383,6 @@ class _HeaderButtonState extends State<_HeaderButton> {
     final color = context.dsw;
     return Tooltip(
       message: widget.tooltip,
-      waitDuration: const Duration(milliseconds: 500),
       child: DswHoverTap(
         onTap: widget.onTap,
         semanticLabel: widget.tooltip,

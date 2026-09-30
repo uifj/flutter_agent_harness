@@ -532,7 +532,6 @@ class _TreeRow extends StatelessWidget {
         // deciding which are truncated needs a layout pass; the full path is
         // useful on every row anyway.
         message: error == null ? row.path : '${row.path}\n$error',
-        waitDuration: const Duration(milliseconds: 600),
         child: ColoredBox(
           color: selected
               ? color.sidebarNavItemActive

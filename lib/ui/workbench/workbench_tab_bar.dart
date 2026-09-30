@@ -447,7 +447,6 @@ class _TabChipState extends State<_TabChip> {
               behavior: HitTestBehavior.opaque,
               child: Tooltip(
                 message: widget.tab.path ?? widget.tab.title,
-                waitDuration: const Duration(milliseconds: 600),
                 child: draggable,
               ),
             ),

@@ -563,7 +563,6 @@ class _ToggleButton extends StatelessWidget {
     final color = context.dsw;
     return Tooltip(
       message: tooltip,
-      waitDuration: const Duration(milliseconds: 500),
       child: DswHoverTap(
         onTap: onTap,
         semanticLabel: tooltip,

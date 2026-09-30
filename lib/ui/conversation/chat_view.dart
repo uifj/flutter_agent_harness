@@ -377,7 +377,6 @@ class _ToBottomButton extends StatelessWidget {
     const label = 'Back to bottom';
     return Tooltip(
       message: label,
-      waitDuration: const Duration(milliseconds: 500),
       child: DswHoverTap(
         onTap: onTap,
         semanticLabel: label,

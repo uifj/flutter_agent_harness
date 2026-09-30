@@ -340,7 +340,6 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
   }) {
     return Tooltip(
       message: tooltip,
-      waitDuration: const Duration(milliseconds: 500),
       child: DswHoverTap(
         onTap: onTap,
         builder: (context, hovered, _) => Container(
@@ -382,7 +381,6 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
           if (onPick != null)
             Tooltip(
               message: context.tr('planSwitchWorkspace'),
-              waitDuration: const Duration(milliseconds: 500),
               child: DswHoverTap(
                 onTap: onPick,
                 semanticLabel: context.tr('planSwitchWorkspace'),

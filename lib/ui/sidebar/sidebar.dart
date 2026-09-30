@@ -830,7 +830,6 @@ class _SessionRow extends StatelessWidget {
       // cut. Truncation is the right strategy (audit 2a) - it just has to leave a
       // way to read the rest, which on a desktop means on hover.
       message: title,
-      waitDuration: const Duration(milliseconds: 500),
       child: Semantics(
         // The other half of "which session is up", for a screen reader and for
         // anyone who cannot tell a 10% wash from a 6% one. `container` because
@@ -980,7 +979,6 @@ class _IconButton extends StatelessWidget {
     final size = wide ? 28.0 : 36.0;
     return Tooltip(
       message: tooltip,
-      waitDuration: const Duration(milliseconds: 500),
       child: DswHoverTap(
         onTap: onTap,
         // The tooltip is the button's name; the glyph inside says nothing to a

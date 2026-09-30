@@ -1887,7 +1887,6 @@ class _CloseButtonState extends State<_CloseButton> {
     final label = context.tr('closeSettings');
     return Tooltip(
       message: label,
-      waitDuration: const Duration(milliseconds: 500),
       child: DswHoverTap(
         onTap: widget.onTap,
         semanticLabel: label,
@@ -2213,7 +2212,6 @@ class _RevealButtonState extends State<_RevealButton> {
         : context.tr('showKey');
     return Tooltip(
       message: label,
-      waitDuration: const Duration(milliseconds: 500),
       child: DswHoverTap(
         onTap: widget.onTap,
         semanticLabel: label,
@@ -2251,7 +2249,6 @@ class _CredentialDot extends StatelessWidget {
       message: configured
           ? context.tr('keyConfigured')
           : context.tr('keyMissing'),
-      waitDuration: const Duration(milliseconds: 500),
       child: Container(
         width: 8,
         height: 8,
@@ -2402,7 +2399,6 @@ class _ModelPickButton extends StatelessWidget {
       message: enabled
           ? context.tr('chooseModel')
           : context.tr('noModelsFetched'),
-      waitDuration: const Duration(milliseconds: 500),
       child: PopupMenuButton<String>(
         enabled: enabled,
         position: PopupMenuPosition.under,
@@ -2562,7 +2558,6 @@ class _RemoveButtonState extends State<_RemoveButton> {
     final color = context.dsw;
     return Tooltip(
       message: context.tr('removeServer'),
-      waitDuration: const Duration(milliseconds: 500),
       child: DswHoverTap(
         onTap: widget.onTap,
         semanticLabel: context.tr('removeServer'),

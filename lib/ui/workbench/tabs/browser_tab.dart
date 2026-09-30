@@ -358,7 +358,6 @@ class _BarIconButton extends StatelessWidget {
     final interactive = enabled && onTap != null;
     return Tooltip(
       message: tooltip,
-      waitDuration: const Duration(milliseconds: 500),
       child: DswHoverTap(
         onTap: onTap,
         enabled: interactive,

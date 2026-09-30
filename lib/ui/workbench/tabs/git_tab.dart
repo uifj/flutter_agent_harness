@@ -881,7 +881,6 @@ class _FileRow extends StatelessWidget {
             Expanded(
               child: Tooltip(
                 message: entry.path,
-                waitDuration: const Duration(milliseconds: 600),
                 child: Row(
                   children: [
                     Container(
@@ -952,7 +951,6 @@ class _LogRow extends StatelessWidget {
       excludeSemantics: true,
       builder: (context, hovered, _) => Tooltip(
         message: '${entry.author} · ${entry.date}\n${entry.hashFull}',
-        waitDuration: const Duration(milliseconds: 600),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
           decoration: BoxDecoration(

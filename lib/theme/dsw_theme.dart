@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 
 import 'dsw_alias.dart';
 import 'dsw_typography.dart';
+import 'dsw_motion.dart';
 import 'dsw_shape.dart';
 
 /// The `--dsw-shadow-*` elevation ramp.
@@ -160,6 +161,11 @@ ThemeData dswThemeData(Brightness brightness) {
       labelSmall: DswType.xxxs11,
     ).apply(bodyColor: c.labelPrimary, displayColor: c.labelPrimary),
     tooltipTheme: TooltipThemeData(
+      // The one hover delay: Material's own default is `Duration.zero`
+      // (`tooltip.dart:394`), so without this a bare `Tooltip` pops the moment
+      // the pointer crosses it. Call sites must not set `waitDuration`
+      // (`test/tooltip_timing_test.dart`, ADR-0023).
+      waitDuration: DswMotion.tooltipDelay,
       decoration: BoxDecoration(
         color: c.tooltipBg,
         borderRadius: BorderRadius.circular(DswShape.inner),

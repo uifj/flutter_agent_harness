@@ -25,6 +25,12 @@ abstract final class DswMotion {
   /// `--ds-transition-duration-slow`. Column width changes in `app_frame.dart`.
   static const slow = Duration(milliseconds: 300);
 
+  /// How long the pointer must rest before a tooltip appears. Deliberately not
+  /// run through [respecting]: a delay is not an animation, and collapsing it
+  /// to zero is what made a sweep across the tab strip flash one bubble per
+  /// tab (ADR-0023).
+  static const tooltipDelay = Duration(milliseconds: 500);
+
   /// Collapses [duration] to zero when the user has asked for reduced motion,
   /// the Flutter counterpart of `@media (prefers-reduced-motion: reduce)`.
   ///
