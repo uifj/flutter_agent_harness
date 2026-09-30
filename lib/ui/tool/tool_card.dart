@@ -543,7 +543,7 @@ class _ToolRowModel {
       icon: _icons[variant]!,
       summary: summary,
       summaryIsFailure: failure.isNotEmpty,
-      input: node.arguments.isEmpty ? null : _pretty(node.arguments),
+      input: node.arguments.isEmpty ? null : _render(node.arguments),
       output: output == null || output.isEmpty ? null : output,
       outputIsError: node.errorMessage != null,
       state: state,
@@ -585,7 +585,7 @@ class _ToolRowModel {
         }
       }
     }
-    if (base.isEmpty) base = _firstLine(_pretty(args));
+    if (base.isEmpty) base = _firstLine(_render(args));
     if (_titles.containsKey(node.name)) return base;
     return '${node.name} · $base';
   }
@@ -595,21 +595,62 @@ class _ToolRowModel {
     return newline == -1 ? text : text.substring(0, newline);
   }
 
-  /// A tool's return value as display text: a string verbatim, anything else as
-  /// pretty JSON.
+  /// A tool's return value as display text.
+  ///
+  /// Not the way the model receives it: `JsonEncoder` escapes the newlines
+  /// inside a string value, so a 30-line `ls -la` arrived on screen as one
+  /// unscannable paragraph with literal `\n` in it (ADR-0031, from a real
+  /// window screenshot). Structure is kept — one key per line, so `path` and
+  /// `totalLines` stay readable — while a text payload is printed raw and
+  /// indented under its key. A result that is already a plain string is shown
+  /// as it is.
   static String? _format(Object? output) {
     if (output == null) return null;
-    if (output is String) return output;
-    return _pretty(output);
+    if (output is String) {
+      final decoded = _tryDecode(output);
+      return decoded == null ? output : _render(decoded);
+    }
+    return _render(output);
   }
 
-  static String _pretty(Object value) {
+  /// Only a string that *looks* like a JSON document is tried; a tool that
+  /// answers with prose starting in a brace is shown as that prose.
+  static Object? _tryDecode(String value) {
+    final text = value.trimLeft();
+    if (!text.startsWith('{') && !text.startsWith('[')) return null;
     try {
-      return const JsonEncoder.withIndent('  ').convert(value);
-    } on JsonUnsupportedObjectError {
-      // A tool returned something outside JSON. Showing it plainly beats
-      // showing nothing, and the guard keeps a decoding quirk out of the frame.
-      return value.toString();
+      return jsonDecode(value);
+    } on FormatException {
+      return null;
     }
   }
+
+  static String _render(Object? value, {String at = ''}) {
+    if (value is Map) {
+      if (value.isEmpty) return '$at{}';
+      return value.entries
+          .map((e) {
+            final v = e.value;
+            if (v is String && v.contains('\n')) {
+              return '$at${e.key}:\n${_block(v, '$at  ')}';
+            }
+            if (v is Map || v is List) {
+              return '$at${e.key}:\n${_render(v, at: '$at  ')}';
+            }
+            return '$at${e.key}: ${v is String ? v : _scalar(v)}';
+          })
+          .join('\n');
+    }
+    if (value is List) {
+      if (value.isEmpty) return '$at[]';
+      return value.map((e) => '$at- ${_render(e, at: '').trim()}').join('\n');
+    }
+    return '$at${_scalar(value)}';
+  }
+
+  static String _block(String text, String at) =>
+      text.split('\n').map((line) => '$at$line').join('\n');
+
+  static String _scalar(Object? value) =>
+      value == null ? 'null' : value.toString();
 }
