@@ -119,6 +119,14 @@ ShadThemeData dswShadTheme(Brightness brightness, {double textScale = 1}) {
       checkedTrackColor: c.brandPrimary,
       uncheckedTrackColor: c.bgLayer1,
     ),
+    // A section card (ADR-0036 rows 18/23): the fill, the hairline and the
+    // corner of every grouped surface, said here rather than per panel. `shell`
+    // because a card sits on the page, not inside a control.
+    cardTheme: ShadCardTheme(
+      backgroundColor: c.bgLayer1,
+      border: ShadBorder.all(color: c.borderL2, width: 1),
+      radius: BorderRadius.circular(DswShape.shell),
+    ),
     selectTheme: ShadSelectTheme(
       placeholderStyle: DswType.s14.copyWith(color: c.labelTertiary),
     ),

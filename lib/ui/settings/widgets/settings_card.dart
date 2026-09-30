@@ -24,8 +24,9 @@
 // its own bottom border and the card stays the single source of separation.
 
 import 'package:flutter/widgets.dart';
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadCard;
 
-import '../../../theme/dsw_shape.dart';
+import '../../../theme/dsw_shad_bridge.dart';
 import '../../../theme/dsw_theme.dart';
 
 /// A rounded, hairline-bordered surface that stacks full-width setting rows into
@@ -61,17 +62,19 @@ class SettingsCard extends StatelessWidget {
       }
       rows.add(children[i]);
     }
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(DswShape.shell),
-        border: Border.all(color: color.borderL2),
-      ),
-      padding: padding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: rows,
+    // The body is shad's card, and its skin is the bridge's `cardTheme` —
+    // the frame this widget used to draw is the same frame the tool card and
+    // every other grouped surface will want, and a card that restates its own
+    // radius is how two surfaces become two greys.
+    return dswEnsureShadTheme(
+      context,
+      ShadCard(
+        padding: padding,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: rows,
+        ),
       ),
     );
   }

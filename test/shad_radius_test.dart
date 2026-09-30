@@ -15,6 +15,7 @@
 
 import 'dart:io';
 
+import 'package:agent_harness/theme/dsw_alias.dart';
 import 'package:agent_harness/theme/dsw_shape.dart';
 import 'package:agent_harness/theme/dsw_shad_bridge.dart';
 import 'package:agent_harness/ui/primitives/confirm_dialog.dart';
@@ -89,5 +90,35 @@ void main() {
 
     final dialog = tester.widget<ShadDialog>(find.byType(ShadDialog));
     expect(dialog.radius, BorderRadius.circular(DswShape.float));
+  });
+
+  group('a section card wears the bridge, not its own frame', () {
+    for (final brightness in Brightness.values) {
+      test('$brightness: fill, hairline and corner are stated once', () {
+        final c = brightness == Brightness.dark
+            ? DswAlias.dark
+            : DswAlias.light;
+        final card = dswShadTheme(brightness).cardTheme;
+        // `shell`, not the knob: the knob answers for a field, and a card is the
+        // page's group surface (ADR-0017's ramp, ADR-0029's one-knob split).
+        expect(card.backgroundColor, c.bgLayer1);
+        expect(card.radius, BorderRadius.circular(DswShape.shell));
+        expect(card.border!.top!.color, c.borderL2);
+      });
+    }
+
+    test('the settings card draws no frame of its own', () {
+      final source = File(
+        'lib/ui/settings/widgets/settings_card.dart',
+      ).readAsStringSync();
+      expect(source.contains('ShadCard('), isTrue);
+      expect(
+        RegExp(r'Border\.all\(').hasMatch(source),
+        isFalse,
+        reason:
+            'a frame written here is a second answer to what the bridge says, '
+            'and two answers are how two greys appear on one screen',
+      );
+    });
   });
 }
