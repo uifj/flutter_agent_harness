@@ -1863,9 +1863,17 @@ class _DocumentChip extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 4),
-          GestureDetector(
+          DswHoverTap(
             onTap: onRemove,
-            child: Icon(LucideIcons.x, size: 12, color: color.labelTertiary),
+            semanticLabel: context.tr('removeAttachment'),
+            excludeSemantics: true,
+            builder: (context, hovered, focused) => Icon(
+              LucideIcons.x,
+              size: 12,
+              color: hovered || focused
+                  ? color.labelPrimary
+                  : color.labelTertiary,
+            ),
           ),
         ],
       ),

@@ -36,6 +36,7 @@ import '../theme/dsw_alias.dart';
 import '../theme/dsw_motion.dart';
 import '../theme/dsw_shape.dart';
 import '../theme/dsw_theme.dart';
+import 'primitives/tappable.dart';
 import 'layout/columns.dart';
 
 /// Which divider a gesture belongs to.
@@ -543,9 +544,10 @@ class _ToggleCluster extends StatelessWidget {
   );
 }
 
-/// One 28px circle of the cluster: transparent fill, secondary ink, hover
-/// raises the fill — the app's own icon-button shape, no border, no shadow.
-class _ToggleButton extends StatefulWidget {
+/// One 32px circle of the cluster: transparent fill, secondary ink, hover or
+/// keyboard focus raises the fill — the app's own icon-button shape, no border,
+/// no shadow.
+class _ToggleButton extends StatelessWidget {
   const _ToggleButton({
     required this.icon,
     required this.tooltip,
@@ -557,39 +559,31 @@ class _ToggleButton extends StatefulWidget {
   final VoidCallback onTap;
 
   @override
-  State<_ToggleButton> createState() => _ToggleButtonState();
-}
-
-class _ToggleButtonState extends State<_ToggleButton> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
     final color = context.dsw;
     return Tooltip(
-      message: widget.tooltip,
+      message: tooltip,
       waitDuration: const Duration(milliseconds: 500),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
-          onTap: widget.onTap,
-          behavior: HitTestBehavior.opaque,
-          child: Container(
+      child: DswHoverTap(
+        onTap: onTap,
+        semanticLabel: tooltip,
+        excludeSemantics: true,
+        builder: (context, hovered, focused) {
+          final lit = hovered || focused;
+          return Container(
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: _hovered ? color.interactiveBgHover : Colors.transparent,
+              color: lit ? color.interactiveBgHover : Colors.transparent,
               shape: BoxShape.circle,
             ),
             child: Icon(
-              widget.icon,
+              icon,
               size: 18,
-              color: _hovered ? color.labelPrimary : color.labelSecondary,
+              color: lit ? color.labelPrimary : color.labelSecondary,
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

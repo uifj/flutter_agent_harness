@@ -380,15 +380,19 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
             ),
           ),
           if (onPick != null)
-            GestureDetector(
-              onTap: onPick,
-              child: Tooltip(
-                message: context.tr('planSwitchWorkspace'),
-                waitDuration: const Duration(milliseconds: 500),
-                child: Icon(
+            Tooltip(
+              message: context.tr('planSwitchWorkspace'),
+              waitDuration: const Duration(milliseconds: 500),
+              child: DswHoverTap(
+                onTap: onPick,
+                semanticLabel: context.tr('planSwitchWorkspace'),
+                excludeSemantics: true,
+                builder: (context, hovered, focused) => Icon(
                   LucideIcons.switch_camera,
                   size: 13,
-                  color: color.labelTertiary,
+                  color: hovered || focused
+                      ? color.labelPrimary
+                      : color.labelTertiary,
                 ),
               ),
             ),

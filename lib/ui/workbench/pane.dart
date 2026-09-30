@@ -32,6 +32,7 @@ import '../../model/sidebar_state.dart';
 import '../../model/sidebar_tab.dart';
 import '../../model/split_node.dart';
 import '../../state/workbench_controller.dart';
+import '../primitives/tappable.dart';
 import 'tab_registry.dart';
 import 'workbench_prefs_scope.dart';
 import 'workbench_tab_bar.dart';
@@ -327,7 +328,7 @@ class _Welcome extends StatelessWidget {
   }
 }
 
-class _WelcomeAction extends StatefulWidget {
+class _WelcomeAction extends StatelessWidget {
   const _WelcomeAction({
     required this.label,
     required this.icon,
@@ -341,52 +342,42 @@ class _WelcomeAction extends StatefulWidget {
   final VoidCallback? onTap;
 
   @override
-  State<_WelcomeAction> createState() => _WelcomeActionState();
-}
-
-class _WelcomeActionState extends State<_WelcomeAction> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    final enabled = widget.onTap != null;
+    final enabled = onTap != null;
     final tint = enabled ? color.labelSecondary : color.labelTertiary;
-    return MouseRegion(
-      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: _hovered && enabled
-                ? color.interactiveBgHover
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(DswShape.inset),
-            border: Border.all(color: color.borderL2),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(widget.icon, size: 12, color: tint),
-              const SizedBox(width: 5),
-              // Ellipsized rather than allowed its natural width: splitting a
-              // 300px column gives panes around 140px, and three actions that
-              // insist on their full labels overflow one.
-              Flexible(
-                child: Text(
-                  widget.label,
-                  style: DswType.xxs12.copyWith(color: tint),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                  softWrap: false,
-                ),
+    return DswHoverTap(
+      onTap: onTap,
+      enabled: enabled,
+      semanticLabel: label,
+      excludeSemantics: true,
+      builder: (context, hovered, focused) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: (hovered || focused) && enabled
+              ? color.interactiveBgHover
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(DswShape.inset),
+          border: Border.all(color: color.borderL2),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12, color: tint),
+            const SizedBox(width: 5),
+            // Ellipsized rather than allowed its natural width: splitting a
+            // 300px column gives panes around 140px, and three actions that
+            // insist on their full labels overflow one.
+            Flexible(
+              child: Text(
+                label,
+                style: DswType.xxs12.copyWith(color: tint),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+                softWrap: false,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

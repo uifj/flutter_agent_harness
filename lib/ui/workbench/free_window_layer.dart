@@ -32,6 +32,7 @@ import '../../theme/dsw_typography.dart';
 import '../../model/sidebar_state.dart';
 import '../../state/workbench_controller.dart';
 import 'tab_registry.dart';
+import '../primitives/tappable.dart';
 import 'tabs/git_tab.dart';
 import 'tabs/sidechat_tab.dart';
 import 'tabs/subagent_tab.dart';
@@ -353,41 +354,33 @@ class _FreeWindowState extends State<_FreeWindow> {
 }
 
 /// The header's close affordance — the `_CloseButton` shape the tab strip uses,
-/// at the strip's own scale.
-class _CloseButton extends StatefulWidget {
+/// at the strip's own scale. It names itself, because at 11px it is only a glyph.
+class _CloseButton extends StatelessWidget {
   const _CloseButton({required this.onTap});
 
   final VoidCallback onTap;
 
   @override
-  State<_CloseButton> createState() => _CloseButtonState();
-}
-
-class _CloseButtonState extends State<_CloseButton> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          width: 20,
-          height: 20,
-          decoration: BoxDecoration(
-            color: _hovered ? color.interactiveBgHover : Colors.transparent,
-            borderRadius: BorderRadius.circular(DswShape.inset),
-          ),
-          child: Icon(
-            LucideIcons.x,
-            size: 11,
-            color: _hovered ? color.labelPrimary : color.labelTertiary,
-          ),
+    final label = context.tr('close');
+    return DswHoverTap(
+      onTap: onTap,
+      semanticLabel: label,
+      excludeSemantics: true,
+      builder: (context, hovered, focused) => Container(
+        width: 20,
+        height: 20,
+        decoration: BoxDecoration(
+          color: hovered || focused
+              ? color.interactiveBgHover
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(DswShape.inset),
+        ),
+        child: Icon(
+          LucideIcons.x,
+          size: 11,
+          color: hovered || focused ? color.labelPrimary : color.labelTertiary,
         ),
       ),
     );
