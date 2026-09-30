@@ -283,6 +283,37 @@ void main() {
     });
   });
 
+  group('glyphs sit on the icon ramp', () {
+    // `lib/ui` spelled its glyph sizes as 10, 11, 12, 13, 14, 15, 16, 18 — eight
+    // steps where the reference has four (`button.tsx:33-37`: 10/12/14/16, each
+    // paired with a box size). 11 and 13 are not decisions, they are the numbers
+    // someone typed while the surrounding text was 12px. ADR-0026.
+    test('no Icon names a size off the ramp', () {
+      const onRamp = {10, 12, 14, 16, 18, 20, 24, 28, 32, 34, 40};
+      final literal = RegExp(r'\b(?:icon)?[Ss]ize: (\d+)(?:\.0)?,');
+      final offenders = <String>[];
+      for (final file in Directory('lib/ui').listSync(recursive: true)) {
+        if (file is! File || !file.path.endsWith('.dart')) continue;
+        final lines = file.readAsLinesSync();
+        for (var i = 0; i < lines.length; i++) {
+          final match = literal.firstMatch(lines[i]);
+          if (match == null) continue;
+          if (!onRamp.contains(int.parse(match.group(1)!))) {
+            offenders.add('${file.path}:${i + 1}  ${lines[i].trim()}');
+          }
+        }
+      }
+      expect(
+        offenders,
+        isEmpty,
+        reason:
+            'a glyph size that is not a step of the ramp reads as a rounding '
+            'accident: use DswShape.iconCaption/iconTiny/iconSm/iconMd/iconLg '
+            '(20 and up are boxes and decorative marks, not glyph steps).',
+      );
+    });
+  });
+
   group('every shape token has a reader', () {
     // ADR-0022's law aimed at the theme layer. A constant nothing reads is not
     // harmless: it is a second spelling of a value someone will later
