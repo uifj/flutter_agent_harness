@@ -1,6 +1,6 @@
 # ADR-0036 · 截图里的件换 shad，shad 没有的按 shad 风格封装
 
-- **状态**：IN-PROGRESS（2026-09-30 用户指令：四张真窗截图中的相关组件采用 shadcn_ui 现有组件，没有的按 shadcn_ui 风格自行封装。ACCEPTED 同日；**B6 菜单归一已落 @ d2401a2/5ee3bd4**，B7 按钮与字段 / B8 封装件与身体待做）
+- **状态**：IN-PROGRESS（2026-09-30 用户指令：四张真窗截图中的相关组件采用 shadcn_ui 现有组件，没有的按 shadcn_ui 风格自行封装。ACCEPTED 同日；**B6 菜单归一已落 @ d2401a2/5ee3bd4；B7 的字段/开关/徽标已落 @ d3181fb/b44c73f**，B7 按钮与字段 / B8 封装件与身体待做）
 - **分类**：ARC（ADR-0002 shadcn 迁移的继续，把迁移面从"主题桥 + 按钮"扩到截图内全部件）
 - **优先级**：P2
 - **日期**：2026-09-30
@@ -39,3 +39,5 @@
 ## 实施
 
 **B6 菜单归一（已落 @ d2401a2 代码 / 5ee3bd4 守卫）**：`lib/ui/primitives/menu.dart` 一枚文件收全部三种形状（`DswMenu` = `ShadPopover` 动作菜单、`DswContextMenu` = `ShadContextMenuRegion`、`DswSelect` = `ShadSelect` 值选择器），行与分隔线只有一份（`DswMenuRow` / `DswMenuDivider`），13 处 Material 菜单归零。皮从 `dsw_theme.dart` 的 `popupMenuTheme` 搬进 `dsw_shad_bridge.dart`（`popoverTheme` + `optionTheme` + `contextMenuTheme`），`popupMenuTheme` 与零读取的 `DswAlias.menu` 一并删除；守卫 `test/shad_menu_adoption_test.dart`（源码计数）与 `test/menu_chrome_test.dart`（读皮，认法改缝、断言留）各先红后绿。四条实现期量到的事实记在映射表 `docs/shad-adoption-2026-09-30.md` §2 的「B6 落地的四条事实」，其中**屏幕上现在有两套 Lucide 字体**一条已另登观察表。
+
+**B7 字段与开关（部分落 @ d3181fb 代码 / b44c73f 守卫）**：五处 `TextField` 换 `ShadInput`（桥补 `inputTheme`，字段皮从此只在桥说一次；框内字段传 `dswBareInput`），设置开关换 `ShadSwitch`（其 `onChanged` 此前根本没接线——只有行在动作），`Pill` 换 `ShadBadge`。守卫 `test/shad_widget_adoption_test.dart` 三条零容忍计数 + 一条正向对照，先红于 5 字段 / 1 自画开关 / pill。余 发送圆钮、新会话、投递药丸 三行（15/16/2）。
