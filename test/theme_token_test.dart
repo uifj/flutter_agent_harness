@@ -94,9 +94,6 @@ void main() {
       // --dsw-alias-button-primary-fill: var(--dsw-alias-brand-primary)
       expect(DswAlias.light.buttonPrimaryFill, DswAlias.light.brandPrimary);
       expect(DswAlias.dark.buttonPrimaryFill, DswAlias.dark.brandPrimary);
-      // --dsw-specific-menu: var(--dsw-alias-bg-layer-3)
-      expect(DswAlias.light.menu, DswAlias.light.bgLayer3);
-      expect(DswAlias.dark.menu, DswAlias.dark.bgLayer3);
     });
 
     test('tokens the source leaves theme-invariant stay identical', () {

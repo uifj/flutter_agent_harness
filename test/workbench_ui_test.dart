@@ -22,6 +22,7 @@ import 'package:agent_harness/model/fs_revision.dart';
 import 'package:agent_harness/model/sidebar_tab.dart';
 import 'package:agent_harness/state/workbench_controller.dart';
 import 'package:agent_harness/state/workbench_store.dart';
+import 'package:agent_harness/ui/primitives/menu.dart' show DswMenuRow;
 import 'package:agent_harness/ui/workbench/workbench.dart';
 import 'package:agent_harness/ui/workbench/workbench_prefs_scope.dart';
 import 'package:agent_harness/ui/workbench/workbench_tab_bar.dart';
@@ -29,6 +30,7 @@ import 'package:agent_harness/state/conversation_controller.dart';
 import 'package:agent_harness/state/streaming_tail.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -186,11 +188,12 @@ void main() {
       await tester.tap(find.byTooltip('New tab'));
       await tester.pumpAndSettle();
       // Scoped to the menu rows: an empty pane's welcome cards carry the same
-      // labels behind the popup. The predicate matcher is because find.byType
-      // is generic-exact (PopupMenuItem<String> ≠ PopupMenuItem<dynamic>).
+      // labels behind the popup. The predicate matcher is because the row is
+      // the primitive's own widget, not a Text, and `find.byType` would not
+      // name it at a call site that passes no type argument.
       Finder menuRow(String label) => find.ancestor(
         of: find.text(label),
-        matching: find.byWidgetPredicate((w) => w is PopupMenuItem),
+        matching: find.byWidgetPredicate((w) => w is DswMenuRow),
       );
       expect(menuRow('Explorer'), findsOneWidget);
       expect(menuRow('Terminal'), findsOneWidget);
@@ -211,7 +214,7 @@ void main() {
       await tester.tap(
         find.ancestor(
           of: find.text('Explorer'),
-          matching: find.byWidgetPredicate((w) => w is PopupMenuItem),
+          matching: find.byWidgetPredicate((w) => w is DswMenuRow),
         ),
       );
       await tester.pumpAndSettle();
@@ -237,7 +240,7 @@ void main() {
       await tester.pumpAndSettle();
       Finder menuRow(String label) => find.ancestor(
         of: find.text(label),
-        matching: find.byWidgetPredicate((w) => w is PopupMenuItem),
+        matching: find.byWidgetPredicate((w) => w is DswMenuRow),
       );
       expect(menuRow('Explorer'), findsOneWidget);
       expect(menuRow('Terminal'), findsNothing);
@@ -657,7 +660,10 @@ void main() {
         expect(textDefects(tester), isEmpty, reason: 'the tree row menu');
 
         // Tap the barrier: a menu left open would cover the next stage.
-        await tester.tapAt(const Offset(2, 2));
+        // Escape, not a tap in a corner: at the amplified steps the menu's own
+        // rows reach the corner, so a "tap outside" lands inside it and the
+        // next stage measures a popup that is still open.
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
         await tester.pumpAndSettle();
         expect(find.text('Copy relative path'), findsNothing);
 
@@ -675,7 +681,10 @@ void main() {
 
         // Same for this one: a menu still on screen when the test ends leaves
         // its route's timer armed, and the binding fails the test for that.
-        await tester.tapAt(const Offset(2, 2));
+        // Escape, not a tap in a corner: at the amplified steps the menu's own
+        // rows reach the corner, so a "tap outside" lands inside it and the
+        // next stage measures a popup that is still open.
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
         await tester.pumpAndSettle();
         expect(find.text('Close all'), findsNothing);
         expect(tester.takeException(), isNull);
@@ -735,7 +744,7 @@ void main() {
           expect(find.text('Terminal'), findsOneWidget);
           expect(textDefects(tester), isEmpty, reason: 'the + opener menu');
 
-          await tester.tapAt(const Offset(2, 2));
+          await tester.sendKeyEvent(LogicalKeyboardKey.escape);
           await tester.pumpAndSettle();
           expect(find.text('Terminal'), findsNothing);
           expect(tester.takeException(), isNull);

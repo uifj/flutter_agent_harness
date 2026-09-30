@@ -23,7 +23,9 @@ void main() {
       final s = dswShadColorScheme(c);
       expect(s.background, c.bgBase);
       expect(s.foreground, c.labelPrimary);
-      expect(s.popover, c.menu);
+      // Not the `menu` alias: in the light palette that equals `bgLayer1`,
+      // i.e. the page the overlay floats over (ADR-0028).
+      expect(s.popover, c.bgLayer2);
       expect(s.primary, c.buttonPrimaryFill);
       expect(s.primaryForeground, c.labelPrimaryForeground);
       expect(s.muted, c.sidebarFill);

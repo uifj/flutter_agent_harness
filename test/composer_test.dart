@@ -27,6 +27,7 @@ import 'package:agent_harness/theme/dsw_shad_bridge.dart';
 import 'package:agent_harness/theme/dsw_shape.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
 import 'package:agent_harness/ui/conversation/composer.dart';
+import 'package:agent_harness/ui/primitives/menu.dart' show DswMenuRow;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -35,7 +36,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 // A `show` list, because shadcn_ui re-exports `LucideIcons` and an unqualified
 // import makes every icon reference ambiguous.
-import 'package:shadcn_ui/shadcn_ui.dart' show ShadSonner, ShadTheme;
+import 'package:shadcn_ui/shadcn_ui.dart'
+    show ShadOption, ShadSonner, ShadTheme;
+// Prefixed, not `show`: shad draws its own option tick from a second Lucide
+// package (`lucide_icons_flutter`, re-exported by shadcn_ui) whose codepoints
+// are not the ones `flutter_lucide` — the font every app glyph comes from —
+// assigns to the same name. `LucideIcons.check` from the app's set matches
+// nothing shad paints.
+import 'package:shadcn_ui/shadcn_ui.dart' as shad;
 
 import 'amplified_text_probe.dart';
 
@@ -340,7 +348,7 @@ void main() {
 
       // The directory's own select moves the chip label without the host.
       // (The commit path is main.dart's; here the seam is what is pinned.)
-      expect(find.byIcon(LucideIcons.check), findsOneWidget);
+      expect(find.byIcon(shad.LucideIcons.check), findsOneWidget);
     });
 
     testWidgets('without a commit the chip stays inert', (tester) async {
@@ -731,7 +739,11 @@ void main() {
         tester.view.physicalSize.width / tester.view.devicePixelRatio,
         tester.view.physicalSize.height / tester.view.devicePixelRatio,
       );
-      final rows = find.byWidgetPredicate((w) => w is PopupMenuItem);
+      // A row is a row in either shape: the attach menu is a popover of
+      // `DswMenuRow`s, the pickers are `ShadOption`s.
+      final rows = find.byWidgetPredicate(
+        (w) => w is DswMenuRow || w is ShadOption,
+      );
 
       Future<void> open(Finder control, String firstRow) async {
         await tester.tap(control);
@@ -797,65 +809,79 @@ void main() {
     });
   });
 
-  // The card's own seats, plus the four menus that only exist once tapped.
+  // The card's own seats, plus the menus that only exist once tapped.
   //
   // `composer.dart` carries the largest cluster of pinned seats left in lib/ui,
   // and a menu row is a glyph beside a label — the first place an amplified
-  // system runs out of width. Each stage below measures the tree WITH the menu
-  // open, since a menu is in no one's tree otherwise.
+  // system runs out of width. Each face below measures the tree WITH its own
+  // menu open, since a menu is in no one's tree otherwise.
+  //
+  // One menu per pumped tree, deliberately: at the second step a popover's rows
+  // are wide enough to cover the chip that opens the next one, so a chained
+  // stage taps the menu it meant to close and measures two faces at once.
   group('amplified text', () {
     for (final (label, step) in const [
       ('1.8x', amplifiedTextStep),
       ('2.2x', nextTextStep),
     ]) {
-      testWidgets('the card and its menus keep their labels ($label)', (
+      Future<void> pumpCard(WidgetTester tester) => pump(
         tester,
+        step: step,
+        directory: ModelDirectory(
+          current: const ModelSettings(apiKey: 'sk-live', model: defaultModel),
+        ),
+        // Without a commit the chip is inert by design, and an inert chip has
+        // no menu to measure.
+        onModelSelected: (_) {},
+        onLookupFiles: () async => const [
+          FileEntry(relative: 'README.md', kind: 'file'),
+          FileEntry(relative: 'src', kind: 'dir'),
+        ],
+      );
+
+      Future<void> open(
+        WidgetTester tester,
+        Finder trigger,
+        String face,
       ) async {
-        Future<void> tap(Finder target) async {
-          await tester.tap(target);
-          await tester.pumpAndSettle();
-        }
-
-        // Tap the barrier rather than an entry: a menu left open covers the
-        // next face, and a route nobody popped leaves its timer armed.
-        Future<void> close() async {
-          await tester.tapAt(const Offset(4, 4));
-          await tester.pumpAndSettle();
-        }
-
-        await pump(
-          tester,
-          step: step,
-          directory: ModelDirectory(
-            current: const ModelSettings(
-              apiKey: 'sk-live',
-              model: defaultModel,
-            ),
-          ),
-          // Without a commit the chip is inert by design, and an inert chip has
-          // no menu to measure.
-          onModelSelected: (_) {},
-          onLookupFiles: () async => const [
-            FileEntry(relative: 'README.md', kind: 'file'),
-            FileEntry(relative: 'src', kind: 'dir'),
-          ],
-        );
         expect(textDefects(tester), isEmpty, reason: 'the composer card');
+        await tester.tap(trigger);
+        await tester.pumpAndSettle();
+        expect(textDefects(tester), isEmpty, reason: face);
+      }
 
-        await tap(find.byIcon(LucideIcons.paperclip));
+      testWidgets('the attach menu keeps its labels ($label)', (tester) async {
+        await pumpCard(tester);
+        await open(
+          tester,
+          find.byIcon(LucideIcons.paperclip),
+          'the attach menu',
+        );
         expect(find.text('Choose image files…'), findsOneWidget);
-        expect(textDefects(tester), isEmpty, reason: 'the attach menu');
-        await close();
+      });
 
-        await tap(find.text('Ask every time'));
+      testWidgets('the mode picker keeps its labels ($label)', (tester) async {
+        await pumpCard(tester);
+        await open(
+          tester,
+          find.byIcon(LucideIcons.shield_question_mark),
+          'the mode picker',
+        );
         expect(find.text('Plan first'), findsOneWidget);
-        expect(textDefects(tester), isEmpty, reason: 'the mode picker');
-        await close();
+      });
 
-        await tap(find.byIcon(LucideIcons.cpu));
-        expect(find.byIcon(LucideIcons.check), findsOneWidget);
-        expect(textDefects(tester), isEmpty, reason: 'the model menu');
-        await close();
+      testWidgets('the model menu keeps its labels ($label)', (tester) async {
+        await pumpCard(tester);
+        await open(tester, find.byIcon(LucideIcons.cpu), 'the model menu');
+        // The tick that says which row is live is drawn by shad, and shad ships
+        // its own Lucide font whose codepoints are not `flutter_lucide`'s for
+        // the same name — so it is matched by that package's constant.
+        expect(find.byIcon(shad.LucideIcons.check), findsOneWidget);
+      });
+
+      testWidgets('the typed menus keep their labels ($label)', (tester) async {
+        await pumpCard(tester);
+        expect(textDefects(tester), isEmpty, reason: 'the composer card');
 
         await tester.enterText(find.byType(TextField), '/');
         await tester.pump();
@@ -866,8 +892,11 @@ void main() {
         await tester.pump();
         expect(find.text('Files'), findsOneWidget);
         expect(textDefects(tester), isEmpty, reason: 'the mention menu');
+      });
 
-        // The two deliveries a blocked turn puts where the send circle was.
+      testWidgets('the delivery buttons keep their labels ($label)', (
+        tester,
+      ) async {
         await pump(tester, step: step, blocked: true);
         await tester.enterText(find.byType(TextField), 'hello');
         await tester.pumpAndSettle();

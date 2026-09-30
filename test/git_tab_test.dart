@@ -16,6 +16,7 @@ import 'dart:io';
 import 'package:agent_harness/model/sidebar_tab.dart';
 import 'package:agent_harness/state/workbench_controller.dart';
 import 'package:agent_harness/state/workbench_store.dart';
+import 'package:agent_harness/ui/primitives/menu.dart' show DswSelect;
 import 'package:agent_harness/ui/workbench/tabs/git_tab.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
 import 'package:agent_harness/theme/dsw_shad_bridge.dart';
@@ -195,9 +196,11 @@ void main() {
     await pumpTab(tester);
     await settle(tester);
 
-    await tester.tap(find.byType(PopupMenuButton<String>));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+    // The branch chip is the panel's one `DswSelect`; it is named by type
+    // rather than by the branch it currently shows, because which branch that
+    // is belongs to the fake repository, not to this assertion.
+    await tester.tap(find.byType(DswSelect<String>));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('dev'));
     await settle(tester);
 
@@ -298,7 +301,7 @@ void main() {
         expect(find.text('staged.txt'), findsOneWidget);
         expect(textDefects(tester), isEmpty, reason: 'the source panel');
 
-        await tester.tap(find.byType(PopupMenuButton<String>));
+        await tester.tap(find.byType(DswSelect<String>));
         await tester.pumpAndSettle();
         expect(find.text('dev'), findsOneWidget);
         expect(textDefects(tester), isEmpty, reason: 'the branch menu');

@@ -29,8 +29,12 @@ void main() {
     final source = File('lib/main.dart').readAsStringSync();
     // Anchored on the frame's own two seams, not on the bare words: `builder:`
     // also appears in `itemBuilder:` and in prose, and a guard that latches onto
-    // the first such hit would pass or fail for the wrong reason.
-    final builder = source.indexOf('builder: (context, child) =>');
+    // the first such hit would pass or fail for the wrong reason. The arrow is
+    // deliberately not part of the anchor: that builder now has a body, because
+    // the composed text step is read once and handed to both `MediaQuery` and
+    // the shad bridge (ADR-0017 S3), and how it opens says nothing about where
+    // the locale sits.
+    final builder = source.indexOf('builder: (context, child)');
     final home = source.indexOf('home: Scaffold(');
     final scope = source.indexOf('AppLocaleScope(');
 

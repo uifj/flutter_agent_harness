@@ -1,74 +1,98 @@
-// One menu skin. The sentence this file guards: a Material menu and the app's
-// own popover must not be two different surfaces.
+// One menu skin. The sentence this file guards has not changed since ADR-0028 —
+// a floating list of actions is one surface in this app, whatever draws it — but
+// the seam moved: ADR-0036 took the last Material menu out of `lib/ui`, so the
+// skin now lives in `dsw_shad_bridge.dart` and every dropdown, popover and
+// right-click menu reads it through shad's `popoverTheme`.
 //
-// Before ADR-0028 the theme had no `popupMenuTheme` at all, so every `showMenu`
-// and `PopupMenuButton` (13 entry points, 7 files) rendered Material's own
-// chrome: a computed `colorScheme.surfaceContainer` — which measured exactly
-// `bgLayer1` in both themes, i.e. the same colour as the page the menu floats
-// over — and a 4px radius, while `DswShape.shell`'s own doc names "dropdown
-// menu" as one of the surfaces it is for.
+// Before ADR-0028 the theme had no menu entry at all and each of the 13 Material
+// entry points rendered Material's own chrome: a computed `surfaceContainer`
+// that measured exactly `bgLayer1` — the same colour as the page the menu floats
+// over — a 4px radius while `DswShape.shell`'s own doc names "dropdown menu" as
+// one of the surfaces it is for, and `labelLarge` (weight 500) while every real
+// row is regular.
 //
-// The disabled label is asserted separately because `popup_menu.dart:417` gives
-// the theme entry *full* responsibility for it: once `labelTextStyle` is set,
-// Material's own dimming is never consulted.
+// Two of those measurements are now asserted as one sentence said once: the
+// selected row's style is checked against the unselected one because shad
+// resolves them through two separate fields, and a bridge that only fills one
+// hands the chosen row `textTheme.muted` — a typography this bridge deliberately
+// does not map, so it would fork a second ramp the moment a row became live.
+//
+// That the *count* of Material menus is zero is `test/shad_menu_adoption_test.dart`'s
+// job; this file is about what the surfaces that remain are painted with.
 
 import 'package:agent_harness/theme/dsw_alias.dart';
 import 'package:agent_harness/theme/dsw_shape.dart';
+import 'package:agent_harness/theme/dsw_shad_bridge.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
 import 'package:agent_harness/theme/dsw_typography.dart';
+import 'package:agent_harness/ui/primitives/menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 void main() {
   for (final brightness in Brightness.values) {
-    group('menu chrome in $brightness', () {
-      final theme = dswThemeData(brightness);
+    group('the overlay skin in $brightness', () {
       final color = brightness == Brightness.dark
           ? DswAlias.dark
           : DswAlias.light;
-      final menu = theme.popupMenuTheme;
+      final theme = dswShadTheme(brightness);
+      final popover = theme.popoverTheme.decoration!;
+      final option = theme.optionTheme;
 
-      test('the menu takes the popover surface, not a computed one', () {
-        expect(menu.color, color.bgLayer2);
+      test('a menu fills with the raised layer, not the page behind it', () {
+        // `menu` and `bgLayer1` are the same colour in the light palette, which
+        // is why the fill is `bgLayer2` and why the hairline below is load-bearing.
+        expect(theme.colorScheme.popover, color.bgLayer2);
       });
 
-      test('its edge is the shell radius plus the hairline the theme can paint', () {
-        final shape = menu.shape;
-        expect(shape, isA<RoundedRectangleBorder>());
-        final border = shape! as RoundedRectangleBorder;
-        expect(border.borderRadius, BorderRadius.circular(DswShape.shell));
-        // Material's own default is a 4px radius and no border side at all; the
-        // popover (`settings_quick_menu.dart:141-147`) is shell + borderL2, and
-        // `_ShapeBorderPainter.paint` (material.dart:973) paints a shape's own
-        // side, so the hairline is expressible here rather than lost.
-        expect(border.side.color, color.borderL2);
-        expect(border.side.width, lessThanOrEqualTo(1.0));
-      });
-
-      test('its rows read like the popover rows, and disabled still dims', () {
-        final style = menu.labelTextStyle;
-        expect(style, isNotNull);
-        // 14 regular, the size ZCode's dropdown rows use (`--ui-font-size: 14px`
-        // at styles.css:58, `text-ui-base` at dropdown-menu.tsx:82) and the size
-        // the app's own popover hand-off row uses
-        // (`settings_quick_menu.dart:361`). Material's M3 default is
-        // `labelLarge`, which this theme maps to `sStrong14` — the same size but
-        // weight 500, so menu labels came out heavier than every real row.
+      test('its edge is the shell radius plus a hairline', () {
+        final border = popover.border!;
         expect(
-          style!.resolve(const <WidgetState>{}),
+          border.radius,
+          BorderRadius.circular(DswShape.shell),
+          reason: '$brightness: an overlay is a `shell` surface, not a control',
+        );
+        // `ShadBorder.all` fans one side out to four, so any side answers.
+        expect(border.top!.color, color.borderL2);
+        expect(border.top!.width, lessThanOrEqualTo(1.0));
+      });
+
+      test('its rows read like the app, and picking one changes no type', () {
+        expect(
+          option.textStyle,
           DswType.s14.copyWith(color: color.labelPrimary),
         );
+        // The fork this guards is a field shad resolves separately, not a state.
         expect(
-          style.resolve(const <WidgetState>{WidgetState.disabled}),
-          DswType.s14.copyWith(color: color.labelTertiary),
+          option.selectedTextStyle,
+          option.textStyle,
+          reason: 'a live row must not be a different typography',
         );
+        expect(option.hoveredBackgroundColor, color.interactiveBgHover);
+        // A row highlight nested inside a `shell` surface is `inner` decoration.
+        expect(option.radius, BorderRadius.circular(DswShape.inner));
       });
 
-      test('the hover wash is the one every other hover affordance uses', () {
-        // Menu rows are `InkWell`s, and `ink_well.dart:1040` falls back to
-        // `ThemeData.hoverColor` — Material's own value is black/white at ~4%,
-        // not `interactiveBgHover`.
-        expect(theme.hoverColor, color.interactiveBgHover);
+      test('the right-click shape answers for the same rows', () {
+        final menu = theme.contextMenuTheme;
+        // Field by field, not whole-style: shad merges its own defaults into
+        // this one, so an `==` would compare `TextDecoration.none` against a
+        // null decoration and fail on the bookkeeping rather than the type.
+        final style = menu.textStyle!;
+        expect(style.color, color.labelPrimary);
+        expect(style.fontSize, 14);
+        expect(style.fontWeight, FontWeight.w400);
+        expect(menu.selectedBackgroundColor, color.interactiveBgHover);
+        // One seat for both shapes, so an action menu and a right-click menu are
+        // the same height (ADR-0017 S3: it rides the text step).
+        expect(menu.height, DswShape.rowMenu);
+      });
+
+      test('a disabled row dims to the one number', () {
+        // `DswMenuRow` has to dim itself — shad keeps its `ShadDisabled` private —
+        // and it reads this field rather than a literal, so the value is said once.
+        expect(theme.disabledOpacity, 0.4);
       });
     });
   }
@@ -80,11 +104,14 @@ void main() {
       MaterialApp(
         theme: dswThemeData(Brightness.dark),
         home: Scaffold(
-          body: PopupMenuButton<String>(
-            child: const Text('open'),
-            itemBuilder: (context) => const [
-              PopupMenuItem<String>(value: 'a', child: Text('Alpha')),
+          body: DswMenu(
+            label: 'open',
+            items: (context) => [
+              DswMenuEntry(label: 'Alpha', onTap: () {}),
+              const DswMenuEntry.divider(),
+              DswMenuEntry(label: 'Beta'),
             ],
+            trigger: (context) => const Text('open'),
           ),
         ),
       ),
@@ -92,21 +119,48 @@ void main() {
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
 
-    // The floating Material above the row — identified by carrying elevation,
-    // since the Scaffold's Material sits at zero. A site that re-forked the skin
-    // for this menu would land here with Material's own values and fail.
-    final material = tester
-        .widgetList<Material>(
-          find.ancestor(
-            of: find.text('Alpha'),
-            matching: find.byType(Material),
-          ),
-        )
-        .firstWhere((m) => m.elevation > 0);
-    final shape = material.shape! as RoundedRectangleBorder;
-    expect(material.color, DswAlias.dark.bgLayer2);
-    expect(shape.borderRadius, BorderRadius.circular(DswShape.shell));
-    expect(shape.side.color, DswAlias.dark.borderL2);
     expect(find.text('Alpha'), findsOneWidget);
+    // The surface the decorator paints around the rows. A call site that
+    // re-forked the skin would land here with shad's own values and fail.
+    final decorator = tester.widget<ShadDecorator>(
+      find.ancestor(
+        of: find.text('Alpha'),
+        matching: find.byType(ShadDecorator),
+      ),
+    );
+    final border = decorator.decoration!.border!;
+    expect(border.radius, BorderRadius.circular(DswShape.shell));
+    expect(border.top!.color, DswAlias.dark.borderL2);
+  });
+
+  testWidgets('a destructive row is red text, not a red block', (tester) async {
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: dswThemeData(Brightness.dark),
+        home: Scaffold(
+          body: DswMenu(
+            label: 'open',
+            items: (context) => [
+              DswMenuEntry(
+                label: 'Discard changes',
+                destructive: true,
+                onTap: () {},
+              ),
+              DswMenuEntry(label: 'Copy path', onTap: () {}),
+            ],
+            trigger: (context) => const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    Color painted(String label) =>
+        tester.widget<Text>(find.text(label)).style!.color!;
+    expect(painted('Discard changes'), DswAlias.dark.stateErrorPrimary);
+    expect(painted('Copy path'), DswAlias.dark.labelPrimary);
   });
 }
