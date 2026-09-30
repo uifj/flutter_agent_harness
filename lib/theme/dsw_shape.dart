@@ -57,18 +57,11 @@ abstract final class DswShape {
   static const lg = 16.0;
   static const xl = 24.0;
 
-  static const gapXs = EdgeInsets.all(xs);
-  static const gapSm = EdgeInsets.all(sm);
-  static const gapMd = EdgeInsets.all(md);
-  static const gapLg = EdgeInsets.all(lg);
-
   /// The sidebar's single horizontal inset. Every row — brand, mode toggle,
   /// new-session, the session list — starts on this line because the whole
   /// column is padded by it once. It was 12 on the column plus 4 more on the
   /// brand row, which is how a logo ended up not lining up with its own list.
   static const sidebarInset = 12.0;
-
-  static const rowInset = EdgeInsets.symmetric(horizontal: sm, vertical: xs);
 
   // --- sizes ----------------------------------------------------------------
   //
@@ -78,16 +71,9 @@ abstract final class DswShape {
   /// A session row in the sidebar.
   static const rowSession = 36.0;
 
-  /// A standard icon button.
+  /// A standard icon button — the default box of `DswIconButton` (ADR-0024).
   static const controlMd = 28.0;
 
   /// A small glyph inside a chip or status row.
   static const iconSm = 14.0;
-
-  /// A dot that marks state (running, unread, waiting).
-  static const dot = 6.0;
-
-  /// Extra transparent hit area around a small control, so a 14px icon is still
-  /// a target a person can aim at.
-  static const hitSlop = 4.0;
 }

@@ -533,7 +533,8 @@ class _SidebarState extends State<Sidebar> {
           // One line of chrome, so the seat rides the text step instead of
           // clipping it: a nailed 36 held 40 worth of 14/22 label at the system's
           // 1.8x step. The bar is the same 36 at the designed step.
-          height: 36 * MediaQuery.textScalerOf(context).scale(1),
+          height:
+              DswShape.rowSession * MediaQuery.textScalerOf(context).scale(1),
           padding: wide
               ? const EdgeInsets.symmetric(horizontal: 16)
               : EdgeInsets.zero,
@@ -842,7 +843,7 @@ class _SessionRow extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(DswShape.control),
           child: Container(
-            height: 36 * step,
+            height: DswShape.rowSession * step,
             padding: const EdgeInsets.symmetric(horizontal: 10),
             decoration: BoxDecoration(
               color: selected ? color.interactiveSelected : null,
