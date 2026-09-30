@@ -211,10 +211,26 @@ class _DshAppState extends ConsumerState<DshApp> {
         ),
         child: ShadTheme(
           data: dswShadTheme(Theme.of(context).brightness),
-          // ADR-0020: the feedback strip's host. Above the Navigator, so a
-          // toast raised from a dialog route or from the full-screen settings
-          // still lands on the one strip the bridge colours from `DswAlias`.
-          child: ShadSonner(child: child!),
+          // The locale seat, resolved once per document: an explicit choice
+          // wins, `system` follows the platform. It belongs here rather than on
+          // `home:` because an overlay route is not under `home:` — mounted
+          // there, every menu and dialog silently fell back to English
+          // key-by-key (ADR-0032, caught in a real window screenshot as
+          // `Retry` next to 中文). Same seam ADR-0017 learned for `MediaQuery`.
+          child: AppLocaleScope(
+            locale: switch (doc.locale) {
+              cfg.LocaleMode.en => AppLocaleId.en,
+              cfg.LocaleMode.zh => AppLocaleId.zh,
+              cfg.LocaleMode.system =>
+                Platform.localeName.toLowerCase().startsWith('zh')
+                    ? AppLocaleId.zh
+                    : AppLocaleId.en,
+            },
+            // ADR-0020: the feedback strip's host. Above the Navigator, so a
+            // toast raised from a dialog route or from the full-screen settings
+            // still lands on the one strip the bridge colours from `DswAlias`.
+            child: ShadSonner(child: child!),
+          ),
         ),
       ),
       // The mode the settings screen writes. `system` hands the decision to the
@@ -226,109 +242,93 @@ class _DshAppState extends ConsumerState<DshApp> {
         cfg.ThemeMode.dark => ThemeMode.dark,
       },
       home: Scaffold(
-        // The locale seat, resolved once per document: an explicit choice wins,
-        // `system` follows the platform. The scope wraps the whole body — the
-        // frame, the free windows and the settings panel that floats over them
-        // all read the same resolution.
-        body: AppLocaleScope(
-          locale: switch (doc.locale) {
-            cfg.LocaleMode.en => AppLocaleId.en,
-            cfg.LocaleMode.zh => AppLocaleId.zh,
-            cfg.LocaleMode.system =>
-              Platform.localeName.toLowerCase().startsWith('zh')
-                  ? AppLocaleId.zh
-                  : AppLocaleId.en,
-          },
-          // The prefs scope wraps the whole frame — the tab strip's `+` menu, the
-          // empty pane's cards and the terminal's glyphs all read it, and the
-          // settings panel that writes it floats over the same tree.
-          child: WorkbenchPrefsScope(
-            prefs: prefs,
-            child: AppearanceScope(
-              contentWidth: contentWidth,
-              expandToolCalls: doc.expandToolCalls,
-              // ADR-0006 S4: settings is a full-screen view that replaces the
-              // body, not an overlay on top of it — a state swap, still no route.
-              child: _settingsOpen
-                  ? _settingsPage(doc)
-                  // ADR-0007: the frame re-renders when the top-level
-                  // workspace mode (企划/代理) changes — the controller is a
-                  // ChangeNotifier the provider fronts, so this is the same
-                  // listen-and-rebuild shape the layout controller uses.
-                  : ListenableBuilder(
-                      listenable: ref.watch(workspaceModeProvider),
-                      builder: (context, _) => AppFrame(
-                        layout: ref.watch(layoutProvider),
-                        sidebarBuilder: (context, collapsed, width) => Sidebar(
-                          collapsed: collapsed,
-                          width: width,
-                          sessions: ref.watch(sessionsProvider),
-                          // The identity the footer avatar shows. `.value` — the
-                          // avatar renders a placeholder until the (mock, later Supabase)
-                          // source resolves; riverpod stays out of the widget tree.
-                          profile: ref.watch(userProfileProvider).value,
-                          // The footer quick-menu edits these live (theme/locale/width
-                          // never rebuild the runtime), so it needs the document and the
-                          // save path — the same `scope.save` the settings panel uses.
-                          // `ref.read` in the callback (audit F7): the save path is an
-                          // action, not data, and keepAlive makes it identical either
-                          // way — this is the riverpod-lint-conventional spelling.
-                          settings: doc,
-                          onSettingsChanged: (next) =>
-                              ref.read(appScopeProvider).save(next),
-                          // The 企划/代理 switch (ADR-0007).
-                          mode: ref.watch(workspaceModeProvider).mode,
-                          onSelectMode: ref
-                              .watch(workspaceModeProvider)
-                              .selectMode,
-                          // The plan extension panels' open view + toggle.
-                          extensionView: ref
-                              .watch(workspaceModeProvider)
-                              .extensionView,
-                          onToggleExtension: ref
-                              .watch(workspaceModeProvider)
-                              .toggleExtension,
-                          onNewSession: scope.newSession,
-                          onToggle: ref.read(layoutProvider).toggleSidebar,
-                          onOpenSession: scope.openSession,
-                          onOpenSettings: () =>
-                              setState(() => _settingsOpen = true),
-                          // The frame rebuilds the sidebar on every layout write, so the
-                          // open state read here is never stale.
-                          onToggleDetails: ref
-                              .read(layoutProvider)
-                              .toggleDetails,
-                          detailsOpen: ref.watch(layoutProvider).details != 0,
-                        ),
-                        center: _centerPane(doc),
-                        details: DetailsPanel(
-                          conversation: ref.watch(conversationProvider),
-                          selection: ref.watch(detailsSelectionProvider),
-                          // Closing the column keeps the selection. dsh's `closeDetails`
-                          // does the same — it is a layout write and nothing else — which
-                          // is what lets the pill on the call already selected reopen the
-                          // panel onto it.
-                          onClose: ref.read(layoutProvider).closeDetails,
-                        ),
-                        workbench: Workbench(
-                          workbench: ref.watch(workbenchProvider),
-                          conversation: ref.watch(conversationProvider),
-                          sideChat: ref.watch(sideChatProvider),
-                          terminals: ref.watch(terminalsProvider),
-                          onClose: ref.read(layoutProvider).closeWorkbench,
-                        ),
-                        bottom: Workbench(
-                          workbench: ref.watch(workbenchProvider),
-                          conversation: ref.watch(conversationProvider),
-                          sideChat: ref.watch(sideChatProvider),
-                          terminals: ref.watch(terminalsProvider),
-                          onClose: ref.read(layoutProvider).closeBottom,
-                          panel: WorkbenchPanel.bottom,
-                        ),
-                        overlay: _floats(),
+        // The prefs scope wraps the whole frame — the tab strip's `+` menu, the
+        // empty pane's cards and the terminal's glyphs all read it, and the
+        // settings panel that writes it floats over the same tree.
+        body: WorkbenchPrefsScope(
+          prefs: prefs,
+          child: AppearanceScope(
+            contentWidth: contentWidth,
+            expandToolCalls: doc.expandToolCalls,
+            // ADR-0006 S4: settings is a full-screen view that replaces the
+            // body, not an overlay on top of it — a state swap, still no route.
+            child: _settingsOpen
+                ? _settingsPage(doc)
+                // ADR-0007: the frame re-renders when the top-level
+                // workspace mode (企划/代理) changes — the controller is a
+                // ChangeNotifier the provider fronts, so this is the same
+                // listen-and-rebuild shape the layout controller uses.
+                : ListenableBuilder(
+                    listenable: ref.watch(workspaceModeProvider),
+                    builder: (context, _) => AppFrame(
+                      layout: ref.watch(layoutProvider),
+                      sidebarBuilder: (context, collapsed, width) => Sidebar(
+                        collapsed: collapsed,
+                        width: width,
+                        sessions: ref.watch(sessionsProvider),
+                        // The identity the footer avatar shows. `.value` — the
+                        // avatar renders a placeholder until the (mock, later Supabase)
+                        // source resolves; riverpod stays out of the widget tree.
+                        profile: ref.watch(userProfileProvider).value,
+                        // The footer quick-menu edits these live (theme/locale/width
+                        // never rebuild the runtime), so it needs the document and the
+                        // save path — the same `scope.save` the settings panel uses.
+                        // `ref.read` in the callback (audit F7): the save path is an
+                        // action, not data, and keepAlive makes it identical either
+                        // way — this is the riverpod-lint-conventional spelling.
+                        settings: doc,
+                        onSettingsChanged: (next) =>
+                            ref.read(appScopeProvider).save(next),
+                        // The 企划/代理 switch (ADR-0007).
+                        mode: ref.watch(workspaceModeProvider).mode,
+                        onSelectMode: ref
+                            .watch(workspaceModeProvider)
+                            .selectMode,
+                        // The plan extension panels' open view + toggle.
+                        extensionView: ref
+                            .watch(workspaceModeProvider)
+                            .extensionView,
+                        onToggleExtension: ref
+                            .watch(workspaceModeProvider)
+                            .toggleExtension,
+                        onNewSession: scope.newSession,
+                        onToggle: ref.read(layoutProvider).toggleSidebar,
+                        onOpenSession: scope.openSession,
+                        onOpenSettings: () =>
+                            setState(() => _settingsOpen = true),
+                        // The frame rebuilds the sidebar on every layout write, so the
+                        // open state read here is never stale.
+                        onToggleDetails: ref.read(layoutProvider).toggleDetails,
+                        detailsOpen: ref.watch(layoutProvider).details != 0,
                       ),
+                      center: _centerPane(doc),
+                      details: DetailsPanel(
+                        conversation: ref.watch(conversationProvider),
+                        selection: ref.watch(detailsSelectionProvider),
+                        // Closing the column keeps the selection. dsh's `closeDetails`
+                        // does the same — it is a layout write and nothing else — which
+                        // is what lets the pill on the call already selected reopen the
+                        // panel onto it.
+                        onClose: ref.read(layoutProvider).closeDetails,
+                      ),
+                      workbench: Workbench(
+                        workbench: ref.watch(workbenchProvider),
+                        conversation: ref.watch(conversationProvider),
+                        sideChat: ref.watch(sideChatProvider),
+                        terminals: ref.watch(terminalsProvider),
+                        onClose: ref.read(layoutProvider).closeWorkbench,
+                      ),
+                      bottom: Workbench(
+                        workbench: ref.watch(workbenchProvider),
+                        conversation: ref.watch(conversationProvider),
+                        sideChat: ref.watch(sideChatProvider),
+                        terminals: ref.watch(terminalsProvider),
+                        onClose: ref.read(layoutProvider).closeBottom,
+                        panel: WorkbenchPanel.bottom,
+                      ),
+                      overlay: _floats(),
                     ),
-            ),
+                  ),
           ),
         ),
       ),
