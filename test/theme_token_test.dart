@@ -282,4 +282,43 @@ void main() {
       );
     });
   });
+
+  group('every shape token has a reader', () {
+    // ADR-0022's law aimed at the theme layer. A constant nothing reads is not
+    // harmless: it is a second spelling of a value someone will later
+    // contradict, and it hides the real defect — the widget that wrote its own
+    // number instead of reading the token. `DswShape.rowSession` was dead while
+    // `sidebar.dart` spelled that same row as `36` twice (ADR-0025).
+    test('no DswShape member is declared and never used', () {
+      final definition = File('lib/theme/dsw_shape.dart');
+      final declared = RegExp(r'^\s+static const (\w+) =', multiLine: true)
+          .allMatches(definition.readAsStringSync())
+          .map((match) => match.group(1)!)
+          .toList();
+      expect(declared, isNotEmpty, reason: 'the parse found no tokens at all');
+
+      final sources = Directory('lib')
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((file) => file.path.endsWith('.dart') && file != definition)
+          .map((file) => MapEntry(file.path, file.readAsStringSync()))
+          .toList();
+
+      final unread = [
+        for (final name in declared)
+          if (!sources.any(
+            (entry) => RegExp('DswShape\\.$name\\b').hasMatch(entry.value),
+          ))
+            name,
+      ];
+      expect(
+        unread,
+        isEmpty,
+        reason:
+            'a shape token with no reader is a claim nothing verifies. Either '
+            'wire the surface that means to use it, or delete the constant '
+            '(ADR-0025).',
+      );
+    });
+  });
 }
