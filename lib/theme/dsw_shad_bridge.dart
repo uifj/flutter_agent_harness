@@ -93,6 +93,32 @@ ShadThemeData dswShadTheme(Brightness brightness, {double textScale = 1}) {
       // A row highlight nested inside a `shell` surface is `inner` decoration.
       radius: BorderRadius.circular(DswShape.inner),
     ),
+    // A field's frame. `ShadInput` reads `inputTheme.decoration`, and the
+    // library's default is an empty `ShadDecoration` — which paints nothing —
+    // so every shad field has been drawing without the hairline the Material
+    // field it replaced had. Rest `borderL2`, focus `brandPrimary`: the same two
+    // steps the composer card's three-state stroke answers with, because a field
+    // and a card are asked the same question — where is the keyboard (ADR-0017
+    // S2b). Radius comes from the knob (`control`), so it is not restated here.
+    inputTheme: ShadInputTheme(
+      style: DswType.s14.copyWith(color: c.labelPrimary),
+      placeholderStyle: DswType.s14.copyWith(color: c.labelTertiary),
+      cursorColor: c.stateBusinessPrimary,
+      decoration: ShadDecoration(
+        border: ShadBorder.all(color: c.borderL2, width: 1),
+        focusedBorder: ShadBorder.all(color: c.brandPrimary, width: 1),
+        errorBorder: ShadBorder.all(color: c.stateErrorPrimary, width: 1),
+      ),
+    ),
+    // The on/off (ADR-0036 row 25). Geometry first: this design's pill is
+    // 36x20 with a 2px gutter and so a 16px thumb, not shad's 44x24.
+    switchTheme: ShadSwitchTheme(
+      width: 36,
+      height: 20,
+      margin: 2,
+      checkedTrackColor: c.brandPrimary,
+      uncheckedTrackColor: c.bgLayer1,
+    ),
     selectTheme: ShadSelectTheme(
       placeholderStyle: DswType.s14.copyWith(color: c.labelTertiary),
     ),
@@ -104,6 +130,24 @@ ShadThemeData dswShadTheme(Brightness brightness, {double textScale = 1}) {
     ),
   );
 }
+
+/// The frameless field: an input that lives *inside* another surface — the
+/// composer card, a search row, an address bar — has no border of its own, and
+/// the surface around it is what says where the keyboard is.
+///
+/// Five call sites used to answer that by hand with an
+/// `InputDecoration(border: InputBorder.none)`, which is the same sentence said
+/// five ways; and because the bridge now gives a field a frame, a shad field
+/// that wants none has to say so. Every side is named, not just the resting
+/// one — the focus border resolves separately, and a bare field that lights up
+/// a ring on focus has grown a frame the card already draws.
+const ShadDecoration dswBareInput = ShadDecoration(
+  border: ShadBorder.none,
+  focusedBorder: ShadBorder.none,
+  errorBorder: ShadBorder.none,
+  secondaryBorder: ShadBorder.none,
+  secondaryFocusedBorder: ShadBorder.none,
+);
 
 /// Wraps [child] in a [ShadTheme] unless an ancestor already provides one.
 ///
@@ -124,6 +168,16 @@ Widget dswEnsureShadTheme(BuildContext context, Widget child) =>
         ),
         child: child,
       );
+
+/// A field's placeholder, on one line and ellipsised.
+///
+/// shad paints a placeholder *over* the field rather than inside its layout, so
+/// a hint that wraps is measured against a one-line box and gets cut mid-glyph —
+/// at the amplified text steps a three-word hint is a two-line hint. The hint is
+/// the thing that yields, never the text being typed (the same call ADR-0017 S3
+/// made about the commit box's own placeholder).
+Widget dswInputHint(String text, {TextStyle? style}) =>
+    Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: style);
 
 /// The colour half of the bridge, exposed separately so a test can assert
 /// the mapping without a widget tree.

@@ -25,9 +25,11 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadInput;
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:path/path.dart' as p;
 
+import '../../../theme/dsw_shad_bridge.dart';
 import '../../../../theme/dsw_shape.dart';
 import '../../../l10n/locales.dart';
 import '../../../model/fs_revision.dart';
@@ -332,14 +334,19 @@ class _FileTreeTabState extends State<FileTreeTab> {
         ),
         const SizedBox(width: 6),
         Expanded(
-          child: TextField(
-            onChanged: (value) => setState(() => _filter = value.trim()),
-            style: DswType.xs13.copyWith(color: color.labelPrimary),
-            decoration: InputDecoration(
-              isCollapsed: true,
-              border: InputBorder.none,
-              hintText: context.tr('searchFiles'),
-              hintStyle: DswType.xxs12.copyWith(color: color.labelCaption),
+          child: dswEnsureShadTheme(
+            context,
+            ShadInput(
+              onChanged: (value) => setState(() => _filter = value.trim()),
+              style: DswType.xs13.copyWith(color: color.labelPrimary),
+              // This field is a hole cut in a toolbar row, not a box: the row is
+              // the surface, so the field draws no frame and no padding of its own.
+              decoration: dswBareInput,
+              padding: EdgeInsets.zero,
+              placeholder: dswInputHint(context.tr('searchFiles')),
+              placeholderStyle: DswType.xxs12.copyWith(
+                color: color.labelCaption,
+              ),
             ),
           ),
         ),

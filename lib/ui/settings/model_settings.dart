@@ -23,7 +23,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:shadcn_ui/shadcn_ui.dart' show ShadInput, ShadOption;
+import 'package:shadcn_ui/shadcn_ui.dart'
+    show ShadInput, ShadOption, ShadSwitch;
 
 import '../../genkit/models_endpoint.dart';
 import '../../l10n/locales.dart';
@@ -35,6 +36,7 @@ import '../../model/model_settings.dart';
 import '../../model/workbench_prefs.dart';
 import '../../state/approval_rule_store.dart';
 import '../../state/backup_service.dart';
+import '../../theme/dsw_shad_bridge.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_shape.dart';
@@ -1775,15 +1777,26 @@ class _SearchField extends StatelessWidget {
           ),
           const SizedBox(width: 6),
           Expanded(
-            child: TextField(
-              controller: controller,
-              style: DswType.s14.copyWith(color: color.labelPrimary),
-              decoration: InputDecoration(
-                isCollapsed: true,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                hintStyle: DswType.s14.copyWith(color: color.labelDimmed),
-                hintText: hint,
+            child: dswEnsureShadTheme(
+              context,
+              ShadInput(
+                // Named, so a test can tell this field from the ones under it:
+                // it sits above every section and is a `ShadInput` like they are.
+                key: const ValueKey('settings-search'),
+                controller: controller,
+                style: DswType.s14.copyWith(color: color.labelPrimary),
+                // The row's own hairline is the frame; a field inside it that
+                // drew a second one would say "two boxes" where there is one.
+                decoration: dswBareInput,
+                // The seat above is the truth (32 at the designed step); a
+                // field that adds its own 8+8 inside it overflows the box it
+                // was put in. Material's collapsed decorator hid that by
+                // clipping silently, shad's flex says so out loud.
+                padding: EdgeInsets.zero,
+                placeholder: dswInputHint(hint),
+                placeholderStyle: DswType.s14.copyWith(
+                  color: color.labelDimmed,
+                ),
               ),
             ),
           ),
@@ -1989,9 +2002,11 @@ class _Field extends StatelessWidget {
 
 /// A label, a one-line description, and a switch — the side card's row shape.
 ///
-/// The switch is drawn rather than Material's: the dsw pill has no ripple and
-/// its own colours, and `Switch` would drag the whole Material theming into a
-/// row that otherwise speaks only in aliases.
+/// The switch is shad's (ADR-0036 row 25), which settles the three things the
+/// drawn one had to answer for itself: it takes Enter and Space, it announces
+/// `toggled`, and a disabled one dims through `ShadDisabled` rather than a
+/// hand-picked opacity. `direction: rtl` is what keeps the reading order this
+/// panel has everywhere else — text first, control last.
 class _SwitchRow extends StatelessWidget {
   const _SwitchRow({
     required this.label,
@@ -2008,72 +2023,24 @@ class _SwitchRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    // The whole row is one on/off control; its visible label is the name and the
-    // switch state is announced via toggled.
-    return DswHoverTap(
-      onTap: () => onChanged(!value),
-      toggled: value,
-      builder: (context, _, _) => Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: DswType.xxs12.copyWith(color: color.labelSecondary),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  description,
-                  style: DswType.xxxs11.copyWith(color: color.labelTertiary),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          _Switch(value: value, onChanged: onChanged),
-        ],
+    return ShadSwitch(
+      value: value,
+      onChanged: (_) => onChanged(!value),
+      direction: TextDirection.rtl,
+      label: Text(
+        label,
+        style: DswType.xxs12.copyWith(color: color.labelSecondary),
       ),
-    );
-  }
-}
-
-/// The switch itself: a 36x20 pill, the thumb slides, the fill flips between
-/// the border token and the brand — on is a colour, not a label.
-class _Switch extends StatelessWidget {
-  const _Switch({required this.value, required this.onChanged});
-
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = context.dsw;
-    return AnimatedContainer(
-      duration: DswMotion.respecting(context, DswMotion.fast),
-      curve: DswMotion.easeInOut,
-      width: 36,
-      height: 20,
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: value ? color.brandPrimary : color.bgLayer1,
-        borderRadius: BorderRadius.circular(DswShape.card),
-        border: Border.all(color: value ? color.brandPrimary : color.borderL2),
+      sublabel: Text(
+        description,
+        style: DswType.xxxs11.copyWith(color: color.labelTertiary),
       ),
-      child: AnimatedAlign(
-        duration: DswMotion.respecting(context, DswMotion.fast),
-        curve: DswMotion.easeInOut,
-        alignment: value ? Alignment.centerRight : Alignment.centerLeft,
-        child: Container(
-          width: 16,
-          height: 16,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: value ? color.labelPrimaryForeground : color.labelTertiary,
-          ),
-        ),
-      ),
+      // The only colour the theme cannot hold: shad has ONE thumb constant, and
+      // this design says an off thumb is quiet (`labelTertiary`) and an on thumb
+      // is the foreground (`labelPrimaryForeground`). A single value in the
+      // bridge would answer the state question with one of the two, so the state
+      // goes where the state is known — and the tracks stay themed.
+      thumbColor: value ? color.labelPrimaryForeground : color.labelTertiary,
     );
   }
 }

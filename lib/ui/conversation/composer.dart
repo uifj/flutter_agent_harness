@@ -20,7 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:pasteboard/pasteboard.dart';
-import 'package:shadcn_ui/shadcn_ui.dart' show ShadOption;
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadInput, ShadOption;
 
 import '../../l10n/locales.dart';
 import '../../model/approval_mode.dart';
@@ -32,6 +32,7 @@ import '../../model/workspace_index.dart';
 import '../../state/document_extractor.dart';
 import '../../state/model_directory.dart';
 import '../../theme/dsw_alias.dart';
+import '../../theme/dsw_shad_bridge.dart';
 import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
@@ -769,23 +770,25 @@ class ComposerState extends State<Composer> {
       // The hero card keeps a two-line floor (~2 x 24 line + 4pt of pad).
       minHeight: widget.hero ? 52 : 0,
     ),
-    child: TextField(
-      controller: _controller,
-      focusNode: _focus,
-      autofocus: true,
-      maxLines: null,
-      // The card is the scroll surface; a field that scrolled itself would put
-      // its own gutter inside the capsule.
-      keyboardType: TextInputType.multiline,
-      cursorColor: color.stateBusinessPrimary,
-      style: DswType.base16.copyWith(color: color.labelPrimary),
-      decoration: InputDecoration(
-        isCollapsed: true,
-        border: InputBorder.none,
+    child: dswEnsureShadTheme(
+      context,
+      ShadInput(
+        controller: _controller,
+        focusNode: _focus,
+        autofocus: true,
+        maxLines: null,
+        // The card is the scroll surface; a field that scrolled itself would put
+        // its own gutter inside the capsule.
+        keyboardType: TextInputType.multiline,
+        style: DswType.base16.copyWith(color: color.labelPrimary),
+        // No frame and no fill of its own: the card's three-state stroke is the
+        // one thing on screen that says the keystrokes land here (ADR-0017 S2b),
+        // and a field that lit its own ring would answer that twice.
+        decoration: dswBareInput,
         // figma .InputText 34:10434: pl 16 / pr 12 / pt 4.
-        contentPadding: const EdgeInsets.only(left: 16, right: 12, top: 4),
-        hintText: context.tr('askAnythingHint'),
-        hintStyle: DswType.base16.copyWith(color: color.labelCaption),
+        padding: const EdgeInsets.only(left: 16, right: 12, top: 4),
+        placeholder: dswInputHint(context.tr('askAnythingHint')),
+        placeholderStyle: DswType.base16.copyWith(color: color.labelCaption),
       ),
     ),
   );

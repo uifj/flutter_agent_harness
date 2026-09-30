@@ -23,9 +23,11 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadInput;
 import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../../l10n/locales.dart';
+import '../../../theme/dsw_shad_bridge.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
 import '../../../model/sidebar_tab.dart';
@@ -252,16 +254,23 @@ class _BrowserTabState extends State<BrowserTab> {
             size: 24,
           ),
           Expanded(
-            child: TextField(
-              controller: _input,
-              style: DswType.xs13.copyWith(color: color.labelPrimary),
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                hintText: context.tr('browserPlaceholder'),
-                hintStyle: DswType.xs13.copyWith(color: color.labelTertiary),
+            child: dswEnsureShadTheme(
+              context,
+              ShadInput(
+                controller: _input,
+                style: DswType.xs13.copyWith(color: color.labelPrimary),
+                // An address bar inside a toolbar: the toolbar is the frame, and
+                // Enter still navigates.
+                decoration: dswBareInput,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 4,
+                ), // 8 overflows the 33 the toolbar gives
+                placeholder: dswInputHint(context.tr('browserPlaceholder')),
+                placeholderStyle: DswType.xs13.copyWith(
+                  color: color.labelTertiary,
+                ),
+                onSubmitted: (_) => _navigate(),
               ),
-              onSubmitted: (_) => _navigate(),
             ),
           ),
           DswIconButton(

@@ -23,10 +23,12 @@
 // than a captured constructor argument.
 
 import 'package:flutter/material.dart';
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadInput;
 import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../../l10n/locales.dart';
 import '../../../state/side_chat_controller.dart';
+import '../../../theme/dsw_shad_bridge.dart';
 import '../../../theme/dsw_shape.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
@@ -220,20 +222,25 @@ class _SideChatTabState extends State<SideChatTab> {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
-            child: TextField(
-              controller: _composer,
-              minLines: 1,
-              maxLines: 4,
-              style: DswType.xs13.copyWith(color: color.labelPrimary),
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                hintText: context.tr('sideChatPlaceholder'),
-                hintStyle: DswType.xs13.copyWith(color: color.labelTertiary),
+            child: dswEnsureShadTheme(
+              context,
+              ShadInput(
+                controller: _composer,
+                minLines: 1,
+                maxLines: 4,
+                style: DswType.xs13.copyWith(color: color.labelPrimary),
+                decoration: dswBareInput,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 4,
+                ), // 8 overflows the 33 the toolbar gives
+                placeholder: dswInputHint(context.tr('sideChatPlaceholder')),
+                placeholderStyle: DswType.xs13.copyWith(
+                  color: color.labelTertiary,
+                ),
+                // Enter sends; Shift+Enter keeps the newline, the source's own
+                // split.
+                onSubmitted: (_) => _send(),
               ),
-              // Enter sends; Shift+Enter keeps the newline, the source's own
-              // split.
-              onSubmitted: (_) => _send(),
             ),
           ),
           _SendButton(onTap: _send),

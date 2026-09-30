@@ -1,14 +1,20 @@
 // Pill: the small rounded label chip, ported from `ui-primitives/src/Pill.tsx`
-// and its stylesheet.
+// and its stylesheet — now drawn by shad's badge (ADR-0036 row 33).
+//
+// What the wrapper still owns is the geometry a caller passes: the chip's seat
+// rides the text step (ADR-0017 S3) and the corner is `shell`, not the badge's
+// control tier, because this chip floats on a card rather than being a control.
 //
 // The source has an interactive arm (a `<button>` with hover and active states)
-// for view-switcher tabs and filters. Nothing in this build has those surfaces
-// yet, so only the static chip is ported — the terminal card's exit-status pill.
-// The interactive arm drops in beside it when a caller needs one.
+// for view-switcher tabs and filters; `ShadBadge.onPressed` is that arm, and
+// nothing here needs it yet — the terminal card's exit-status pill is the only
+// reader, and it is static.
 
 import 'package:flutter/material.dart';
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadBadge;
 
 import '../../theme/dsw_shape.dart';
+import '../../theme/dsw_shad_bridge.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 
@@ -29,22 +35,36 @@ class Pill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = context.dsw;
-    return Container(
-      // The caller's number is a design-px line (24 here, 22 for the terminal's
-      // prompt row), so it rides the text step: at 1.8x the 12px label wanted 32.0
-      // inside the 24.0 seat and was cut top and bottom (ADR-0017 S3).
-      height: height * MediaQuery.textScalerOf(context).scale(1),
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: scheme.bgLayer2,
-        borderRadius: BorderRadius.circular(DswShape.shell),
-      ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: DswType.xxs12.copyWith(color: color ?? scheme.labelSecondary),
+    return dswEnsureShadTheme(
+      context,
+      ShadBadge(
+        backgroundColor: scheme.bgLayer2,
+        foregroundColor: color ?? scheme.labelSecondary,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(DswShape.shell)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: SizedBox(
+          // The caller's number is a design-px line (24 here, 22 for the
+          // terminal's prompt row), so it rides the text step: at 1.8x the 12px
+          // label wanted 32.0 inside the 24.0 seat and was cut top and bottom
+          // (ADR-0017 S3).
+          height: height * MediaQuery.textScalerOf(context).scale(1),
+          // `widthFactor`, because a chip in an unbounded row must not reach for
+          // the whole line — `Center` would, and the badge would overflow the
+          // banner it is pinned to. Its width is its label.
+          child: Align(
+            widthFactor: 1,
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              // The typography stays this file's: the bridge maps no text theme,
+              // so a badge that inherited shad's ramp would fork a second one.
+              style: DswType.xxs12,
+            ),
+          ),
+        ),
       ),
     );
   }
