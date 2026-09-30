@@ -1,6 +1,6 @@
 # ADR-0036 · 截图里的件换 shad，shad 没有的按 shad 风格封装
 
-- **状态**：ACCEPTED（2026-09-30 用户指令：四张真窗截图中的相关组件采用 shadcn_ui 现有组件，没有的按 shadcn_ui 风格自行封装）
+- **状态**：IN-PROGRESS（2026-09-30 用户指令：四张真窗截图中的相关组件采用 shadcn_ui 现有组件，没有的按 shadcn_ui 风格自行封装。ACCEPTED 同日；**B6 菜单归一已落 @ d2401a2/5ee3bd4**，B7 按钮与字段 / B8 封装件与身体待做）
 - **分类**：ARC（ADR-0002 shadcn 迁移的继续，把迁移面从"主题桥 + 按钮"扩到截图内全部件）
 - **优先级**：P2
 - **日期**：2026-09-30
@@ -35,3 +35,7 @@
 - `test/menu_chrome_test.dart` 读皮的缝要随菜单批改（从 Material `popupMenuTheme` 改读桥给 shad 的档）——**改的是认法不是断言**，照 ADR-0034 改 `chat_view_test` 的先例在批次里说明。
 - 放大文本那把尺子（ADR-0017 S3）对换进来的 shad 件同样成立：shad 组件的固定高度座位要过两档（1.8x / 2.2x）探针，`ShadButton.height` 既是 min 又是 max 的天花板照旧登记。
 - 风险：shad 组件自带排版（textTheme），与 `DswType` 阶梯可能分叉——桥只映射颜色与半径时，字号仍由调用点用 `DswType` 显式给（ADR-0027 的"样式名不许撒谎"继续管调用点）。
+
+## 实施
+
+**B6 菜单归一（已落 @ d2401a2 代码 / 5ee3bd4 守卫）**：`lib/ui/primitives/menu.dart` 一枚文件收全部三种形状（`DswMenu` = `ShadPopover` 动作菜单、`DswContextMenu` = `ShadContextMenuRegion`、`DswSelect` = `ShadSelect` 值选择器），行与分隔线只有一份（`DswMenuRow` / `DswMenuDivider`），13 处 Material 菜单归零。皮从 `dsw_theme.dart` 的 `popupMenuTheme` 搬进 `dsw_shad_bridge.dart`（`popoverTheme` + `optionTheme` + `contextMenuTheme`），`popupMenuTheme` 与零读取的 `DswAlias.menu` 一并删除；守卫 `test/shad_menu_adoption_test.dart`（源码计数）与 `test/menu_chrome_test.dart`（读皮，认法改缝、断言留）各先红后绿。四条实现期量到的事实记在映射表 `docs/shad-adoption-2026-09-30.md` §2 的「B6 落地的四条事实」，其中**屏幕上现在有两套 Lucide 字体**一条已另登观察表。

@@ -22,13 +22,13 @@
 | 5 | 页脚 Profile 行（`5dfe47f3`） | `sidebar.dart:624` | 保留 | 级联快捷菜单 shad 无对应（ShadMenubar 是横向常驻）；触发器是整行不是钮 | — |
 | 6 | 字母头像（`5dfe47f3` 页脚） | `sidebar.dart:1008` `_UserAvatar` | 封装（沿用） | `ShadAvatar` 必需图片 `src`（`avatar.dart` 位置参数），字母+索引色表达不了 | — |
 | 7 | hero 标题/副标题（`5dfe47f3`） | `conversation_root.dart:244,272` | 保留（排版层） | 非组件；`DswType` 阶梯 | — |
-| 8 | hero 工作区 chip + recents 菜单（`5dfe47f3`） | `hero_workspace_picker.dart:75,154`（showMenu） | shad | `ShadSelect`：trigger=`selectedOptionBuilder` 画 chip（folder 图标+名+chevron），options 混排 recents 行与"打开…"动作行 | B6 |
+| 8 ✅ | hero 工作区 chip + recents 菜单（`5dfe47f3`） | `hero_workspace_picker.dart:75,154`（showMenu） | shad | `ShadSelect`：trigger=`selectedOptionBuilder` 画 chip（folder 图标+名+chevron），options 混排 recents 行与"打开…"动作行 | B6 |
 | 9 | composer 卡容器（四张皆有） | `composer.dart:722` AnimatedContainer 三态边 | 保留 | 三态动画边是已证性质（ADR-0017 S2b，守卫读**画出来的** BoxDecoration）；ShadCard 装饰是静态主题项，表达不了"焦点优先于 hover"的过渡 | — |
 | 10 | composer 草稿字段（四张皆有） | `composer.dart:763` Material `TextField` | shad | `ShadInput`（`decoration` 给无边框档、`style` 取 `DswType.base16`、maxLines/minLines 照旧） | B7 |
 | 11 | `/` 命令与 `@` 提及补全面 | `composer.dart:634,666` 内联 DecoratedBox | 封装（沿用） | shad 无 combobox/autocomplete；内联补全不是浮层语义；行皮对齐 shad 选项行（hover/selected 令牌） | — |
-| 12 | 附件菜单（`5dfe47f3` 回形针） | `composer.dart:1276` PopupMenuButton | shad | `ShadSelect`（动作行混排进 options） | B6 |
-| 13 | 模型菜单（`bf783e32` 展开态） | `composer.dart:1379` PopupMenuButton | shad | `ShadSelect`：`ShadOption` 选项行 + `ShadSeparator` + 动作行 + 异步 Retry 行（options 是 `Iterable<Widget>`，异质行进得来） | B6 |
-| 14 | 审批模式菜单（`5dfe47f3` 每次询问） | `composer.dart:1606` PopupMenuButton | shad | `ShadSelect<ApprovalMode>` | B6 |
+| 12 | 附件菜单（`5dfe47f3` 回形针） | `composer.dart:1276` PopupMenuButton | shad | **落地改 `DswMenu`（`ShadPopover`）**：一把只有动作、没有值的菜单不该是 select——`ShadSelect` 在 value 为 null 时 assert `placeholder != null`，逼调用点伪造一个选中项 | B6 ✅ |
+| 13 ✅ | 模型菜单（`bf783e32` 展开态） | `composer.dart:1379` PopupMenuButton | shad | `ShadSelect`：`ShadOption` 选项行 + `ShadSeparator` + 动作行 + 异步 Retry 行（options 是 `Iterable<Widget>`，异质行进得来） | B6 |
+| 14 ✅ | 审批模式菜单（`5dfe47f3` 每次询问） | `composer.dart:1606` PopupMenuButton | shad | `ShadSelect<ApprovalMode>` | B6 |
 | 15 | 发送圆钮（四张皆有） | `composer.dart:1721` DswHoverTap | shad | `ShadButton`（primary；圆形半径经 decoration 给——button 几何不读 `theme.radius`，ADR-0029 边界②） | B7 |
 | 16 | 投递药丸（queue/guide） | `composer.dart:1769` | shad | `ShadBadge`（带 `onPressed` 的变体） | B7 |
 | 17 | 用户气泡 / 助手 markdown / 统计行 / 工作区状态行（`86e0bd57`） | `message_item.dart:47`、`assistant_markdown`、`conversation_root.dart:330`、`composer.dart:963` | 保留 | 内容层，分别由 ADR-0034/0031/0018 与 §U3 撤回记录管 | — |
@@ -40,12 +40,12 @@
 | 23 | 设置分区卡（`e68d068b` 的段落容器族） | `settings_card.dart:36,55` | shad | `ShadCard`（皮经桥 `cardTheme`，与工具卡同一层皮） | B8 |
 | 24 | 设置字段（`e68d068b` 文件夹） | `model_settings.dart:1927` | 已 shad | `ShadInput` — 不动 | — |
 | 25 | 设置开关行 | `model_settings.dart:2010,2059` 自画 AnimatedContainer | shad | `ShadSwitch`（label/sublabel 接既有文案键） | B7 |
-| 26 | 设置选择器 pill + 菜单 | `model_settings.dart:1447,2419` PopupMenuButton | shad | `ShadSelect`（trigger=pill 现值） | B6 |
+| 26 ✅ | 设置选择器 pill + 菜单 | `model_settings.dart:1447,2419` PopupMenuButton | shad | `ShadSelect`（trigger=pill 现值） | B6 |
 | 27 | 设置保存/关闭（`e68d068b` 顶部） | CapsuleButton / 图标钮 | 已 shad / B8 | CapsuleButton 内即 ShadButton；关闭钮随决策 3 | B7/B8 |
 | 28 | 级联快捷菜单 | `settings_quick_menu.dart:41` OverlayEntry | 保留 | 级联浮层 shad 无对应；已有滚动 + 两档放大文本守卫 | — |
-| 29 | 工作台 `+` opener / tab 右键（截图外同族） | `workbench_tab_bar.dart:158,482` | shad | `ShadPopover`（动作列表，trigger=图标钮）/ `ShadContextMenuRegion` | B6 |
-| 30 | 文件树行右键 / 自由窗口表头菜单（同族） | `file_tree_tab.dart:383`；`free_window_layer.dart:308` | shad | `ShadContextMenuRegion` | B6 |
-| 31 | git 面板三把菜单（同族） | `git_tab.dart:462,525,1036` | shad | 选项类 `ShadSelect` / 行右键 `ShadContextMenuRegion` | B6 |
+| 29 | 工作台 `+` opener / tab 右键（截图外同族） | `workbench_tab_bar.dart:158,482` | shad | `DswMenu`（`ShadPopover`，动作列表，trigger=图标钮）/ `DswContextMenu`（`ShadContextMenuRegion`） | B6 ✅ |
+| 30 ✅ | 文件树行右键 / 自由窗口表头菜单（同族） | `file_tree_tab.dart:383`；`free_window_layer.dart:308` | shad | `ShadContextMenuRegion` | B6 |
+| 31 ✅ | git 面板三把菜单（同族） | `git_tab.dart:462,525,1036` | shad | 选项类 `ShadSelect` / 行右键 `ShadContextMenuRegion` | B6 |
 | 32 | tab chip 与拖拽 / pane 欢迎页 | `workbench_tab_bar.dart:272`；`pane.dart:232,331` | 保留 / shad | chip 可拖拽重排，shad Tabs 无 reorder → 保留；欢迎页动作卡 → `ShadCard`+`ShadButton.outline` | B8 |
 | 33 | 静态标签 pill | `primitives/pill.dart:15` | shad | `ShadBadge` | B7 |
 | 34 | 图标钮原语身体 | `primitives/icon_button.dart:26` | shad（身体） | `ShadIconButton` | B8 |
@@ -59,6 +59,27 @@
 - **B6 菜单归一**：13 处归零。守卫 `test/shad_menu_adoption_test.dart`：① 源码计数（`PopupMenuButton`/`showMenu` 标识符在 `lib/ui` = 0，照 `tap_affordance_test` 的按文件计数先例，新增即红并指名文件）；② 真开一把 `ShadSelect` 读它渲染的皮等于桥给的档（`menu_chrome_test` 的**认法改缝、断言留**：从 Material `popupMenuTheme` 改读 ShadTheme 的 select 皮，照 ADR-0034 改 `chat_view_test` 认法的先例说明）；③ 放大文本两档（1.8x/2.2x）复量打开着的菜单。**先红**：计数守卫在当前树 = 13。
 - **B7 字段/开关/按钮/徽标**：裸 `TextField(` 归零（5 处全换，无登记例外）；开关行渲染 `ShadSwitch`；发送钮/新会话/药丸换 `ShadButton`/`ShadBadge`。守卫：计数 + 行为（开关可点可键盘、字段可输入、三态边守卫与设置页放大守卫仍绿）。**先红**：TextField 计数 = 5。
 - **B8 封装与身体**：`DswIconButton` 身体 = `ShadIconButton`（`icon_button_test` 四性仍绿 + 一条断言读身体类型）；新 `segmented` 件（sidebar 两档可点/可键盘/语义 toggled）；`ShadCard` 收工具卡与设置分区卡（`cardTheme` 进桥，`shad_radius_test` 扩一条"卡片皮只在桥说一次"）。**先红**：身体类型断言与 cardTheme 断言在当前树红。
+
+### B6 落地的四条事实（2026-09-30，13 处归零后补记；代码 `d2401a2`，守卫 `5ee3bd4`）
+
+守卫 `test/shad_menu_adoption_test.dart` 从 13 归零（`lib/ui` 里 `PopupMenuButton`/`PopupMenuItem`/`showMenu` 三个标识符 = 0），
+`test/menu_chrome_test.dart` 按"认法改缝、断言留"重接：读的是桥的 `popoverTheme` + `optionTheme` + `contextMenuTheme`，不再读 Material 的 `popupMenuTheme`。
+随最后一把 Material 菜单退场，`dsw_theme.dart` 的 `popupMenuTheme` 与 `DswAlias.menu`（零读取，ADR-0025）**一并删除**。
+
+1. **`ShadSelect` 的 `minWidth` 是 trigger 与浮层共用的一枚数**（`select.dart` 的 `effectiveConstraints` 同时进两个 `ConstrainedBox`）。
+   所以 `DswSelect` 给 trigger 传 `minWidth: 0`，另开 `popupMinWidth`，把它做成**每行的地板**（`ConstrainedBox(minWidth:)` 与浮层的 `IntrinsicWidth` 合成），
+   而不是把 chip 撑宽。
+2. **动作行混排进 options 时必须自己会关**：只有 `ShadOption` 在选中时收起浮层，所以 `DswSelect.options` 拿到 `close`
+   （模型菜单的"模型管理"、hero 的"打开…"都是这种自由行）。
+3. **`ShadSelect` 的 trigger 没有 hover 档**（`ShadDecoration` 表达不了 hover），且 `select.dart` 里没有 `Semantics`。
+   于是 `DswSelect` 自己喂 `hovered`（ADR-0017 S2 那条"可点的行要回答指针"）、自己包 `Tooltip` + `Semantics(button:)`。
+   顺带把 `interactiveBgHover` 这层 wash 给了五枚此前没有的 chip。
+4. **shad 自带第二套 Lucide 字体**（`lucide_icons_flutter` 3.1.20，经 `shadcn_ui` re-export），码位与 app 用的 `flutter_lucide` 1.48.0 不同名同形不同号。
+   实测：断言选项行的勾选要用 `shad.LucideIcons.check`，用 app 那把常量匹配不到任何像素。**这是 B8 之前要知道的一件事**：屏幕上现在有两套图标字体在画图标。
+
+另外两条是被守卫逼出来的测试事实，写下来免得下次再查：
+放大档位下浮层的行会**盖住叫它出来的那一行**，所以"点角落空白处收起菜单"这个惯用法在 2.2x 会点在菜单自己身上——测试改用 `Escape`（`ShadPopover` 的 `CallbackShortcuts` 真接了它，实测三种手势：远点 tap ✅ / Escape ✅ / 点回宿主行 ✗）；
+一把菜单量一次就要一棵新树， chained 的两把菜单测的是"两把叠在一起"。
 
 ## 3. 桥要补的主题项（一层皮只说一次）
 
