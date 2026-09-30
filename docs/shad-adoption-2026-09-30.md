@@ -16,7 +16,7 @@
 | # | 面（截图证据） | 现状 | 判定 | 换成 / 理由 | 批次 |
 | --- | --- | --- | --- | --- | --- |
 | 1 | 企划/代理分段控件（`5dfe47f3` 侧栏） | `sidebar.dart:256` 手画 Container+Row | 封装 | shad 无 ToggleGroup；新 `primitives/segmented.dart`：轨道 + 选中格，皮取 `bgLayer1`/`bgLayer2`+`borderL2`，点击格走 `DswHoverTap` | B8 |
-| 2 | 新会话（`5dfe47f3`） | `sidebar.dart:507` `_Pressable`+Container | shad | `ShadButton.outline`（撑满列宽） | B7 |
+| 2 | 新会话（`5dfe47f3`） | `sidebar.dart:507` `_Pressable`+Container | **保留**（判定改） | 指针／键盘／语义／焦点四条 ADR-0021 已满足（`DswHoverTap` 本就是放行的一支），换 `ShadButton` 得不到任何新性质；而它的两档形态（宽栏 hug 标签 ／ rail 36 见方）与刻意不做动画的理由（`AnimatedContainer` 在有限宽与无界宽之间无法插值，注释已写）都要往 shad 的固定座位里硬塞 | — |
 | 3 | 会话行（`5dfe47f3`/`86e0bd57` 选中态） | `sidebar.dart:809` | 封装（沿用） | shad 无 list 组件；`DswHoverTap` 行，selected/hover 皮已在令牌（ADR-0017 S2） | — |
 | 4 | 图标钮族：logo 折叠、页脚齿轮/详情、外壳右上两钮、详情栏关闭 | `sidebar.dart:447,624,681`；`app_frame.dart:529,536,550`；`details_panel.dart:215` | shad（经原语） | `DswIconButton` 的**身体**改 `ShadIconButton`（ADR-0036 决策 3；wrapper 仍管 tooltip=语义名、半径按盒、色阶、动效） | B8 |
 | 5 | 页脚 Profile 行（`5dfe47f3`） | `sidebar.dart:624` | 保留 | 级联快捷菜单 shad 无对应（ShadMenubar 是横向常驻）；触发器是整行不是钮 | — |
@@ -29,8 +29,8 @@
 | 12 | 附件菜单（`5dfe47f3` 回形针） | `composer.dart:1276` PopupMenuButton | shad | **落地改 `DswMenu`（`ShadPopover`）**：一把只有动作、没有值的菜单不该是 select——`ShadSelect` 在 value 为 null 时 assert `placeholder != null`，逼调用点伪造一个选中项 | B6 ✅ |
 | 13 ✅ | 模型菜单（`bf783e32` 展开态） | `composer.dart:1379` PopupMenuButton | shad | `ShadSelect`：`ShadOption` 选项行 + `ShadSeparator` + 动作行 + 异步 Retry 行（options 是 `Iterable<Widget>`，异质行进得来） | B6 |
 | 14 ✅ | 审批模式菜单（`5dfe47f3` 每次询问） | `composer.dart:1606` PopupMenuButton | shad | `ShadSelect<ApprovalMode>` | B6 |
-| 15 | 发送圆钮（四张皆有） | `composer.dart:1721` DswHoverTap | shad | `ShadButton`（primary；圆形半径经 decoration 给——button 几何不读 `theme.radius`，ADR-0029 边界②） | B7 |
-| 16 | 投递药丸（queue/guide） | `composer.dart:1769` | shad | `ShadBadge`（带 `onPressed` 的变体） | B7 |
+| 15 ✅ | 发送圆钮（四张皆有） | `composer.dart:1721` DswHoverTap | shad | `ShadButton.ghost`，填充／悬停取 `buttonInfoFill`／`buttonInfoHover`，圆角由 `decoration.shape: BoxShape.circle` 在调用点说（button 几何不读 `theme.radius`，ADR-0029 边界②）；`enabled` 与 `Opacity(0.4)` 那对双真值删掉，禁用只由 `onPressed: null` 说一次，焦点环由 shad 补上（此前应用的主操作完全没有键盘指示） | B7 |
+| 16 | 投递药丸（queue/guide） | `composer.dart:1769` | **保留**（判定改） | 落地前核对 `ShadBadge` 的参数：它有 `onPressed`，但**没有 `decoration`／边框入口**（`badge.dart:26-38` 只有 shape / backgroundColor / foregroundColor / padding）。这枚药丸读作「可按」靠的就是那圈描边，描边只能回调用点画，那就不是「用 shad 的件」了；且它是动作不是标签 | — |
 | 17 | 用户气泡 / 助手 markdown / 统计行 / 工作区状态行（`86e0bd57`） | `message_item.dart:47`、`assistant_markdown`、`conversation_root.dart:330`、`composer.dart:963` | 保留 | 内容层，分别由 ADR-0034/0031/0018 与 §U3 撤回记录管 | — |
 | 18 | 工具卡容器（`86e0bd57`） | `tool_card.dart:77,88` | shad | `ShadCard`：backgroundColor/radius/border 经桥 `cardTheme` 说一次，交互头作 child | B8 |
 | 19 | 工具卡头行（chevron+名+摘要） | `disclosure_row.dart:17` | 封装（沿用） | ShadAccordion 是**组**语义，单卡折叠不匹配；行皮已在令牌 | — |
@@ -57,7 +57,7 @@
 ## 2. 批次与守卫（每批先红后绿）
 
 - **B6 菜单归一**：13 处归零。守卫 `test/shad_menu_adoption_test.dart`：① 源码计数（`PopupMenuButton`/`showMenu` 标识符在 `lib/ui` = 0，照 `tap_affordance_test` 的按文件计数先例，新增即红并指名文件）；② 真开一把 `ShadSelect` 读它渲染的皮等于桥给的档（`menu_chrome_test` 的**认法改缝、断言留**：从 Material `popupMenuTheme` 改读 ShadTheme 的 select 皮，照 ADR-0034 改 `chat_view_test` 认法的先例说明）；③ 放大文本两档（1.8x/2.2x）复量打开着的菜单。**先红**：计数守卫在当前树 = 13。
-- **B7 字段/开关/按钮/徽标（部分落地 @ d3181fb/b44c73f）**：裸 `TextField(` 归零（5 处全换，无登记例外）；开关行渲染 `ShadSwitch`；发送钮/新会话/药丸换 `ShadButton`/`ShadBadge`。守卫：计数 + 行为（开关可点可键盘、字段可输入、三态边守卫与设置页放大守卫仍绿）。**已落**：5 处 `TextField(` 与自画 `_Switch` 类与 `pill` 三处断言全部归零（守卫 `test/shad_widget_adoption_test.dart`，先红 5 字段 / 1 开关 / pill 一条，且带正向对照，扫不到东西不算通过）；`_Switch` 的 `onChanged` 此前从未接线（只有行在动作），现在是 `ShadSwitch` 本体。**未落**：发送圆钮 / 新会话 → `ShadButton`、投递药丸 → `ShadBadge(onPressed)`（行 15/16/2）。
+- **B7 字段/开关/按钮/徽标（已落 @ d3181fb/b44c73f + 发送钮那一次）**：裸 `TextField(` 归零（5 处全换，无登记例外）；开关行渲染 `ShadSwitch`；发送钮/新会话/药丸换 `ShadButton`/`ShadBadge`。守卫：计数 + 行为（开关可点可键盘、字段可输入、三态边守卫与设置页放大守卫仍绿）。**已落**：5 处 `TextField(` 与自画 `_Switch` 类与 `pill` 三处断言全部归零（守卫 `test/shad_widget_adoption_test.dart`，先红 5 字段 / 1 开关 / pill 一条，且带正向对照，扫不到东西不算通过）；`_Switch` 的 `onChanged` 此前从未接线（只有行在动作），现在是 `ShadSwitch` 本体。**已落**：发送圆钮（行 15，`ShadButton.ghost`，同时消掉 `enabled` + `Opacity(0.4)` 这对双真值并补上焦点环）。**判定改并写明理由**：新会话（行 2）与投递药丸（行 16）留原语——前者四条性质已在且两档形态是 bespoke，后者要的描边 `ShadBadge` 根本没有入口。这两条是落地前对着 pub-cache 参数表核出来的，不是偏好。
 
 - **B8 封装与身体**：`DswIconButton` 身体 = `ShadIconButton`（`icon_button_test` 四性仍绿 + 一条断言读身体类型）；新 `segmented` 件（sidebar 两档可点/可键盘/语义 toggled）；`ShadCard` 收工具卡与设置分区卡（`cardTheme` 进桥，`shad_radius_test` 扩一条"卡片皮只在桥说一次"）。**先红**：身体类型断言与 cardTheme 断言在当前树红。
 
