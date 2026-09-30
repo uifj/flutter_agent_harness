@@ -24,6 +24,55 @@ const _definition = 'lib/model/app_settings.dart';
 const _writer = 'lib/ui/settings/model_settings.dart';
 
 void main() {
+  group('a hint is a fact the user can act on', () {
+    // ADR-0033. A field hint is not decoration: it names a directory someone may
+    // create. Two of them were inherited from the project this one was written
+    // against - `/Users/you/.dsh/skills` on a screen whose own description says
+    // "application support directory", and `/Users/you/project` - so the copy
+    // contradicted the screen it sat on.
+    test('no copy in lib/ui names the upstream product directory', () {
+      final offenders = <String>[];
+      for (final file in Directory(
+        'lib/ui',
+      ).listSync(recursive: true).whereType<File>()) {
+        if (!file.path.endsWith('.dart')) continue;
+        final lines = file.readAsLinesSync();
+        for (var i = 0; i < lines.length; i++) {
+          final text = lines[i];
+          if (!text.contains('.dsh')) continue;
+          if (text.trimLeft().startsWith('//') ||
+              text.trimLeft().startsWith('///')) {
+            continue;
+          }
+          offenders.add('${file.path}: ${i + 1}');
+        }
+      }
+      expect(offenders, isEmpty);
+    });
+
+    test('no field hint is an invented absolute path', () {
+      final offenders = <String>[];
+      for (final file in Directory(
+        'lib/ui',
+      ).listSync(recursive: true).whereType<File>()) {
+        if (!file.path.endsWith('.dart')) continue;
+        final lines = file.readAsLinesSync();
+        for (var i = 0; i < lines.length; i++) {
+          if (RegExp(r"hint: '/").hasMatch(lines[i])) {
+            offenders.add('${file.path}: ${i + 1}');
+          }
+        }
+      }
+      expect(
+        offenders,
+        isEmpty,
+        reason:
+            'a hint that starts with / is a path someone will type into a '
+            'folder picker; the real one is already known at runtime',
+      );
+    });
+  });
+
   test('every field of AppSettings is read somewhere it can take effect', () {
     final fields = _settingsFields();
     // Guards against the parse silently finding nothing, which would make the

@@ -409,6 +409,10 @@ class _DshAppState extends ConsumerState<DshApp> {
       onSave: scope.save,
       onClose: () => setState(() => _settingsOpen = false),
       onPickFolder: scope.pickFolder,
+      // The field hints on the settings page name directories the user can open,
+      // so they name the real one (ADR-0033). Read here, not in the panel:
+      // riverpod stays out of the widget tree.
+      supportPath: ref.watch(supportDirectoryProvider).path,
       workbenchPrefs: ref.watch(workbenchPrefsProvider),
       onPrefsChange: (next) => ref.read(prefsStoreProvider).save(next),
       // The endpoint interrogation behind "Test connection" and the model

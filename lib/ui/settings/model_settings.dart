@@ -64,6 +64,7 @@ class SettingsPanel extends StatefulWidget {
     required this.onSave,
     required this.onClose,
     required this.onPickFolder,
+    required this.supportPath,
     this.workbenchPrefs = const WorkbenchPrefs(),
     this.onPrefsChange,
     this.modelsFetcher,
@@ -77,6 +78,14 @@ class SettingsPanel extends StatefulWidget {
   final Future<void> Function(AppSettings next) onSave;
 
   final VoidCallback onClose;
+
+  /// Where this app keeps its own data, resolved at startup and handed in —
+  /// the field hints below name a directory, and a hint is a fact the user can
+  /// act on, so it cannot be an invented example (ADR-0033: the skills hint used
+  /// to read `/Users/you/.dsh/skills`, a path from the project this one was
+  /// written against, on a screen whose own description said "application
+  /// support directory").
+  final String supportPath;
 
   /// Opens the platform's directory picker and adopts the choice (or null when
   /// the picker is dismissed), returning the settings document with the choice
@@ -1035,7 +1044,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
     _Field(
       label: context.tr('folder'),
       controller: _workspace,
-      hint: '/Users/you/project',
+      hint: '~/projects/my-app',
       autofocus: true,
       code: true,
       trailing: CapsuleButton(label: context.tr('choose'), onTap: _pickFolder),
@@ -1166,7 +1175,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
     _Field(
       label: context.tr('folder'),
       controller: _skills,
-      hint: '/Users/you/.dsh/skills',
+      hint: '${widget.supportPath}/skills',
       code: true,
     ),
   ];

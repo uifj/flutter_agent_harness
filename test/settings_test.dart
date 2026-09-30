@@ -151,6 +151,7 @@ void main() {
       required AppSettings settings,
       required Future<void> Function(AppSettings) onSave,
       Future<AppSettings?> Function(AppSettings)? onPickFolder,
+      String supportPath = '/support',
       VoidCallback? onClose,
       WorkbenchPrefs workbenchPrefs = const WorkbenchPrefs(),
       ValueChanged<WorkbenchPrefs>? onPrefsChange,
@@ -173,6 +174,7 @@ void main() {
             onSave: onSave,
             onClose: onClose ?? () {},
             onPickFolder: onPickFolder ?? (_) async => null,
+            supportPath: supportPath,
             workbenchPrefs: workbenchPrefs,
             onPrefsChange: onPrefsChange,
           ),
@@ -407,6 +409,7 @@ void main() {
         tester,
         settings: const AppSettings(),
         onPickFolder: (current) async => current.withWorkspace(picked.path),
+        supportPath: '/support',
         onSave: (next) async => saved = next,
       );
 
@@ -424,12 +427,33 @@ void main() {
       expect(saved?.recentWorkspaces, [picked.path]);
     });
 
+    testWidgets('the skills hint is the directory this app actually uses', (
+      tester,
+    ) async {
+      // ADR-0033: the hint used to read `/Users/you/.dsh/skills` - another
+      // product's path, on a screen whose description says "application support
+      // directory". It now comes from the support path handed in, so the field
+      // and the sentence above it cannot disagree.
+      await pump(
+        tester,
+        settings: const AppSettings(),
+        supportPath: '/var/app-support',
+        onSave: (_) async {},
+      );
+      await tester.tap(find.text('Extensions'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('/var/app-support/skills'), findsOneWidget);
+      expect(find.textContaining('.dsh'), findsNothing);
+    });
+
     testWidgets('a dismissed picker changes nothing', (tester) async {
       AppSettings? saved;
       await pump(
         tester,
         settings: const AppSettings(workspaceRoot: '/tmp/kept'),
         onPickFolder: (_) async => null,
+        supportPath: '/support',
         onSave: (next) async => saved = next,
       );
 
