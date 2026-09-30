@@ -128,6 +128,11 @@ ThemeData dswThemeData(Brightness brightness) {
     canvasColor: c.bgBase,
     dividerColor: c.borderL2,
     splashFactory: NoSplash.splashFactory,
+    // Menu rows are `InkWell`s, and `ink_well.dart:1040` falls back to
+    // `ThemeData.hoverColor` — Material's own value is a black/white veil, not
+    // the wash every other hover affordance in the app takes from
+    // `interactiveBgHover` (ADR-0021).
+    hoverColor: c.interactiveBgHover,
     // dsh is a pointer-first desktop UI; Material's touch-sized defaults would
     // inflate every control past the ported geometry.
     visualDensity: VisualDensity.compact,
@@ -171,6 +176,31 @@ ThemeData dswThemeData(Brightness brightness) {
         borderRadius: BorderRadius.circular(DswShape.inner),
       ),
       textStyle: DswType.xxxs11.copyWith(color: c.labelPrimaryForeground),
+    ),
+    // One menu skin (ADR-0028). Without this entry every `showMenu` and
+    // `PopupMenuButton` renders Material's chrome: a computed
+    // `surfaceContainer` that measures the same colour as the page behind it, a
+    // 4px radius while `DswShape.shell`'s own doc names "dropdown menu" as its
+    // surface, and `labelLarge` (weight 500) while every real row is regular.
+    // The popover in `settings_quick_menu.dart:141-147` is the second opinion on
+    // what a floating list looks like here, and the menus now agree with it.
+    popupMenuTheme: PopupMenuThemeData(
+      color: c.bgLayer2,
+      // `RoundedRectangleBorder.side` is painted by Material
+      // (`_ShapeBorderPainter.paint`, `material.dart:973` passes no borderColor),
+      // so the hairline the popover has is expressible here.
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(DswShape.shell),
+        side: BorderSide(color: c.borderL2),
+      ),
+      // Resolution order (`popup_menu.dart:417`) hands the theme full
+      // responsibility once this is set: Material's own disabled dimming is
+      // never consulted, so the disabled branch has to be written.
+      labelTextStyle: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.disabled)
+            ? DswType.s14.copyWith(color: c.labelTertiary)
+            : DswType.s14.copyWith(color: c.labelPrimary),
+      ),
     ),
     scrollbarTheme: ScrollbarThemeData(
       thumbColor: WidgetStateProperty.resolveWith(
