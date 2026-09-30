@@ -32,12 +32,12 @@
 | 15 ✅ | 发送圆钮（四张皆有） | `composer.dart:1721` DswHoverTap | shad | `ShadButton.ghost`，填充／悬停取 `buttonInfoFill`／`buttonInfoHover`，圆角由 `decoration.shape: BoxShape.circle` 在调用点说（button 几何不读 `theme.radius`，ADR-0029 边界②）；`enabled` 与 `Opacity(0.4)` 那对双真值删掉，禁用只由 `onPressed: null` 说一次，焦点环由 shad 补上（此前应用的主操作完全没有键盘指示） | B7 |
 | 16 | 投递药丸（queue/guide） | `composer.dart:1769` | **保留**（判定改） | 落地前核对 `ShadBadge` 的参数：它有 `onPressed`，但**没有 `decoration`／边框入口**（`badge.dart:26-38` 只有 shape / backgroundColor / foregroundColor / padding）。这枚药丸读作「可按」靠的就是那圈描边，描边只能回调用点画，那就不是「用 shad 的件」了；且它是动作不是标签 | — |
 | 17 | 用户气泡 / 助手 markdown / 统计行 / 工作区状态行（`86e0bd57`） | `message_item.dart:47`、`assistant_markdown`、`conversation_root.dart:330`、`composer.dart:963` | 保留 | 内容层，分别由 ADR-0034/0031/0018 与 §U3 撤回记录管 | — |
-| 18 | 工具卡容器（`86e0bd57`） | `tool_card.dart:77,88` | shad | `ShadCard`：backgroundColor/radius/border 经桥 `cardTheme` 说一次，交互头作 child | B8 |
+| 18 | 工具卡容器（`86e0bd57`） | 行 18 的前提在落地核对时不成立：`tool_card.dart` 与它用的 `disclosure_row.dart` **没有卡片容器**（`grep -n "BoxDecoration\|Border.all\|borderRadius" disclosure_row.dart` 只命中图标色两行），一条工具调用就是一行加展开的正文，无边框无填充。所以不是"换 ShadCard"而是"要不要给每次工具调用加一张带发丝的卡"——那是版式决定，与 §U6/§U7 同批等用户选方向；`ShadCard` 那层皮已由行 23 住进桥，选了加就直接复用 | — |
 | 19 | 工具卡头行（chevron+名+摘要） | `disclosure_row.dart:17` | 封装（沿用） | ShadAccordion 是**组**语义，单卡折叠不匹配；行皮已在令牌 | — |
 | 20 | 详情栏容器与两 blob | `details_panel.dart:31,76,99,256` | 保留 | 复制面留原文（ADR-0035）；容器自绘 | — |
 | 21 | 设置左导航行（`e68d068b`） | `model_settings.dart:1813` | 封装（沿用） | 此移植版无垂直 nav（无 NavigationMenu）；左 accent 条 + selected 皮已在令牌 | — |
 | 22 ✅ | 设置搜索框（`e68d068b`） | `model_settings.dart:1765` Material `TextField` | shad | `ShadInput`（prefix 放大镜） | B7 |
-| 23 | 设置分区卡（`e68d068b` 的段落容器族） | `settings_card.dart:36,55` | shad | `ShadCard`（皮经桥 `cardTheme`，与工具卡同一层皮） | B8 |
+| 23 ✅ | 设置分区卡（`e68d068b` 的段落容器族） | `settings_card.dart:36,55` | shad | `ShadCard`，皮（`bgLayer1` + `shell` + `borderL2` + 裁剪）住在桥的 `cardTheme`；`shad_radius_test` 新增三条：桥值两档 + 「settings_card 里不得再出现 `Border.all(`」。**观感变化要人签收**：分区卡此前是**透明底 + 发丝**，现在按映射表 §3 多了一层 `bgLayer1` 底——这是表格写的目标形状，但只有真窗能判断它比原来读得好不好 | B8 |
 | 24 | 设置字段（`e68d068b` 文件夹） | `model_settings.dart:1927` | 已 shad | `ShadInput` — 不动 | — |
 | 25 ✅ | 设置开关行 | `model_settings.dart:2010,2059` 自画 AnimatedContainer | shad | `ShadSwitch`（label/sublabel 接既有文案键） | B7 |
 | 26 ✅ | 设置选择器 pill + 菜单 | `model_settings.dart:1447,2419` PopupMenuButton | shad | `ShadSelect`（trigger=pill 现值） | B6 |
