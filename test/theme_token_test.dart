@@ -314,6 +314,60 @@ void main() {
     });
   });
 
+  group('a style name never lies about its size', () {
+    // `DswType.xs13.copyWith(fontSize: 12, …)` renders 12 while its name says 13.
+    // Two numbers for one fact, and the reader of the call site is told the wrong
+    // one (ADR-0014's shape, ADR-0022's "a comment that admits it is still a
+    // lying control"). Re-sizing a named step is how the type scale grew a
+    // shadow copy of itself: 18 under `l20`, 26 under `xl24`, 15 under `s14`.
+    test('no call site resteps a DswType size', () {
+      final declared = {
+        for (final match in RegExp(
+          r'static final (\w+) = _(?:ui|code)\((\d+),',
+        ).allMatches(File('lib/theme/dsw_typography.dart').readAsStringSync()))
+          match.group(1)!: int.parse(match.group(2)!),
+      };
+      expect(declared.length, greaterThan(10), reason: 'the parse rotted');
+
+      final opener = RegExp(r'DswType\.(\w+)\.copyWith\($');
+      final resizer = RegExp(r'fontSize: (\d+)(?:\.0)?,');
+      final lies = <String>[];
+      for (final file in Directory('lib/ui').listSync(recursive: true)) {
+        if (file is! File || !file.path.endsWith('.dart')) continue;
+        final lines = file.readAsLinesSync();
+        for (var i = 0; i < lines.length; i++) {
+          final start = opener.firstMatch(lines[i].trim());
+          if (start == null) continue;
+          final step = declared[start.group(1)!];
+          expect(
+            step,
+            isNotNull,
+            reason: '${start.group(1)} is not on the ramp',
+          );
+          for (var j = i + 1; j <= i + 6 && j < lines.length; j++) {
+            final sized = resizer.firstMatch(lines[j].trim());
+            if (sized == null) continue;
+            if (int.parse(sized.group(1)!) != step) {
+              lies.add(
+                '${file.path}:${j + 1}  DswType.${start.group(1)} '
+                '(=$step) renders ${sized.group(1)}',
+              );
+            }
+            break;
+          }
+        }
+      }
+      expect(
+        lies,
+        isEmpty,
+        reason:
+            'a step that renders another number is a second truth about the '
+            'type scale. Read the step that has the size you want, or name the '
+            'new one in dsw_typography.dart.',
+      );
+    });
+  });
+
   group('every shape token has a reader', () {
     // ADR-0022's law aimed at the theme layer. A constant nothing reads is not
     // harmless: it is a second spelling of a value someone will later
