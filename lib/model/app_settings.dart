@@ -59,19 +59,6 @@ enum LocaleMode {
   };
 }
 
-/// The conversation text face (starkins: sans-serif / serif).
-enum AppFontFamily {
-  sansSerif,
-  serif;
-
-  String get name => switch (this) {
-    sansSerif => 'sansSerif',
-    serif => 'serif',
-  };
-  static AppFontFamily fromName(String? raw) =>
-      raw == 'serif' ? serif : sansSerif;
-}
-
 /// The app's text-size step. Multiplied into the system's own `TextScaler` at
 /// the root (`main.dart`), so it composes with the OS's "放大文本" instead of
 /// replacing it — which is why it is a factor and not a pixel size.
@@ -114,49 +101,6 @@ enum AppConversationWidth {
       raw == 'wide' ? wide : normal;
 }
 
-/// The window skin. NOTE (ADR-0005 S4 guard): only `standard` has a real
-/// palette today; glass/classic/parchment need their own DswAlias set and a
-/// follow-up ADR — the field persists the intent but the renderer applies
-/// standard until that exists.
-enum AppInterfaceStyle {
-  standard,
-  glass,
-  classic,
-  parchment;
-
-  String get name => switch (this) {
-    standard => 'standard',
-    glass => 'glass',
-    classic => 'classic',
-    parchment => 'parchment',
-  };
-  static AppInterfaceStyle fromName(String? raw) => switch (raw) {
-    'glass' => glass,
-    'classic' => classic,
-    'parchment' => parchment,
-    _ => standard,
-  };
-}
-
-/// How generated files are previewed. Maps onto the existing editor/browser
-/// tabs at S4.
-enum AppPreviewMode {
-  newWindow,
-  sidePanel,
-  inline;
-
-  String get name => switch (this) {
-    newWindow => 'newWindow',
-    sidePanel => 'sidePanel',
-    inline => 'inline',
-  };
-  static AppPreviewMode fromName(String? raw) => switch (raw) {
-    'newWindow' => newWindow,
-    'inline' => inline,
-    _ => sidePanel,
-  };
-}
-
 class AppSettings {
   const AppSettings({
     this.model = const ModelSettings(),
@@ -167,13 +111,9 @@ class AppSettings {
     this.theme = ThemeMode.system,
     this.locale = LocaleMode.system,
     this.recentWorkspaces = const [],
-    this.fontFamily = AppFontFamily.sansSerif,
     this.fontSize = AppFontSize.medium,
     this.conversationWidth = AppConversationWidth.normal,
-    this.interfaceStyle = AppInterfaceStyle.standard,
-    this.previewMode = AppPreviewMode.sidePanel,
     this.expandToolCalls = true,
-    this.promptSuggestions = false,
   });
 
   AppSettings.fromJson(Map<String, dynamic> json)
@@ -193,17 +133,11 @@ class AppSettings {
         for (final path in (json['recentWorkspaces'] as List? ?? const []))
           if (path is String) path,
       ],
-      fontFamily = AppFontFamily.fromName(json['fontFamily'] as String?),
       fontSize = AppFontSize.fromName(json['fontSize'] as String?),
       conversationWidth = AppConversationWidth.fromName(
         json['conversationWidth'] as String?,
       ),
-      interfaceStyle = AppInterfaceStyle.fromName(
-        json['interfaceStyle'] as String?,
-      ),
-      previewMode = AppPreviewMode.fromName(json['previewMode'] as String?),
-      expandToolCalls = json['expandToolCalls'] as bool? ?? true,
-      promptSuggestions = json['promptSuggestions'] as bool? ?? false;
+      expandToolCalls = json['expandToolCalls'] as bool? ?? true;
 
   final ModelSettings model;
 
@@ -232,20 +166,14 @@ class AppSettings {
   /// Folders offered back in the picker, most recent first, deduped.
   final List<String> recentWorkspaces;
 
-  // ---- Appearance / behaviour preferences (ADR-0005) ---------------------
+  // ---- Appearance / behaviour preferences (ADR-0005; ADR-0022 removed the
+  // four that no code ever read back) --------------------------------------
 
-  final AppFontFamily fontFamily;
   final AppFontSize fontSize;
   final AppConversationWidth conversationWidth;
-  final AppInterfaceStyle interfaceStyle;
-  final AppPreviewMode previewMode;
 
   /// Whether a newly-shown tool block starts expanded (starkins default on).
   final bool expandToolCalls;
-
-  /// Whether the agent offers follow-up prompt suggestions. Behaviour lands
-  /// with the composer subsystem; persisted now so the toggle survives.
-  final bool promptSuggestions;
 
   static List<String> _pushRecent(List<String> recent, String path) => [
     path,
@@ -262,13 +190,9 @@ class AppSettings {
     ThemeMode? theme,
     LocaleMode? locale,
     List<String>? recentWorkspaces,
-    AppFontFamily? fontFamily,
     AppFontSize? fontSize,
     AppConversationWidth? conversationWidth,
-    AppInterfaceStyle? interfaceStyle,
-    AppPreviewMode? previewMode,
     bool? expandToolCalls,
-    bool? promptSuggestions,
   }) => AppSettings(
     model: model ?? this.model,
     workspaceRoot: workspaceRoot ?? this.workspaceRoot,
@@ -278,13 +202,9 @@ class AppSettings {
     theme: theme ?? this.theme,
     locale: locale ?? this.locale,
     recentWorkspaces: recentWorkspaces ?? this.recentWorkspaces,
-    fontFamily: fontFamily ?? this.fontFamily,
     fontSize: fontSize ?? this.fontSize,
     conversationWidth: conversationWidth ?? this.conversationWidth,
-    interfaceStyle: interfaceStyle ?? this.interfaceStyle,
-    previewMode: previewMode ?? this.previewMode,
     expandToolCalls: expandToolCalls ?? this.expandToolCalls,
-    promptSuggestions: promptSuggestions ?? this.promptSuggestions,
   );
 
   /// Explicit: an empty path field means "take the permission back". The
@@ -296,13 +216,9 @@ class AppSettings {
     theme: theme,
     locale: locale,
     recentWorkspaces: recentWorkspaces,
-    fontFamily: fontFamily,
     fontSize: fontSize,
     conversationWidth: conversationWidth,
-    interfaceStyle: interfaceStyle,
-    previewMode: previewMode,
     expandToolCalls: expandToolCalls,
-    promptSuggestions: promptSuggestions,
   );
 
   /// [path] adopted as the workspace, moved to the front of the recent list in
@@ -316,13 +232,9 @@ class AppSettings {
     theme: theme,
     locale: locale,
     recentWorkspaces: _pushRecent(recentWorkspaces, path),
-    fontFamily: fontFamily,
     fontSize: fontSize,
     conversationWidth: conversationWidth,
-    interfaceStyle: interfaceStyle,
-    previewMode: previewMode,
     expandToolCalls: expandToolCalls,
-    promptSuggestions: promptSuggestions,
   );
 
   AppSettings forgetWorkspace(String path) => copyWith(
@@ -352,16 +264,10 @@ class AppSettings {
     if (recentWorkspaces.isNotEmpty) 'recentWorkspaces': recentWorkspaces,
     // Persisted only when off the default, so a fresh document stays lean and
     // absent keys mean "default" on the read side.
-    if (fontFamily != AppFontFamily.sansSerif) 'fontFamily': fontFamily.name,
     if (fontSize != AppFontSize.medium) 'fontSize': fontSize.name,
     if (conversationWidth != AppConversationWidth.normal)
       'conversationWidth': conversationWidth.name,
-    if (interfaceStyle != AppInterfaceStyle.standard)
-      'interfaceStyle': interfaceStyle.name,
-    if (previewMode != AppPreviewMode.sidePanel)
-      'previewMode': previewMode.name,
     if (!expandToolCalls) 'expandToolCalls': false,
-    if (promptSuggestions) 'promptSuggestions': true,
   };
 
   @override
@@ -375,13 +281,9 @@ class AppSettings {
       other.theme == theme &&
       other.locale == locale &&
       _listEq(other.recentWorkspaces, recentWorkspaces) &&
-      other.fontFamily == fontFamily &&
       other.fontSize == fontSize &&
       other.conversationWidth == conversationWidth &&
-      other.interfaceStyle == interfaceStyle &&
-      other.previewMode == previewMode &&
-      other.expandToolCalls == expandToolCalls &&
-      other.promptSuggestions == promptSuggestions;
+      other.expandToolCalls == expandToolCalls;
 
   @override
   int get hashCode => Object.hash(
@@ -393,13 +295,9 @@ class AppSettings {
     theme,
     locale,
     Object.hashAll(recentWorkspaces),
-    fontFamily,
     fontSize,
     conversationWidth,
-    interfaceStyle,
-    previewMode,
     expandToolCalls,
-    promptSuggestions,
   );
 
   static bool _listEq<T>(List<T> a, List<T> b) {

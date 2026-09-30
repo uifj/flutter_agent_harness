@@ -43,13 +43,9 @@ void main() {
 
     test('appearance preferences round-trip when off the defaults', () {
       const settings = AppSettings(
-        fontFamily: AppFontFamily.serif,
         fontSize: AppFontSize.large,
         conversationWidth: AppConversationWidth.wide,
-        interfaceStyle: AppInterfaceStyle.parchment,
-        previewMode: AppPreviewMode.inline,
         expandToolCalls: false,
-        promptSuggestions: true,
       );
       final json = settings.toJson();
       expect(
@@ -60,8 +56,8 @@ void main() {
       );
       // Off-default-only persistence: every field is written because each is
       // non-default, and a default document writes none of them.
-      expect(json.containsKey('fontFamily'), isTrue);
-      expect(const AppSettings().toJson().containsKey('fontFamily'), isFalse);
+      expect(json.containsKey('fontSize'), isTrue);
+      expect(const AppSettings().toJson().containsKey('fontSize'), isFalse);
     });
 
     // The stored step multiplies INTO the platform's own scaler at the root, so
@@ -342,7 +338,7 @@ void main() {
       expect(saved?.expandToolCalls, isFalse);
       // Untouched preferences keep their defaults rather than arriving null.
       expect(saved?.fontSize.name, 'medium');
-      expect(saved?.previewMode.name, 'sidePanel');
+      expect(saved?.locale.name, 'system');
       // A pure appearance edit carries the model half through untouched.
       expect(saved?.model.apiKey, '');
     });

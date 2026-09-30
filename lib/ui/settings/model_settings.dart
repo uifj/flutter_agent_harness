@@ -164,15 +164,10 @@ class _SettingsPanelState extends State<SettingsPanel> {
   /// the theme. None of them rebuilds the runtime — they ride Save purely to
   /// persist — so they need no restart warning, only the same draft-to-document
   /// flow the theme and language already use.
-  late settings.AppFontFamily _textFont = widget.settings.fontFamily;
   late settings.AppFontSize _textSize = widget.settings.fontSize;
   late settings.AppConversationWidth _conversationWidth =
       widget.settings.conversationWidth;
-  late settings.AppInterfaceStyle _interfaceStyle =
-      widget.settings.interfaceStyle;
-  late settings.AppPreviewMode _previewMode = widget.settings.previewMode;
   late bool _expandToolCalls = widget.settings.expandToolCalls;
-  late bool _promptSuggestions = widget.settings.promptSuggestions;
 
   /// The recents as the picker will edit them. Tracked here rather than derived
   /// from [widget.settings] so an "adopted" folder survives a later cancel: the
@@ -428,13 +423,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
       theme: _theme,
       locale: _locale,
       recentWorkspaces: _recent,
-      fontFamily: _textFont,
       fontSize: _textSize,
       conversationWidth: _conversationWidth,
-      interfaceStyle: _interfaceStyle,
-      previewMode: _previewMode,
       expandToolCalls: _expandToolCalls,
-      promptSuggestions: _promptSuggestions,
     );
   }
 
@@ -739,18 +730,6 @@ class _SettingsPanelState extends State<SettingsPanel> {
     SettingsCard(
       dividers: true,
       children: [
-        _SettingCellRow<settings.AppFontFamily>(
-          title: context.tr('appearanceTextFont'),
-          description: context.tr('appearanceTextFontDesc'),
-          leading: LucideIcons.type,
-          labels: {
-            settings.AppFontFamily.sansSerif: context.tr('fontSansSerif'),
-            settings.AppFontFamily.serif: context.tr('fontSerif'),
-          },
-          value: _textFont,
-          onChanged: (v) => setState(() => _textFont = v),
-          last: true,
-        ),
         _SettingCellRow<settings.AppFontSize>(
           title: context.tr('appearanceTextSize'),
           description: context.tr('appearanceTextSizeDesc'),
@@ -775,36 +754,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
           onChanged: (v) => setState(() => _conversationWidth = v),
           last: true,
         ),
-        _SettingCellRow<settings.AppInterfaceStyle>(
-          title: context.tr('interfaceStyle'),
-          description: context.tr('interfaceStyleDesc'),
-          leading: LucideIcons.columns_2,
-          labels: {
-            settings.AppInterfaceStyle.standard: context.tr('styleStandard'),
-            settings.AppInterfaceStyle.glass: context.tr('styleGlass'),
-            settings.AppInterfaceStyle.classic: context.tr('styleClassic'),
-            settings.AppInterfaceStyle.parchment: context.tr('styleParchment'),
-          },
-          value: _interfaceStyle,
-          onChanged: (v) => setState(() => _interfaceStyle = v),
-          last: true,
-        ),
-        _SettingCellRow<settings.AppPreviewMode>(
-          title: context.tr('previewMode'),
-          description: context.tr('previewModeDesc'),
-          leading: LucideIcons.eye,
-          labels: {
-            settings.AppPreviewMode.newWindow: context.tr('previewNewWindow'),
-            settings.AppPreviewMode.sidePanel: context.tr('previewSidePanel'),
-            settings.AppPreviewMode.inline: context.tr('previewInline'),
-          },
-          value: _previewMode,
-          onChanged: (v) => setState(() => _previewMode = v),
-          last: true,
-        ),
-        // The two behaviour toggles. `_SwitchRow` is a bare row (the workbench
-        // section lays them out manually), so they get the same vertical padding
-        // the selector rows carry, and the card's hairlines separate them.
+        // `_SwitchRow` is a bare row (the workbench section lays it out by
+        // hand), so it carries the padding the selector rows get from a cell.
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 16),
           child: _SwitchRow(
@@ -812,15 +763,6 @@ class _SettingsPanelState extends State<SettingsPanel> {
             description: context.tr('expandToolCallsDesc'),
             value: _expandToolCalls,
             onChanged: (v) => setState(() => _expandToolCalls = v),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: _SwitchRow(
-            label: context.tr('promptSuggestions'),
-            description: context.tr('promptSuggestionsDesc'),
-            value: _promptSuggestions,
-            onChanged: (v) => setState(() => _promptSuggestions = v),
           ),
         ),
       ],
