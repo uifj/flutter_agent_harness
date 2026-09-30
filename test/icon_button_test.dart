@@ -18,27 +18,34 @@ import 'dart:io';
 import 'package:agent_harness/theme/dsw_alias.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
 import 'package:agent_harness/ui/primitives/icon_button.dart';
+import 'package:agent_harness/ui/primitives/tappable.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadIconButton;
 import 'package:flutter_test/flutter_test.dart';
 
-/// The control's own wash layer, which is the only `AnimatedContainer` it draws.
-BoxDecoration _wash(WidgetTester tester) =>
-    (tester
-            .widget<AnimatedContainer>(
-              find.descendant(
-                of: find.byType(DswIconButton),
-                matching: find.byType(AnimatedContainer),
-              ),
-            )
-            .decoration!
-        as BoxDecoration);
+// What the control resolves for its two states. shad paints the wash through
+// its own decorator — a `CustomPaint`, not a `BoxDecoration` this file could
+// read — so the ladder is asserted on the state colours the primitive hands it,
+// which is the same shift ADR-0029 accepted for a dialog's radius. What stays
+// behavioural is the part that can be: a disabled control takes no tap, an
+// enabled one does.
+class _States {
+  const _States(this.button);
+  final ShadIconButton button;
+  Color? get washAtRest => button.backgroundColor;
+  Color? get washOnHover => button.hoverBackgroundColor;
+  Color? get glyphAtRest => button.foregroundColor;
+  Color? get glyphOnHover => button.hoverForegroundColor;
+}
 
-Icon _glyph(WidgetTester tester) => tester.widget<Icon>(
-  find.descendant(
-    of: find.byType(DswIconButton),
-    matching: find.byIcon(LucideIcons.refresh_cw),
+_States _states(WidgetTester tester) => _States(
+  tester.widget<ShadIconButton>(
+    find.descendant(
+      of: find.byType(DswIconButton),
+      matching: find.byType(ShadIconButton),
+    ),
   ),
 );
 
@@ -109,20 +116,44 @@ void main() {
       await _pump(tester, onTap: null);
       await _hover(tester);
 
+      final states = _states(tester);
       expect(
-        _glyph(tester).color,
+        states.glyphAtRest,
         DswAlias.dark.labelCaption,
         reason: 'the disabled step of the ladder, not a per-site guess',
       );
-      expect(
-        _wash(tester).color,
-        isNull,
-        reason: 'hovering a control with nothing to do must not offer it',
-      );
+      // One spelling of off all the way down: `onTap == null` is the only thing
+      // a call site says, and shad's own disabled state is what withholds the
+      // wash on hover — no second `enabled` field to disagree with the first.
+      expect(states.button.enabled, isFalse);
+      expect(states.button.onPressed, isNull);
 
       await tester.tap(find.byType(DswIconButton), warnIfMissed: false);
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the body is shad\'s, and no second tap layer is left under it', (
+      tester,
+    ) async {
+      await _pump(tester, onTap: () {});
+      // The primitive stays the only icon control, and what it stands on is now
+      // the library's button: focus ring, disabled dimming and the semantic
+      // press all stop being re-implemented per copy (ADR-0036 decision 3).
+      expect(
+        find.descendant(
+          of: find.byType(DswIconButton),
+          matching: find.byType(ShadIconButton),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(DswIconButton),
+          matching: find.byType(DswHoverTap),
+        ),
+        findsNothing,
+      );
     });
 
     testWidgets('the wash and the brighter glyph arrive together', (
@@ -131,12 +162,17 @@ void main() {
       var taps = 0;
       await _pump(tester, onTap: () => taps++);
 
-      expect(_wash(tester).color, isNull);
-      expect(_glyph(tester).color, DswAlias.dark.labelSecondary);
+      final states = _states(tester);
+      expect(states.washAtRest, Colors.transparent);
+      expect(states.glyphAtRest, DswAlias.dark.labelSecondary);
+
+      // Together, not one without the other: a glyph that brightened over no
+      // wash — or a wash behind a glyph that stayed put — is the split this
+      // primitive exists to prevent.
+      expect(states.washOnHover, DswAlias.dark.interactiveBgHover);
+      expect(states.glyphOnHover, DswAlias.dark.labelPrimary);
 
       await _hover(tester);
-      expect(_wash(tester).color, DswAlias.dark.interactiveBgHover);
-      expect(_glyph(tester).color, DswAlias.dark.labelPrimary);
 
       await tester.tap(find.byType(DswIconButton));
       await tester.pumpAndSettle();

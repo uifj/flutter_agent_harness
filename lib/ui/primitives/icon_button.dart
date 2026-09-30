@@ -16,11 +16,13 @@
 // comment while drawing a circle. See ADR-0024.
 
 import 'package:flutter/material.dart';
+import 'package:shadcn_ui/shadcn_ui.dart'
+    show ShadBorder, ShadDecoration, ShadIconButton;
 
-import '../../theme/dsw_motion.dart';
+import '../../theme/dsw_shad_bridge.dart';
+
 import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
-import 'tappable.dart';
 
 /// An icon control whose tooltip is also its accessible name.
 class DswIconButton extends StatelessWidget {
@@ -62,29 +64,44 @@ class DswIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = context.dsw;
     final enabled = onTap != null;
-    return Tooltip(
-      message: tooltip,
-      child: DswHoverTap(
-        onTap: onTap,
-        semanticLabel: tooltip,
-        excludeSemantics: true,
-        builder: (context, active, _) => AnimatedContainer(
-          duration: DswMotion.respecting(context, DswMotion.fast),
-          width: size,
-          height: size,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: active && enabled ? color.interactiveBgHover : null,
-            borderRadius: DswShape.radius(_radius),
-          ),
-          child: Icon(
-            icon,
-            size: iconSize,
-            color: !enabled
-                ? color.labelCaption
-                : active
-                ? color.labelPrimary
-                : color.labelSecondary,
+    // The body is shad's (ADR-0036 decision 3): the four properties this
+    // primitive exists to guarantee — pointer, keyboard, semantics, and one
+    // disabled spelling — stop being re-implemented per control, and the focus
+    // ring arrives free. What stays here is the ladder and the geometry, which
+    // is what the call sites were each answering differently.
+    return dswEnsureShadTheme(
+      context,
+      Tooltip(
+        message: tooltip,
+        child: Semantics(
+          button: true,
+          label: tooltip,
+          child: ShadIconButton.ghost(
+            onPressed: onTap,
+            // shad's own `disabledOpacity` dims it and the ladder drops it one
+            // step further; both say the same thing, and the second is the
+            // colour the design sheet asks for.
+            enabled: enabled,
+            width: size,
+            height: size,
+            padding: EdgeInsets.zero,
+            icon: Icon(icon, size: iconSize),
+            backgroundColor: Colors.transparent,
+            hoverBackgroundColor: color.interactiveBgHover,
+            foregroundColor: enabled
+                ? color.labelSecondary
+                : color.labelCaption,
+            hoverForegroundColor: color.labelPrimary,
+            decoration: ShadDecoration(
+              border: ShadBorder.all(
+                width: 0,
+                radius: DswShape.radius(_radius),
+              ),
+              focusedBorder: ShadBorder.all(
+                width: 0,
+                radius: DswShape.radius(_radius),
+              ),
+            ),
           ),
         ),
       ),
