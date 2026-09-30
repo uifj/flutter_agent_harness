@@ -33,11 +33,11 @@ import '../../../model/fs_revision.dart';
 import '../../../model/workspace.dart';
 import '../../../theme/dsw_alias.dart';
 import '../../../theme/dsw_motion.dart';
-import '../../../theme/dsw_shape.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
 import '../../../model/sidebar_tab.dart';
 import '../../../state/workbench_controller.dart';
+import '../../primitives/icon_button.dart';
 import '../../primitives/tappable.dart';
 
 /// Row height. 22px is the source's `--row-h`; it is also what fits a 13px label
@@ -337,10 +337,12 @@ class _FileTreeTabState extends State<FileTreeTab> {
           ),
         ),
         if (_filter.isNotEmpty)
-          _IconButton(
+          DswIconButton(
             icon: LucideIcons.x,
             tooltip: context.tr('cancel'),
             onTap: () => setState(() => _filter = ''),
+            size: 20,
+            iconSize: 13,
           ),
       ],
     ),
@@ -444,10 +446,12 @@ class _FileTreeTabState extends State<FileTreeTab> {
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        _IconButton(
+        DswIconButton(
           icon: LucideIcons.refresh_cw,
-          tooltip: 'Refresh',
+          tooltip: context.tr('refresh'),
           onTap: _refresh,
+          size: 20,
+          iconSize: 13,
         ),
       ],
     ),
@@ -560,49 +564,6 @@ class _Empty extends StatelessWidget {
           message,
           textAlign: TextAlign.center,
           style: DswType.xs13.copyWith(color: color.labelTertiary),
-        ),
-      ),
-    );
-  }
-}
-
-/// A 20px square icon affordance, hover-tinted. Small enough that the shared
-/// button primitives in `lib/ui/primitives/` would be more configuration than
-/// code.
-class _IconButton extends StatelessWidget {
-  const _IconButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = context.dsw;
-    return Tooltip(
-      message: tooltip,
-      child: DswHoverTap(
-        onTap: onTap,
-        semanticLabel: tooltip,
-        excludeSemantics: true,
-        builder: (context, hovered, _) => Container(
-          width: 20,
-          height: 20,
-          decoration: BoxDecoration(
-            color: hovered ? color.interactiveBgHover : Colors.transparent,
-            borderRadius: BorderRadius.circular(DswShape.inset),
-          ),
-          child: Center(
-            child: Icon(
-              icon,
-              size: 13,
-              color: hovered ? color.labelSecondary : color.labelTertiary,
-            ),
-          ),
         ),
       ),
     );

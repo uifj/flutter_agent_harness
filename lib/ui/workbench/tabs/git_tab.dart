@@ -38,6 +38,7 @@ import '../../../model/sidebar_tab.dart';
 import '../../../state/workbench_controller.dart';
 import '../../primitives/tappable.dart';
 import '../../primitives/confirm_dialog.dart';
+import '../../primitives/icon_button.dart';
 
 // ---- The view vocabulary, ported from GitView.tsx --------------------------
 
@@ -687,7 +688,7 @@ class _GitTabState extends State<GitTab> {
             ),
           ),
           const SizedBox(width: 8),
-          _RoundIconButton(
+          DswIconButton(
             icon: LucideIcons.refresh_cw,
             tooltip: context.tr('refresh'),
             onTap: _busy ? null : _refresh,
@@ -915,7 +916,7 @@ class _FileRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 6),
-            _RoundIconButton(
+            DswIconButton(
               icon: staged ? LucideIcons.trash : LucideIcons.git_branch,
               tooltip: staged ? context.tr('unstage') : context.tr('stage'),
               onTap: busy ? null : onStage,
@@ -1078,55 +1079,6 @@ class _BranchSelect extends StatelessWidget {
               color: enabled ? color.labelTertiary : color.labelCaption,
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// `.iconButton` — the 28px round hover-tinted affordance.
-class _RoundIconButton extends StatelessWidget {
-  const _RoundIconButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String tooltip;
-
-  /// Null disables — busy, or the action has nothing to act on.
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = context.dsw;
-    final enabled = onTap != null;
-    return Tooltip(
-      message: tooltip,
-      child: DswHoverTap(
-        onTap: onTap,
-        enabled: enabled,
-        semanticLabel: tooltip,
-        excludeSemantics: true,
-        builder: (context, hovered, _) => Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: hovered && enabled
-                ? color.interactiveBgHover
-                : Colors.transparent,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Icon(
-              icon,
-              size: 14,
-              color: enabled
-                  ? (hovered ? color.labelPrimary : color.labelSecondary)
-                  : color.labelCaption,
-            ),
-          ),
         ),
       ),
     );

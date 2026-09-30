@@ -26,12 +26,11 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../../l10n/locales.dart';
-import '../../../theme/dsw_shape.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
 import '../../../model/sidebar_tab.dart';
 import '../../../state/workbench_controller.dart';
-import '../../primitives/tappable.dart';
+import '../../primitives/icon_button.dart';
 
 // ---- The URL rules, pure and testable --------------------------------------
 
@@ -233,23 +232,24 @@ class _BrowserTabState extends State<BrowserTab> {
       ),
       child: Row(
         children: [
-          _BarIconButton(
+          DswIconButton(
             icon: LucideIcons.chevron_left,
             tooltip: context.tr('browserBack'),
-            onTap: _back,
-            enabled: _cursor > 0,
+            onTap: _cursor > 0 ? _back : null,
+            size: 24,
           ),
-          _BarIconButton(
+          DswIconButton(
             icon: LucideIcons.chevron_right,
             tooltip: context.tr('browserForward'),
-            onTap: _forward,
-            enabled: _cursor < _history.length - 1,
+            onTap: _cursor < _history.length - 1 ? _forward : null,
+            size: 24,
           ),
-          _BarIconButton(
+          DswIconButton(
             icon: LucideIcons.refresh_cw,
             tooltip: context.tr('refresh'),
             // A fresh tab has nothing to remount.
             onTap: _fresh ? null : () => setState(() => _reloadKey++),
+            size: 24,
           ),
           Expanded(
             child: TextField(
@@ -264,15 +264,17 @@ class _BrowserTabState extends State<BrowserTab> {
               onSubmitted: (_) => _navigate(),
             ),
           ),
-          _BarIconButton(
+          DswIconButton(
             icon: LucideIcons.arrow_right,
             tooltip: context.tr('browserGo'),
             onTap: _navigate,
+            size: 24,
           ),
-          _BarIconButton(
+          DswIconButton(
             icon: LucideIcons.external_link,
             tooltip: context.tr('browserOpenExternal'),
             onTap: _fresh ? null : _openExternal,
+            size: 24,
           ),
         ],
       ),
@@ -333,55 +335,6 @@ class _BrowserTabState extends State<BrowserTab> {
         });
         _persist(next);
       },
-    );
-  }
-}
-
-/// One address-bar button — the source's `.iconButton`: 24x24, hover fill,
-/// dimmed rather than hidden when it has nothing to do.
-class _BarIconButton extends StatelessWidget {
-  const _BarIconButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onTap,
-    this.enabled = true,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback? onTap;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = context.dsw;
-    final interactive = enabled && onTap != null;
-    return Tooltip(
-      message: tooltip,
-      child: DswHoverTap(
-        onTap: onTap,
-        enabled: interactive,
-        semanticLabel: tooltip,
-        excludeSemantics: true,
-        builder: (context, hovered, _) => Container(
-          width: 24,
-          height: 24,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: interactive && hovered
-                ? color.interactiveBgHover
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(DswShape.inner),
-          ),
-          child: Icon(
-            icon,
-            size: 14,
-            color: enabled
-                ? (hovered ? color.labelPrimary : color.labelSecondary)
-                : color.labelCaption,
-          ),
-        ),
-      ),
     );
   }
 }
