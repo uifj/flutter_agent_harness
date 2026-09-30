@@ -20,7 +20,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:pasteboard/pasteboard.dart';
-import 'package:shadcn_ui/shadcn_ui.dart' show ShadInput, ShadOption;
+import 'package:shadcn_ui/shadcn_ui.dart'
+    show ShadBorder, ShadButton, ShadDecoration, ShadInput, ShadOption;
 
 import '../../l10n/locales.dart';
 import '../../model/approval_mode.dart';
@@ -1645,28 +1646,37 @@ class _PrimaryButton extends StatefulWidget {
 
 class _PrimaryButtonState extends State<_PrimaryButton> {
   @override
-  Widget build(BuildContext context) => DswHoverTap(
-    onTap: widget.onTap,
-    enabled: widget.enabled,
-    builder: (context, hovered, _) => Opacity(
-      opacity: widget.enabled ? 1 : 0.4,
+  Widget build(BuildContext context) => dswEnsureShadTheme(
+    context,
+    ShadButton.ghost(
+      // One way to say "off": shad dims through `ShadDisabled` and reads the
+      // theme's 40%, so the button no longer carries an `enabled` flag beside
+      // an `onTap` that could disagree with it (ADR-0024's rule).
+      onPressed: widget.enabled ? widget.onTap : null,
+      width: 34,
+      // min AND max: `ShadButton.height` writes both, which is what a circle
+      // wants and what ADR-0017 S3 warns about for anything holding a label.
+      // This one holds a glyph, which does not grow with the text step.
+      height: 34,
+      padding: EdgeInsets.zero,
+      backgroundColor: widget.color.buttonInfoFill,
+      hoverBackgroundColor: widget.color.buttonInfoHover,
+      // The corner is said here because shad's one radius knob answers for the
+      // control tier and a send circle is not that (ADR-0029); the frame is
+      // turned off so the fill is the only thing on the surface, while the
+      // focus ring stays — the app's primary action used to have no keyboard
+      // answer at all.
+      decoration: const ShadDecoration(
+        shape: BoxShape.circle,
+        border: ShadBorder.none,
+        focusedBorder: ShadBorder.none,
+        secondaryBorder: ShadBorder.none,
+      ),
       // Opts out of the row's 2px downward shift: the send circle keeps its
       // original seat while smaller chips sit lower.
       child: Transform.translate(
         offset: const Offset(0, -2),
-        child: AnimatedContainer(
-          duration: DswMotion.respecting(context, DswMotion.fast),
-          width: 34,
-          height: 34,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: hovered && widget.enabled
-                ? widget.color.buttonInfoHover
-                : widget.color.buttonInfoFill,
-            shape: BoxShape.circle,
-          ),
-          child: widget.child,
-        ),
+        child: widget.child,
       ),
     ),
   );
