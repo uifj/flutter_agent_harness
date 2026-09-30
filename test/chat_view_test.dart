@@ -23,6 +23,7 @@ import 'package:agent_harness/model/conversation.dart';
 import 'package:agent_harness/model/turn_event.dart';
 import 'package:agent_harness/state/conversation_controller.dart';
 import 'package:agent_harness/state/streaming_tail.dart';
+import 'package:agent_harness/theme/dsw_alias.dart';
 import 'package:agent_harness/theme/dsw_shape.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
 import 'package:agent_harness/ui/conversation/conversation_root.dart';
@@ -354,13 +355,16 @@ void main() {
                   BorderRadius.circular(DswShape.float),
         ),
       );
+      // The aside is found by the colour that makes it an aside, not by its
+      // corner: ADR-0034 moved the bubble off `pill` (a short message clamped to
+      // a disc), and a finder that keys off the radius would break for a reason
+      // this test is not asserting.
       final aside = tester.getRect(
         find.byWidgetPredicate(
           (w) =>
               w is DecoratedBox &&
               w.decoration is BoxDecoration &&
-              (w.decoration as BoxDecoration).borderRadius ==
-                  BorderRadius.circular(DswShape.pill),
+              (w.decoration as BoxDecoration).color == DswAlias.light.bubble,
         ),
       );
       final reply = tester.getRect(answer('Hello there'));

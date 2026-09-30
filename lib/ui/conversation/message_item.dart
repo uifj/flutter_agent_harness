@@ -61,10 +61,24 @@ class _UserBubble extends StatelessWidget {
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: color.bubble,
-                borderRadius: BorderRadius.circular(DswShape.pill),
+                // Not `pill`: Flutter clamps a radius to half the box, so the
+                // shorter the message the rounder a pill gets until `h'i` reads
+                // as an avatar. The ramp reserves `pill` for dots and avatars
+                // (`dsw_shape.dart:27`). The near-square top-right points at the
+                // edge the message came from, and the hairline says "surface"
+                // the way every other floating layer here does.
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(DswShape.shell),
+                  topRight: const Radius.circular(DswShape.inset),
+                  bottomRight: const Radius.circular(DswShape.shell),
+                  bottomLeft: const Radius.circular(DswShape.shell),
+                ),
+                border: Border.all(color: color.borderL2),
               ),
               child: Padding(
                 // 10 + 24 + 10: the 44px single-line bubble the source calls out.
+                // The border is painted inside that box, so the seat did not
+                // grow with it.
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 10,
