@@ -11,7 +11,9 @@
 | `.qoder/rules/build.md` / `.trae/rules/build.md` | 桌面端构建事实：版本基线、三桌面目标与开发机平台、CI 门禁口径、entitlements/沙箱边界、签名缺口、出包清单 | 构建/排障/发布前 |
 | `.qoder/skills/` / `.trae/skills/` | 25 个 skill（git-commit、flutter-*、dart-*、ponytail-*）；哪些被裁掉、为什么，见 workflow.md §2 | 按需 |
 | [docs/README.md](docs/README.md) | 文档体系规范：ADR 分类 / 优先级 / 状态机 / 新增流程 | 记录问题时 |
-| [docs/debt-register.md](docs/debt-register.md) | 技术债与缺陷登记表（唯一状态源）：ADR-0001…0036 已登记 + 观察表若干待立条目（下一编号 ADR-0037；ADR-0030 只在观察表未立文） | 动手前 |
+| [docs/debt-register.md](docs/debt-register.md) | 技术债与缺陷登记表（唯一状态源）：ADR-0001…0037 已登记 + 观察表若干待立条目（下一编号 ADR-0038；ADR-0030 只在观察表未立文） | 动手前 |
+| [docs/anytype-feature-inventory-2026-10-01.md](docs/anytype-feature-inventory-2026-10-01.md) | Anytype Android 客户端（`_archive_project/anytype-kotlin` @ `7af5254` = 0.50.4）的**功能清单**，每条带 `path:line`：§1 数据视图六档、§3 块与 slash 可达集、§4 二十一个内置类型、§5 十六种关系格式、§7 十三种组件形态与五档布局，外加 §17「看起来有其实没有」23 行（Calendar/Graph 视图、24 种 embed、LaTeX 插入、Notion 导入、used-in、goal/habit 全部为 ⛔/❌）。回答"Anytype 有没有/怎么做这个功能"先读它，别按记忆或营销文案答 |
+| [docs/plan-mode-anytype-dataview-migration-2026-10-01.md](docs/plan-mode-anytype-dataview-migration-2026-10-01.md) | ADR-0037 的**施工表**：企划模式复现上述 §1–§7（现状分析 → 目标形状 → `packages/board_panel` 复用线 → 逐段映射 → 分层落位 → P1–P7 七阶段提交 → 每段守卫清单 → §8 诚实边界）。动企划模式的数据视图/块/组件之前先读它 |
 | [docs/migration-log.md](docs/migration-log.md) | ADR-0002/0003/0004 迁移执行台账：阶段·commit·门禁·待人签收清单 | 接手迁移时 |
 | [docs/starkins-settings-migration-analysis.md](docs/starkins-settings-migration-analysis.md) | 从 starkins_app 迁移设置页的分析：逐项 可迁/改造/不迁 判定 + 不变量冲突（待拍板） | 做该迁移前 |
 | [repomix.config.json](repomix.config.json) | 全仓库打包配置（产物 `repomix-output.xml` 不入库；已排除 vendored UI 库实现） | 按需 |
@@ -49,7 +51,7 @@
 | `tool/` | 2 | — | `contrast_check.dart`：对 `dsw_static` + `dsw_alias` 做 WCAG 对比度三求值（dart:io/dart:math only），`dart tool/contrast_check.dart`；`check_architecture.dart`：五条架构规则的指纹 baseline 门禁（ADR-0011），baseline 落 `tool/architecture_baseline.json` |
 | `packages/board_panel/` | — | — | **入库的本地包**（path 依赖，ADR-0007 D5 记录为 ADR-0001"vendored 不入库"的例外）：看板/日程/表格扩展面板，由 `ui/plan/plan_extensions_view.dart` 消费，数据来自 `state/plan_task_store.dart` |
 | `packages/flutter-shadcn-ui/` | — | — | **vendored 源码镜像，`.gitignore` 排除**（ADR-0001）。`shadcn_ui` 0.56.3 已是 pubspec 依赖（ADR-0002 实施中），但配色仍走 `dsw_*`（经 `theme/dsw_shad_bridge.dart`）。查组件 API 用入库的 `.qoder/skills/shadcn-ui-flutter/`；读实现看此目录或上游 `nank1ro/flutter-shadcn-ui` `0.56.3` |
-| `docs/` | — | — | `README.md`（ADR 规范）+ `debt-register.md`（状态源）+ `migration-log.md` + `adr/`（模板 + ADR-0001…0036）+ 审计报告与优化方案 |
+| `docs/` | — | — | `README.md`（ADR 规范）+ `debt-register.md`（状态源）+ `migration-log.md` + `adr/`（模板 + ADR-0001…0037）+ 审计报告与优化方案 |
 | `.github/workflows/` | 2 | — | `pr-check.yml`（push/PR 到 develop·main：format + `dart analyze --fatal-infos` + `flutter test`）、`build.yml`（`workflow_dispatch`：三桌面平台出包 + 可选 GitHub Release）。两者都钉 `FLUTTER_VERSION: '3.41.9'` |
 
 ## 3. 架构不变量（违反即错误，命令可自证）
