@@ -17,7 +17,7 @@
 
 ## 1. 要调整的组件（按优先级，每条带证据）
 
-### U1 · 工具卡把"给模型的 JSON 信封"直接给人看 —— **P1，DEF**
+### U1 · 工具卡把"给模型的 JSON 信封"直接给人看 —— **P1，DEF · 已闭（ADR-0031 @ 9fc0420/5402104）**
 
 - **截图证据**（`86e0bd57`，裁切放大 2× 已确认）：`OUT` 段整段是 `{"output": "/Users/uifj/…/flutter_tiptap_test\n.total 88\ndrwxr-xr-x@ 25 uifj staff 800 May 26 22:35 .\ndrwxr-xr-x@ 15 uifj staff 480…` —— 真实换行被渲染成字面 `\n`，一条 `ls -la` 变成一整段无法扫读的墙；右边缘字符被**直接切断**（`480` 显示成 `48(`，无 ellipsis、无横向滚动、无折行）。
 - **代码证据**：`lib/ui/tool/tool_card.dart:600-603` `_format()` 明写"字符串原样返回"；而 bash 工具交给模型的结果本身就是 JSON 文本（`lib/genkit/tools.dart:672` `'output': renderShellRun(run)` → genkit 侧编码），所以卡片拿到的 `String` 是**信封**不是内容。`_pretty` 只在非字符串时才会走 JSON 美化。
@@ -25,7 +25,7 @@
 - **处置**：`_format` 先试 `jsonDecode`：解出 Map 且只有一个人类可读字段（`output`／`content`／`text`／`message`）时取该字段的**纯文本**按行渲染；解不出或结构更复杂才回到 `_pretty`。渲染侧给 `OUT` 段加**行折叠**（超过 N 行时"展开全部 N 行"）与**横向可滚动**，绝不切断字符。
 - **归属**：新 ADR（下一编号见 §3），回归面 `test/tool_card_test.dart`（新建）。
 
-### U2 · 覆盖层里的文案退化成英文 —— **P1，DEF**
+### U2 · 覆盖层里的文案退化成英文 —— **P1，DEF · 已闭（ADR-0032 @ ad7b650/ff19b88）**
 
 - **截图证据**（`bf783e32`）：模型菜单同屏出现 `载入服务端的模型列表`（中）与 **`Retry`**（英）。
 - **代码证据**：`lib/ui/conversation/composer.dart:1506` 用的是 `context.tr('retry')`，字典两侧都有（`lib/l10n/locales.dart:42` `'retry': 'Retry'`、`:493` `'retry': '重试'`）——**不是缺键，是取键时读不到 locale**：`AppLocaleScope` 挂在 `lib/main.dart:233` 的 `body:` 之下，而 `PopupMenuButton`/`showMenu` 的条目活在 **overlay 路由**里，拿的是另一条 context 分支 → `AppLocaleScope.of` 返回 null → 逐键回退英文（`lib/l10n/locales.dart:928-939` 的兜底）。
@@ -33,7 +33,7 @@
 - **处置**：把 `AppLocaleScope` 从 `body:` 挪到 `MaterialApp.builder`（与 `ShadTheme`/`ShadSonner`/字号合成同一道缝，`lib/main.dart` 里现成的顺序是 `MediaQuery → ShadTheme → ShadSonner → Navigator`）。守卫：挂上 zh 后真开一次菜单，断言菜单里的条目文案是中文（并反向验：把 scope 挪回 `home:` 立刻红）。
 - **归属**：新 ADR，回归面 `test/i18n_overlay_test.dart`（新建）+ `test/l10n_parity_test.dart`。
 
-### U3 · 对话列底部三条信息各用一条轴 —— **P2，DEBT**
+### U3 · 对话列底部三条信息各用一条轴 —— **P2，DEBT · 复核后撤回**（不是三条轴，是一条轴两种对齐；证据与判词写在 ADR-0034 的"明确不做"，观察表那两行随之删除）
 
 - **截图证据**（`86e0bd57` 裁切 2×）：`3 轮 · 3 步` **居中**浮在输入卡上方；`📁 flutter_tiptap_test 本地` **左对齐**且落在输入卡**外**（贴窗口左边距 x≈300 起）；输入卡本体居中且宽 760。三行三段轴，读起来像三个不相关的部件。
 - **代码证据**：状态条在 `lib/ui/conversation/composer.dart:958-1005`（注释自称"Qoder style"的 `name 本地 branch` 格式），统计行在 `chat_view`/`conversation_root` 一侧；两者都不在输入卡的装饰盒内。
@@ -41,15 +41,15 @@
 - **处置**：把统计行与状态条收进**输入卡的同一条轴**（要么都在卡内 footer 一行、左右两端；要么都在卡外同一 left 轴），并把两处 `padding` 归到一枚 `DswShape` 档位；不改文案内容（`本地` 与分支名的信息价值保留）。
 - **归属**：新 ADR（DEBT P2），回归面 `composer_test.dart` 的轴断言 + `chat_view_test.dart`。
 
-### U4 · 短用户气泡被挤成圆形 —— **P2，DEBT**
+### U4 · 短用户气泡被挤成圆形 —— **P2，DEBT · 已闭（ADR-0034 @ daa22fc/7d87f73）**
 
 - **截图证据**（`86e0bd57` 右上角裁切 2×）：会话第一条用户消息只有 `h'i` 三个字符，渲染成一个**近圆形的淡蓝块**，贴在面板开关图标正下方，视觉上像一枚头像而不是"人说的话"。
 - **代码证据**：`lib/ui/conversation/message_item.dart:47-66` —— `_UserBubble` 只有 `maxWidth: min(525, 82%)` 上界，圆角直接 `DswShape.pill`，**没有最小宽度**，于是内容宽 ≈ 文字宽 + 左右 padding 时 pill 把它变成胶囊/圆。
 - **判据**：ZCode 的 `rounded-2xl` 气泡（`packages/ui/src/components/ui/`）在短文本下仍是圆角矩形，因为**半径由档位封顶**而不是 `pill`；本仓库 ADR-0017 的律是"pill 只留给点和头像"。
-- **处置**：用户气泡改用阶梯里的 `float 16`（与"浮在页面之上的表面"同档），并给一个由字号导出的最小宽度（避免 1–2 字时又变成圆）。**注意**：这条会改变所有用户气泡的观感，属可见改动，需要真机眼。
+- **处置（落地的与初稿不同）**：初稿写的是"`float 16` + 由字号导出的最小宽度"。实施时两条都被证伪：① `float` 是给"浮在页面之上的表面"的（对话框、composer 卡），气泡是**列内**的表面，与卡片同档 ⇒ `shell 12`；② 病根不是"没有宽度下界"而是**半径不该取 `pill`**（Flutter 把半径夹到盒子的一半），所以封顶半径之后最小宽度是多余的第二枚数字——探针量到 `h'i` 的盒子 83.7 × 44.0，改形前后一模一样。最终形状照参考实现：`shell 12` 三角 + 方向性 `inset 4` 右上角 + `borderL2` 发丝。**这条仍会改变所有用户气泡观感，需真机眼。**
 - **归属**：新 ADR（DEBT P2），回归面 `chat_view_test.dart` 的气泡矩形断言。
 
-### U5 · 设置页把上游产品路径泄漏给用户 —— **P1，DEF（文案）**
+### U5 · 设置页把上游产品路径泄漏给用户 —— **P1，DEF（文案）· 已闭（ADR-0033 @ b5e8d7d）**
 
 - **截图证据**（`e68d068b`）：技能文件夹输入框的占位是 `/Users/you/.dsh/skills`，而**同一屏**上方的描述写着"…为空表示 <应用程序支持目录>/skills"。两处说的是两个目录，且 `.dsh` 是**被参考的另一个产品**的名字。
 - **代码证据**：`lib/ui/settings/model_settings.dart:1169` `hint: '/Users/you/.dsh/skills'`（同文件 `:1038` 还有 `/Users/you/project`）；本仓库真实的 skills 目录在应用支持目录下（`lib/state/backup_service.dart:55-56` 的 `dirs` 里就有 `skills`）。
@@ -57,7 +57,7 @@
 - **处置**：hint 改成**运行时真值**（从已有的 support 目录 API 取，示例化前缀），或退化为不带具体路径的 `<应用支持目录>/skills`；`:1038` 的 `/Users/you/project` 一并换成中性示例。守卫：扫 `lib/` 里出现 `.dsh` 的用户可见字符串（注释除外）。
 - **归属**：并入 ADR-0022 家族的文案条目（DEF P1，改动小，可单独一 commit + 一条扫描守卫）。
 
-### U6 · 模型菜单压住输入区，看不见自己正在打的字 —— **P2，DEBT**
+### U6 · 模型菜单压住输入区，看不见自己正在打的字 —— **P2，DEBT · 等用户选方向**（观察表内）
 
 - **截图证据**（`bf783e32`）：菜单从芯片向上长，**盖住输入卡左半**（占位文字被截断在菜单左缘），且菜单底色与它盖住的浅灰区几乎同色，边界只靠一条极淡的发丝。
 - **代码证据**：ADR-0028 已经把菜单皮收进主题（`lib/theme/dsw_theme.dart` 的 `popupMenuTheme` = `bgLayer2` + `shell` + `borderL2`），但**亮色下 `bgLayer2` 与 `bgLayer1` 只差 2–3 个灰阶**（`DswAlias.light`：白 vs `rgb(249,250,251)`），发丝边框 `borderL2` 也极淡，所以"一层皮"落地后分离度仍不够；几何上菜单与输入卡无避让关系（`composer.dart:1276,1379,1606` 三把下拉都从芯片起）。
@@ -65,7 +65,7 @@
 - **处置（需选一条，别默认）**：① 亮色下把菜单底色降到 `bgLayer3` 之外的一档（要过 `contrast_check`）；② 把 `elevation` 抬一档让投影真正出现；③ 给发丝加一档到 `borderL3`。三条都是观感决定，**先问用户**。
 - **归属**：登记为观察项，等用户点头再立 ADR（与 ADR-0028 的"余真机走查"合并走查）。
 
-### U7 · 设置页的轴与留白（观察，暂不立 ADR）
+### U7 · 设置页的轴与留白（观察，暂不立 ADR · 等用户选方向）
 
 - **截图证据**（`e68d068b`，像素量自 1410 宽窗口）：左导航 20→172，内容列从 **437** 起、到 ~882 止 → 导航与内容之间 **265px 空档**，右侧留 **~528px 死白**；内容自身没有卡片容器（`SettingsCard` 只在模型卡等分区出现，扩展页的 MCP/技能是裸段落 + 字段）。
 - **判据**：对话列有 `chat_view_test.dart` 的"同轴"断言（审计 §3-C），设置页没有对应的轴律。**先量再改**：这条要的是"内容列最大宽 + 居中或左对齐取一"的决定，属观感，需要眼。
@@ -80,7 +80,7 @@
 1. **B1 = U1 工具卡解码**（P1，最难读的一处，纯逻辑 + 渲染，可测性最好）→ ADR-0031。
 2. **B2 = U2 覆盖层文案**（P1，一行接线 + 一条新守卫）→ ADR-0032。
 3. **B3 = U5 设置页路径泄漏**（P1 文案 + 一条扫描守卫）→ 并入 ADR-0022 家族，编号 ADR-0033。
-4. **B4 = U3 + U4 对话列轴与气泡**（P2，可见改动，落完请用户走查）→ ADR-0034。
+4. **B4 = U3 + U4 对话列轴与气泡**（P2，可见改动）→ ADR-0034。**U3 在复核中撤回**（见该节），所以 B4 只剩气泡一枚：`daa22fc` + 守卫 `7d87f73`，余真机走查。
 5. **U6 / U7** 等用户选方向后再排。
 
-每批交付口径不变：`dart format` / `dart analyze --fatal-infos` / `flutter test`（基线 `+932 -2`，两条既有失败不得变多）/ `dart tool/check_architecture.dart`，改配色再加 `dart tool/contrast_check.dart`；新守卫一律**先红后绿**；可见改动重建并重启应用后交给用户走查。
+每批交付口径不变：`dart format` / `dart analyze --fatal-infos` / `flutter test`（基线随批次推进：B1 后 `+936 -2`、B2 后 `+938 -2`、B3 后 `+941 -2`、B4 后 `+944 -2`；两条既有失败不得变多）/ `dart tool/check_architecture.dart`，改配色再加 `dart tool/contrast_check.dart`；新守卫一律**先红后绿**；可见改动重建并重启应用后交给用户走查。
