@@ -46,7 +46,7 @@
 | 29 | 工作台 `+` opener / tab 右键（截图外同族） | `workbench_tab_bar.dart:158,482` | shad | `DswMenu`（`ShadPopover`，动作列表，trigger=图标钮）/ `DswContextMenu`（`ShadContextMenuRegion`） | B6 ✅ |
 | 30 ✅ | 文件树行右键 / 自由窗口表头菜单（同族） | `file_tree_tab.dart:383`；`free_window_layer.dart:308` | shad | `ShadContextMenuRegion` | B6 |
 | 31 ✅ | git 面板三把菜单（同族） | `git_tab.dart:462,525,1036` | shad | 选项类 `ShadSelect` / 行右键 `ShadContextMenuRegion` | B6 |
-| 32 | tab chip 与拖拽 / pane 欢迎页 | `workbench_tab_bar.dart:272`；`pane.dart:232,331` | 保留 / shad | chip 可拖拽重排，shad Tabs 无 reorder → 保留；欢迎页动作卡 → `ShadCard`+`ShadButton.outline` | B8 |
+| 32 | tab chip 与拖拽 / pane 欢迎页 | `workbench_tab_bar.dart:272`；`pane.dart:232,331` | 保留（判定改） | chip 可拖拽重排，shad Tabs 无 reorder → 保留。**落地核对**：`_WelcomeAction`（`pane.dart:331-385`）是一枚**按钮**不是卡（inset 4 圆角 + h8v4 内边距 + 发丝 + 省略号标签），行 32 里"ShadCard"那半是映射表的口误；换 `ShadButton.outline` 那半是纯观感决定——半径 4→8、内边距 h12v8 会把三枚动作撑大，而它的 `enabled` 是从 `onTap != null` 导出的（`Semantics(enabled:)` 才是它真正在做的事，不是双真值）。所以留原样，与行 18 一并等真窗那一眼 | — |
 | 33 ✅ | 静态标签 pill | `primitives/pill.dart:15` | shad | `ShadBadge` | B7 |
 | 34 ✅ | 图标钮原语身体 | `primitives/icon_button.dart:26` | shad（身体） | `ShadIconButton.ghost`：焦点环／`disabledOpacity`／按压语义由库给，wrapper 继续只管 tooltip=语义名、半径按盒推、三档色阶（一条被反向验过的断言钉着：挪错一档即红）；`icon_button_test` 新增一条身体类型断言（正+反） | B8 |
 | 35 | CapsuleButton wrapper | `primitives/capsule_button.dart:42` | 已 shad | 调用点迁完后删 wrapper（可选收尾，登记不强制） | — |
