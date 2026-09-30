@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../l10n/locales.dart';
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_typography.dart';
 
 /// Shows a Cancel / [confirmLabel] confirm and resolves true only when the
@@ -34,6 +35,11 @@ Future<bool> showConfirmDialog(
   final result = await showShadDialog<bool>(
     context: context,
     builder: (context) => ShadDialog.alert(
+      // A dialog is the `float` tier (16) — `dsw_shape.dart:17` says so by name,
+      // and ZCode's own alert sheet is `rounded-2xl`. shad's single radius knob
+      // carries the control tier, so a surface that means another one has to say
+      // it here (ADR-0029).
+      radius: BorderRadius.circular(DswShape.float),
       title: Text(title, style: DswType.sStrong14),
       description: Text(description, style: DswType.xs13),
       actions: [

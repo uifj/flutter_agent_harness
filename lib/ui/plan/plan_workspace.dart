@@ -512,6 +512,10 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
     final result = await showShadDialog<String>(
       context: context,
       builder: (context) => ShadDialog(
+        // The `float` tier, same reason as `primitives/confirm_dialog.dart`
+        // (ADR-0029): shad's one knob carries the control tier, so a dialog has
+        // to name its own.
+        radius: BorderRadius.circular(DswShape.float),
         title: Text(title, style: DswType.sStrong14),
         actions: [
           // One line of chrome each, so the seat rides the text step: measured

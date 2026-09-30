@@ -13,15 +13,20 @@
 //   * No text theme mapping. DSW type scale (`DswType`) stays authoritative;
 //     components that need it pass a DSW style at the call site rather than
 //     inheriting shad's default ramp, which would fork a second typography.
-//   * No radius/geometry. The ported shapes (capsule r18/r14, block radii)
-//     are call-site facts, not palette facts; shad's default (6) is left
-//     alone so a new component gets the library's own standard instead of a
-//     guessed port.
+//
+// Radius is NOT omitted any more (ADR-0029, which supersedes this file's earlier
+// "shad's default (6) is left alone"). shad has a single `radius` knob where
+// `DswShape` has a ramp, so the knob can only answer for one tier, and it takes
+// the one most shad surfaces here actually are: `control` (fields, toasts, the
+// card inside a dialog). A surface that means another tier says so itself — the
+// two dialogs pass `float`, and `test/shad_radius_test.dart` fails any new
+// `ShadDialog` that forgets to.
 
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import 'dsw_alias.dart';
+import 'dsw_shape.dart';
 
 /// The shad theme for one brightness, coloured entirely by [DswAlias].
 ///
@@ -36,6 +41,11 @@ ShadThemeData dswShadTheme(Brightness brightness) {
     colorScheme: dswShadColorScheme(c),
     // dsh dims a disabled control to 40%, not shad's 50% default.
     disabledOpacity: 0.4,
+    // One knob for every shad surface, so it answers for the tier most of them
+    // are: a field, a toast, the card inside a dialog. `control` is that tier —
+    // shad's own 6 is not a number this design system uses anywhere
+    // (`test/shad_radius_test.dart`, ADR-0029).
+    radius: BorderRadius.circular(DswShape.control),
   );
 }
 
