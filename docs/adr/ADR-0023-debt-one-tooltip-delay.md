@@ -65,6 +65,23 @@ hoverDelay: widget.waitDuration ?? _tooltipTheme.waitDuration ?? _defaultWaitDur
 - `lib/ui` 的净变化：**11 个文件 −19 行，0 行新增**（`git diff --stat`），主题侧 +1 令牌 +1 赋值。
 - **待 macOS 真机走查**：横向划过 tab 条与文件树时气泡不再逐行闪（这一眼与 ADR-0019/0020/0021/0022 那几处并成一次走查）。
 
+
+## 实施记录（S2：同一条律的第二枚实例，同一批普查里查出来的）
+
+延迟统一之后，同一把尺子量"过渡时长"（`lib/ui` 里每个 `Animated*` 的 `duration:`），实测：
+
+```
+13 处 Animated(Container|Switcher|Size|CrossFade) 的 duration：
+  9 取 DswMotion.respecting(context, DswMotion.fast)
+  2 取传入的 duration 参数（app_frame 的分栏列动画，由调用方给 DswMotion.slow）
+  2 自写 const Duration(milliseconds: 50)   ← lib/ui/sidebar/sidebar.dart:951,989
+```
+
+那两处都是侧栏 `_Pressable` 与 `_IconButton` 的 **hover 底色淡入**——与应用里其余 9 处完全同一个交互，却快一倍，而且**绕过 `respecting()`**，等于对"减少动态效果"的用户仍然在动。这正是本 ADR 那句"一个数字出现在两处就是两份真值"在过渡时长上的实例，所以并进本 ADR 而不是另立编号：同一条律、同一条守卫族。
+
+- 修法：两处都改成 `DswMotion.respecting(context, DswMotion.fast)`（与那 9 处同值同档），`lib/ui/sidebar/sidebar.dart` 净变化 **2 行**。
+- 守卫：`test/theme_token_test.dart` 新增 `motion ramp` 一节——从每个 `Animated*` 的**开句那一行**往后 4 行找它的 `duration:`，要求该值为 `DswMotion.…` 或 `duration: duration,`（参数由调用方接令牌）。**故意不扫所有 `duration:` 行**：`AnimationController` 的那个是循环周期（思考微光 1800ms、行高亮扫过 2600ms、"已复制"回位 1000ms），把它们钉到 100/200/300 的 ramp 上是错的。**反向验过**：把 50ms 塞回 `sidebar.dart:951`，守卫红并整行指名 `Actual: ['lib/ui/sidebar/sidebar.dart:951  duration: const Duration(milliseconds: 50),']`，取出恢复。
+
 ## 关联（Links）
 
 - 依据: `packages/flutter/lib/src/material/tooltip.dart:394,542`（默认值与取值顺序）· `_archive_project/ZCode-main/packages/ui/src/components/ui/tooltip.tsx:9` 与 `app-shell/SidePaneTabTitleTooltip.tsx:5`（一处默认 + 一处具名例外）
