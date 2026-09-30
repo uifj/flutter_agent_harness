@@ -35,6 +35,7 @@ import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../primitives/tappable.dart';
+import '../primitives/feedback.dart';
 import '../appearance_scope.dart';
 import '../../theme/dsw_typography.dart';
 import 'conversation_root.dart';
@@ -413,14 +414,12 @@ class ComposerState extends State<Composer> {
       setState(() => _images.addAll(incoming));
       return;
     }
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(
-        content: Text(
-          context.tr('imagesUnsupportedByModel', {
-            'model': directory.selectedModel,
-          }),
-        ),
-      ),
+    showFeedback(
+      context,
+      context.tr('imagesUnsupportedByModel', {
+        'model': directory.selectedModel,
+      }),
+      destructive: true,
     );
   }
 

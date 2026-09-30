@@ -20,7 +20,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:shadcn_ui/shadcn_ui.dart' show ShadTheme;
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadSonner, ShadTheme;
 import 'package:window_manager/window_manager.dart';
 
 import 'genkit/models_endpoint.dart';
@@ -211,7 +211,10 @@ class _DshAppState extends ConsumerState<DshApp> {
         ),
         child: ShadTheme(
           data: dswShadTheme(Theme.of(context).brightness),
-          child: child!,
+          // ADR-0020: the feedback strip's host. Above the Navigator, so a
+          // toast raised from a dialog route or from the full-screen settings
+          // still lands on the one strip the bridge colours from `DswAlias`.
+          child: ShadSonner(child: child!),
         ),
       ),
       // The mode the settings screen writes. `system` hands the decision to the

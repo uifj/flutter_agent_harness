@@ -35,6 +35,7 @@ import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../conversation/assistant_markdown.dart';
 import '../primitives/capsule_button.dart';
+import '../primitives/feedback.dart';
 import '../primitives/confirm_dialog.dart';
 import '../primitives/tappable.dart';
 
@@ -455,9 +456,11 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
     final fullPath = p.join(root, relativePath);
     if (await File(fullPath).exists()) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
+      showFeedback(
         context,
-      ).showSnackBar(SnackBar(content: Text(context.tr('planFileNameExists'))));
+        context.tr('planFileNameExists'),
+        destructive: true,
+      );
       return;
     }
     await File(fullPath).writeAsString('');
@@ -481,8 +484,10 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
     final fullPath = p.join(root, name);
     if (await Directory(fullPath).exists()) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.tr('planFolderNameExists'))),
+      showFeedback(
+        context,
+        context.tr('planFolderNameExists'),
+        destructive: true,
       );
       return;
     }

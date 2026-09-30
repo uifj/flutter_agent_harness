@@ -41,6 +41,7 @@ import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../primitives/tappable.dart';
+import '../primitives/feedback.dart';
 import '../primitives/capsule_button.dart';
 import 'widgets/settings_card.dart';
 
@@ -1326,17 +1327,16 @@ class _SettingsPanelState extends State<SettingsPanel> {
     try {
       final count = await BackupService.createBackup(path);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            context.tr('backupCreated').replaceAll('{count}', '$count'),
-          ),
-        ),
+      showFeedback(
+        context,
+        context.tr('backupCreated').replaceAll('{count}', '$count'),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${context.tr('backupFailed')}: $e')),
+      showFeedback(
+        context,
+        '${context.tr('backupFailed')}: $e',
+        destructive: true,
       );
     }
   }
@@ -1353,17 +1353,16 @@ class _SettingsPanelState extends State<SettingsPanel> {
         result.files.single.path!,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            context.tr('backupRestored').replaceAll('{count}', '$count'),
-          ),
-        ),
+      showFeedback(
+        context,
+        context.tr('backupRestored').replaceAll('{count}', '$count'),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${context.tr('backupFailed')}: $e')),
+      showFeedback(
+        context,
+        '${context.tr('backupFailed')}: $e',
+        destructive: true,
       );
     }
   }

@@ -124,6 +124,16 @@ final rules = [
     pattern: RegExp(r"^import 'package:flutter_riverpod"),
   ),
   Rule(
+    name: 'one-feedback-strip',
+    description:
+        'feedback is raised through ui/primitives/feedback.dart on shad\'s '
+        'Sonner, never a Material SnackBar or ScaffoldMessenger (ADR-0020) — '
+        'the strip a user meets most was the one surface outside the bridged '
+        'palette, the shape tiers and the text scaler',
+    appliesTo: ['lib/'],
+    pattern: RegExp(r'ScaffoldMessenger\.|SnackBar\('),
+  ),
+  Rule(
     name: 'runtime-reaches-neither-flutter-nor-state',
     description:
         "lib/genkit/ imports neither package:flutter nor lib/state/ (ADR-0015) "

@@ -23,6 +23,7 @@ import 'package:agent_harness/model/model_settings.dart';
 import 'package:agent_harness/model/queued_input.dart';
 import 'package:agent_harness/model/workspace_index.dart';
 import 'package:agent_harness/state/model_directory.dart';
+import 'package:agent_harness/theme/dsw_shad_bridge.dart';
 import 'package:agent_harness/theme/dsw_shape.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
 import 'package:agent_harness/ui/conversation/composer.dart';
@@ -32,6 +33,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
+// A `show` list, because shadcn_ui re-exports `LucideIcons` and an unqualified
+// import makes every icon reference ambiguous.
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadSonner, ShadTheme;
 
 import 'amplified_text_probe.dart';
 
@@ -147,7 +151,16 @@ void main() {
     onSubmit,
   }) => tester.pumpWidget(
     MaterialApp(
-      builder: (context, child) => amplifiedAppBuilder(step, child),
+      // The app's own composition (ADR-0017 S3 then ADR-0020): the step above
+      // `ShadSonner`, so the refusal toast the attach gate raises is measured
+      // at the same step as the card that raised it.
+      builder: (context, child) => ShadTheme(
+        data: dswShadTheme(Brightness.light),
+        child: AmplifiedText(
+          step: step,
+          child: ShadSonner(child: child!),
+        ),
+      ),
       theme: dswThemeData(Brightness.light),
       home: Scaffold(
         body: _ComposerHost(

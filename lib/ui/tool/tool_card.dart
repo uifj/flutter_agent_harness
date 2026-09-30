@@ -25,6 +25,7 @@ import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../primitives/confirm_dialog.dart';
+import '../primitives/feedback.dart';
 import '../primitives/tappable.dart';
 import '../../theme/dsw_typography.dart';
 import '../primitives/disclosure_row.dart';
@@ -263,9 +264,7 @@ class _ToolCardState extends State<ToolCard> {
     RewindSkipReason.imageUnavailable => context.tr('rewindWhyNoImage'),
   };
 
-  void _report(String message) => ScaffoldMessenger.maybeOf(
-    context,
-  )?.showSnackBar(SnackBar(content: Text(message)));
+  void _report(String message) => showFeedback(context, message);
 
   Widget _ioCard(DswAlias color, _ToolRowModel model) {
     final input = model.input;

@@ -48,6 +48,7 @@ import '../../../theme/dsw_alias.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
 import '../../../ui/conversation/assistant_markdown.dart';
+import '../../../ui/primitives/feedback.dart';
 import '../../../model/sidebar_tab.dart';
 import '../../../state/workbench_controller.dart';
 import '../../primitives/tappable.dart';
@@ -300,13 +301,11 @@ class _EditorTabState extends State<EditorTab> {
     }
   }
 
-  void _report(String message) {
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    if (messenger == null) return;
-    messenger.showSnackBar(
-      SnackBar(content: Text(context.tr('couldNotSave', {'message': message}))),
-    );
-  }
+  void _report(String message) => showFeedback(
+    context,
+    context.tr('couldNotSave', {'message': message}),
+    destructive: true,
+  );
 
   @override
   Widget build(BuildContext context) {

@@ -54,10 +54,12 @@ void main() {
     return tester.pumpWidget(
       MaterialApp(
         theme: dswThemeData(Brightness.light),
-        // Mirrors main's MaterialApp.builder: the confirmation is a ShadDialog.
+        // Mirrors main's MaterialApp.builder: the confirmation is a ShadDialog,
+        // and the report the rewind ends with is a Sonner toast (ADR-0020), so
+        // both hosts are mounted the way the app mounts them.
         builder: (context, child) => ShadTheme(
           data: dswShadTheme(Theme.of(context).brightness),
-          child: child!,
+          child: ShadSonner(child: child!),
         ),
         home: Scaffold(
           body: AppearanceScope(
