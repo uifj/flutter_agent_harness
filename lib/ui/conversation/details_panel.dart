@@ -198,12 +198,7 @@ class _DetailsPanelState extends State<DetailsPanel> {
   /// `.sectionLabel`: 12/18 wt500 secondary.
   Widget _sectionLabel(DswAlias color, String text) => Text(
     text,
-    style: DswType.xs13.copyWith(
-      fontSize: 12,
-      height: 18 / 12,
-      fontWeight: FontWeight.w500,
-      color: color.labelSecondary,
-    ),
+    style: DswType.xxsStrong12.copyWith(color: color.labelSecondary),
   );
 
   ToolCallNode? _find(String callId) {

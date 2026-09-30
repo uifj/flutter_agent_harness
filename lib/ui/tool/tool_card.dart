@@ -403,8 +403,7 @@ class _QuietPill extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(
                   label,
-                  style: DswType.xs13.copyWith(
-                    fontSize: 11,
+                  style: DswType.xxxs11.copyWith(
                     height: 16 / 11,
                     color: hovered ? color.labelPrimary : color.labelSecondary,
                   ),

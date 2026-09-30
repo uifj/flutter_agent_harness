@@ -283,12 +283,7 @@ class _ConversationRootState extends State<ConversationRoot> {
               const SizedBox(width: 10),
               Text(
                 context.tr('askAnything'),
-                style: DswType.xl24.copyWith(
-                  fontSize: 26,
-                  height: 32 / 26,
-                  fontWeight: FontWeight.w500,
-                  color: color.labelPrimary,
-                ),
+                style: DswType.heroTitle26.copyWith(color: color.labelPrimary),
               ),
             ],
           ),

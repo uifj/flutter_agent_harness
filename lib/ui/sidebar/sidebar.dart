@@ -470,10 +470,7 @@ class _SidebarState extends State<Sidebar> {
                       overflow: TextOverflow.ellipsis,
                       // 18px/24px, weight 600, letter-spacing 0.04em — the one
                       // place dsh sets type outside the token scale.
-                      style: DswType.l20.copyWith(
-                        fontSize: 18,
-                        height: 24 / 18,
-                        fontWeight: FontWeight.w600,
+                      style: DswType.brand18.copyWith(
                         letterSpacing: 18 * 0.04,
                         color: color.labelPrimary,
                       ),

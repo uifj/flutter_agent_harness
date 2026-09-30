@@ -89,6 +89,15 @@ abstract final class DswType {
   /// step's name after its size was reduced. Ported by value, not by name.
   static final m18 = _ui(16, 28, FontWeight.w500);
 
+  /// The three steps the ported scale does not have, named here instead of being
+  /// re-spelled at the call site. `DswType.xs13.copyWith(fontSize: 12)` renders 12
+  /// while its name says 13 — two numbers for one fact, and the reader of the call
+  /// site is told the wrong one (ADR-0027; the guard is the `a style name never
+  /// lies about its size` group in `theme_token_test.dart`).
+  static final brand18 = _ui(18, 24, FontWeight.w600);
+  static final panelHeadline15 = _ui(15, 24, FontWeight.w500);
+  static final heroTitle26 = _ui(26, 32, FontWeight.w500);
+
   static final base16 = _ui(16, 24, FontWeight.w400);
   static final baseStrong16 = _ui(16, 24, FontWeight.w500);
   static final s14 = _ui(14, 22, FontWeight.w400);
