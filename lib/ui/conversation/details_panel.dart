@@ -26,6 +26,7 @@ import '../../theme/dsw_theme.dart';
 import '../primitives/tappable.dart';
 import '../../theme/dsw_typography.dart';
 import '../primitives/code_block.dart';
+import '../tool/tool_card.dart';
 
 class DetailsPanel extends StatefulWidget {
   const DetailsPanel({
@@ -181,7 +182,7 @@ class _DetailsPanelState extends State<DetailsPanel> {
         node.status != ToolStatus.awaitingApproval;
     if (!settled) return _message(color, context.tr('running'));
     return _Pre(
-      text: node.errorMessage ?? _format(node.output) ?? '',
+      text: node.errorMessage ?? formatToolOutput(node.output) ?? '',
       isError: node.errorMessage != null,
     );
   }
@@ -277,20 +278,16 @@ class _Pre extends StatelessWidget {
   }
 }
 
-/// dsh reparses and reprints `argsRaw` here rather than reusing the row's copy,
-/// and keeps a `rawResultText` of its own beside it. The same two live here, for
-/// the same reason: the panel is a different presentation of the same call, and
-/// tying it to the row's private formatting would couple them for nothing.
+/// dsh reparses and reprints `argsRaw` here rather than reusing the row's copy.
+/// The Input blob stays that way on purpose: it is the surface the user copies
+/// from, so it holds the model-facing JSON. The result is not copied — it is
+/// read — so it prints through the card's renderer rather than a second one
+/// here (ADR-0035: ADR-0031 fixed how a result reads and left this panel with
+/// its own formatter, which showed the envelope with its escapes intact).
 String _pretty(Object value) {
   try {
     return const JsonEncoder.withIndent('  ').convert(value);
   } on JsonUnsupportedObjectError {
     return value.toString();
   }
-}
-
-String? _format(Object? output) {
-  if (output == null) return null;
-  if (output is String) return output;
-  return _pretty(output);
 }

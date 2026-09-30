@@ -536,7 +536,7 @@ class _ToolRowModel {
     // An error row's collapsed summary IS the failure: the first error line
     // outranks the args summary.
     final summary = failure.isNotEmpty ? failure : _summaryOf(node);
-    final output = node.errorMessage ?? _format(node.output);
+    final output = node.errorMessage ?? formatToolOutput(node.output);
     final variant = _toolVariants[node.name] ?? _RowVariant.others;
     return _ToolRowModel(
       title: _titles[node.name] ?? 'Tool call',
@@ -594,63 +594,66 @@ class _ToolRowModel {
     final newline = text.indexOf('\n');
     return newline == -1 ? text : text.substring(0, newline);
   }
-
-  /// A tool's return value as display text.
-  ///
-  /// Not the way the model receives it: `JsonEncoder` escapes the newlines
-  /// inside a string value, so a 30-line `ls -la` arrived on screen as one
-  /// unscannable paragraph with literal `\n` in it (ADR-0031, from a real
-  /// window screenshot). Structure is kept — one key per line, so `path` and
-  /// `totalLines` stay readable — while a text payload is printed raw and
-  /// indented under its key. A result that is already a plain string is shown
-  /// as it is.
-  static String? _format(Object? output) {
-    if (output == null) return null;
-    if (output is String) {
-      final decoded = _tryDecode(output);
-      return decoded == null ? output : _render(decoded);
-    }
-    return _render(output);
-  }
-
-  /// Only a string that *looks* like a JSON document is tried; a tool that
-  /// answers with prose starting in a brace is shown as that prose.
-  static Object? _tryDecode(String value) {
-    final text = value.trimLeft();
-    if (!text.startsWith('{') && !text.startsWith('[')) return null;
-    try {
-      return jsonDecode(value);
-    } on FormatException {
-      return null;
-    }
-  }
-
-  static String _render(Object? value, {String at = ''}) {
-    if (value is Map) {
-      if (value.isEmpty) return '$at{}';
-      return value.entries
-          .map((e) {
-            final v = e.value;
-            if (v is String && v.contains('\n')) {
-              return '$at${e.key}:\n${_block(v, '$at  ')}';
-            }
-            if (v is Map || v is List) {
-              return '$at${e.key}:\n${_render(v, at: '$at  ')}';
-            }
-            return '$at${e.key}: ${v is String ? v : _scalar(v)}';
-          })
-          .join('\n');
-    }
-    if (value is List) {
-      if (value.isEmpty) return '$at[]';
-      return value.map((e) => '$at- ${_render(e, at: '').trim()}').join('\n');
-    }
-    return '$at${_scalar(value)}';
-  }
-
-  static String _block(String text, String at) =>
-      text.split('\n').map((line) => '$at$line').join('\n');
-
-  static String _scalar(Object? value) =>
-      value == null ? 'null' : value.toString();
 }
+
+/// How a tool result reads for a person — the one answer both surfaces print.
+///
+/// The card in the transcript and the details inspector are two presentations of
+/// the same call, so this is a library function: ADR-0031 moved the card off
+/// `JsonEncoder` and left the inspector its own formatter.
+///
+/// Not the way the model receives it: `JsonEncoder` escapes the newlines
+/// inside a string value, so a 30-line `ls -la` arrived on screen as one
+/// unscannable paragraph with literal `\n` in it (ADR-0031, from a real
+/// window screenshot). Structure is kept — one key per line, so `path` and
+/// `totalLines` stay readable — while a text payload is printed raw and
+/// indented under its key. A result that is already a plain string is shown
+/// as it is.
+String? formatToolOutput(Object? output) {
+  if (output == null) return null;
+  if (output is String) {
+    final decoded = _tryDecode(output);
+    return decoded == null ? output : _render(decoded);
+  }
+  return _render(output);
+}
+
+/// Only a string that *looks* like a JSON document is tried; a tool that
+/// answers with prose starting in a brace is shown as that prose.
+Object? _tryDecode(String value) {
+  final text = value.trimLeft();
+  if (!text.startsWith('{') && !text.startsWith('[')) return null;
+  try {
+    return jsonDecode(value);
+  } on FormatException {
+    return null;
+  }
+}
+
+String _render(Object? value, {String at = ''}) {
+  if (value is Map) {
+    if (value.isEmpty) return '$at{}';
+    return value.entries
+        .map((e) {
+          final v = e.value;
+          if (v is String && v.contains('\n')) {
+            return '$at${e.key}:\n${_block(v, '$at  ')}';
+          }
+          if (v is Map || v is List) {
+            return '$at${e.key}:\n${_render(v, at: '$at  ')}';
+          }
+          return '$at${e.key}: ${v is String ? v : _scalar(v)}';
+        })
+        .join('\n');
+  }
+  if (value is List) {
+    if (value.isEmpty) return '$at[]';
+    return value.map((e) => '$at- ${_render(e, at: '').trim()}').join('\n');
+  }
+  return '$at${_scalar(value)}';
+}
+
+String _block(String text, String at) =>
+    text.split('\n').map((line) => '$at$line').join('\n');
+
+String _scalar(Object? value) => value == null ? 'null' : value.toString();
