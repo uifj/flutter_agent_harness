@@ -11,11 +11,12 @@
 | `.qoder/rules/build.md` / `.trae/rules/build.md` | 桌面端构建事实：版本基线、三桌面目标与开发机平台、CI 门禁口径、entitlements/沙箱边界、签名缺口、出包清单 | 构建/排障/发布前 |
 | `.qoder/skills/` / `.trae/skills/` | 25 个 skill（git-commit、flutter-*、dart-*、ponytail-*）；哪些被裁掉、为什么，见 workflow.md §2 | 按需 |
 | [docs/README.md](docs/README.md) | 文档体系规范：ADR 分类 / 优先级 / 状态机 / 新增流程 | 记录问题时 |
-| [docs/debt-register.md](docs/debt-register.md) | 技术债与缺陷登记表（唯一状态源）：ADR-0001…0035 已登记 + 观察表若干待立条目（下一编号 ADR-0036；ADR-0030 只在观察表未立文） | 动手前 |
+| [docs/debt-register.md](docs/debt-register.md) | 技术债与缺陷登记表（唯一状态源）：ADR-0001…0036 已登记 + 观察表若干待立条目（下一编号 ADR-0037；ADR-0030 只在观察表未立文） | 动手前 |
 | [docs/migration-log.md](docs/migration-log.md) | ADR-0002/0003/0004 迁移执行台账：阶段·commit·门禁·待人签收清单 | 接手迁移时 |
 | [docs/starkins-settings-migration-analysis.md](docs/starkins-settings-migration-analysis.md) | 从 starkins_app 迁移设置页的分析：逐项 可迁/改造/不迁 判定 + 不变量冲突（待拍板） | 做该迁移前 |
 | [repomix.config.json](repomix.config.json) | 全仓库打包配置（产物 `repomix-output.xml` 不入库；已排除 vendored UI 库实现） | 按需 |
 | [docs/ui-consistency-audit-2026-09-30.md](docs/ui-consistency-audit-2026-09-30.md) | **第一批真机窗口截图**（四张）的逐组件走查：令牌层与原语已统一之后剩下的不一致都在内容层——七条里**四条已闭**（§U1 工具卡信封 = ADR-0031、§U2 覆盖层文案 = ADR-0032、§U5 上游路径 = ADR-0033、§U4 圆形短气泡 = ADR-0034），**§U3「对话列三条轴」复核后撤回**（是一条轴两种对齐，判词写在 ADR-0034 的"明确不做"），同批补记的 **§U8（详情栏第二套读法，§U1 的同函数回扫发现，非截图）= ADR-0035 已闭**，剩 §U6/§U7 两条等用户选方向。回答"还有哪些 UI 要调"先读它，别重新调研 |
+| [docs/shad-adoption-2026-09-30.md](docs/shad-adoption-2026-09-30.md) | shad 组件采纳映射（ADR-0036 的执行表）：四张真窗截图 36 行逐件三档判定（shad 有则用 / 无则 shad 风格封装 / 保留必带理由）+ B6 菜单 13 处归零 / B7 字段·开关·按钮·徽标 / B8 封装与图标钮身体 + 桥要补的四枚主题项。回答"这个件该不该换 shad、换成哪个"先读它 |
 | [docs/zcode-vs-agent-harness-2026-09.md](docs/zcode-vs-agent-harness-2026-09.md) | ZCode-main（Apache-2.0 桌面 agent 产品，86.1 万行）逐维度对比与移植评估：UI 布局 / agent 能力 / 功能面 / 工程治理，含 A/B/C 分级路线图与红线检查表 | 判断"要不要搬 ZCode 的某个能力"前 |
 | `技术文档-agent_harness基于genkit-dart的可落地增强路线.md` | genkit-dart 0.16.1 逐文件审读：能借哪些能力、要绕哪些限制、该放弃哪些幻想 | 动运行时前 |
 | `对标技术文章-agent_harness与dsh生态横向对比.md` | 与 dsh / better-sidebar 的十维度对比与完成度评估 | 判断"该不该做"前 |
@@ -48,7 +49,7 @@
 | `tool/` | 2 | — | `contrast_check.dart`：对 `dsw_static` + `dsw_alias` 做 WCAG 对比度三求值（dart:io/dart:math only），`dart tool/contrast_check.dart`；`check_architecture.dart`：五条架构规则的指纹 baseline 门禁（ADR-0011），baseline 落 `tool/architecture_baseline.json` |
 | `packages/board_panel/` | — | — | **入库的本地包**（path 依赖，ADR-0007 D5 记录为 ADR-0001"vendored 不入库"的例外）：看板/日程/表格扩展面板，由 `ui/plan/plan_extensions_view.dart` 消费，数据来自 `state/plan_task_store.dart` |
 | `packages/flutter-shadcn-ui/` | — | — | **vendored 源码镜像，`.gitignore` 排除**（ADR-0001）。`shadcn_ui` 0.56.3 已是 pubspec 依赖（ADR-0002 实施中），但配色仍走 `dsw_*`（经 `theme/dsw_shad_bridge.dart`）。查组件 API 用入库的 `.qoder/skills/shadcn-ui-flutter/`；读实现看此目录或上游 `nank1ro/flutter-shadcn-ui` `0.56.3` |
-| `docs/` | — | — | `README.md`（ADR 规范）+ `debt-register.md`（状态源）+ `migration-log.md` + `adr/`（模板 + ADR-0001…0035）+ 审计报告与优化方案 |
+| `docs/` | — | — | `README.md`（ADR 规范）+ `debt-register.md`（状态源）+ `migration-log.md` + `adr/`（模板 + ADR-0001…0036）+ 审计报告与优化方案 |
 | `.github/workflows/` | 2 | — | `pr-check.yml`（push/PR 到 develop·main：format + `dart analyze --fatal-infos` + `flutter test`）、`build.yml`（`workflow_dispatch`：三桌面平台出包 + 可选 GitHub Release）。两者都钉 `FLUTTER_VERSION: '3.41.9'` |
 
 ## 3. 架构不变量（违反即错误，命令可自证）

@@ -1,0 +1,37 @@
+# ADR-0036 · 截图里的件换 shad，shad 没有的按 shad 风格封装
+
+- **状态**：ACCEPTED（2026-09-30 用户指令：四张真窗截图中的相关组件采用 shadcn_ui 现有组件，没有的按 shadcn_ui 风格自行封装）
+- **分类**：ARC（ADR-0002 shadcn 迁移的继续，把迁移面从"主题桥 + 按钮"扩到截图内全部件）
+- **优先级**：P2
+- **日期**：2026-09-30
+
+## 背景
+
+四张真窗截图（2026-09-30，`5dfe47f3` 空态 / `e68d068b` 设置·扩展 / `86e0bd57` 对话流 / `bf783e32` 模型菜单展开）逐件看过去，仍非 shad 的表面有：侧栏的**企划/代理分段控件**、`新会话` 按钮、会话行、页脚字母头像与两枚图标钮；外壳右上两枚面板切换钮；hero 的**工作区 chip**（folder 图标 + chevron）；composer 卡与它的**五把下拉**（Material `PopupMenuButton`，皮住在 `popupMenuTheme`，ADR-0028）、发送圆钮；工具卡的容器与 IN/OUT 两 pane；设置页的**垂直导航行**、搜索框、字段、`添加服务器`/`保存`/关闭钮；以及展开的模型菜单本身（灰底、勾选项、分隔线、带 Retry 的异步行——Material popup 的形状）。
+
+对照 shadcn_ui **0.56.3** 的组件索引（入库 skill `.qoder/skills/shadcn-ui-flutter/` 的组件表，与 pubspec 钉的版本同源）：
+
+- **有**：Button、IconButton、Input、Textarea、Switch、Checkbox、RadioGroup、Select、Context Menu、Menubar、Popover、Tooltip、Card、Badge、Separator、Tabs、Accordion、Dialog、Sheet、Sonner/Toast、Avatar、Table、Resizable、Progress、Alert、Form、Calendar、Slider、Breadcrumb、InputOTP、Time/Date Picker。
+- **没有**：分段控件（Segmented / ToggleGroup）、垂直导航列表、ScrollArea、Skeleton、DropdownMenu（React 版有；此移植版用 Select / Context Menu / Menubar / Popover 表达同一族交互）。
+
+现状基线：ADR-0002 的 shad 迁移只落了 Stage 4 主题桥（`theme/dsw_shad_bridge.dart`，DswAlias→ShadColorScheme）与 Stage 5 的 CapsuleButton→ShadButton；对话框一路已收进 `ShadDialog`（`1e417e6`）；反馈条已收进 `ShadSonner`（ADR-0020）。其余截图内的件仍是自绘或 Material。
+
+## 决策
+
+1. **截图内凡 shad 有现成组件的件，界面一律改用该组件**：Button / IconButton / Input / Switch / Checkbox / Select / ContextMenu / Popover / Card / Separator / Badge / Tabs（语义合时）。Select 表达不了异质行（模型菜单的"选项 + 动作 + 异步状态行"）时，用 `ShadPopover` 自排列表——仍是 shad 组件，不退回 Material。
+2. **shad 没有的件按 shad 风格封装**，落在 `lib/ui/primitives/`：分段控件、垂直导航行、会话行、hero 空态、以及 Card 表达不了的容器。封装件的**皮**（填充/圆角/发丝/字重）只从 `DswAlias` 与 `DswShape` 取、经既有主题缝说一次；**身体**优先用 shad 原语拼（分段控件 = 轨道容器 + 两枚 `ShadButton`），拼不出才自绘。
+3. **既有原语律不破，但原语的身体改委托 shad**：点击机制仍只认 `DswHoverTap` / `ShadButton`（ADR-0021），图标钮仍只认 `DswIconButton`（ADR-0024）——`DswIconButton` 的身体改为 `ShadIconButton`，wrapper 继续负责 tooltip=语义名、半径按盒子尺寸推、色阶与动效（ADR-0023/0024 的四性不变）。这是"封装件身体用 shad"的第一枚实例：单点原语的数量不增加，变的是它站在谁的肩膀上。
+4. **菜单换 shad 后，ADR-0028 的"皮只在 `popupMenuTheme` 说一次"部分被取代**：皮改住在 ShadTheme 的对应主题项（select / context-menu），由 `dsw_shad_bridge.dart` 从 `DswAlias` 映射。"一层皮、只在主题说一次"这条律不变，换的是缝。Material 的 `popupMenuTheme` 保留到最后一把 Material 菜单换完才删；`tooltipTheme`（ADR-0023）不动——Tooltip 不在截图内。
+5. **配色仍只从 dsw 取**（workflow §2 老律）：shad 组件一律经桥拿色，任何调用点不得读 shad 调色板。
+6. **明确不做**：
+   - 不给 composer 卡换 `ShadCard`——它的三态描边是 `AnimatedContainer` + `BoxDecoration` 的动画（ADR-0017 S2b，守卫读的是**画出来的** border），ShadCard 的装饰是静态主题项，表达不了"焦点优先于 hover"的过渡；
+   - 不动工具卡 IN/OUT 的读法（ADR-0031/0035）与用户气泡形状（ADR-0034）——它们是内容层，不是组件层；
+   - 不换 Tooltip（ADR-0023 已闭，且不在截图内）；
+   - 不引入 shad 的 `ShadApp` 替换 `MaterialApp`——装配根与 overlay 缝（ADR-0020/0032 的 `MaterialApp.builder` 顺序）是已证的事实，换根等于重开那两条律。
+
+## 后果
+
+- ADR-0002 的迁移面扩大；本 ADR 是它的执行批次族（B6 菜单 / B7 按钮与字段 / B8 封装件），每批一条先红后绿的守卫，映射表见 `docs/shad-adoption-2026-09-30.md`。
+- `test/menu_chrome_test.dart` 读皮的缝要随菜单批改（从 Material `popupMenuTheme` 改读桥给 shad 的档）——**改的是认法不是断言**，照 ADR-0034 改 `chat_view_test` 的先例在批次里说明。
+- 放大文本那把尺子（ADR-0017 S3）对换进来的 shad 件同样成立：shad 组件的固定高度座位要过两档（1.8x / 2.2x）探针，`ShadButton.height` 既是 min 又是 max 的天花板照旧登记。
+- 风险：shad 组件自带排版（textTheme），与 `DswType` 阶梯可能分叉——桥只映射颜色与半径时，字号仍由调用点用 `DswType` 显式给（ADR-0027 的"样式名不许撒谎"继续管调用点）。
