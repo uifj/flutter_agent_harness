@@ -107,7 +107,6 @@ final class DswAlias {
     required this.bubbleHighlight,
     required this.inputMajor,
     required this.loginInput,
-    required this.menu,
     required this.selector,
     required this.sidebarFill,
     required this.sidebarNavItemActive,
@@ -232,7 +231,6 @@ final class DswAlias {
   final Color bubbleHighlight;
   final Color inputMajor;
   final Color loginInput;
-  final Color menu;
   final Color selector;
   final Color sidebarFill;
   final Color sidebarNavItemActive;
@@ -328,8 +326,6 @@ final class DswAlias {
     bubbleHighlight: DswStatic.deepseek200,
     inputMajor: DswStatic.neutralBluish00,
     loginInput: DswStatic.neutralBluish50,
-    // Source aliases this to `--dsw-alias-bg-layer-3`.
-    menu: DswStatic.neutralBluish00,
     selector: DswStatic.neutralBluish60Light,
     sidebarFill: DswStatic.neutralBluish50,
     sidebarNavItemActive: DswStatic.neutralBluish100,
@@ -425,8 +421,6 @@ final class DswAlias {
     bubbleHighlight: DswStatic.neutralBluish750,
     inputMajor: DswStatic.neutralBluish850,
     loginInput: DswStatic.neutralBluish900,
-    // Source aliases this to `--dsw-alias-bg-layer-3`.
-    menu: DswStatic.neutralBluish800,
     selector: DswStatic.neutralBluish800,
     sidebarFill: DswStatic.neutralBluish900,
     sidebarNavItemActive: DswStatic.neutralBluish750,

@@ -32,6 +32,7 @@ import '../../theme/dsw_typography.dart';
 import '../../model/sidebar_state.dart';
 import '../../state/workbench_controller.dart';
 import 'tab_registry.dart';
+import '../primitives/menu.dart';
 import '../primitives/tappable.dart';
 import 'tabs/git_tab.dart';
 import 'tabs/sidechat_tab.dart';
@@ -263,9 +264,20 @@ class _FreeWindowState extends State<_FreeWindow> {
       },
       onPointerUp: (_) => _movePress = null,
       onPointerCancel: (_) => _movePress = null,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onSecondaryTapDown: (details) => _menu(details.globalPosition),
+      child: DswContextMenu(
+        minWidth: 180,
+        items: (context) => [
+          DswMenuEntry(
+            icon: LucideIcons.panel_right,
+            label: context.tr('dockToSidebar'),
+            onTap: () => widget.workbench.dockFloat(widget.float.id),
+          ),
+          DswMenuEntry(
+            icon: LucideIcons.x,
+            label: context.tr('close'),
+            onTap: () => widget.workbench.closeFloatByTab(widget.float.tab.id),
+          ),
+        ],
         child: Container(
           // One line of chrome holding the tab's title: pinned at 32 the bottom
           // stroke left 31.0 for a label wanting 32.0 at 1.8x and 40.0 at 2.2x.
@@ -298,66 +310,6 @@ class _FreeWindowState extends State<_FreeWindow> {
         ),
       ),
     );
-  }
-
-  /// The header's right-click menu: the dock-back and the close, the two
-  /// things a floating window wants said about it.
-  Future<void> _menu(Offset global) async {
-    final color = context.dsw;
-    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-    final result = await showMenu<String>(
-      context: context,
-      position: RelativeRect.fromRect(
-        Rect.fromPoints(global, global),
-        Offset.zero & overlay.size,
-      ),
-      constraints: const BoxConstraints(minWidth: 180),
-      color: color.menu,
-      items: [
-        PopupMenuItem(
-          value: 'dock',
-          child: Row(
-            children: [
-              Icon(
-                LucideIcons.panel_right,
-                size: DswShape.iconTiny,
-                color: color.labelSecondary,
-              ),
-              const SizedBox(width: 5),
-              Text(
-                context.tr('dockToSidebar'),
-                style: DswType.xs13.copyWith(color: color.labelPrimary),
-              ),
-            ],
-          ),
-        ),
-        PopupMenuItem(
-          value: 'close',
-          child: Row(
-            children: [
-              Icon(
-                LucideIcons.x,
-                size: DswShape.iconTiny,
-                color: color.labelSecondary,
-              ),
-              const SizedBox(width: 5),
-              Text(
-                context.tr('close'),
-                style: DswType.xs13.copyWith(color: color.labelPrimary),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-    switch (result) {
-      case 'dock':
-        widget.workbench.dockFloat(widget.float.id);
-      case 'close':
-        widget.workbench.closeFloatByTab(widget.float.tab.id);
-      case null:
-        break;
-    }
   }
 }
 

@@ -197,42 +197,50 @@ class _DshAppState extends ConsumerState<DshApp> {
       // too. The colour scheme is dsw's own (ADR-0002 decision 4, route A):
       // the bridge reads the resolved brightness back out of the Material
       // theme, so one themeMode drives both systems.
-      builder: (context, child) => MediaQuery(
+      builder: (context, child) {
         // ADR-0017 S3: the stored text-size step multiplies INTO the platform's
         // own scaler instead of replacing it, so the OS's "放大文本" and the
         // user's own choice compose rather than compete. One seat above the
         // Navigator means dialogs and the settings page scale with the frame,
         // and `DswType` stays the pure ramp it is — the framework already has
         // this channel, and every `Text` reads it.
-        data: MediaQuery.of(context).copyWith(
-          textScaler: TextScaler.linear(
-            MediaQuery.textScalerOf(context).scale(1) * doc.fontSize.scale,
+        final textScale =
+            MediaQuery.textScalerOf(context).scale(1) * doc.fontSize.scale;
+        return MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: ShadTheme(
+            // The bridge needs the same number: shad sizes a few seats with a
+            // plain double (`ShadContextMenuItem.height` → `ShadButton.raw`),
+            // and a seat that does not know the step cuts a scaled label.
+            data: dswShadTheme(
+              Theme.of(context).brightness,
+              textScale: textScale,
+            ),
+            // The locale seat, resolved once per document: an explicit choice
+            // wins, `system` follows the platform. It belongs here rather than on
+            // `home:` because an overlay route is not under `home:` — mounted
+            // there, every menu and dialog silently fell back to English
+            // key-by-key (ADR-0032, caught in a real window screenshot as
+            // `Retry` next to 中文). Same seam ADR-0017 learned for `MediaQuery`.
+            child: AppLocaleScope(
+              locale: switch (doc.locale) {
+                cfg.LocaleMode.en => AppLocaleId.en,
+                cfg.LocaleMode.zh => AppLocaleId.zh,
+                cfg.LocaleMode.system =>
+                  Platform.localeName.toLowerCase().startsWith('zh')
+                      ? AppLocaleId.zh
+                      : AppLocaleId.en,
+              },
+              // ADR-0020: the feedback strip's host. Above the Navigator, so a
+              // toast raised from a dialog route or from the full-screen settings
+              // still lands on the one strip the bridge colours from `DswAlias`.
+              child: ShadSonner(child: child!),
+            ),
           ),
-        ),
-        child: ShadTheme(
-          data: dswShadTheme(Theme.of(context).brightness),
-          // The locale seat, resolved once per document: an explicit choice
-          // wins, `system` follows the platform. It belongs here rather than on
-          // `home:` because an overlay route is not under `home:` — mounted
-          // there, every menu and dialog silently fell back to English
-          // key-by-key (ADR-0032, caught in a real window screenshot as
-          // `Retry` next to 中文). Same seam ADR-0017 learned for `MediaQuery`.
-          child: AppLocaleScope(
-            locale: switch (doc.locale) {
-              cfg.LocaleMode.en => AppLocaleId.en,
-              cfg.LocaleMode.zh => AppLocaleId.zh,
-              cfg.LocaleMode.system =>
-                Platform.localeName.toLowerCase().startsWith('zh')
-                    ? AppLocaleId.zh
-                    : AppLocaleId.en,
-            },
-            // ADR-0020: the feedback strip's host. Above the Navigator, so a
-            // toast raised from a dialog route or from the full-screen settings
-            // still lands on the one strip the bridge colours from `DswAlias`.
-            child: ShadSonner(child: child!),
-          ),
-        ),
-      ),
+        );
+      },
       // The mode the settings screen writes. `system` hands the decision to the
       // platform's own brightness, which MaterialApp reads through this same
       // parameter — there is nothing else to wire.

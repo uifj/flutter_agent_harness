@@ -23,7 +23,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:shadcn_ui/shadcn_ui.dart' show ShadInput;
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadInput, ShadOption;
 
 import '../../genkit/models_endpoint.dart';
 import '../../l10n/locales.dart';
@@ -42,6 +42,7 @@ import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../primitives/tappable.dart';
 import '../primitives/feedback.dart';
+import '../primitives/menu.dart';
 import '../primitives/capsule_button.dart';
 import 'widgets/settings_card.dart';
 
@@ -1410,7 +1411,7 @@ double _oneLineWidth(BuildContext context, String text, TextStyle style) {
 
 /// dsh's own `LanguageRow`/`AppearanceRow` selectors take. A bordered box
 /// here would read as one of the form inputs, which a preference is not.
-class _SettingCellRow<T> extends StatefulWidget {
+class _SettingCellRow<T> extends StatelessWidget {
   const _SettingCellRow({
     required this.title,
     required this.description,
@@ -1437,62 +1438,48 @@ class _SettingCellRow<T> extends StatefulWidget {
   /// last row; dsh's column strips it there (`:last-child { border: none }`).
   final bool last;
 
-  @override
-  State<_SettingCellRow<T>> createState() => _SettingCellRowState<T>();
-}
-
-class _SettingCellRowState<T> extends State<_SettingCellRow<T>> {
-  bool _hovered = false;
-
-  Widget _menu(DswAlias color) => PopupMenuButton<T>(
-    position: PopupMenuPosition.under,
-    constraints: const BoxConstraints(minWidth: 160),
-    initialValue: widget.value,
-    onSelected: widget.onChanged,
-    itemBuilder: (context) => [
-      for (final entry in widget.labels.entries)
-        PopupMenuItem(
-          value: entry.key,
-          child: Text(
-            entry.value,
-            style: DswType.xs13.copyWith(color: color.labelPrimary),
-          ),
-        ),
+  /// The hover wash used to be this widget's own `State` plus a `MouseRegion`;
+  /// [DswSelect] reports the pointer instead, so the row is stateless again.
+  Widget _menu(DswAlias color) => DswSelect<T>(
+    value: value,
+    onChanged: (picked) {
+      if (picked != null) onChanged(picked);
+    },
+    popupMinWidth: 160,
+    options: (context, close) => [
+      for (final entry in labels.entries)
+        ShadOption<T>(value: entry.key, child: Text(entry.value)),
     ],
-    child: MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedContainer(
-        duration: DswMotion.respecting(context, DswMotion.fast),
-        // One line of chrome, so the seat follows the text step: 36 gave
-        // this row's 14/22 label 36.0 where 40.0 was needed at 1.8x. A floor
-        // rather than a height because the label takes a second line only when
-        // even the whole card cannot hold it on one (2.2x in a 430px card).
-        constraints: BoxConstraints(
-          minHeight: 36 * MediaQuery.textScalerOf(context).scale(1),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          color: _hovered ? color.interactiveBgHover : color.bgModulePlatform,
-          borderRadius: BorderRadius.circular(DswShape.float),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: Text(
-                widget.labels[widget.value]!,
-                style: DswType.s14.copyWith(color: color.labelPrimary),
-              ),
+    trigger: (context, selected, hovered) => AnimatedContainer(
+      duration: DswMotion.respecting(context, DswMotion.fast),
+      // One line of chrome, so the seat follows the text step: 36 gave
+      // this row's 14/22 label 36.0 where 40.0 was needed at 1.8x. A floor
+      // rather than a height because the label takes a second line only when
+      // even the whole card cannot hold it on one (2.2x in a 430px card).
+      constraints: BoxConstraints(
+        minHeight: 36 * MediaQuery.textScalerOf(context).scale(1),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: hovered ? color.interactiveBgHover : color.bgModulePlatform,
+        borderRadius: BorderRadius.circular(DswShape.float),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(
+              labels[value]!,
+              style: DswType.s14.copyWith(color: color.labelPrimary),
             ),
-            const SizedBox(width: 12),
-            Icon(
-              LucideIcons.chevron_down,
-              size: DswShape.iconSm,
-              color: color.labelTertiary,
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 12),
+          Icon(
+            LucideIcons.chevron_down,
+            size: DswShape.iconSm,
+            color: color.labelTertiary,
+          ),
+        ],
       ),
     ),
   );
@@ -1501,9 +1488,9 @@ class _SettingCellRowState<T> extends State<_SettingCellRow<T>> {
   Widget build(BuildContext context) {
     final color = context.dsw;
     final titleStyle = DswType.s14.copyWith(color: color.labelPrimary);
-    final leading = <Widget>[
-      if (widget.leading != null) ...[
-        Icon(widget.leading, size: DswShape.iconMd, color: color.labelTertiary),
+    final leadingCells = <Widget>[
+      if (leading != null) ...[
+        Icon(leading, size: DswShape.iconMd, color: color.labelTertiary),
         const SizedBox(width: 12),
       ],
     ];
@@ -1511,10 +1498,10 @@ class _SettingCellRowState<T> extends State<_SettingCellRow<T>> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.title, style: titleStyle),
+          Text(title, style: titleStyle),
           const SizedBox(height: 4),
           Text(
-            widget.description,
+            description,
             style: DswType.xxs12.copyWith(color: color.labelTertiary),
           ),
         ],
@@ -1526,26 +1513,24 @@ class _SettingCellRowState<T> extends State<_SettingCellRow<T>> {
     // card, so under one line of room for title plus pill the pill moves
     // below the label instead.
     final beside =
-        (widget.leading == null ? 0.0 : 28.0) +
-        _oneLineWidth(context, widget.title, titleStyle) +
+        (leading == null ? 0.0 : 28.0) +
+        _oneLineWidth(context, title, titleStyle) +
         8 +
-        _oneLineWidth(context, widget.labels[widget.value]!, titleStyle) +
+        _oneLineWidth(context, labels[value]!, titleStyle) +
         12 +
         14 +
         28;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
-        border: widget.last
-            ? null
-            : Border(bottom: BorderSide(color: color.borderL2)),
+        border: last ? null : Border(bottom: BorderSide(color: color.borderL2)),
       ),
       child: LayoutBuilder(
         builder: (context, box) {
           if (beside <= box.maxWidth) {
             return Row(
               children: [
-                ...leading,
+                ...leadingCells,
                 text,
                 const SizedBox(width: 8),
                 _menu(color),
@@ -1555,7 +1540,7 @@ class _SettingCellRowState<T> extends State<_SettingCellRow<T>> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(children: [...leading, text]),
+              Row(children: [...leadingCells, text]),
               SizedBox(height: 12 * MediaQuery.textScalerOf(context).scale(1)),
               _menu(color),
             ],
@@ -2412,43 +2397,46 @@ class _ModelPickButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = context.dsw;
     final enabled = models.isNotEmpty;
-    return Tooltip(
-      message: enabled
+    return DswSelect<String>(
+      // Nothing is ever selected here: the box is a way in, not a value, so the
+      // trigger is always the placeholder branch.
+      value: null,
+      onChanged: (id) {
+        if (id != null) onPick(id);
+      },
+      enabled: enabled,
+      label: enabled
           ? context.tr('chooseModel')
           : context.tr('noModelsFetched'),
-      child: PopupMenuButton<String>(
-        enabled: enabled,
-        position: PopupMenuPosition.under,
-        constraints: const BoxConstraints(minWidth: 260, maxHeight: 320),
-        initialValue: null,
-        onSelected: onPick,
-        itemBuilder: (context) => [
-          for (final id in models)
-            PopupMenuItem(
-              value: id,
-              child: Text(
-                id,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: DswType.xs13.copyWith(
-                  color: color.labelPrimary,
-                  fontFamily: dswFontFamilyCode,
-                  fontFamilyFallback: dswFontFamilyCodeFallback,
-                ),
+      popupMinWidth: 260,
+      maxHeight: 320,
+      options: (context, close) => [
+        for (final id in models)
+          ShadOption<String>(
+            value: id,
+            child: Text(
+              id,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: DswType.xs13.copyWith(
+                color: color.labelPrimary,
+                fontFamily: dswFontFamilyCode,
+                fontFamilyFallback: dswFontFamilyCodeFallback,
               ),
             ),
-        ],
-        child: Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(DswShape.inner),
           ),
-          child: Icon(
-            LucideIcons.list,
-            size: DswShape.iconMd,
-            color: enabled ? color.labelTertiary : color.labelDimmed,
-          ),
+      ],
+      trigger: (context, selected, hovered) => Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: hovered ? color.interactiveBgHover : Colors.transparent,
+          borderRadius: BorderRadius.circular(DswShape.inner),
+        ),
+        child: Icon(
+          LucideIcons.list,
+          size: DswShape.iconMd,
+          color: enabled ? color.labelTertiary : color.labelDimmed,
         ),
       ),
     );

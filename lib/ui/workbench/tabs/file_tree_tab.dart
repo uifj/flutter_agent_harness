@@ -39,6 +39,7 @@ import '../../../theme/dsw_typography.dart';
 import '../../../model/sidebar_tab.dart';
 import '../../../state/workbench_controller.dart';
 import '../../primitives/icon_button.dart';
+import '../../primitives/menu.dart';
 import '../../primitives/tappable.dart';
 
 /// Row height. 22px is the source's `--row-h`; it is also what fits a 13px label
@@ -281,18 +282,19 @@ class _FileTreeTabState extends State<FileTreeTab> {
                   itemBuilder: (context, index) {
                     final row = rows[index];
                     final filtering = _filter.isNotEmpty;
-                    return _TreeRow(
-                      row: row,
-                      expanded:
-                          filtering ||
-                          widget.workbench.state.expanded.contains(row.path),
-                      selected: row.path == current,
-                      error: _failed[row.path],
-                      onTap: () => row.isDirectory
-                          ? widget.workbench.toggleExpanded(row.path)
-                          : widget.workbench.openFile(row.path),
-                      onSecondaryTap: (position) =>
-                          _showRowMenu(context, row, position),
+                    return DswContextMenu(
+                      items: (context) => _rowMenuItems(context, row),
+                      child: _TreeRow(
+                        row: row,
+                        expanded:
+                            filtering ||
+                            widget.workbench.state.expanded.contains(row.path),
+                        selected: row.path == current,
+                        error: _failed[row.path],
+                        onTap: () => row.isDirectory
+                            ? widget.workbench.toggleExpanded(row.path)
+                            : widget.workbench.openFile(row.path),
+                      ),
                     );
                   },
                 ),
@@ -354,83 +356,37 @@ class _FileTreeTabState extends State<FileTreeTab> {
   );
 
   /// The row's right-click menu: open, copy paths, and — for a directory — a
-  /// tree tab rooted there. Menu position comes from the tap so the menu lands
-  /// under the cursor, not under the row's corner.
-  Future<void> _showRowMenu(
-    BuildContext context,
-    _Row row,
-    Offset position,
-  ) async {
-    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-    final color = context.dsw;
+  /// tree tab rooted there. [DswContextMenu] opens it at the pointer.
+  List<DswMenuEntry> _rowMenuItems(BuildContext context, _Row row) {
     final root = widget.workbench.workspaceRoot;
     final relative = root != null && p.isWithin(root, row.path)
         ? p.relative(row.path, from: root)
         : row.path;
-    // One menu row: the glyph keeps its seat and the label is what yields. A
-    // bare `Text` here is handed the menu's whole width, so a label spilled past
-    // the popup once the system amplified text (274.8 of 256.0 at 1.8x).
-    Widget menuItem(IconData icon, String label) => Row(
-      children: [
-        Icon(icon, size: DswShape.iconSm, color: color.labelSecondary),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
-        ),
-      ],
-    );
-    final seat = 34 * MediaQuery.textScalerOf(context).scale(1);
-    final choice = await showMenu<String>(
-      context: context,
-      position: RelativeRect.fromLTRB(
-        position.dx,
-        position.dy,
-        overlay.size.width - position.dx,
-        overlay.size.height - position.dy,
+    return [
+      DswMenuEntry(
+        icon: row.isDirectory ? LucideIcons.chevron_right : LucideIcons.file,
+        label: context.tr('open'),
+        onTap: () => row.isDirectory
+            ? widget.workbench.toggleExpanded(row.path)
+            : widget.workbench.openFile(row.path),
       ),
-      color: color.bgLayer2,
-      items: [
-        PopupMenuItem(
-          value: 'open',
-          height: seat,
-          child: menuItem(
-            row.isDirectory ? LucideIcons.chevron_right : LucideIcons.file,
-            context.tr('open'),
-          ),
+      DswMenuEntry(
+        icon: LucideIcons.copy,
+        label: context.tr('copyRelative'),
+        onTap: () => Clipboard.setData(ClipboardData(text: relative)),
+      ),
+      DswMenuEntry(
+        icon: LucideIcons.file_symlink,
+        label: context.tr('copyAbsolute'),
+        onTap: () => Clipboard.setData(ClipboardData(text: row.path)),
+      ),
+      if (row.isDirectory)
+        DswMenuEntry(
+          icon: LucideIcons.list_tree,
+          label: context.tr('openInTreeTab'),
+          onTap: () => widget.workbench.openFolder(row.path),
         ),
-        PopupMenuItem(
-          value: 'copyRelative',
-          height: seat,
-          child: menuItem(LucideIcons.copy, context.tr('copyRelative')),
-        ),
-        PopupMenuItem(
-          value: 'copyAbsolute',
-          height: seat,
-          child: menuItem(LucideIcons.file_symlink, context.tr('copyAbsolute')),
-        ),
-        if (row.isDirectory)
-          PopupMenuItem(
-            value: 'treeTab',
-            height: seat,
-            child: menuItem(LucideIcons.list_tree, context.tr('openInTreeTab')),
-          ),
-      ],
-    );
-    if (choice == null) return;
-    switch (choice) {
-      case 'open':
-        if (row.isDirectory) {
-          widget.workbench.toggleExpanded(row.path);
-        } else {
-          widget.workbench.openFile(row.path);
-        }
-      case 'copyRelative':
-        await Clipboard.setData(ClipboardData(text: relative));
-      case 'copyAbsolute':
-        await Clipboard.setData(ClipboardData(text: row.path));
-      case 'treeTab':
-        widget.workbench.openFolder(row.path);
-    }
+    ];
   }
 
   Widget _header(DswAlias color) => Container(
@@ -470,7 +426,6 @@ class _TreeRow extends StatelessWidget {
     required this.selected,
     required this.error,
     required this.onTap,
-    this.onSecondaryTap,
   });
 
   final _Row row;
@@ -482,10 +437,6 @@ class _TreeRow extends StatelessWidget {
   final String? error;
 
   final VoidCallback onTap;
-
-  /// Right-click. Null disables the menu — the plain builder rows pass it, the
-  /// tests stub it out.
-  final void Function(Offset position)? onSecondaryTap;
 
   @override
   Widget build(BuildContext context) {
@@ -533,11 +484,10 @@ class _TreeRow extends StatelessWidget {
       ],
     );
 
+    // No secondary tap here on purpose: the row's `DswContextMenu` claims the
+    // right button, and the deeper recognizer would win the arena instead.
     return DswHoverTap(
       onTap: onTap,
-      onSecondaryTapDown: onSecondaryTap == null
-          ? null
-          : (details) => onSecondaryTap!(details.globalPosition),
       semanticLabel: row.path,
       excludeSemantics: true,
       builder: (context, hovered, _) => Tooltip(

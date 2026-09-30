@@ -26,7 +26,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter/services.dart';
-import 'package:shadcn_ui/shadcn_ui.dart' show ShadInput;
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadInput, ShadOption;
 import 'package:path/path.dart' as p;
 
 import '../../../host/git.dart';
@@ -36,6 +36,7 @@ import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
 import '../../../model/sidebar_tab.dart';
 import '../../../state/workbench_controller.dart';
+import '../../primitives/menu.dart';
 import '../../primitives/tappable.dart';
 import '../../primitives/confirm_dialog.dart';
 import '../../primitives/icon_button.dart';
@@ -411,15 +412,6 @@ class _GitTabState extends State<GitTab> {
     );
   }
 
-  /// Where a right-click's menu opens, at the cursor.
-  RelativeRect _menuAt(Offset global) {
-    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-    return RelativeRect.fromRect(
-      Rect.fromPoints(global, global),
-      Offset.zero & overlay.size,
-    );
-  }
-
   Future<void> _copy(String text) =>
       Clipboard.setData(ClipboardData(text: text));
 
@@ -443,154 +435,115 @@ class _GitTabState extends State<GitTab> {
     );
   }
 
-  Future<void> _fileMenu(
-    TapDownDetails details,
+  /// The changed file's right-click menu, as rows for [DswContextMenu].
+  List<DswMenuEntry> _fileMenuItems(
+    BuildContext context,
     GitStatusEntry entry,
     bool staged,
-  ) async {
+  ) {
     final root = _repo!.root;
     final absolute = p.join(root, entry.path);
     // A path outside the workspace fence cannot be opened in the editor: the
     // host guard rejects it. The menu hides the action for that checkout
     // rather than offering a no-op.
     final openable = widget.workbench.workspace?.tryResolve(absolute);
-    // Captured before the await: the confirm strings are used after the menu
-    // closes, and a context read across an async gap is exactly what the lint
-    // is about.
+    // Read while this context is certainly good: the strings are used after an
+    // await inside the action below.
     final discardTitle = context.tr('discardChanges');
     final discardDesc = context.tr('discardDesc', {'path': entry.path});
-    final result = await showMenu<String>(
-      context: context,
-      position: _menuAt(details.globalPosition),
-      // The default menu width is narrower than icon + label rows like
-      // "Copy relative path", which would overflow by a pixel or two.
-      constraints: const BoxConstraints(minWidth: 220),
-      items: [
-        if (openable != null)
-          PopupMenuItem(
-            value: 'open',
-            child: _menuRow(LucideIcons.code, context.tr('openEditor')),
-          ),
-        PopupMenuItem(
-          value: 'stage',
-          child: _menuRow(
-            staged ? LucideIcons.trash : LucideIcons.git_branch,
-            staged ? context.tr('unstage') : context.tr('stage'),
-          ),
+    return [
+      if (openable != null)
+        DswMenuEntry(
+          icon: LucideIcons.code,
+          label: context.tr('openEditor'),
+          onTap: () => widget.workbench.openFile(openable),
         ),
-        if (!isUntracked(entry))
-          PopupMenuItem(
-            value: 'discard',
-            child: _menuRow(
-              LucideIcons.trash,
-              context.tr('discardChanges'),
-              danger: true,
-            ),
-          ),
-        const PopupMenuDivider(),
-        PopupMenuItem(
-          value: 'relative',
-          child: _menuRow(LucideIcons.copy, context.tr('copyRelative')),
+      DswMenuEntry(
+        icon: staged ? LucideIcons.trash : LucideIcons.git_branch,
+        label: staged ? context.tr('unstage') : context.tr('stage'),
+        onTap: () => _stageEntry(entry, staged),
+      ),
+      if (!isUntracked(entry))
+        DswMenuEntry(
+          icon: LucideIcons.trash,
+          label: discardTitle,
+          destructive: true,
+          onTap: () async {
+            if (await _confirm(discardTitle, discardDesc, discardTitle)) {
+              await _run(null, () => _repo!.discard(entry.path));
+            }
+          },
         ),
-        PopupMenuItem(
-          value: 'absolute',
-          child: _menuRow(LucideIcons.copy, context.tr('copyAbsolute')),
-        ),
-      ],
-    );
-    if (result == null) return;
-    if (result == 'open' && openable != null) {
-      widget.workbench.openFile(openable);
-    } else if (result == 'stage') {
-      await _stageEntry(entry, staged);
-    } else if (result == 'discard') {
-      if (await _confirm(discardTitle, discardDesc, discardTitle)) {
-        await _run(null, () => _repo!.discard(entry.path));
-      }
-    } else if (result == 'relative') {
-      await _copy(entry.path);
-    } else if (result == 'absolute') {
-      await _copy(absolute);
-    }
+      const DswMenuEntry.divider(),
+      DswMenuEntry(
+        icon: LucideIcons.copy,
+        label: context.tr('copyRelative'),
+        onTap: () => _copy(entry.path),
+      ),
+      DswMenuEntry(
+        icon: LucideIcons.copy,
+        label: context.tr('copyAbsolute'),
+        onTap: () => _copy(absolute),
+      ),
+    ];
   }
 
-  Future<void> _historyMenu(TapDownDetails details, GitLogEntry entry) async {
-    // Captured before the await, as in `_fileMenu`.
+  /// The history row's right-click menu, as rows for [DswContextMenu].
+  List<DswMenuEntry> _historyMenuItems(
+    BuildContext context,
+    GitLogEntry entry,
+  ) {
+    // Read before any await, as in `_fileMenuItems`.
     final revertTitle = context.tr('revertCommit');
     final revertDesc = context.tr('revertDesc', {'subject': entry.subject});
     final cherryPickTitle = context.tr('cherryPickCommit');
     final cherryPickDesc = context.tr('cherryPickDesc', {
       'subject': entry.subject,
     });
-    final result = await showMenu<String>(
-      context: context,
-      position: _menuAt(details.globalPosition),
-      constraints: const BoxConstraints(minWidth: 220),
-      items: [
-        PopupMenuItem(
-          value: 'view',
-          child: _menuRow(null, context.tr('viewCommitDiff')),
-        ),
-        PopupMenuItem(
-          value: 'copyShort',
-          child: _menuRow(LucideIcons.copy, context.tr('copyShortHash')),
-        ),
-        PopupMenuItem(
-          value: 'copyFull',
-          child: _menuRow(LucideIcons.copy, context.tr('copyFullHash')),
-        ),
-        PopupMenuItem(
-          value: 'copySubject',
-          child: _menuRow(LucideIcons.copy, context.tr('copySubject')),
-        ),
-        const PopupMenuDivider(),
-        PopupMenuItem(
-          value: 'revert',
-          child: _menuRow(null, context.tr('revertCommit'), danger: true),
-        ),
-        PopupMenuItem(
-          value: 'cherryPick',
-          child: _menuRow(null, context.tr('cherryPickCommit'), danger: true),
-        ),
-      ],
-    );
-    if (result == null) return;
-    if (result == 'view') {
-      _openCommitDiff(entry);
-    } else if (result == 'copyShort') {
-      await _copy(entry.hash);
-    } else if (result == 'copyFull') {
-      await _copy(entry.hashFull);
-    } else if (result == 'copySubject') {
-      await _copy(entry.subject);
-    } else if (result == 'revert') {
-      if (await _confirm(revertTitle, revertDesc, revertTitle)) {
-        await _run(null, () => _repo!.revert(entry.hashFull));
-      }
-    } else if (result == 'cherryPick') {
-      if (await _confirm(cherryPickTitle, cherryPickDesc, cherryPickTitle)) {
-        await _run(null, () => _repo!.cherryPick(entry.hashFull));
-      }
-    }
-  }
-
-  Widget _menuRow(IconData? icon, String label, {bool danger = false}) {
-    final color = context.dsw;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (icon != null) ...[
-          Icon(icon, size: DswShape.iconSm, color: color.labelTertiary),
-          const SizedBox(width: 8),
-        ],
-        Text(
-          label,
-          style: DswType.xs13.copyWith(
-            color: danger ? color.stateErrorPrimary : color.labelPrimary,
-          ),
-        ),
-      ],
-    );
+    return [
+      DswMenuEntry(
+        label: context.tr('viewCommitDiff'),
+        onTap: () => _openCommitDiff(entry),
+      ),
+      DswMenuEntry(
+        icon: LucideIcons.copy,
+        label: context.tr('copyShortHash'),
+        onTap: () => _copy(entry.hash),
+      ),
+      DswMenuEntry(
+        icon: LucideIcons.copy,
+        label: context.tr('copyFullHash'),
+        onTap: () => _copy(entry.hashFull),
+      ),
+      DswMenuEntry(
+        icon: LucideIcons.copy,
+        label: context.tr('copySubject'),
+        onTap: () => _copy(entry.subject),
+      ),
+      const DswMenuEntry.divider(),
+      DswMenuEntry(
+        label: revertTitle,
+        destructive: true,
+        onTap: () async {
+          if (await _confirm(revertTitle, revertDesc, revertTitle)) {
+            await _run(null, () => _repo!.revert(entry.hashFull));
+          }
+        },
+      ),
+      DswMenuEntry(
+        label: cherryPickTitle,
+        destructive: true,
+        onTap: () async {
+          if (await _confirm(
+            cherryPickTitle,
+            cherryPickDesc,
+            cherryPickTitle,
+          )) {
+            await _run(null, () => _repo!.cherryPick(entry.hashFull));
+          }
+        },
+      ),
+    ];
   }
 
   @override
@@ -646,10 +599,13 @@ class _GitTabState extends State<GitTab> {
           ),
           SliverList.builder(
             itemCount: _log.length,
-            itemBuilder: (context, index) => _LogRow(
-              entry: _log[index],
-              onTap: () => _openCommitDiff(_log[index]),
-              onMenu: (details) => _historyMenu(details, _log[index]),
+            itemBuilder: (context, index) => DswContextMenu(
+              items: (context) => _historyMenuItems(context, _log[index]),
+              minWidth: 220,
+              child: _LogRow(
+                entry: _log[index],
+                onTap: () => _openCommitDiff(_log[index]),
+              ),
             ),
           ),
           if (!_logEnded)
@@ -713,13 +669,16 @@ class _GitTabState extends State<GitTab> {
       else
         SliverList.builder(
           itemCount: entries.length,
-          itemBuilder: (context, index) => _FileRow(
-            entry: entries[index],
-            staged: staged,
-            busy: _busy,
-            onTap: () => _openWorktreeDiff(entries[index], staged),
-            onMenu: (details) => _fileMenu(details, entries[index], staged),
-            onStage: () => _stageEntry(entries[index], staged),
+          itemBuilder: (context, index) => DswContextMenu(
+            items: (context) => _fileMenuItems(context, entries[index], staged),
+            minWidth: 220,
+            child: _FileRow(
+              entry: entries[index],
+              staged: staged,
+              busy: _busy,
+              onTap: () => _openWorktreeDiff(entries[index], staged),
+              onStage: () => _stageEntry(entries[index], staged),
+            ),
           ),
         ),
     ];
@@ -850,7 +809,6 @@ class _FileRow extends StatelessWidget {
     required this.staged,
     required this.busy,
     required this.onTap,
-    required this.onMenu,
     required this.onStage,
   });
 
@@ -858,15 +816,16 @@ class _FileRow extends StatelessWidget {
   final bool staged;
   final bool busy;
   final VoidCallback onTap;
-  final void Function(TapDownDetails) onMenu;
   final VoidCallback onStage;
 
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
+    // No secondary tap here on purpose: the `DswContextMenu` the host wraps
+    // this row in claims the right button, and the deeper recognizer would win
+    // the arena instead.
     return DswHoverTap(
       onTap: onTap,
-      onSecondaryTapDown: onMenu,
       semanticLabel: entry.path,
       excludeSemantics: true,
       builder: (context, hovered, _) => Container(
@@ -932,22 +891,17 @@ class _FileRow extends StatelessWidget {
 /// A keyboard-focusable row (opened diff on Enter); its accessible name is the
 /// commit subject, not the hash/pills/meta chatter.
 class _LogRow extends StatelessWidget {
-  const _LogRow({
-    required this.entry,
-    required this.onTap,
-    required this.onMenu,
-  });
+  const _LogRow({required this.entry, required this.onTap});
 
   final GitLogEntry entry;
   final VoidCallback onTap;
-  final void Function(TapDownDetails) onMenu;
 
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
+    // No secondary tap here either — the host's `DswContextMenu` owns it.
     return DswHoverTap(
       onTap: onTap,
-      onSecondaryTapDown: onMenu,
       semanticLabel: entry.subject,
       excludeSemantics: true,
       builder: (context, hovered, _) => Tooltip(
@@ -1033,19 +987,17 @@ class _BranchSelect extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    return PopupMenuButton<String>(
+    return DswSelect<String>(
+      value: value,
+      onChanged: (picked) {
+        if (picked != null) onSelected(picked);
+      },
       enabled: enabled && branches.isNotEmpty,
-      initialValue: value,
-      onSelected: onSelected,
-      constraints: const BoxConstraints(minWidth: 120),
-      position: PopupMenuPosition.under,
-      itemBuilder: (context) => [
+      popupMinWidth: 120,
+      options: (context, close) => [
         for (final name in branches)
-          PopupMenuItem(
+          ShadOption<String>(
             value: name,
-            // One line of the picker, so the row rides the step the branch
-            // name is drawn at.
-            height: 32 * MediaQuery.textScalerOf(context).scale(1),
             child: Text(
               name,
               style: DswType.xs13.copyWith(color: color.labelPrimary),
@@ -1053,13 +1005,13 @@ class _BranchSelect extends StatelessWidget {
             ),
           ),
       ],
-      child: Container(
+      trigger: (context, selected, hovered) => Container(
         // The chip and its menu are the same seat at the same step: 26 pinned
         // this 12px name down to one clipped line (32.0 wanted at 1.8).
         height: 26 * MediaQuery.textScalerOf(context).scale(1),
         padding: const EdgeInsets.symmetric(horizontal: 6),
         decoration: BoxDecoration(
-          color: color.bgBase,
+          color: hovered ? color.interactiveBgHover : color.bgBase,
           border: Border.all(color: color.borderL2),
           borderRadius: BorderRadius.circular(DswShape.inner),
         ),

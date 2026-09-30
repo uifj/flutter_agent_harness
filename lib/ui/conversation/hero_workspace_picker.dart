@@ -16,14 +16,15 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadOption;
 
 import '../../l10n/locales.dart';
 import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
-import '../primitives/tappable.dart';
 import '../../theme/dsw_typography.dart';
 import '../primitives/capsule_button.dart';
+import '../primitives/menu.dart';
 
 /// The seam the hero picker reads: the settings document, the recents it
 /// offers, and the way out to the platform's directory dialog.
@@ -90,11 +91,17 @@ class HeroWorkspacePicker extends StatelessWidget {
       );
     }
 
-    // The row opens the recents menu. Keyboard: Enter/Space activates the same
-    // menu (previously a tap-down-only gesture, unreachable by keyboard).
-    return DswHoverTap(
-      onTap: () => _openMenu(context, scope),
-      builder: (context, hovered, _) => AnimatedContainer(
+    // The chip is a picker, so shad owns the popup, the keyboard (Enter/Space
+    // opens, Escape closes) and the selected row's trailing check. What it does
+    // not own is the hover wash — `ShadSelect`'s trigger has none — so
+    // [DswSelect] reports the pointer and the chip paints as before.
+    return DswSelect<String>(
+      value: scope.workspaceRoot,
+      onChanged: (path) {
+        if (path != null) scope.onAdopt?.call(path);
+      },
+      popupMinWidth: 260,
+      trigger: (context, value, hovered) => AnimatedContainer(
         duration: DswMotion.respecting(context, DswMotion.fast),
         curve: DswMotion.easeInOut,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -114,9 +121,9 @@ class HeroWorkspacePicker extends StatelessWidget {
             const SizedBox(width: 6),
             Flexible(
               child: Text(
-                scope.workspaceRoot == null
+                value == null
                     ? context.tr('chooseWorkspaceFolder')
-                    : scope.workspaceRoot!.split('/').last,
+                    : value.split('/').last,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: DswType.xs13.copyWith(color: color.labelPrimary),
@@ -131,74 +138,36 @@ class HeroWorkspacePicker extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  /// The recents as a menu: adopt on select, "Choose…" as the footer — the
-  /// source's menu-plus-footer shape.
-  Future<void> _openMenu(BuildContext context, HeroWorkspaceScope scope) async {
-    final color = context.dsw;
-    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-    final button = context.findRenderObject() as RenderBox;
-    final position = RelativeRect.fromRect(
-      Rect.fromPoints(
-        button.localToGlobal(Offset.zero, ancestor: overlay),
-        button.localToGlobal(
-          button.size.bottomRight(Offset.zero),
-          ancestor: overlay,
-        ),
-      ),
-      Offset.zero & overlay.size,
-    );
-
-    final choice = await showMenu<String>(
-      context: context,
-      position: position,
-      constraints: const BoxConstraints(minWidth: 260),
-      color: color.menu,
-      items: [
+      // The recents as options, "Choose…" as the footer — the source's
+      // menu-plus-footer shape.
+      options: (context, close) => [
         for (final path in scope.recent)
-          PopupMenuItem(
-            value: path,
-            child: _row(context, path, selected: path == scope.workspaceRoot),
-          ),
-        const PopupMenuDivider(),
-        // The footer row: the platform picker, in the menu.
-        PopupMenuItem(
-          value: '\u0000pick',
-          child: Row(
-            children: [
-              Icon(
-                LucideIcons.plus,
-                size: DswShape.iconSm,
-                color: color.labelSecondary,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                context.tr('chooseAFolder'),
-                style: DswType.xs13.copyWith(color: color.labelSecondary),
-              ),
-            ],
+          ShadOption<String>(value: path, child: _row(context, path)),
+        const DswMenuDivider(),
+        // A free row rather than an option: it picks nothing, so it has to close
+        // the popup itself.
+        DswMenuRow(
+          entry: DswMenuEntry(
+            icon: LucideIcons.plus,
+            label: context.tr('chooseAFolder'),
+            onTap: () {
+              close();
+              scope.onPick();
+            },
           ),
         ),
       ],
     );
-    if (choice == null) return;
-    if (choice == '\u0000pick') {
-      await scope.onPick();
-      return;
-    }
-    await scope.onAdopt?.call(choice);
   }
 
-  Widget _row(BuildContext context, String path, {bool selected = false}) {
+  Widget _row(BuildContext context, String path) {
     final color = context.dsw;
     return Row(
       children: [
         Icon(
           LucideIcons.folder,
           size: DswShape.iconSm,
-          color: selected ? color.labelPrimary : color.labelSecondary,
+          color: color.labelSecondary,
         ),
         const SizedBox(width: 6),
         Expanded(
@@ -206,9 +175,7 @@ class HeroWorkspacePicker extends StatelessWidget {
             path,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: DswType.xs13.copyWith(
-              color: selected ? color.labelPrimary : color.labelSecondary,
-            ),
+            style: DswType.xs13.copyWith(color: color.labelSecondary),
           ),
         ),
       ],

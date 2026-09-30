@@ -39,6 +39,7 @@ import '../../model/split_node.dart';
 import '../../state/workbench_controller.dart';
 import 'tab_registry.dart';
 import 'workbench_prefs_scope.dart';
+import '../primitives/menu.dart';
 import '../primitives/tappable.dart';
 
 /// Strip height — tall enough that the 32px circular controls sit in it
@@ -154,87 +155,51 @@ class _NewTabButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = context.dsw;
     final prefs = WorkbenchPrefsScope.of(context);
-    final hasWorkspace = workbench.workspaceRoot != null;
-    return PopupMenuButton<String>(
-      tooltip: context.tr('newTab'),
-      position: PopupMenuPosition.under,
-      constraints: const BoxConstraints(minWidth: 180),
-      onSelected: (id) {
-        switch (id) {
-          case 'explorer':
-            final root = workbench.workspaceRoot;
-            if (root != null) workbench.openFolder(root);
-          case 'terminal':
-            workbench.openTerminal();
-          case 'git':
-            workbench.openGit();
-          case 'subagent':
-            workbench.openSubagents();
-          case 'browser':
-            workbench.openBrowserUntitled();
-          case 'sidechat':
-            workbench.openSideChat();
-        }
-      },
-      itemBuilder: (context) => [
+    final root = workbench.workspaceRoot;
+    return DswMenu(
+      label: context.tr('newTab'),
+      minWidth: 180,
+      items: (context) => [
         if (prefs.tabEnabled(BuiltinTabType.explorer))
-          PopupMenuItem(
-            value: 'explorer',
-            enabled: hasWorkspace,
-            child: _optionRow(
-              context,
-              LucideIcons.folder_open,
-              context.tr('explorer'),
-              enabled: hasWorkspace,
-            ),
+          DswMenuEntry(
+            icon: LucideIcons.folder_open,
+            label: context.tr('explorer'),
+            // Disabled rather than hidden when there is no workspace, matching
+            // `available` returning false (`Sidebar.tsx:162-179`).
+            onTap: root == null ? null : () => workbench.openFolder(root),
           ),
         if (prefs.tabEnabled(BuiltinTabType.terminal))
-          PopupMenuItem(
-            value: 'terminal',
-            child: _optionRow(
-              context,
-              LucideIcons.terminal,
-              context.tr('terminal'),
-            ),
+          DswMenuEntry(
+            icon: LucideIcons.terminal,
+            label: context.tr('terminal'),
+            onTap: workbench.openTerminal,
           ),
         if (prefs.tabEnabled(BuiltinTabType.git))
-          PopupMenuItem(
-            value: 'git',
-            child: _optionRow(
-              context,
-              LucideIcons.git_branch,
-              context.tr('git'),
-            ),
+          DswMenuEntry(
+            icon: LucideIcons.git_branch,
+            label: context.tr('git'),
+            onTap: workbench.openGit,
           ),
         if (prefs.tabEnabled(BuiltinTabType.subagent))
-          PopupMenuItem(
-            value: 'subagent',
-            child: _optionRow(
-              context,
-              LucideIcons.network,
-              context.tr('subagents'),
-            ),
+          DswMenuEntry(
+            icon: LucideIcons.network,
+            label: context.tr('subagents'),
+            onTap: workbench.openSubagents,
           ),
         if (prefs.tabEnabled(BuiltinTabType.browser))
-          PopupMenuItem(
-            value: 'browser',
-            child: _optionRow(
-              context,
-              LucideIcons.globe,
-              context.tr('browser'),
-            ),
+          DswMenuEntry(
+            icon: LucideIcons.globe,
+            label: context.tr('browser'),
+            onTap: workbench.openBrowserUntitled,
           ),
         if (prefs.tabEnabled(BuiltinTabType.sidechat))
-          PopupMenuItem(
-            value: 'sidechat',
-            child: _optionRow(
-              context,
-              LucideIcons.message_square_plus,
-              context.tr('sidechat'),
-            ),
+          DswMenuEntry(
+            icon: LucideIcons.message_square_plus,
+            label: context.tr('sidechat'),
+            onTap: workbench.openSideChat,
           ),
       ],
-      child: Container(
+      trigger: (context) => Container(
         width: 30,
         height: tabBarHeight * MediaQuery.textScalerOf(context).scale(1),
         color: Colors.transparent,
@@ -244,27 +209,6 @@ class _NewTabButton extends StatelessWidget {
           color: color.labelSecondary,
         ),
       ),
-    );
-  }
-
-  Widget _optionRow(
-    BuildContext context,
-    IconData icon,
-    String label, {
-    bool enabled = true,
-  }) {
-    final color = context.dsw;
-    final tint = enabled ? color.labelPrimary : color.labelCaption;
-    return Row(
-      children: [
-        Icon(
-          icon,
-          size: DswShape.iconSm,
-          color: enabled ? color.labelSecondary : color.labelCaption,
-        ),
-        const SizedBox(width: 6),
-        Text(label, style: DswType.xs13.copyWith(color: tint)),
-      ],
     );
   }
 }
@@ -292,6 +236,11 @@ class _TabChip extends StatefulWidget {
 class _TabChipState extends State<_TabChip> {
   bool _hovered = false;
   bool _focused = false;
+
+  /// Where the last right-click landed, globally. The context menu owns the
+  /// right button and keeps the position to itself, so the one action that
+  /// needs it — floating the window under the click — reads it off the pointer.
+  Offset? _secondaryAt;
 
   /// True while a tab is hovering the left half of this chip, so the insertion
   /// point is visible before the drop rather than guessed.
@@ -440,18 +389,27 @@ class _TabChipState extends State<_TabChip> {
           onExit: (_) => setState(() => _hovered = false),
           child: Listener(
             // Middle-click to close: not a button Flutter's tap recognisers
-            // report, so the raw pointer event is the only way to see it.
+            // report, so the raw pointer event is the only way to see it. The
+            // secondary press is noted for the same reason — the context menu
+            // below owns the right button, and "float under the click" needs to
+            // know where that click was.
             onPointerDown: (event) {
               if (event.buttons & kMiddleMouseButton != 0) _close();
+              if (event.buttons & kSecondaryMouseButton != 0) {
+                _secondaryAt = event.position;
+              }
             },
-            child: GestureDetector(
-              onTap: () =>
-                  widget.workbench.activateTab(widget.paneId, widget.tab.id),
-              onSecondaryTapDown: _menu,
-              behavior: HitTestBehavior.opaque,
-              child: Tooltip(
-                message: widget.tab.path ?? widget.tab.title,
-                child: draggable,
+            child: DswContextMenu(
+              minWidth: 190,
+              items: (context) => _menuItems(context),
+              child: GestureDetector(
+                onTap: () =>
+                    widget.workbench.activateTab(widget.paneId, widget.tab.id),
+                behavior: HitTestBehavior.opaque,
+                child: Tooltip(
+                  message: widget.tab.path ?? widget.tab.title,
+                  child: draggable,
+                ),
               ),
             ),
           ),
@@ -462,106 +420,67 @@ class _TabChipState extends State<_TabChip> {
 
   void _close() => widget.workbench.closeTab(widget.paneId, widget.tab.id);
 
-  /// Where a right-click's menu opens, at the cursor. Same anchor recipe as
-  /// the git tab's row menus.
-  RelativeRect _menuAt(Offset global) {
-    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-    return RelativeRect.fromRect(
-      Rect.fromPoints(global, global),
-      Offset.zero & overlay.size,
-    );
-  }
-
   /// The per-tab context menu: the close family, then the send that stands in
   /// for dragging the tab to the other panel, then the float. "Close others"
   /// needs others to be there, or it would read as a no-op on a one-tab strip.
-  Future<void> _menu(TapDownDetails details) async {
+  List<DswMenuEntry> _menuItems(BuildContext context) {
     final state = widget.workbench.state;
     final inBottom = state.bottomPanes.any((pane) => pane.id == widget.paneId);
     final others = state.paneOf(widget.tab.id)?.tabs.length ?? 1;
-    final result = await showMenu<String>(
-      context: context,
-      position: _menuAt(details.globalPosition),
-      constraints: const BoxConstraints(minWidth: 190),
-      items: [
-        PopupMenuItem(
-          value: 'close',
-          child: _menuRow(LucideIcons.x, context.tr('close')),
+    return [
+      DswMenuEntry(
+        icon: LucideIcons.x,
+        label: context.tr('close'),
+        onTap: _close,
+      ),
+      if (others > 1)
+        DswMenuEntry(
+          icon: LucideIcons.list_x,
+          label: context.tr('closeOthers'),
+          onTap: () =>
+              widget.workbench.closeOtherTabs(widget.paneId, widget.tab.id),
         ),
-        if (others > 1)
-          PopupMenuItem(
-            value: 'others',
-            child: _menuRow(LucideIcons.list_x, context.tr('closeOthers')),
-          ),
-        PopupMenuItem(
-          value: 'all',
-          child: _menuRow(LucideIcons.square_x, context.tr('closeAll')),
-        ),
-        const PopupMenuDivider(),
-        PopupMenuItem(
-          value: 'send',
-          child: _menuRow(
-            inBottom
-                ? LucideIcons.arrow_up_from_line
-                : LucideIcons.arrow_down_to_line,
-            inBottom
-                ? context.tr('sendToSidePanel')
-                : context.tr('sendToBottomPanel'),
-          ),
-        ),
-        PopupMenuItem(
-          value: 'float',
-          child: _menuRow(
-            LucideIcons.picture_in_picture_2,
-            context.tr('floatInWindow'),
-          ),
-        ),
-      ],
-    );
-    switch (result) {
-      case 'close':
-        _close();
-      case 'others':
-        widget.workbench.closeOtherTabs(widget.paneId, widget.tab.id);
-      case 'all':
-        widget.workbench.closeAllTabs(widget.paneId);
-      case 'send':
-        widget.workbench.sendTabToOtherPanel(widget.paneId, widget.tab.id);
-      case 'float':
-        _float(details);
-      case null:
-        break;
-    }
+      DswMenuEntry(
+        icon: LucideIcons.square_x,
+        label: context.tr('closeAll'),
+        onTap: () => widget.workbench.closeAllTabs(widget.paneId),
+      ),
+      const DswMenuEntry.divider(),
+      DswMenuEntry(
+        icon: inBottom
+            ? LucideIcons.arrow_up_from_line
+            : LucideIcons.arrow_down_to_line,
+        label: inBottom
+            ? context.tr('sendToSidePanel')
+            : context.tr('sendToBottomPanel'),
+        onTap: () =>
+            widget.workbench.sendTabToOtherPanel(widget.paneId, widget.tab.id),
+      ),
+      DswMenuEntry(
+        icon: LucideIcons.picture_in_picture_2,
+        label: context.tr('floatInWindow'),
+        onTap: _float,
+      ),
+    ];
   }
 
-  /// Floats this tab, centred on the click that asked for it — the window lands
-  /// under the pointer the same way it would under a drag, minus the drag. The
-  /// viewport is the overlay's own size, because the float layer lives there.
-  void _float(TapDownDetails details) {
+  /// Floats this tab, centred on the right-click that opened the menu — the
+  /// window lands under the pointer the same way it would under a drag, minus
+  /// the drag. The viewport is the overlay's own size, because the float layer
+  /// lives there.
+  void _float() {
+    final at = _secondaryAt;
+    if (at == null) return;
     final overlay =
         Overlay.of(context).context.findRenderObject() as RenderBox?;
     if (overlay == null) return;
-    final local = overlay.globalToLocal(details.globalPosition);
+    final local = overlay.globalToLocal(at);
     widget.workbench.floatTab(
       widget.tab.id,
       local.dx,
       local.dy,
       overlay.size.width,
       overlay.size.height,
-    );
-  }
-
-  /// One menu row: 12px icon, 5px gap, label — the same shape the git tab's
-  /// menus use. The colour is read here rather than in the route so the menu
-  /// matches the strip's theme even mid-theme-change.
-  Widget _menuRow(IconData icon, String label) {
-    final color = context.dsw;
-    return Row(
-      children: [
-        Icon(icon, size: DswShape.iconTiny, color: color.labelSecondary),
-        const SizedBox(width: 5),
-        Text(label, style: DswType.xs13.copyWith(color: color.labelPrimary)),
-      ],
     );
   }
 }

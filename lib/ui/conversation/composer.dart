@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:pasteboard/pasteboard.dart';
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadOption;
 
 import '../../l10n/locales.dart';
 import '../../model/approval_mode.dart';
@@ -36,6 +37,7 @@ import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../primitives/tappable.dart';
 import '../primitives/feedback.dart';
+import '../primitives/menu.dart';
 import '../appearance_scope.dart';
 import '../../theme/dsw_typography.dart';
 import 'conversation_root.dart';
@@ -1247,13 +1249,6 @@ class _ImageChip extends StatelessWidget {
 
 /// The paperclip. A popup rather than a direct pick: the clipboard paste is the
 /// other half of the affordance, and the only way to offer both is a menu.
-/// The label cell of an attach-menu row. `Row` hands a non-flex child the whole
-/// width it was given, so at the 2.2x text step 'Attach documents (PDF, text)…'
-/// wanted 896.1 of the 760.0 the screen left the menu and the row spilled 158.0;
-/// the label is what yields there, not the glyph.
-Widget _menuLabel(String text) =>
-    Expanded(child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis));
-
 class _AttachButton extends StatelessWidget {
   const _AttachButton({
     required this.onPick,
@@ -1268,79 +1263,34 @@ class _AttachButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    return PopupMenuTheme(
-      data: PopupMenuThemeData(
-        color: color.bgLayer2,
-        textStyle: DswType.xs13.copyWith(color: color.labelPrimary),
-      ),
-      child: PopupMenuButton<String>(
-        tooltip: context.tr('attach'),
-        position: PopupMenuPosition.over,
-        constraints: const BoxConstraints(minWidth: 220),
-        itemBuilder: (context) => [
-          PopupMenuItem(
-            value: 'files',
-            height: 36,
-            child: Row(
-              children: [
-                Icon(
-                  LucideIcons.image_up,
-                  size: DswShape.iconSm,
-                  color: color.labelSecondary,
-                ),
-                const SizedBox(width: 8),
-                _menuLabel(context.tr('chooseImages')),
-              ],
-            ),
-          ),
-          PopupMenuItem(
-            value: 'documents',
-            height: 36,
-            child: Row(
-              children: [
-                Icon(
-                  LucideIcons.file_text,
-                  size: DswShape.iconSm,
-                  color: color.labelSecondary,
-                ),
-                const SizedBox(width: 8),
-                _menuLabel(context.tr('chooseDocuments')),
-              ],
-            ),
-          ),
-          PopupMenuItem(
-            value: 'paste',
-            height: 36,
-            child: Row(
-              children: [
-                Icon(
-                  LucideIcons.clipboard,
-                  size: DswShape.iconSm,
-                  color: color.labelSecondary,
-                ),
-                const SizedBox(width: 8),
-                _menuLabel(context.tr('pasteImage')),
-              ],
-            ),
-          ),
-        ],
-        onSelected: (value) {
-          if (value == 'files') onPick();
-          if (value == 'documents') onPickDocuments();
-          if (value == 'paste') onPaste();
-        },
-        child: Container(
-          width: 28,
-          height: 24,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(DswShape.inner),
-          ),
-          child: Center(
-            child: Icon(
-              LucideIcons.paperclip,
-              size: DswShape.iconSm,
-              color: color.labelTertiary,
-            ),
+    return DswMenu(
+      label: context.tr('attach'),
+      minWidth: 220,
+      items: (context) => [
+        DswMenuEntry(
+          icon: LucideIcons.image_up,
+          label: context.tr('chooseImages'),
+          onTap: onPick,
+        ),
+        DswMenuEntry(
+          icon: LucideIcons.file_text,
+          label: context.tr('chooseDocuments'),
+          onTap: onPickDocuments,
+        ),
+        DswMenuEntry(
+          icon: LucideIcons.clipboard,
+          label: context.tr('pasteImage'),
+          onTap: onPaste,
+        ),
+      ],
+      trigger: (context) => SizedBox(
+        width: 28,
+        height: 24,
+        child: Center(
+          child: Icon(
+            LucideIcons.paperclip,
+            size: DswShape.iconSm,
+            color: color.labelTertiary,
           ),
         ),
       ),
@@ -1371,208 +1321,173 @@ class _ModelChip extends StatelessWidget {
     final color = context.dsw;
     return ListenableBuilder(
       listenable: directory,
-      builder: (context, _) => PopupMenuTheme(
-        data: PopupMenuThemeData(
-          color: color.bgLayer2,
-          textStyle: DswType.xs13.copyWith(color: color.labelPrimary),
-        ),
-        child: PopupMenuButton<String>(
-          tooltip: context.tr('model'),
-          position: PopupMenuPosition.over,
-          constraints: const BoxConstraints(minWidth: 320, maxHeight: 420),
-          enabled: onSelect != null,
-          initialValue: directory.selectedModel,
-          itemBuilder: (context) => [
-            for (final model in directory.models)
-              PopupMenuItem(
-                value: model.id,
-                height: 56,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            model.id,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: DswType.xs13.copyWith(
-                              color: color.labelPrimary,
-                              fontFamily: dswFontFamilyCode,
-                              fontFamilyFallback: dswFontFamilyCodeFallback,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            model.description ??
-                                providerFamilyLabel(model.provider),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: DswType.xxxs11.copyWith(
-                              color: color.labelTertiary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (model.id == directory.selectedModel)
-                      Icon(
-                        LucideIcons.check,
-                        size: DswShape.iconSm,
-                        color: color.stateBusinessPrimary,
-                      ),
-                  ],
-                ),
-              ),
-            // The "模型管理" row: opens the full-screen settings view so the
-            // user can edit credentials, base URL, and provider — the things
-            // the menu itself cannot change.
-            PopupMenuItem(
-              enabled: onOpenSettings != null,
-              height: 40,
-              onTap: onOpenSettings,
-              child: Row(
-                children: [
-                  Icon(
-                    LucideIcons.settings,
-                    size: DswShape.iconSm,
-                    color: onOpenSettings != null
-                        ? color.labelSecondary
-                        : color.labelDimmed,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    context.tr('modelManagement'),
-                    style: DswType.xs13.copyWith(
-                      color: onOpenSettings != null
-                          ? color.labelPrimary
-                          : color.labelDimmed,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // The refresh row: the fetched catalog on demand, with the load's
-            // own one-line outcome under it when there is one to say.
-            PopupMenuItem(
-              enabled: false,
-              height: 36,
-              padding: EdgeInsets.zero,
+      builder: (context, _) => DswSelect<String>(
+        value: directory.selectedModel,
+        onChanged: (id) {
+          if (id == null) return;
+          directory.select(id);
+          onSelect?.call(id);
+        },
+        enabled: onSelect != null,
+        label: context.tr('model'),
+        popupMinWidth: 320,
+        maxHeight: 420,
+        options: (context, close) => [
+          for (final model in directory.models)
+            ShadOption<String>(
+              value: model.id,
+              // Two lines, so the row is intrinsic rather than nailed at 56: a
+              // seat that carries its own second line has to be allowed to grow
+              // (ADR-0017 S3). The check that says "this one is live" is
+              // shad's, trailing, as it was.
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Divider(height: 1, color: color.borderL2),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: directory.isLoading
-                              ? SizedBox(
-                                  width: 10,
-                                  height: 10,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: color.labelTertiary,
-                                  ),
-                                )
-                              : Icon(
-                                  LucideIcons.refresh_cw,
-                                  size: DswShape.iconTiny,
-                                  color: color.labelTertiary,
-                                ),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            directory.loadError ?? context.tr('refreshModels'),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: DswType.xxxs11.copyWith(
-                              color: directory.loadError != null
-                                  ? color.stateErrorPrimary
-                                  : color.labelTertiary,
-                            ),
-                          ),
-                        ),
-                        if (!directory.isLoading)
-                          DswHoverTap(
-                            onTap: directory.refresh,
-                            builder: (context, _, _) => Text(
-                              context.tr('retry'),
-                              style: DswType.xxxs11.copyWith(
-                                color: color.stateBusinessPrimary,
-                              ),
-                            ),
-                          ),
-                      ],
+                  Text(
+                    model.id,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: DswType.xs13.copyWith(
+                      color: color.labelPrimary,
+                      fontFamily: dswFontFamilyCode,
+                      fontFamilyFallback: dswFontFamilyCodeFallback,
                     ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    model.description ?? providerFamilyLabel(model.provider),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: DswType.xxxs11.copyWith(color: color.labelTertiary),
                   ),
                 ],
               ),
             ),
-          ],
-          onSelected: (id) {
-            directory.select(id);
-            onSelect?.call(id);
-          },
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              // The mode chip's rule, applied here too: a chip that cannot fit
-              // its label sheds the label and the stroke before the row gives
-              // up on the control entirely. The model is named by the menu's
-              // own checkmark, so an icon-only seat still says what it opens.
-              final tight = constraints.maxWidth < 64;
-              return Container(
-                // The same one-line seat as the mode chip below it: pinned at 24
-                // this cut the model's own name as soon as the system amplified
-                // text (25.0 wanted at 1.8, 31.0 at 2.2).
-                height: 24 * MediaQuery.textScalerOf(context).scale(1),
-                padding: EdgeInsets.symmetric(horizontal: tight ? 0 : 8),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(DswShape.inner),
-                  border: Border.all(
-                    color: tight ? Colors.transparent : color.borderL2,
+          // The "模型管理" row: opens the full-screen settings view so the user
+          // can edit credentials, base URL, and provider — the things the menu
+          // itself cannot change. A free row, so it closes the popup first.
+          DswMenuRow(
+            entry: DswMenuEntry(
+              icon: LucideIcons.settings,
+              label: context.tr('modelManagement'),
+              onTap: onOpenSettings == null
+                  ? null
+                  : () {
+                      close();
+                      onOpenSettings!();
+                    },
+            ),
+          ),
+          const DswMenuDivider(),
+          // The refresh row: the fetched catalog on demand, with the load's own
+          // one-line outcome under it when there is one to say.
+          Container(
+            constraints: BoxConstraints(minHeight: dswMenuSeat(context)),
+            padding: const EdgeInsets.symmetric(horizontal: DswShape.sm),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: directory.isLoading
+                      ? SizedBox(
+                          width: 10,
+                          height: 10,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: color.labelTertiary,
+                          ),
+                        )
+                      : Icon(
+                          LucideIcons.refresh_cw,
+                          size: DswShape.iconTiny,
+                          color: color.labelTertiary,
+                        ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    directory.loadError ?? context.tr('refreshModels'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: DswType.xxxs11.copyWith(
+                      color: directory.loadError != null
+                          ? color.stateErrorPrimary
+                          : color.labelTertiary,
+                    ),
                   ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      LucideIcons.cpu,
-                      size: DswShape.iconSm,
-                      color: color.labelSecondary,
+                if (!directory.isLoading)
+                  DswHoverTap(
+                    onTap: directory.refresh,
+                    builder: (context, _, _) => Text(
+                      context.tr('retry'),
+                      style: DswType.xxxs11.copyWith(
+                        color: color.stateBusinessPrimary,
+                      ),
                     ),
-                    if (!tight) ...[
-                      const SizedBox(width: 5),
-                      Flexible(
-                        child: Text(
-                          directory.selectedModel,
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                          style: DswType.xxxs11.copyWith(
-                            color: color.labelSecondary,
-                            fontFamily: dswFontFamilyCode,
-                            fontFamilyFallback: dswFontFamilyCodeFallback,
-                          ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+        trigger: (context, value, hovered) => LayoutBuilder(
+          builder: (context, constraints) {
+            // The mode chip's rule, applied here too: a chip that cannot fit
+            // its label sheds the label and the stroke before the row gives
+            // up on the control entirely. The model is named by the menu's
+            // own checkmark, so an icon-only seat still says what it opens.
+            final tight = constraints.maxWidth < 64;
+            return Container(
+              // The same one-line seat as the mode chip below it: pinned at 24
+              // this cut the model's own name as soon as the system amplified
+              // text (25.0 wanted at 1.8, 31.0 at 2.2).
+              height: 24 * MediaQuery.textScalerOf(context).scale(1),
+              padding: EdgeInsets.symmetric(horizontal: tight ? 0 : 8),
+              decoration: BoxDecoration(
+                // shad's select trigger answers the pointer with nothing —
+                // `ShadDecoration` cannot express hover — so the chip paints
+                // the house wash itself from the state [DswSelect] reports.
+                color: hovered ? color.interactiveBgHover : Colors.transparent,
+                borderRadius: BorderRadius.circular(DswShape.inner),
+                border: Border.all(
+                  color: tight ? Colors.transparent : color.borderL2,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    LucideIcons.cpu,
+                    size: DswShape.iconSm,
+                    color: color.labelSecondary,
+                  ),
+                  if (!tight) ...[
+                    const SizedBox(width: 5),
+                    Flexible(
+                      child: Text(
+                        directory.selectedModel,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        style: DswType.xxxs11.copyWith(
+                          color: color.labelSecondary,
+                          fontFamily: dswFontFamilyCode,
+                          fontFamilyFallback: dswFontFamilyCodeFallback,
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        LucideIcons.chevron_down,
-                        size: DswShape.iconTiny,
-                        color: color.labelTertiary,
-                      ),
-                    ],
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      LucideIcons.chevron_down,
+                      size: DswShape.iconTiny,
+                      color: color.labelTertiary,
+                    ),
                   ],
-                ),
-              );
-            },
-          ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
@@ -1598,121 +1513,111 @@ class _ModeChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = context.dsw;
     final (icon, label) = _visual(context);
-    return PopupMenuTheme(
-      data: PopupMenuThemeData(
-        color: color.bgLayer2,
-        textStyle: DswType.xs13.copyWith(color: color.labelPrimary),
-      ),
-      child: PopupMenuButton<ApprovalMode>(
-        tooltip: context.tr('approvalMode'),
-        position: PopupMenuPosition.over,
-        constraints: const BoxConstraints(minWidth: 260),
-        initialValue: mode,
-        enabled: onSelect != null,
-        itemBuilder: (context) => [
-          for (final entry in const [
-            (
-              ApprovalMode.ask,
-              LucideIcons.shield_question_mark,
-              'askEveryTime',
-              'askEveryTimeDesc',
-            ),
-            (
-              ApprovalMode.plan,
-              LucideIcons.clipboard_list,
-              'planFirst',
-              'planFirstDesc',
-            ),
-            (ApprovalMode.auto, LucideIcons.zap, 'autoRun', 'autoRunDesc'),
-          ])
-            PopupMenuItem(
-              value: entry.$1,
-              height: 44,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    entry.$2,
-                    size: DswShape.iconSm,
-                    color: color.labelSecondary,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(context.tr(entry.$3)),
-                        Text(
-                          context.tr(entry.$4),
-                          style: DswType.xxxs11.copyWith(
-                            color: color.labelTertiary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (entry.$1 == mode)
-                    Icon(
-                      LucideIcons.check,
-                      size: DswShape.iconSm,
-                      color: color.stateBusinessPrimary,
-                    ),
-                ],
-              ),
-            ),
-        ],
-        onSelected: onSelect,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            // Below this the chip sheds its label and chrome rather than
-            // overflowing the card — a re-expanded sidebar over a narrow
-            // window squeezes the centre column to almost nothing, and the
-            // icon alone still names the mode to anyone who knows the menu.
-            final tight = constraints.maxWidth < 64;
-            return Container(
-              // One line of chrome: the label is 11/14, and a seat nailed to 24
-              // cut it once the system amplified text (25.0 needed). At the
-              // designed step this is still exactly 24.
-              height: 24 * MediaQuery.textScalerOf(context).scale(1),
-              padding: EdgeInsets.symmetric(horizontal: tight ? 0 : 8),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(DswShape.inner),
-                border: Border.all(
-                  color: tight ? Colors.transparent : color.borderL2,
+    return DswSelect<ApprovalMode>(
+      value: mode,
+      onChanged: onSelect == null
+          ? null
+          : (picked) {
+              if (picked != null) onSelect!(picked);
+            },
+      enabled: onSelect != null,
+      label: context.tr('approvalMode'),
+      popupMinWidth: 260,
+      options: (context, close) => [
+        for (final entry in const [
+          (
+            ApprovalMode.ask,
+            LucideIcons.shield_question_mark,
+            'askEveryTime',
+            'askEveryTimeDesc',
+          ),
+          (
+            ApprovalMode.plan,
+            LucideIcons.clipboard_list,
+            'planFirst',
+            'planFirstDesc',
+          ),
+          (ApprovalMode.auto, LucideIcons.zap, 'autoRun', 'autoRunDesc'),
+        ])
+          ShadOption<ApprovalMode>(
+            value: entry.$1,
+            // Two lines again, so again no nailed 44: the row grows with the
+            // text step instead of cutting the description.
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  entry.$2,
+                  size: DswShape.iconSm,
+                  color: color.labelSecondary,
                 ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    icon,
-                    size: DswShape.iconSm,
-                    color: color.labelSecondary,
-                  ),
-                  if (!tight) ...[
-                    const SizedBox(width: 5),
-                    Flexible(
-                      child: Text(
-                        context.tr(label),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(context.tr(entry.$3)),
+                      Text(
+                        context.tr(entry.$4),
                         style: DswType.xxxs11.copyWith(
-                          color: color.labelSecondary,
+                          color: color.labelTertiary,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      LucideIcons.chevron_down,
-                      size: DswShape.iconTiny,
-                      color: color.labelTertiary,
-                    ),
-                  ],
-                ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+      trigger: (context, value, hovered) => LayoutBuilder(
+        builder: (context, constraints) {
+          // Below this the chip sheds its label and chrome rather than
+          // overflowing the card — a re-expanded sidebar over a narrow
+          // window squeezes the centre column to almost nothing, and the
+          // icon alone still names the mode to anyone who knows the menu.
+          final tight = constraints.maxWidth < 64;
+          return Container(
+            // One line of chrome: the label is 11/14, and a seat nailed to 24
+            // cut it once the system amplified text (25.0 needed). At the
+            // designed step this is still exactly 24.
+            height: 24 * MediaQuery.textScalerOf(context).scale(1),
+            padding: EdgeInsets.symmetric(horizontal: tight ? 0 : 8),
+            decoration: BoxDecoration(
+              color: hovered ? color.interactiveBgHover : Colors.transparent,
+              borderRadius: BorderRadius.circular(DswShape.inner),
+              border: Border.all(
+                color: tight ? Colors.transparent : color.borderL2,
               ),
-            );
-          },
-        ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: DswShape.iconSm, color: color.labelSecondary),
+                if (!tight) ...[
+                  const SizedBox(width: 5),
+                  Flexible(
+                    child: Text(
+                      context.tr(label),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      style: DswType.xxxs11.copyWith(
+                        color: color.labelSecondary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    LucideIcons.chevron_down,
+                    size: DswShape.iconTiny,
+                    color: color.labelTertiary,
+                  ),
+                ],
+              ],
+            ),
+          );
+        },
       ),
     );
   }

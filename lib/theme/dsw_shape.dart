@@ -71,6 +71,13 @@ abstract final class DswShape {
   /// A session row in the sidebar.
   static const rowSession = 36.0;
 
+  /// A menu row — the seat both menu shapes share, so a right-click menu and an
+  /// action menu opened from the same surface are the same height. Two readers
+  /// by design: `dswMenuSeat` (the row a widget draws) and the shad bridge (the
+  /// default height shad hands its own context item), which is the pair that
+  /// would otherwise be two numbers that must be equal (ADR-0014).
+  static const rowMenu = 36.0;
+
   /// A standard icon button — the default box of `DswIconButton` (ADR-0024).
   static const controlMd = 28.0;
 
