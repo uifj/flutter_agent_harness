@@ -948,7 +948,7 @@ class _PressableState extends State<_Pressable> {
       onTap: widget.onTap,
       semanticLabel: widget.semanticLabel,
       builder: (context, hovered, _) => AnimatedContainer(
-        duration: const Duration(milliseconds: 50),
+        duration: DswMotion.respecting(context, DswMotion.fast),
         decoration: BoxDecoration(
           color: hovered ? wash : null,
           borderRadius: widget.borderRadius,
@@ -986,7 +986,7 @@ class _IconButton extends StatelessWidget {
         semanticLabel: tooltip,
         excludeSemantics: true,
         builder: (context, hovered, _) => AnimatedContainer(
-          duration: const Duration(milliseconds: 50),
+          duration: DswMotion.respecting(context, DswMotion.fast),
           width: size,
           height: size,
           decoration: BoxDecoration(

@@ -240,4 +240,46 @@ void main() {
       );
     });
   });
+
+  group('motion ramp', () {
+    // A transition duration is a token too. Eleven of the thirteen `Animated*`
+    // sites in `lib/ui` take `DswMotion.respecting(context, …)`; two in
+    // `sidebar.dart` had invented `const Duration(milliseconds: 50)` instead —
+    // a hover wash that faded twice as fast as every other hover wash in the
+    // app, and one that kept animating for users who asked for reduced motion
+    // (ADR-0023's second instance of "a timing value with two truths").
+    //
+    // The scan follows the opening line of each `Animated*` widget rather than
+    // every `duration:` in the file, on purpose: an `AnimationController`'s
+    // duration is a loop period (the thinking shimmer, the row sweep), not a
+    // transition, and forcing those onto the ramp would be wrong.
+    test('no transition in lib/ui invents its own duration', () {
+      final opener = RegExp(r'Animated(Container|Switcher|Size|CrossFade)\(');
+      final offenders = <String>[];
+      for (final file in Directory('lib/ui').listSync(recursive: true)) {
+        if (file is! File || !file.path.endsWith('.dart')) continue;
+        final lines = file.readAsLinesSync();
+        for (var i = 0; i < lines.length; i++) {
+          if (!opener.hasMatch(lines[i])) continue;
+          for (var j = i + 1; j <= i + 4 && j < lines.length; j++) {
+            final trimmed = lines[j].trim();
+            if (!trimmed.startsWith('duration:')) continue;
+            final tokenised =
+                trimmed.contains('DswMotion') ||
+                trimmed == 'duration: duration,';
+            if (!tokenised) offenders.add('${file.path}:${j + 1}  $trimmed');
+            break;
+          }
+        }
+      }
+      expect(
+        offenders,
+        isEmpty,
+        reason:
+            'hover/press transitions read the ramp (DswMotion.fast/normal/slow) '
+            'so reduced motion is honoured everywhere and one interaction never '
+            'moves faster than the same interaction elsewhere.',
+      );
+    });
+  });
 }
