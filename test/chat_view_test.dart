@@ -29,6 +29,7 @@ import 'package:agent_harness/ui/conversation/conversation_root.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'amplified_text_probe.dart';
 import 'fake_turn_source.dart';
 
 void main() {
@@ -49,18 +50,40 @@ void main() {
 
   /// Pumps the column wide enough that the 748px content width, not the viewport,
   /// is what decides the layout.
-  Future<void> pump(WidgetTester tester, {bool stillness = false}) {
+  ///
+  /// The amplified step is composed in `MaterialApp.builder`, not under `home:`:
+  /// a `MediaQuery` below the Navigator never reaches an overlay route, and the
+  /// column's own popups are part of what the ruler is here to measure.
+  Future<void> pump(
+    WidgetTester tester, {
+    bool stillness = false,
+    double step = 1.0,
+  }) {
     tester.view.physicalSize = const Size(1400, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     return tester.pumpWidget(
       MaterialApp(
+        // Both steps are `copyWith` on what is already there, and the
+        // disableAnimations layer sits BELOW the ruler's own `MediaQuery`: a
+        // fresh `MediaQueryData(disableAnimations: …)` under `home:` replaces the
+        // whole data object — `textScaler` included — and had this harness been
+        // written that way the amplified faces would have measured the column at
+        // 1.0 while reporting a pass.
+        builder: (context, child) => AmplifiedText(
+          step: step,
+          child: Builder(
+            builder: (context) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(disableAnimations: stillness),
+              child: child!,
+            ),
+          ),
+        ),
         theme: dswThemeData(Brightness.light),
         home: Scaffold(
-          body: MediaQuery(
-            data: MediaQueryData(disableAnimations: stillness),
-            child: ConversationRoot(conversation: controller, tail: tail),
-          ),
+          body: ConversationRoot(conversation: controller, tail: tail),
         ),
       ),
     );
@@ -217,6 +240,60 @@ void main() {
 
     expect(find.textContaining('No API key set.'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  // The column's own chrome under an amplified system.
+  //
+  // `block_primitives_test` measures the seven blocks in isolation; what no
+  // block test ever builds is the row around them — the mid-turn activity strip
+  // (one-line chrome by construction), the seat caption the fading band sits
+  // over, and the composer this root mounts below. Two steps, because one step
+  // cannot certify a seat: a 36px line is exactly one line of 14/20 at 1.8.
+  group('amplified text', () {
+    for (final (label, step) in const [
+      ('1.8x', amplifiedTextStep),
+      ('2.2x', nextTextStep),
+    ]) {
+      testWidgets('the column keeps its chrome and its cards ($label)', (
+        tester,
+      ) async {
+        await pump(tester, step: step);
+        expect(textDefects(tester), isEmpty, reason: 'the hero column');
+
+        await startTurn(tester, 'hi');
+        // Asserted before measured, and BEFORE the first delta: the strip is a
+        // waiting-for-the-first-token row, so once a TextDelta lands it is gone
+        // and the next `textDefects` would be measuring an empty column while
+        // calling it the activity row.
+        expect(find.text('Deep diving...'), findsOneWidget);
+        expect(
+          textDefects(tester),
+          isEmpty,
+          reason: 'the mid-turn activity row',
+        );
+
+        source.emit(const TextDelta(text: 'Thinking it over', messageIndex: 0));
+        await deliver(tester);
+        await reveal(tester);
+        expect(answer('Thinking it over'), findsOneWidget);
+        expect(textDefects(tester), isEmpty, reason: 'the streaming tail');
+
+        source.emit(
+          const ToolCallRequested(
+            ref: 'r1',
+            name: 'read',
+            arguments: {'file_path': '/tmp/a-fairly-long-path-to-a-file.txt'},
+          ),
+        );
+        await deliver(tester);
+        expect(find.text('Read'), findsOneWidget);
+        expect(textDefects(tester), isEmpty, reason: 'a tool card in the flow');
+
+        source.emit(const ToolCallSucceeded(ref: 'r1', output: 'contents'));
+        await finish(tester);
+        expect(textDefects(tester), isEmpty, reason: 'the settled column');
+      });
+    }
   });
 
   // Audit §3-C read the screenshot's "body hugs the right, blank strip on the

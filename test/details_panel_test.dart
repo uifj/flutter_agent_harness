@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'amplified_text_probe.dart';
 import 'fake_turn_source.dart';
 
 void main() {
@@ -47,22 +48,29 @@ void main() {
   });
 
   /// The panel at the column's contract default width.
-  Future<void> pumpPanel(WidgetTester tester) => tester.pumpWidget(
-    MaterialApp(
-      theme: dswThemeData(Brightness.light),
-      home: Scaffold(
-        body: SizedBox(
-          width: 360,
-          height: 600,
-          child: DetailsPanel(
-            conversation: conversation,
-            selection: selection,
-            onClose: () => closed++,
+  ///
+  /// The amplified step goes in `MaterialApp.builder`, where `main.dart`
+  /// composes the user's font step: a `MediaQuery` under `home:` never reaches
+  /// an overlay route, so a host that wraps there measures its popups at 1.0
+  /// and calls that a pass.
+  Future<void> pumpPanel(WidgetTester tester, {double step = 1.0}) =>
+      tester.pumpWidget(
+        MaterialApp(
+          builder: (context, child) => amplifiedAppBuilder(step, child),
+          theme: dswThemeData(Brightness.light),
+          home: Scaffold(
+            body: SizedBox(
+              width: 360,
+              height: 600,
+              child: DetailsPanel(
+                conversation: conversation,
+                selection: selection,
+                onClose: () => closed++,
+              ),
+            ),
           ),
         ),
-      ),
-    ),
-  );
+      );
 
   /// Opens a turn and lets the frame that starts it settle.
   Future<void> startTurn(WidgetTester tester) async {
@@ -175,6 +183,54 @@ void main() {
 
     expect(find.text('No such file.'), findsOneWidget);
     expect(find.text('Running…'), findsNothing);
+  });
+
+  // The column under an amplified system.
+  //
+  // It is 360 wide by contract and its sections are one-line rows — the call's
+  // name at one end, its state at the other — which is the shape that cuts a
+  // label without throwing anything. Two steps, because a single line at 1.8x
+  // is exactly one line at the designed seat.
+  group('amplified text', () {
+    for (final (label, step) in const [
+      ('1.8x', amplifiedTextStep),
+      ('2.2x', nextTextStep),
+    ]) {
+      testWidgets('the panel keeps its header and both blobs ($label)', (
+        tester,
+      ) async {
+        await pumpPanel(tester, step: step);
+        expect(textDefects(tester), isEmpty, reason: 'the empty panel');
+
+        await startTurn(tester);
+        source.emit(
+          const ToolCallRequested(
+            ref: 'r1',
+            name: 'read',
+            arguments: {
+              'file_path':
+                  '/tmp/a-fairly-long-path-to-a-project-source-file.txt',
+            },
+          ),
+        );
+        await deliver(tester);
+        selection.select(callId: calls().single.id, toolName: 'Read');
+        await tester.pump();
+
+        expect(find.text('Input'), findsOneWidget);
+        expect(textDefects(tester), isEmpty, reason: 'a running call');
+
+        source.emit(
+          const ToolCallSucceeded(
+            ref: 'r1',
+            output: 'a line of output\nand a second line of output',
+          ),
+        );
+        await deliver(tester);
+        expect(find.text('Running…'), findsNothing);
+        expect(textDefects(tester), isEmpty, reason: 'a settled call');
+      });
+    }
   });
 
   testWidgets('the copy confirmation does not follow the selection', (
