@@ -23,6 +23,18 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadInput, ShadTheme;
 
+// The calendar panel opens on the month it is pumped in, so a task the grid is
+// expected to show has to be dated inside that month. A fixed month and day
+// passed for eleven months and then read an empty grid: the two calendar cases
+// failed on the first October run with nothing changed but the clock.
+final dueDate = DateTime(DateTime.now().year, DateTime.now().month, 20);
+
+String _two(int n) => n.toString().padLeft(2, '0');
+
+String isoOf(DateTime d) => '${d.year}-${_two(d.month)}-${_two(d.day)}';
+
+String shortOf(DateTime d) => '${_two(d.month)}-${_two(d.day)}';
+
 void main() {
   late Directory root;
   late PlanTaskStore store;
@@ -30,7 +42,7 @@ void main() {
   setUp(() async {
     root = Directory.systemTemp.createTempSync('dsh_plan_panels_');
     store = await PlanTaskStore.open(root);
-    await store.add('write the intro', dueDate: DateTime(2026, 9, 20));
+    await store.add('write the intro', dueDate: dueDate);
     await store.add('draft outline', groupIndex: 1);
   });
 
@@ -105,7 +117,7 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Task'), findsOneWidget);
     expect(find.text('write the intro'), findsOneWidget);
-    expect(find.text('2026-09-20'), findsOneWidget);
+    expect(find.text(isoOf(dueDate)), findsOneWidget);
     expect(find.text('draft outline'), findsOneWidget);
     // The undated task shows the em dash, not an empty cell - a blank column
     // reads as a rendering bug to the person looking at it.
@@ -165,7 +177,7 @@ void main() {
     }
     expect(find.text('write the intro'), findsOneWidget);
     // The card carries the short date; the full ISO string is the table's.
-    expect(find.text('09-20'), findsOneWidget);
+    expect(find.text(shortOf(dueDate)), findsOneWidget);
   });
 
   testWidgets('the calendar mounts the dated task without an exception', (
@@ -218,7 +230,7 @@ void main() {
         unawaited(
           store.add(
             'review the quarterly report draft and hand the summary to the owner',
-            dueDate: DateTime(2026, 10, 5),
+            dueDate: DateTime(dueDate.year, dueDate.month, 5),
           ),
         );
         tester.view.physicalSize = const Size(1400, 1000);
