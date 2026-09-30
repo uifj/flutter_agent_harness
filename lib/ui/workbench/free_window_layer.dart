@@ -227,7 +227,11 @@ class _FreeWindowState extends State<_FreeWindow> {
         width: 16,
         height: 16,
         child: Center(
-          child: Icon(LucideIcons.grip, size: 12, color: color.labelTertiary),
+          child: Icon(
+            LucideIcons.grip,
+            size: DswShape.iconTiny,
+            color: color.labelTertiary,
+          ),
         ),
       ),
     ),
@@ -273,7 +277,7 @@ class _FreeWindowState extends State<_FreeWindow> {
           ),
           child: Row(
             children: [
-              Icon(icon, size: 12, color: color.labelSecondary),
+              Icon(icon, size: DswShape.iconTiny, color: color.labelSecondary),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
@@ -316,7 +320,7 @@ class _FreeWindowState extends State<_FreeWindow> {
             children: [
               Icon(
                 LucideIcons.panel_right,
-                size: 12,
+                size: DswShape.iconTiny,
                 color: color.labelSecondary,
               ),
               const SizedBox(width: 5),
@@ -331,7 +335,11 @@ class _FreeWindowState extends State<_FreeWindow> {
           value: 'close',
           child: Row(
             children: [
-              Icon(LucideIcons.x, size: 12, color: color.labelSecondary),
+              Icon(
+                LucideIcons.x,
+                size: DswShape.iconTiny,
+                color: color.labelSecondary,
+              ),
               const SizedBox(width: 5),
               Text(
                 context.tr('close'),
@@ -379,7 +387,7 @@ class _CloseButton extends StatelessWidget {
         ),
         child: Icon(
           LucideIcons.x,
-          size: 11,
+          size: DswShape.iconTiny,
           color: hovered || focused ? color.labelPrimary : color.labelTertiary,
         ),
       ),

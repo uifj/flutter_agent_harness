@@ -1479,7 +1479,7 @@ class _SettingCellRowState<T> extends State<_SettingCellRow<T>> {
             const SizedBox(width: 12),
             Icon(
               LucideIcons.chevron_down,
-              size: 14,
+              size: DswShape.iconSm,
               color: color.labelTertiary,
             ),
           ],
@@ -1494,7 +1494,7 @@ class _SettingCellRowState<T> extends State<_SettingCellRow<T>> {
     final titleStyle = DswType.s14.copyWith(color: color.labelPrimary);
     final leading = <Widget>[
       if (widget.leading != null) ...[
-        Icon(widget.leading, size: 16, color: color.labelTertiary),
+        Icon(widget.leading, size: DswShape.iconMd, color: color.labelTertiary),
         const SizedBox(width: 12),
       ],
     ];
@@ -1604,7 +1604,7 @@ class _RecentWorkspaces extends StatelessWidget {
             children: [
               Icon(
                 LucideIcons.circle_alert,
-                size: 13,
+                size: DswShape.iconSm,
                 color: color.stateWarnPrimary,
               ),
               const SizedBox(width: 6),
@@ -1674,7 +1674,7 @@ class _RecentRowState extends State<_RecentRow> {
       children: [
         Icon(
           LucideIcons.folder,
-          size: 14,
+          size: DswShape.iconSm,
           // A dead folder keeps its seat but wears the caption tint: the row
           // still explains where the user has been.
           color: widget.missing ? color.labelCaption : color.labelSecondary,
@@ -1734,7 +1734,7 @@ class _ForgetButton extends StatelessWidget {
         ),
         child: Icon(
           LucideIcons.x,
-          size: 11,
+          size: DswShape.iconTiny,
           color: hovered ? color.labelPrimary : color.labelTertiary,
         ),
       ),
@@ -1774,7 +1774,11 @@ class _SearchField extends StatelessWidget {
       child: Row(
         children: [
           const SizedBox(width: 8),
-          Icon(LucideIcons.search, size: 14, color: color.labelTertiary),
+          Icon(
+            LucideIcons.search,
+            size: DswShape.iconSm,
+            color: color.labelTertiary,
+          ),
           const SizedBox(width: 6),
           Expanded(
             child: TextField(
@@ -1847,7 +1851,7 @@ class _NavCellState extends State<_NavCell> {
           children: [
             Icon(
               widget.icon,
-              size: 16,
+              size: DswShape.iconMd,
               color: widget.active ? color.brandPrimary : color.labelSecondary,
             ),
             const SizedBox(width: 8),
@@ -1898,7 +1902,11 @@ class _CloseButtonState extends State<_CloseButton> {
             shape: BoxShape.circle,
             color: hovered ? color.interactiveBgHover : null,
           ),
-          child: Icon(LucideIcons.x, size: 14, color: color.labelPrimary),
+          child: Icon(
+            LucideIcons.x,
+            size: DswShape.iconSm,
+            color: color.labelPrimary,
+          ),
         ),
       ),
     );
@@ -2182,7 +2190,7 @@ class _StepButtonState extends State<_StepButton> {
         ),
         child: Icon(
           widget.icon,
-          size: 14,
+          size: DswShape.iconSm,
           color: widget.onTap != null
               ? color.labelSecondary
               : color.labelCaption,
@@ -2225,7 +2233,7 @@ class _RevealButtonState extends State<_RevealButton> {
           ),
           child: Icon(
             widget.revealed ? LucideIcons.eye_off : LucideIcons.eye,
-            size: 16,
+            size: DswShape.iconMd,
             color: hovered ? color.labelPrimary : color.labelTertiary,
           ),
         ),
@@ -2355,7 +2363,7 @@ class _CustomizedDisclosureState extends State<_CustomizedDisclosure> {
                     duration: DswMotion.respecting(context, DswMotion.fast),
                     child: Icon(
                       LucideIcons.chevron_right,
-                      size: 14,
+                      size: DswShape.iconSm,
                       color: hovered
                           ? color.labelPrimary
                           : color.labelSecondary,
@@ -2429,7 +2437,7 @@ class _ModelPickButton extends StatelessWidget {
           ),
           child: Icon(
             LucideIcons.list,
-            size: 16,
+            size: DswShape.iconMd,
             color: enabled ? color.labelTertiary : color.labelDimmed,
           ),
         ),
@@ -2467,7 +2475,7 @@ class _ModelProbeStatus extends StatelessWidget {
         children: [
           Icon(
             LucideIcons.circle_alert,
-            size: 13,
+            size: DswShape.iconSm,
             color: color.stateErrorPrimary,
           ),
           const SizedBox(width: 6),
@@ -2571,7 +2579,7 @@ class _RemoveButtonState extends State<_RemoveButton> {
           ),
           child: Icon(
             LucideIcons.x,
-            size: 16,
+            size: DswShape.iconMd,
             color: hovered ? color.stateErrorPrimary : color.labelTertiary,
           ),
         ),

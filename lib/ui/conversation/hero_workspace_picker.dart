@@ -108,7 +108,7 @@ class HeroWorkspacePicker extends StatelessWidget {
           children: [
             Icon(
               LucideIcons.folder_open,
-              size: 14,
+              size: DswShape.iconSm,
               color: color.labelSecondary,
             ),
             const SizedBox(width: 6),
@@ -125,7 +125,7 @@ class HeroWorkspacePicker extends StatelessWidget {
             const SizedBox(width: 6),
             Icon(
               LucideIcons.chevron_down,
-              size: 13,
+              size: DswShape.iconSm,
               color: color.labelTertiary,
             ),
           ],
@@ -168,7 +168,11 @@ class HeroWorkspacePicker extends StatelessWidget {
           value: '\u0000pick',
           child: Row(
             children: [
-              Icon(LucideIcons.plus, size: 13, color: color.labelSecondary),
+              Icon(
+                LucideIcons.plus,
+                size: DswShape.iconSm,
+                color: color.labelSecondary,
+              ),
               const SizedBox(width: 6),
               Text(
                 context.tr('chooseAFolder'),
@@ -193,7 +197,7 @@ class HeroWorkspacePicker extends StatelessWidget {
       children: [
         Icon(
           LucideIcons.folder,
-          size: 13,
+          size: DswShape.iconSm,
           color: selected ? color.labelPrimary : color.labelSecondary,
         ),
         const SizedBox(width: 6),

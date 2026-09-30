@@ -546,7 +546,7 @@ class _DoneToggle extends StatelessWidget {
       excludeSemantics: true,
       builder: (context, hovered, _) => Icon(
         task.done ? LucideIcons.check : LucideIcons.circle,
-        size: 15,
+        size: DswShape.iconMd,
         color: task.done ? color.stateSuccessPrimary : color.labelTertiary,
       ),
     );
@@ -637,7 +637,7 @@ class _RemoveIcon extends StatelessWidget {
       excludeSemantics: true,
       builder: (context, hovered, _) => Icon(
         LucideIcons.x,
-        size: 12,
+        size: DswShape.iconTiny,
         color: hovered ? color.stateErrorPrimary : color.labelTertiary,
       ),
     );

@@ -77,7 +77,11 @@ class InputQueuePanel extends StatelessWidget {
 
   Widget _header(BuildContext context, DswAlias color) => Row(
     children: [
-      Icon(LucideIcons.list_end, size: 13, color: color.labelTertiary),
+      Icon(
+        LucideIcons.list_end,
+        size: DswShape.iconSm,
+        color: color.labelTertiary,
+      ),
       const SizedBox(width: 6),
       Text(
         context.tr('inputQueue'),
@@ -144,7 +148,7 @@ class _QueueRow extends StatelessWidget {
               message: context.tr('dragToReorder'),
               child: Icon(
                 LucideIcons.grip_vertical,
-                size: 14,
+                size: DswShape.iconSm,
                 color: color.labelTertiary,
               ),
             ),

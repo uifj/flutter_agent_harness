@@ -9,6 +9,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
+import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import 'tappable.dart';
@@ -139,7 +140,7 @@ class DisclosureRow extends StatelessWidget {
   Widget _leading(BuildContext context, DswAlias color, bool hovered) {
     final chevron = Icon(
       LucideIcons.chevron_down,
-      size: 14,
+      size: DswShape.iconSm,
       color: chevronColor ?? color.labelTertiary,
     );
     if (open) return chevron;

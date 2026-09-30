@@ -349,7 +349,7 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
             color: hovered ? color.interactiveBgHover : null,
             borderRadius: BorderRadius.circular(DswShape.inset),
           ),
-          child: Icon(icon, size: 14, color: color.labelSecondary),
+          child: Icon(icon, size: DswShape.iconSm, color: color.labelSecondary),
         ),
       ),
     );
@@ -368,7 +368,11 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
       ),
       child: Row(
         children: [
-          Icon(LucideIcons.folder, size: 13, color: color.labelTertiary),
+          Icon(
+            LucideIcons.folder,
+            size: DswShape.iconSm,
+            color: color.labelTertiary,
+          ),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
@@ -387,7 +391,7 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
                 excludeSemantics: true,
                 builder: (context, hovered, focused) => Icon(
                   LucideIcons.switch_camera,
-                  size: 13,
+                  size: DswShape.iconSm,
                   color: hovered || focused
                       ? color.labelPrimary
                       : color.labelTertiary,
@@ -707,11 +711,15 @@ class _DirRow extends StatelessWidget {
           children: [
             Icon(
               expanded ? LucideIcons.chevron_down : LucideIcons.chevron_right,
-              size: 12,
+              size: DswShape.iconTiny,
               color: color.labelTertiary,
             ),
             const SizedBox(width: 4),
-            Icon(LucideIcons.folder, size: 13, color: color.labelTertiary),
+            Icon(
+              LucideIcons.folder,
+              size: DswShape.iconSm,
+              color: color.labelTertiary,
+            ),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
@@ -771,7 +779,7 @@ class _NoteRowState extends State<_NoteRow> {
           children: [
             Icon(
               LucideIcons.file_text,
-              size: 13,
+              size: DswShape.iconSm,
               color: widget.selected ? color.labelPrimary : color.labelTertiary,
             ),
             const SizedBox(width: 8),

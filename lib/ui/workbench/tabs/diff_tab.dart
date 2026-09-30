@@ -768,7 +768,7 @@ class _RefreshButtonState extends State<_RefreshButton> {
           child: Center(
             child: Icon(
               LucideIcons.refresh_cw,
-              size: 14,
+              size: DswShape.iconSm,
               color: hovered ? color.labelPrimary : color.labelSecondary,
             ),
           ),
@@ -826,7 +826,7 @@ class _FileHeaderState extends State<_FileHeader> {
                 widget.expanded
                     ? LucideIcons.chevron_down
                     : LucideIcons.chevron_right,
-                size: 14,
+                size: DswShape.iconSm,
                 color: color.labelTertiary,
               ),
               const SizedBox(width: 6),

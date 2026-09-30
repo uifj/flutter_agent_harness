@@ -762,7 +762,7 @@ class _KillButtonState extends State<_KillButton> {
         ),
         child: Icon(
           LucideIcons.square,
-          size: 12,
+          size: DswShape.iconTiny,
           color: hovered ? color.stateErrorPrimary : color.labelSecondary,
         ),
       ),
@@ -939,7 +939,7 @@ class _DockCloseButtonState extends State<_DockCloseButton> {
         ),
         child: Icon(
           LucideIcons.x,
-          size: 10,
+          size: DswShape.iconCaption,
           color: hovered ? color.labelPrimary : color.labelSecondary,
         ),
       ),

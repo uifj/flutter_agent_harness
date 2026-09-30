@@ -273,7 +273,7 @@ class _SidebarState extends State<Sidebar> {
           mode == WorkspaceMode.agent
               ? LucideIcons.book_open
               : LucideIcons.message_square,
-          size: 18,
+          size: DswShape.iconLg,
           color: color.labelPrimary,
         ),
       );
@@ -324,7 +324,7 @@ class _SidebarState extends State<Sidebar> {
                         children: [
                           Icon(
                             icon,
-                            size: 14,
+                            size: DswShape.iconSm,
                             color: mode == candidate
                                 ? color.labelPrimary
                                 : color.labelSecondary,
@@ -584,8 +584,11 @@ class _SidebarState extends State<Sidebar> {
       onTap: widget.onToggle,
       wide: false,
       tooltip: context.tr('sessions'),
-      builder: (_) =>
-          Icon(LucideIcons.message_square, size: 18, color: color.labelPrimary),
+      builder: (_) => Icon(
+        LucideIcons.message_square,
+        size: DswShape.iconLg,
+        color: color.labelPrimary,
+      ),
     ),
   );
 
@@ -660,7 +663,7 @@ class _SidebarState extends State<Sidebar> {
                 tooltip: context.tr('settings'),
                 builder: (_) => Icon(
                   LucideIcons.settings,
-                  size: 18,
+                  size: DswShape.iconLg,
                   color: color.labelPrimary,
                 ),
               ),
@@ -741,7 +744,7 @@ class _SidebarState extends State<Sidebar> {
             alignment: Alignment.center,
             child: Icon(
               LucideIcons.settings,
-              size: 16,
+              size: DswShape.iconMd,
               color: color.labelSecondary,
             ),
           ),

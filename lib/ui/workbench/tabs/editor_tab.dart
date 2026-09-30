@@ -42,6 +42,7 @@ import 'package:re_highlight/languages/yaml.dart';
 import 'package:re_highlight/styles/atom-one-dark.dart';
 import 'package:re_highlight/styles/atom-one-light.dart';
 
+import '../../../../theme/dsw_shape.dart';
 import '../../../l10n/locales.dart';
 import '../../../model/workspace.dart';
 import '../../../theme/dsw_alias.dart';
@@ -363,7 +364,7 @@ class _EditorTabState extends State<EditorTab> {
               message: readOnly,
               child: Icon(
                 LucideIcons.lock,
-                size: 13,
+                size: DswShape.iconSm,
                 color: color.labelTertiary,
               ),
             ),
@@ -606,7 +607,9 @@ class _BarIcon extends StatelessWidget {
         excludeSemantics: true,
         builder: (context, _, _) => SizedBox.square(
           dimension: 20,
-          child: Center(child: Icon(icon, size: 14, color: tint)),
+          child: Center(
+            child: Icon(icon, size: DswShape.iconSm, color: tint),
+          ),
         ),
       ),
     );
@@ -646,7 +649,7 @@ class _SaveButton extends StatelessWidget {
                       color: tint,
                     ),
                   )
-                : Icon(LucideIcons.save, size: 14, color: tint),
+                : Icon(LucideIcons.save, size: DswShape.iconSm, color: tint),
           ),
         ),
       ),

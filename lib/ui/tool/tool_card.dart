@@ -116,7 +116,7 @@ class _ToolCardState extends State<ToolCard> {
   Widget _leading(DswAlias color, _ToolRowModel model) => switch (model.state) {
     _RowState.error => const StateDot(state: StateDotState.error),
     _RowState.stopped => const StateDot(state: StateDotState.warning),
-    _ => Icon(model.icon, size: 14, color: color.labelTertiary),
+    _ => Icon(model.icon, size: DswShape.iconSm, color: color.labelTertiary),
   };
 
   /// A 2px separator, then the FILL-truncated summary. An empty summary drops
@@ -397,7 +397,7 @@ class _QuietPill extends StatelessWidget {
               children: [
                 Icon(
                   icon,
-                  size: 12,
+                  size: DswShape.iconTiny,
                   color: hovered ? color.labelPrimary : color.labelSecondary,
                 ),
                 const SizedBox(width: 4),

@@ -239,7 +239,11 @@ class _CloseButton extends StatelessWidget {
             color: hovered ? color.interactiveBgHover : null,
           ),
           child: Center(
-            child: Icon(LucideIcons.x, size: 14, color: color.labelSecondary),
+            child: Icon(
+              LucideIcons.x,
+              size: DswShape.iconSm,
+              color: color.labelSecondary,
+            ),
           ),
         ),
       ),

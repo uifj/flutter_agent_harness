@@ -28,6 +28,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:path/path.dart' as p;
 
+import '../../../../theme/dsw_shape.dart';
 import '../../../l10n/locales.dart';
 import '../../../model/fs_revision.dart';
 import '../../../model/workspace.dart';
@@ -322,7 +323,11 @@ class _FileTreeTabState extends State<FileTreeTab> {
     ),
     child: Row(
       children: [
-        Icon(LucideIcons.search, size: 12, color: color.labelTertiary),
+        Icon(
+          LucideIcons.search,
+          size: DswShape.iconTiny,
+          color: color.labelTertiary,
+        ),
         const SizedBox(width: 6),
         Expanded(
           child: TextField(
@@ -342,7 +347,7 @@ class _FileTreeTabState extends State<FileTreeTab> {
             tooltip: context.tr('cancel'),
             onTap: () => setState(() => _filter = ''),
             size: 20,
-            iconSize: 13,
+            iconSize: DswShape.iconTiny,
           ),
       ],
     ),
@@ -367,7 +372,7 @@ class _FileTreeTabState extends State<FileTreeTab> {
     // the popup once the system amplified text (274.8 of 256.0 at 1.8x).
     Widget menuItem(IconData icon, String label) => Row(
       children: [
-        Icon(icon, size: 13, color: color.labelSecondary),
+        Icon(icon, size: DswShape.iconSm, color: color.labelSecondary),
         const SizedBox(width: 8),
         Expanded(
           child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -451,7 +456,7 @@ class _FileTreeTabState extends State<FileTreeTab> {
           tooltip: context.tr('refresh'),
           onTap: _refresh,
           size: 20,
-          iconSize: 13,
+          iconSize: DswShape.iconTiny,
         ),
       ],
     ),
@@ -498,11 +503,15 @@ class _TreeRow extends StatelessWidget {
                     curve: DswMotion.easeInOut,
                     child: Icon(
                       LucideIcons.chevron_right,
-                      size: 14,
+                      size: DswShape.iconSm,
                       color: color.labelTertiary,
                     ),
                   )
-                : Icon(LucideIcons.file, size: 11, color: color.labelTertiary),
+                : Icon(
+                    LucideIcons.file,
+                    size: DswShape.iconTiny,
+                    color: color.labelTertiary,
+                  ),
           ),
         ),
         const SizedBox(width: 4),

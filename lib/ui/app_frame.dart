@@ -578,7 +578,7 @@ class _ToggleButton extends StatelessWidget {
             ),
             child: Icon(
               icon,
-              size: 18,
+              size: DswShape.iconLg,
               color: lit ? color.labelPrimary : color.labelSecondary,
             ),
           );

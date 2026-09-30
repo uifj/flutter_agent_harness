@@ -395,7 +395,7 @@ class _ToBottomButton extends StatelessWidget {
           ),
           child: Icon(
             LucideIcons.arrow_down,
-            size: 16,
+            size: DswShape.iconMd,
             color: color.labelPrimary,
           ),
         ),

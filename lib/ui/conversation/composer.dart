@@ -904,7 +904,7 @@ class ComposerState extends State<Composer> {
         onTap: enabled ? _onPrimary : null,
         child: Icon(
           widget.busy ? LucideIcons.square : LucideIcons.arrow_up,
-          size: 16,
+          size: DswShape.iconMd,
           // Static white in both themes: the glyph sits on the blue fill.
           color: Colors.white,
         ),
@@ -980,7 +980,7 @@ class ComposerState extends State<Composer> {
             children: [
               Icon(
                 LucideIcons.folder_open,
-                size: 14,
+                size: DswShape.iconSm,
                 color: color.labelTertiary,
               ),
               const SizedBox(width: 6),
@@ -1009,7 +1009,7 @@ class ComposerState extends State<Composer> {
                 const SizedBox(width: 8),
                 Icon(
                   LucideIcons.git_branch,
-                  size: 12,
+                  size: DswShape.iconTiny,
                   color: color.labelTertiary,
                 ),
                 const SizedBox(width: 4),
@@ -1077,7 +1077,7 @@ class _MentionRow extends StatelessWidget {
           children: [
             Icon(
               isDir ? LucideIcons.folder : LucideIcons.file,
-              size: 13,
+              size: DswShape.iconSm,
               color: color.labelSecondary,
             ),
             const SizedBox(width: 8),
@@ -1111,7 +1111,7 @@ class _MentionRow extends StatelessWidget {
             if (isDir)
               Icon(
                 LucideIcons.chevron_right,
-                size: 13,
+                size: DswShape.iconSm,
                 color: color.labelTertiary,
               ),
           ],
@@ -1161,7 +1161,11 @@ class _CommandRowState extends State<_CommandRow> {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
           child: Row(
             children: [
-              Icon(widget.entry.icon, size: 13, color: color.labelSecondary),
+              Icon(
+                widget.entry.icon,
+                size: DswShape.iconSm,
+                color: color.labelSecondary,
+              ),
               const SizedBox(width: 8),
               Text(
                 widget.entry.command,
@@ -1227,7 +1231,11 @@ class _ImageChip extends StatelessWidget {
                   color: color.bgOverlay,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(LucideIcons.x, size: 11, color: color.labelPrimary),
+                child: Icon(
+                  LucideIcons.x,
+                  size: DswShape.iconTiny,
+                  color: color.labelPrimary,
+                ),
               ),
             ),
           ),
@@ -1277,7 +1285,7 @@ class _AttachButton extends StatelessWidget {
               children: [
                 Icon(
                   LucideIcons.image_up,
-                  size: 14,
+                  size: DswShape.iconSm,
                   color: color.labelSecondary,
                 ),
                 const SizedBox(width: 8),
@@ -1292,7 +1300,7 @@ class _AttachButton extends StatelessWidget {
               children: [
                 Icon(
                   LucideIcons.file_text,
-                  size: 14,
+                  size: DswShape.iconSm,
                   color: color.labelSecondary,
                 ),
                 const SizedBox(width: 8),
@@ -1307,7 +1315,7 @@ class _AttachButton extends StatelessWidget {
               children: [
                 Icon(
                   LucideIcons.clipboard,
-                  size: 14,
+                  size: DswShape.iconSm,
                   color: color.labelSecondary,
                 ),
                 const SizedBox(width: 8),
@@ -1330,7 +1338,7 @@ class _AttachButton extends StatelessWidget {
           child: Center(
             child: Icon(
               LucideIcons.paperclip,
-              size: 14,
+              size: DswShape.iconSm,
               color: color.labelTertiary,
             ),
           ),
@@ -1412,7 +1420,7 @@ class _ModelChip extends StatelessWidget {
                     if (model.id == directory.selectedModel)
                       Icon(
                         LucideIcons.check,
-                        size: 14,
+                        size: DswShape.iconSm,
                         color: color.stateBusinessPrimary,
                       ),
                   ],
@@ -1429,7 +1437,7 @@ class _ModelChip extends StatelessWidget {
                 children: [
                   Icon(
                     LucideIcons.settings,
-                    size: 14,
+                    size: DswShape.iconSm,
                     color: onOpenSettings != null
                         ? color.labelSecondary
                         : color.labelDimmed,
@@ -1474,7 +1482,7 @@ class _ModelChip extends StatelessWidget {
                                 )
                               : Icon(
                                   LucideIcons.refresh_cw,
-                                  size: 12,
+                                  size: DswShape.iconTiny,
                                   color: color.labelTertiary,
                                 ),
                         ),
@@ -1536,7 +1544,7 @@ class _ModelChip extends StatelessWidget {
                   children: [
                     Icon(
                       LucideIcons.cpu,
-                      size: 13,
+                      size: DswShape.iconSm,
                       color: color.labelSecondary,
                     ),
                     if (!tight) ...[
@@ -1556,7 +1564,7 @@ class _ModelChip extends StatelessWidget {
                       const SizedBox(width: 4),
                       Icon(
                         LucideIcons.chevron_down,
-                        size: 11,
+                        size: DswShape.iconTiny,
                         color: color.labelTertiary,
                       ),
                     ],
@@ -1623,7 +1631,11 @@ class _ModeChip extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(entry.$2, size: 14, color: color.labelSecondary),
+                  Icon(
+                    entry.$2,
+                    size: DswShape.iconSm,
+                    color: color.labelSecondary,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
@@ -1642,7 +1654,7 @@ class _ModeChip extends StatelessWidget {
                   if (entry.$1 == mode)
                     Icon(
                       LucideIcons.check,
-                      size: 14,
+                      size: DswShape.iconSm,
                       color: color.stateBusinessPrimary,
                     ),
                 ],
@@ -1672,7 +1684,11 @@ class _ModeChip extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(icon, size: 13, color: color.labelSecondary),
+                  Icon(
+                    icon,
+                    size: DswShape.iconSm,
+                    color: color.labelSecondary,
+                  ),
                   if (!tight) ...[
                     const SizedBox(width: 5),
                     Flexible(
@@ -1688,7 +1704,7 @@ class _ModeChip extends StatelessWidget {
                     const SizedBox(width: 4),
                     Icon(
                       LucideIcons.chevron_down,
-                      size: 11,
+                      size: DswShape.iconTiny,
                       color: color.labelTertiary,
                     ),
                   ],
@@ -1792,7 +1808,7 @@ class _DeliverChip extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(icon, size: 13, color: color.labelSecondary),
+              Icon(icon, size: DswShape.iconSm, color: color.labelSecondary),
               if (!tight) ...[
                 const SizedBox(width: 5),
                 Text(
@@ -1849,7 +1865,11 @@ class _DocumentChip extends StatelessWidget {
               ),
             )
           else
-            Icon(LucideIcons.file_text, size: 13, color: color.labelSecondary),
+            Icon(
+              LucideIcons.file_text,
+              size: DswShape.iconSm,
+              color: color.labelSecondary,
+            ),
           const SizedBox(width: 6),
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 140),
@@ -1867,7 +1887,7 @@ class _DocumentChip extends StatelessWidget {
             excludeSemantics: true,
             builder: (context, hovered, focused) => Icon(
               LucideIcons.x,
-              size: 12,
+              size: DswShape.iconTiny,
               color: hovered || focused
                   ? color.labelPrimary
                   : color.labelTertiary,

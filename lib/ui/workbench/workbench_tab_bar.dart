@@ -238,7 +238,11 @@ class _NewTabButton extends StatelessWidget {
         width: 30,
         height: tabBarHeight * MediaQuery.textScalerOf(context).scale(1),
         color: Colors.transparent,
-        child: Icon(LucideIcons.plus, size: 14, color: color.labelSecondary),
+        child: Icon(
+          LucideIcons.plus,
+          size: DswShape.iconSm,
+          color: color.labelSecondary,
+        ),
       ),
     );
   }
@@ -255,7 +259,7 @@ class _NewTabButton extends StatelessWidget {
       children: [
         Icon(
           icon,
-          size: 14,
+          size: DswShape.iconSm,
           color: enabled ? color.labelSecondary : color.labelCaption,
         ),
         const SizedBox(width: 6),
@@ -368,7 +372,7 @@ class _TabChipState extends State<_TabChip> {
         children: [
           Icon(
             icon,
-            size: 12,
+            size: DswShape.iconTiny,
             color: widget.active ? color.labelSecondary : color.labelTertiary,
           ),
           const SizedBox(width: 5),
@@ -554,7 +558,7 @@ class _TabChipState extends State<_TabChip> {
     final color = context.dsw;
     return Row(
       children: [
-        Icon(icon, size: 12, color: color.labelSecondary),
+        Icon(icon, size: DswShape.iconTiny, color: color.labelSecondary),
         const SizedBox(width: 5),
         Text(label, style: DswType.xs13.copyWith(color: color.labelPrimary)),
       ],
@@ -633,7 +637,7 @@ class _Feedback extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: color.labelSecondary),
+          Icon(icon, size: DswShape.iconTiny, color: color.labelSecondary),
           const SizedBox(width: 5),
           Flexible(
             child: Text(
@@ -673,7 +677,7 @@ class _CloseButton extends StatelessWidget {
         child: Center(
           child: Icon(
             LucideIcons.x,
-            size: 11,
+            size: DswShape.iconTiny,
             color: hovered ? color.labelPrimary : color.labelTertiary,
           ),
         ),
@@ -711,7 +715,7 @@ class _StripButton extends StatelessWidget {
         builder: (context, hovered, _) {
           final glyph = Icon(
             icon,
-            size: 13,
+            size: DswShape.iconSm,
             color: hovered ? color.labelSecondary : color.labelTertiary,
           );
           return Container(

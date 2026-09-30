@@ -74,6 +74,23 @@ abstract final class DswShape {
   /// A standard icon button — the default box of `DswIconButton` (ADR-0024).
   static const controlMd = 28.0;
 
-  /// A small glyph inside a chip or status row.
+  /// A small glyph inside a chip or status row — the standard control glyph, and
+  /// the default `iconSize` of `DswIconButton` in its 24/28px boxes.
   static const iconSm = 14.0;
+
+  /// The step below [iconTiny]: a glyph that sits beside `xxxs` text (a count
+  /// badge, a status tick in a dense list).
+  static const iconCaption = 10.0;
+
+  /// The dense-row step: a glyph inside a 20-24px box (tree rows, chips, tab
+  /// strips), where 14 would crowd the box.
+  static const iconTiny = 12.0;
+
+  /// The step above [iconSm] — a glyph that carries a label's weight in a 28-32px
+  /// box (a settings row's leading icon, a menu's check).
+  static const iconMd = 16.0;
+
+  /// The largest chrome glyph: the collapsed rail's icons, where there is no
+  /// text next to the control.
+  static const iconLg = 18.0;
 }

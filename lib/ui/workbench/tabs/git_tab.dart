@@ -580,7 +580,7 @@ class _GitTabState extends State<GitTab> {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (icon != null) ...[
-          Icon(icon, size: 14, color: color.labelTertiary),
+          Icon(icon, size: DswShape.iconSm, color: color.labelTertiary),
           const SizedBox(width: 8),
         ],
         Text(
@@ -1075,7 +1075,7 @@ class _BranchSelect extends StatelessWidget {
             ),
             Icon(
               LucideIcons.chevron_down,
-              size: 14,
+              size: DswShape.iconSm,
               color: enabled ? color.labelTertiary : color.labelCaption,
             ),
           ],

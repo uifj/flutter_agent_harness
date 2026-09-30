@@ -363,7 +363,7 @@ class _WelcomeAction extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 12, color: tint),
+            Icon(icon, size: DswShape.iconTiny, color: tint),
             const SizedBox(width: 5),
             // Ellipsized rather than allowed its natural width: splitting a
             // 300px column gives panes around 140px, and three actions that

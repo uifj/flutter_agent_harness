@@ -353,7 +353,7 @@ class _SendButtonState extends State<_SendButton> {
         ),
         child: Icon(
           LucideIcons.send,
-          size: 14,
+          size: DswShape.iconSm,
           color: hovered ? color.labelPrimary : color.labelSecondary,
         ),
       ),
@@ -397,7 +397,7 @@ class _HeaderButtonState extends State<_HeaderButton> {
           ),
           child: Icon(
             widget.icon,
-            size: 13,
+            size: DswShape.iconSm,
             color: hovered ? color.labelPrimary : color.labelSecondary,
           ),
         ),
