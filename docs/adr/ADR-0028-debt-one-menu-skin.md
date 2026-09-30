@@ -58,7 +58,7 @@
 - **先红**：守卫跑在未改的树上 → `+0 -9`。失败输出把两处实测错值并列出来：渲染那条 `Expected: Color<(1.0, 0.1725, 0.1725, 0.1804)> Actual: Color<(1.0, 0.1373, 0.1373, 0.1412)>`（`bgLayer2` vs 实测的 `bgLayer1`），悬停那条 `Expected: (0.06, 0.149, 0.1922, 0.2824) Actual: (0.0392, 0, 0, 0)`（`interactiveBgHover` vs Material 的黑纱）。
 - **后绿**：`test/menu_chrome_test.dart` 9/9；套件 `+920 → +929 -2`，净增 9 条正是这个文件，既有两条失败（`app_scope_test` 的 `/var`↔`/private/var`、`plan_workspace_test` 的 `find.text('notes')`）未触碰。
 - `dart format --set-exit-if-changed lib test tool spike` 无 diff；`dart analyze --fatal-infos lib test tool spike` → `No issues found!`；`dart tool/check_architecture.dart` → 7 recorded, 0 new；`dart tool/contrast_check.dart` 同上无新增。
-- macOS debug 重建并重启，肉眼确认（本 ADR 合入时回填 PID 与结论）。
+- macOS debug 已重建并重启（PID 53622，HEAD `f34d097` 之后的树）。**肉眼那一眼仍未确认**：本机没有 Screen Recording 权限，截不到应用窗口，而这条改的正是可见的皮——真机走查留在登记表那一行的"余"里。
 
 ## 关联（Links）
 
