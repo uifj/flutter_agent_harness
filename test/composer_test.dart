@@ -702,6 +702,62 @@ void main() {
       expect(find.byIcon(LucideIcons.cpu), findsNothing);
     });
 
+    testWidgets('a menu wider than the column overlays it, never squeezes it', (
+      tester,
+    ) async {
+      // The other half of report item 6. The mode menu's own minWidth (260) is
+      // the entire centre column at this width, so it can only be honest as an
+      // overlay: opening it must not move the field by a pixel, and a row that
+      // lands outside the viewport is a door that cannot be opened.
+      await pump(tester, width: 260, directory: seeded());
+
+      final field = tester.getRect(find.byType(TextField));
+      final screen = Rect.fromLTWH(
+        0,
+        0,
+        tester.view.physicalSize.width / tester.view.devicePixelRatio,
+        tester.view.physicalSize.height / tester.view.devicePixelRatio,
+      );
+      final rows = find.byWidgetPredicate((w) => w is PopupMenuItem);
+
+      Future<void> open(Finder control, String firstRow) async {
+        await tester.tap(control);
+        await tester.pumpAndSettle();
+        expect(
+          find.text(firstRow),
+          findsOneWidget,
+          reason: 'the $firstRow menu',
+        );
+        expect(
+          tester.getRect(find.byType(TextField)),
+          field,
+          reason: '$firstRow re-laid the row out',
+        );
+        for (var i = 0; i < rows.evaluate().length; i++) {
+          final rect = tester.getRect(rows.at(i));
+          expect(rect.left, greaterThanOrEqualTo(screen.left));
+          expect(rect.top, greaterThanOrEqualTo(screen.top));
+          expect(rect.right, lessThanOrEqualTo(screen.right));
+          expect(rect.bottom, lessThanOrEqualTo(screen.bottom));
+        }
+        // The row is 504.0 wide over a 260.0 column, and its right edge lands
+        // at 792.0 of an 800.0 viewport — the menu is a door drawn OVER the card
+        // and clamped to the screen, which is the only way this case can work.
+        // Without this the face would pass for a menu that simply fit inside the
+        // column, and there would be nothing to prove.
+        expect(tester.getRect(rows.first).width, greaterThan(260));
+        // Tap the barrier rather than an entry: a menu left open covers the next
+        // face, and a route nobody popped leaves its timer armed.
+        await tester.tapAt(const Offset(4, 4));
+        await tester.pumpAndSettle();
+        expect(rows, findsNothing);
+      }
+
+      await open(find.byIcon(LucideIcons.paperclip), 'Choose image files…');
+      await open(find.byIcon(LucideIcons.shield_question_mark), 'Plan first');
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('a folder name too long for the bar does not overflow it', (
       tester,
     ) async {
