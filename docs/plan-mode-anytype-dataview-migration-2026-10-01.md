@@ -93,10 +93,11 @@
   拖拽改序（复用现有 `reorder` 语义）、文内搜索（Next/Previous/Clear）、选区 markup 工具栏 8 枚。
 - 限制位：`PlanObjectRestriction` 11 档 + `PlanDataViewRestriction` 3 档，UI 按位禁用。
 
-### §4 对象类型（21 个内置 key）
+### §4 对象类型（23 个不同 key，24 个常量）
 
-- `PlanObjectTypeIds` 21 常量 + `getSystemTypes/getFileTypes/getSetTypes/getTypesWithoutTemplates` 四组，
-  与 `ObjectTypeIds.kt:9-53` 逐一对齐（含 `_ot` 市场前缀那组镜像）。
+- `PlanObjectTypeIds` 23 个 key 常量 + `all` 列表 + 四组分组函数，与 `ObjectTypeIds.kt:8-31` 逐一对齐
+  （上游 `WORKSPACE` 与 `SPACE` 都等于 `"ot-space"`，故 24 个常量对应 23 个不同 key；本项目只留一个名字）；
+  `_ot` 市场前缀那组镜像在 `PlanMarketplaceIds`。
 - 客户端特判也照做：**Task 没有专属屏，只是 List 行形态**；Bookmark 有"新建书签记录"对话框 +
   分享接收路径；Date 有整屏（`ot-date`）；Chat/ChatDerived 有组件源；四类文件不给模板；
   Project 只出现在类型排序优先级里。
@@ -138,7 +139,7 @@
 ```
 lib/model/plan_struct.dart          # PlanStruct / PlanObject / 关系解析 / 限制位
 lib/model/plan_relation.dart        # 16 格式 + 选项 + CRUD 参数
-lib/model/plan_object_type.dart     # 21 内置 key + 类型对象
+lib/model/plan_object_type.dart     # 23 内置 key + 类型对象 + 七档布局
 lib/model/plan_block.dart           # 块 sealed 树 + 14 样式 + 11 标记 + 24 embed 档
 lib/model/plan_dataview.dart        # 视图 6 档 / 排序 / 18 条件 / 15 快捷 / 视图配置
 lib/model/plan_markdown_codec.dart  # Markdown ⇄ 块（纯 Dart，可单测）

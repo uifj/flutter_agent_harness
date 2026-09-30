@@ -12,7 +12,7 @@
 | `.qoder/skills/` / `.trae/skills/` | 25 个 skill（git-commit、flutter-*、dart-*、ponytail-*）；哪些被裁掉、为什么，见 workflow.md §2 | 按需 |
 | [docs/README.md](docs/README.md) | 文档体系规范：ADR 分类 / 优先级 / 状态机 / 新增流程 | 记录问题时 |
 | [docs/debt-register.md](docs/debt-register.md) | 技术债与缺陷登记表（唯一状态源）：ADR-0001…0037 已登记 + 观察表若干待立条目（下一编号 ADR-0038；ADR-0030 只在观察表未立文） | 动手前 |
-| [docs/anytype-feature-inventory-2026-10-01.md](docs/anytype-feature-inventory-2026-10-01.md) | Anytype Android 客户端（`_archive_project/anytype-kotlin` @ `7af5254` = 0.50.4）的**功能清单**，每条带 `path:line`：§1 数据视图六档、§3 块与 slash 可达集、§4 二十一个内置类型、§5 十六种关系格式、§7 十三种组件形态与五档布局，外加 §17「看起来有其实没有」23 行（Calendar/Graph 视图、24 种 embed、LaTeX 插入、Notion 导入、used-in、goal/habit 全部为 ⛔/❌）。回答"Anytype 有没有/怎么做这个功能"先读它，别按记忆或营销文案答 |
+| [docs/anytype-feature-inventory-2026-10-01.md](docs/anytype-feature-inventory-2026-10-01.md) | Anytype Android 客户端（`_archive_project/anytype-kotlin` @ `7af5254` = 0.50.4）的**功能清单**，每条带 `path:line`：§1 数据视图六档、§3 块与 slash 可达集、§4 二十三个内置类型 key、§5 十六种关系格式、§7 十三种组件形态与五档布局，外加 §17「看起来有其实没有」23 行（Calendar/Graph 视图、24 种 embed、LaTeX 插入、Notion 导入、used-in、goal/habit 全部为 ⛔/❌）。回答"Anytype 有没有/怎么做这个功能"先读它，别按记忆或营销文案答 |
 | [docs/plan-mode-anytype-dataview-migration-2026-10-01.md](docs/plan-mode-anytype-dataview-migration-2026-10-01.md) | ADR-0037 的**施工表**：企划模式复现上述 §1–§7（现状分析 → 目标形状 → `packages/board_panel` 复用线 → 逐段映射 → 分层落位 → P1–P7 七阶段提交 → 每段守卫清单 → §8 诚实边界）。动企划模式的数据视图/块/组件之前先读它 |
 | [docs/migration-log.md](docs/migration-log.md) | ADR-0002/0003/0004 迁移执行台账：阶段·commit·门禁·待人签收清单 | 接手迁移时 |
 | [docs/starkins-settings-migration-analysis.md](docs/starkins-settings-migration-analysis.md) | 从 starkins_app 迁移设置页的分析：逐项 可迁/改造/不迁 判定 + 不变量冲突（待拍板） | 做该迁移前 |

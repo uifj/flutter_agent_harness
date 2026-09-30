@@ -23,7 +23,7 @@
   直接吃 store，没有"记录 = 有序 id 列表 + 按行解析内容"这一层，所以筛选、排序、分组、视图管理、
   手工排序都无处可长。
 - 对照清单：`docs/anytype-feature-inventory-2026-10-01.md` §1–§7 记录了 Anytype 客户端真实作答的
-  6 种视图档位、14 档文本样式、16 种关系格式、21 个内置类型、13 种主屏组件形态与 5 档布局，
+  6 种视图档位、14 档文本样式、16 种关系格式、23 个内置类型 key、13 种主屏组件形态与 5 档布局，
   以及"看起来有其实没有"那 23 行。本 ADR 要复现的是那张清单，不是它的营销描述。
 - 可复用的底座已在仓库里：`packages/board_panel`（`board_panel.dart` 导出 `BoardPanel` +
   `BoardPanelController/BoardPanelConfig/cardBuilder/headerBuilder` 与 `MonthView` 全家）。

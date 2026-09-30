@@ -208,9 +208,12 @@ CELL/ROW/COLUMN 三个 tab `BlockView.kt:1522`）：
 
 ---
 
-## 4. 对象类型清单（内置 21 个 key）
+## 4. 对象类型清单（内置 23 个不同 key / 24 个常量）
 
-`core-models/.../ObjectTypeIds.kt:9-31`：
+24 个 `const val` 中有两个同名异值的情况：`WORKSPACE` 与 `SPACE` **都**等于
+`"ot-space"`（`:24` 与 `:28`），所以**去重后是 23 个 key**。
+
+`core-models/.../ObjectTypeIds.kt:8-31`：
 `ot-page`、`ot-objectType`、`ot-relation`、`ot-template`、`ot-image`、`ot-file`、`ot-video`、`ot-audio`、
 `ot-set`、`ot-collection`、**`ot-task`**、`ot-date`、`ot-profile`、`ot-human`、`ot-participant`、`ot-note`、
 `ot-space`、`ot-dashboard`、**`ot-bookmark`**、`ot-relationOption`、`ot-chatDerived`、`ot-chat`、`ot-project`
