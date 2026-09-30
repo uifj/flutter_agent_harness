@@ -11,7 +11,7 @@
 | `.qoder/rules/build.md` / `.trae/rules/build.md` | 桌面端构建事实：版本基线、三桌面目标与开发机平台、CI 门禁口径、entitlements/沙箱边界、签名缺口、出包清单 | 构建/排障/发布前 |
 | `.qoder/skills/` / `.trae/skills/` | 25 个 skill（git-commit、flutter-*、dart-*、ponytail-*）；哪些被裁掉、为什么，见 workflow.md §2 | 按需 |
 | [docs/README.md](docs/README.md) | 文档体系规范：ADR 分类 / 优先级 / 状态机 / 新增流程 | 记录问题时 |
-| [docs/debt-register.md](docs/debt-register.md) | 技术债与缺陷登记表（唯一状态源）：ADR-0001…0023 已登记 + 观察表若干待立条目（下一编号 ADR-0024） | 动手前 |
+| [docs/debt-register.md](docs/debt-register.md) | 技术债与缺陷登记表（唯一状态源）：ADR-0001…0024 已登记 + 观察表若干待立条目（下一编号 ADR-0025） | 动手前 |
 | [docs/migration-log.md](docs/migration-log.md) | ADR-0002/0003/0004 迁移执行台账：阶段·commit·门禁·待人签收清单 | 接手迁移时 |
 | [docs/starkins-settings-migration-analysis.md](docs/starkins-settings-migration-analysis.md) | 从 starkins_app 迁移设置页的分析：逐项 可迁/改造/不迁 判定 + 不变量冲突（待拍板） | 做该迁移前 |
 | [repomix.config.json](repomix.config.json) | 全仓库打包配置（产物 `repomix-output.xml` 不入库；已排除 vendored UI 库实现） | 按需 |
@@ -27,7 +27,7 @@
 
 - **是什么**：`agent_harness` —— 用 **Flutter + Google Genkit** 从零实现的 **桌面端 AI Agent 工作台**：两种工作区模式（**企划**：工作区内 .md 的本地 Markdown 工作台 + 看板/日程/表格扩展面板，ADR-0007；**代理**：对话流 + 工具调用投影 + 分栏 workbench（文件树 / 编辑器 / 终端 / git / diff / 浏览器 / 子 agent / side chat），工作台有右栏与下栏**两棵树**）。pubspec 自述："A Flutter desktop agent harness: chat UI, tool-call projection via Genkit, and a split-pane workbench."
 - **不是什么**：不是移动端/网页 App（三桌面平台 `macos/`+`windows/`+`linux/`，见 ADR-0003；无 `android/`/`ios/`/`web/`）；不是 dsh 的 fork（不吸收其代码，只取其设计思想重写）；不是发布物（`version: 0.0.1`，ad-hoc 签名，见 `build.md` §4）。
-- **规模**（2026-09-30 校准，会腐烂：引用前用 `find`/`wc` 现场重算）：`lib/` 126 个 Dart 文件（不含 `*.g.dart`）/ ~37.8k 行，`test/` 70 个 `*_test.dart`（另有 3 个手写替身 + 2 个探针 `clipboard_probe.dart`·`amplified_text_probe.dart`）；`spike/` 2 个可执行证据脚本，`tool/` 2 个脚本（对比度校验 + 架构门禁）与它的 baseline。
+- **规模**（2026-09-30 校准，会腐烂：引用前用 `find`/`wc` 现场重算）：`lib/` 127 个 Dart 文件（不含 `*.g.dart`）/ ~37.6k 行，`test/` 71 个 `*_test.dart`（另有 3 个手写替身 + 2 个探针 `clipboard_probe.dart`·`amplified_text_probe.dart`）；`spike/` 2 个可执行证据脚本，`tool/` 2 个脚本（对比度校验 + 架构门禁）与它的 baseline。
 - **技术栈**：Dart SDK `^3.11.5` / Flutter 3.41.9 stable；运行时 `genkit` 0.16.1 + `genkit_openai` / `genkit_anthropic` / `genkit_google_genai` / `genkit_mcp` / `genkit_middleware`（**全是 0.x**）；状态管理 `flutter_riverpod` 3.2.1 + `riverpod_annotation` 4.0.2（ADR-0002 修订 1：注解模式，`*.g.dart` 入库）；组件库 `shadcn_ui` 0.56.3（迁移中）+ 入库本地包 `board_panel`（path 依赖，ADR-0007 D5）；宿主能力 `flutter_pty` + `xterm`（终端）、`flutter_inappwebview`（浏览器 tab）、`file_picker` + `path_provider`（工作区）、`pasteboard`（剪贴板）、`tray_manager` + `window_manager` + `hotkey_manager`（托盘/窗口/全局热键）、`desktop_drop`（拖拽入 composer）、`pdfrx`（PDF 与文档抽文本）；渲染与编辑 `gpt_markdown`（含 LaTeX 与 `flutter_mermaid` 围栏图）+ `re_editor` + `re_highlight`、`archive`（本地备份 zip）、`schemantic`（工具运行时 schema）、`flutter_lucide`（图标）。lint 只有 `flutter_lints`（`riverpod_lint` 因 SDK meta 约束暂不可装，见 ADR-0002 修订 1）。
 - **刻意不存在的机制**：genkit 工具输入保持 Map、schema 运行时构造（codegen 仅限 riverpod 注解，见 ADR-0002 修订 1）；没有 `intl` / `.arb` / `flutter_localizations`（i18n 自研，见 §3）；没有路由表（单窗口，界面靠 widget 组合与 scope 拼装）。
 
@@ -40,14 +40,14 @@
 | `lib/model/` | 26 | 4.6k | 纯 Dart 领域词汇：`conversation` / `turn_event` / `turn_source` / `approval_mode` / `approval_rule`（免问规则，ADR-0012）/ `queued_input`（忙时输入与它的两种投递，ADR-0013）/ `checkpoint`（before 镜像的值、FNV 指纹与 `CheckpointSink` 接口，ADR-0014）、`window_title`（窗口标题的那句话，纯 Dart，ADR-0019 ③）· `fs_revision`（工作区文件版本号，**纯 Dart 的监听表**，ADR-0015——`lib/model` 里第一个全局可变单例，理由写在该文件头部）——它是 `lib/model` 第一次定义"由 genkit 侧消费、由 state 侧实现"的接口）/ `sidebar_tab`（+ `sidebar_state` 双树）/ `split_node` / `workbench` / `workspace` / `plan_task` / `user_profile` / `known_models`（含 `modelAcceptsImages`，ADR-0010）/ `mcp_settings` / 各 settings。手写 `toJson`/`fromJson` |
 | `lib/state/` | 23 | 4.9k | 控制器与持久化：`app_providers`（+ 唯一入库生成件 `app_providers.g.dart`，19 个 provider：stores、read seams、per-controller provider，ADR-0002）、`app_scope`（组合根：runtime 热替换链仍在其中，并在此打开 `approval_rule_store` 与 `checkpoint_store`）、`conversation_controller`、`workbench_controller` / `workbench_store`（双树持久化）、`layout_controller`、`workspace_mode_controller`（企划/代理，ADR-0007）、`plan_task_store`、`approval_rule_store`（`<support>/approvals.json`，按工作区分键，ADR-0012）/ `checkpoint_store`（`<support>/checkpoints/` 的镜像、冲突闸门与 rewind，ADR-0014）、`model_directory`、`session_index`、`backup_service`、`tray_service`、`hotkey_service`、`window_title_service`、`document_extractor`、`settings_store` / `prefs_store`（原子写）、`streaming_tail` |
 | `lib/host/` | 4 | 0.8k | 宿主能力：`git`、`terminal_manager`、`project_folder_ops`（security-scoped bookmark）、`profile_repository`（ADR-0006 S1，用户 Profile） |
-| `lib/ui/` | 55 | ~21.5k | 界面：`workbench/`（16，含 `tabs/` 9、`tab_registry`、`workbench_tab_bar` 右键菜单）、`primitives/`（16，卡片/代码块/diff/终端等自绘件）、`conversation/`（13，含 `assistant_markdown`：LaTeX + Mermaid，与 `input_queue_panel`：忙时队列条）、`layout/columns.dart`（约束求解）、`plan/`（2，企划工作台 + 看板/表格/日程三面扩展面板（日程的日期格由宿主画，`MonthView.cellBuilder`））、`settings/`（3：全屏设置 + `widgets/` 卡片与级联快捷菜单）、`sidebar`、`tool/`（2：`tool_card` 与它读的 `checkpoint_scope`，卡片上那枚回退 pill 属于 ADR-0014）、根 `app_frame.dart`（五区外壳）+ `appearance_scope.dart` |
+| `lib/ui/` | 57 | ~21.5k | 界面：`workbench/`（16，含 `tabs/` 9、`tab_registry`、`workbench_tab_bar` 右键菜单）、`primitives/`（17，卡片/代码块/diff/终端等自绘件）、`conversation/`（13，含 `assistant_markdown`：LaTeX + Mermaid，与 `input_queue_panel`：忙时队列条）、`layout/columns.dart`（约束求解）、`plan/`（2，企划工作台 + 看板/表格/日程三面扩展面板（日程的日期格由宿主画，`MonthView.cellBuilder`））、`settings/`（3：全屏设置 + `widgets/` 卡片与级联快捷菜单）、`sidebar`、`tool/`（2：`tool_card` 与它读的 `checkpoint_scope`，卡片上那枚回退 pill 属于 ADR-0014）、根 `app_frame.dart`（五区外壳）+ `appearance_scope.dart` |
 | `lib/theme/` | 6 | 1.0k | `dsw_alias`（令牌）→ `dsw_theme`（挂到 `ThemeData` + `DswShadow` elevation ramp）→ `dsw_typography` / `dsw_motion` / `dsw_static` / `dsw_shad_bridge`（DswAlias→ShadColorScheme） |
 | `lib/l10n/` | 1 | 0.9k | `locales.dart`：en/zh 双字典（键集对齐由 `test/l10n_parity_test.dart` 守卫，ADR-0008；条数不写死）+ `AppLocaleScope` + `context.tr()`，zh 逐键回退 en |
 | `spike/` | 2 | — | `agent_spike.dart`（genkit 真实形状的可执行证据，头部 FINDINGS）、`runtime_smoke.dart`（命令行驱动 runtime 的验收门：没有 Flutter、没有 UI 也能把工具环跑起来。它能编译的前提是 ADR-0015，并由 `check_architecture` 规则 6 守着） |
 | `tool/` | 2 | — | `contrast_check.dart`：对 `dsw_static` + `dsw_alias` 做 WCAG 对比度三求值（dart:io/dart:math only），`dart tool/contrast_check.dart`；`check_architecture.dart`：五条架构规则的指纹 baseline 门禁（ADR-0011），baseline 落 `tool/architecture_baseline.json` |
 | `packages/board_panel/` | — | — | **入库的本地包**（path 依赖，ADR-0007 D5 记录为 ADR-0001"vendored 不入库"的例外）：看板/日程/表格扩展面板，由 `ui/plan/plan_extensions_view.dart` 消费，数据来自 `state/plan_task_store.dart` |
 | `packages/flutter-shadcn-ui/` | — | — | **vendored 源码镜像，`.gitignore` 排除**（ADR-0001）。`shadcn_ui` 0.56.3 已是 pubspec 依赖（ADR-0002 实施中），但配色仍走 `dsw_*`（经 `theme/dsw_shad_bridge.dart`）。查组件 API 用入库的 `.qoder/skills/shadcn-ui-flutter/`；读实现看此目录或上游 `nank1ro/flutter-shadcn-ui` `0.56.3` |
-| `docs/` | — | — | `README.md`（ADR 规范）+ `debt-register.md`（状态源）+ `migration-log.md` + `adr/`（模板 + ADR-0001…0023）+ 审计报告与优化方案 |
+| `docs/` | — | — | `README.md`（ADR 规范）+ `debt-register.md`（状态源）+ `migration-log.md` + `adr/`（模板 + ADR-0001…0024）+ 审计报告与优化方案 |
 | `.github/workflows/` | 2 | — | `pr-check.yml`（push/PR 到 develop·main：format + `dart analyze --fatal-infos` + `flutter test`）、`build.yml`（`workflow_dispatch`：三桌面平台出包 + 可选 GitHub Release）。两者都钉 `FLUTTER_VERSION: '3.41.9'` |
 
 ## 3. 架构不变量（违反即错误，命令可自证）
@@ -118,7 +118,7 @@ flutter build linux --release            # 需 GTK 工具链
 
 已知缺口的分类、优先级、状态一律看 [docs/debt-register.md](docs/debt-register.md)：`README.md` 与 `CHANGELOG.md` 仍是包模板、macOS 签名/公证缺口与 `.gitignore` 缺证书规则、版本仍 `0.0.1`。（`spike/runtime_smoke.dart` 那道"真实链路"门曾不可运行，已由 ADR-0015 修好并加进门禁；ADR-0012/0013/0014 的收尾现在只等一把 API key。）（i18n 双语对齐的守卫缺口已由 ADR-0008 闭环。）ADR-0005 遗留的那几项"仅持久化未接线"的偏好**不再是缺口而是已处置**：普查发现四条设置行没有任何读取点（`previewMode`/正文字体族/界面皮肤/提示建议），已由 ADR-0022 连行带字段撤下，并立 `test/settings_reach_test.dart` 拦第五枚——要接回任何一条请先按 §7 立 ADR。**修任何一个之前先按 `docs/README.md` 立 ADR 并置 ACCEPTED。**
 
-**测试基线（本机 macOS，2026-09-30 校准）不是绝对全绿**：`flutter test` 得 `+914 -2`，两个既有失败（macOS temp 路径 `/var`↔`/private/var` 规范化、企划树 `find.text('notes')` 命中两处）已登记在债务表的待立 ADR 观察里。验收口径因此是**相对基线零新增失败**，不是"全绿"；通过条数会随加测试漂移，别把它当常数，也不要为了让套件变绿去改那两条断言。
+**测试基线（本机 macOS，2026-09-30 校准）不是绝对全绿**：`flutter test` 得 `+917 -2`，两个既有失败（macOS temp 路径 `/var`↔`/private/var` 规范化、企划树 `find.text('notes')` 命中两处）已登记在债务表的待立 ADR 观察里。验收口径因此是**相对基线零新增失败**，不是"全绿"；通过条数会随加测试漂移，别把它当常数，也不要为了让套件变绿去改那两条断言。
 
 **CI 已经有了**（`.github/workflows/`，commit `d09b92d`）：`pr-check.yml` 在 push/PR 到 `develop`·`main` 上跑 format + `dart analyze --fatal-infos` + `flutter test`；`build.yml` 是 `workflow_dispatch` 手动三平台出包并可选发 GitHub Release。**但它只保证门禁命令，不等于签名/公证已过**——CI 产物依旧 ad-hoc，见 `build.md` §4/§5。
 
