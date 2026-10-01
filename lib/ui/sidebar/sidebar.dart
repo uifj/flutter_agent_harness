@@ -13,12 +13,19 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:shadcn_ui/shadcn_ui.dart'
+    show ShadButton, ShadDialog, ShadInput, showShadDialog;
 
+import '../../host/reveal.dart';
 import '../../l10n/locales.dart';
 import '../../model/app_settings.dart' as appcfg;
 import '../../model/conversation.dart';
+import '../../model/relative_time.dart';
+import '../../model/session_groups.dart';
 import '../../model/user_profile.dart';
+import '../../model/workbench_prefs.dart';
 import '../../state/hotkey_service.dart';
 import '../../state/session_index.dart';
 import '../../state/workspace_mode_controller.dart';
@@ -27,6 +34,10 @@ import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
+import '../primitives/confirm_dialog.dart';
+import '../primitives/feedback.dart';
+import '../primitives/icon_button.dart';
+import '../primitives/menu.dart';
 import '../primitives/segmented.dart';
 import '../primitives/tappable.dart';
 import '../settings/widgets/settings_quick_menu.dart';
@@ -65,6 +76,16 @@ class Sidebar extends StatefulWidget {
     required this.onOpenSettings,
     required this.onToggleDetails,
     required this.detailsOpen,
+    this.currentWorkspace,
+    this.knownWorkspaces = const [],
+    this.historyOrganize = HistoryOrganize.project,
+    this.collapsedWorkspaces = const {},
+    this.onToggleWorkspaceCollapsed,
+    this.onHistoryOrganizeChanged,
+    this.onNewSessionInWorkspace,
+    this.onRemoveWorkspace,
+    this.onOpenWorkspaceTree,
+    this.onAddWorkspace,
   });
 
   /// The resolved rail state, decided by the frame's concession solve.
@@ -74,6 +95,31 @@ class Sidebar extends StatefulWidget {
   final double width;
 
   final SessionIndex sessions;
+
+  /// The folder the app is working in right now, and every folder the history
+  /// or the settings know about. Both feed the grouped history (ADR-0039): the
+  /// first decides which group leads, the second decides which folders appear
+  /// at all when they hold no conversation yet.
+  final String? currentWorkspace;
+  final List<String> knownWorkspaces;
+
+  /// The history's arrangement and the folded folders. View state owned by the
+  /// prefs document, handed in rather than read from a provider (rule 6).
+  final HistoryOrganize historyOrganize;
+  final Set<String> collapsedWorkspaces;
+
+  /// The five actions the grouped history can ask for. All optional: a bare
+  /// `Sidebar` in a test has no workspace to switch to and no prefs to fold.
+  final ValueChanged<String>? onToggleWorkspaceCollapsed;
+  final ValueChanged<HistoryOrganize>? onHistoryOrganizeChanged;
+  final ValueChanged<String>? onNewSessionInWorkspace;
+  final ValueChanged<String>? onRemoveWorkspace;
+  final ValueChanged<String>? onOpenWorkspaceTree;
+
+  /// The section head's `+`: bring another folder into the list. Same picker as
+  /// the hero's, because a second path to granting access is a second answer to
+  /// "which folder may the agent read".
+  final VoidCallback? onAddWorkspace;
 
   /// The signed-in user, or null while the profile source is loading or when
   /// there is none — the footer avatar then shows an anonymous placeholder.
@@ -665,9 +711,12 @@ class _SidebarState extends State<Sidebar> {
   /// The sessions, as slivers to sit under the column's chrome in one scroll
   /// view. Called from inside a `ListenableBuilder` on the index, so the list
   /// stays lazy: the builder only runs for rows the viewport reaches.
+  ///
+  /// Grouped mode flattens the groups into one line list rather than emitting a
+  /// sliver per group: one lazy list, and the folded rows simply are not in it.
   List<Widget> _sessionSlivers(DswAlias color) {
     final sessions = widget.sessions.sessions;
-    if (sessions.isEmpty) {
+    if (sessions.isEmpty && widget.historyOrganize == HistoryOrganize.flat) {
       return [
         SliverToBoxAdapter(
           child: Padding(
@@ -682,16 +731,167 @@ class _SidebarState extends State<Sidebar> {
         ),
       ];
     }
+
+    final lines = <_HistoryLine>[
+      if (widget.historyOrganize == HistoryOrganize.flat)
+        for (final session in sessions) _HistoryLine.row(session),
+      if (widget.historyOrganize == HistoryOrganize.project)
+        ..._historyLines(sessions),
+    ];
+
     return [
-      SliverList.builder(
-        itemCount: sessions.length,
-        itemBuilder: (context, index) => _SessionRow(
-          session: sessions[index],
-          selected: sessions[index].id == widget.sessions.activeId,
-          onTap: () => widget.onOpenSession(sessions[index].id),
+      if (widget.historyOrganize == HistoryOrganize.project)
+        SliverToBoxAdapter(
+          child: _HistorySectionRow(
+            organize: widget.historyOrganize,
+            onOrganizeChanged: widget.onHistoryOrganizeChanged,
+            onAddWorkspace: widget.onAddWorkspace,
+          ),
         ),
+      SliverList.builder(
+        itemCount: lines.length,
+        itemBuilder: (context, index) {
+          final line = lines[index];
+          final group = line.group;
+          if (group != null) {
+            return _WorkspaceGroupRow(
+              group: group,
+              collapsed: widget.collapsedWorkspaces.contains(group.key),
+              isCurrent: _isCurrentFolder(group.workspaceRoot),
+              onToggle: () =>
+                  widget.onToggleWorkspaceCollapsed?.call(group.key),
+              onNewSession:
+                  widget.onNewSessionInWorkspace == null || group.isUnassigned
+                  ? null
+                  : () => widget.onNewSessionInWorkspace!(group.workspaceRoot!),
+              menu: _workspaceMenu(group),
+            );
+          }
+          final session = line.session!;
+          return DswContextMenu(
+            items: (_) => _sessionMenu(session),
+            child: _SessionRow(
+              session: session,
+              selected: session.id == widget.sessions.activeId,
+              indented: widget.historyOrganize == HistoryOrganize.project,
+              onTap: () => widget.onOpenSession(session.id),
+            ),
+          );
+        },
       ),
     ];
+  }
+
+  /// Groups, with a folded group contributing only its header.
+  List<_HistoryLine> _historyLines(List<SessionSummary> sessions) {
+    final groups = groupSessionsByWorkspace(
+      sessions: sessions,
+      currentWorkspace: widget.currentWorkspace,
+      knownWorkspaces: {
+        ...widget.knownWorkspaces,
+        ...widget.sessions.knownWorkspaces,
+      },
+    );
+    return [
+      for (final group in groups) ...[
+        _HistoryLine.header(group),
+        if (!widget.collapsedWorkspaces.contains(group.key))
+          for (final session in group.sessions) _HistoryLine.row(session),
+      ],
+    ];
+  }
+
+  bool _isCurrentFolder(String? root) =>
+      root != null &&
+      widget.currentWorkspace != null &&
+      workspaceKey(root) == workspaceKey(widget.currentWorkspace!);
+
+  List<DswMenuEntry> _workspaceMenu(WorkspaceGroup group) {
+    final root = group.workspaceRoot;
+    if (root == null) return const [];
+    return [
+      DswMenuEntry(
+        label: context.tr('showFileTree'),
+        icon: LucideIcons.folder_tree,
+        onTap: widget.onOpenWorkspaceTree == null
+            ? null
+            : () => widget.onOpenWorkspaceTree!(root),
+      ),
+      DswMenuEntry(
+        label: context.tr('revealInFinder'),
+        icon: LucideIcons.external_link,
+        onTap: () async {
+          if (await revealInFileManager(root)) return;
+          if (!mounted) return;
+          showFeedback(context, context.tr('revealFailed'), destructive: true);
+        },
+      ),
+      const DswMenuEntry.divider(),
+      DswMenuEntry(
+        label: context.tr('removeWorkspace'),
+        icon: LucideIcons.circle_minus,
+        onTap: widget.onRemoveWorkspace == null
+            ? null
+            : () => widget.onRemoveWorkspace!(root),
+      ),
+    ];
+  }
+
+  List<DswMenuEntry> _sessionMenu(SessionSummary session) => [
+    DswMenuEntry(
+      label: context.tr(
+        session.pinnedAt == null ? 'pinSession' : 'unpinSession',
+      ),
+      icon: LucideIcons.pin,
+      onTap: () =>
+          widget.sessions.setPinned(session.id, session.pinnedAt == null),
+    ),
+    DswMenuEntry(
+      label: context.tr('renameSession'),
+      icon: LucideIcons.pencil,
+      onTap: () => _rename(session),
+    ),
+    const DswMenuEntry.divider(),
+    DswMenuEntry(
+      label: context.tr('copySessionId'),
+      icon: LucideIcons.copy,
+      onTap: () => Clipboard.setData(ClipboardData(text: session.id)),
+    ),
+    if (session.workspaceRoot != null)
+      DswMenuEntry(
+        label: context.tr('copyWorkspacePath'),
+        icon: LucideIcons.copy,
+        onTap: () =>
+            Clipboard.setData(ClipboardData(text: session.workspaceRoot!)),
+      ),
+    DswMenuEntry(
+      label: context.tr('deleteSession'),
+      icon: LucideIcons.trash,
+      destructive: true,
+      onTap: () => _delete(session),
+    ),
+  ];
+
+  Future<void> _rename(SessionSummary session) async {
+    final next = await _promptForText(
+      context,
+      title: context.tr('renameSessionTitle'),
+      initial: session.title ?? '',
+    );
+    if (next == null || next.isEmpty) return;
+    widget.sessions.rename(session.id, next);
+  }
+
+  Future<void> _delete(SessionSummary session) async {
+    final confirmed = await showConfirmDialog(
+      context,
+      title: context.tr('deleteSessionTitle'),
+      description: context.tr('deleteSessionBody'),
+      confirmLabel: context.tr('deleteSession'),
+    );
+    if (!confirmed || !mounted) return;
+    widget.sessions.remove(session.id);
+    showFeedback(context, context.tr('sessionDeleted'));
   }
 
   Widget _footer(DswAlias color, {required bool wide}) => Align(
@@ -884,11 +1084,16 @@ class _SessionRow extends StatelessWidget {
     required this.session,
     required this.selected,
     required this.onTap,
+    this.indented = false,
   });
 
   final SessionSummary session;
   final bool selected;
   final VoidCallback onTap;
+
+  /// Under a group header the row steps in, so the header's folder and its
+  /// conversations read as one nest rather than as a flat list with a label.
+  final bool indented;
 
   @override
   Widget build(BuildContext context) {
@@ -917,7 +1122,10 @@ class _SessionRow extends StatelessWidget {
           borderRadius: BorderRadius.circular(DswShape.control),
           child: Container(
             height: DswShape.rowSession * step,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+            padding: EdgeInsets.only(
+              left: 10 + (indented ? DswShape.iconTiny + 6 : 0),
+              right: 10,
+            ),
             decoration: BoxDecoration(
               color: selected ? color.interactiveSelected : null,
               borderRadius: BorderRadius.circular(DswShape.control),
@@ -958,8 +1166,24 @@ class _SessionRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 6),
+                if (session.pinnedAt != null) ...[
+                  // The pin reads as a glyph, not as a colour: the row already
+                  // spends its one colour token on "which one is open".
+                  Icon(
+                    LucideIcons.pin,
+                    size: DswShape.iconCaption,
+                    color: color.labelTertiary,
+                  ),
+                  const SizedBox(width: 6),
+                ],
                 Text(
-                  _time(session.updatedAt),
+                  () {
+                    final when = formatRelativeTime(
+                      session.updatedAt,
+                      DateTime.now(),
+                    );
+                    return context.tr(when.key, when.params);
+                  }(),
                   style: DswType.xxs12.copyWith(
                     height: 20 / 12,
                     color: color.labelTertiary,
@@ -973,18 +1197,265 @@ class _SessionRow extends StatelessWidget {
     );
   }
 
-  /// Today shows a clock, anything older a date — the row has 12px of type to
-  /// spend and the day is the part that stops being useful first.
-  static String _time(DateTime at) {
-    final now = DateTime.now();
-    final local = at.toLocal();
-    String two(int n) => n.toString().padLeft(2, '0');
-    if (local.year == now.year &&
-        local.month == now.month &&
-        local.day == now.day) {
-      return '${two(local.hour)}:${two(local.minute)}';
-    }
-    return '${two(local.month)}/${two(local.day)}';
+  /// One line of the history: a folder's header, or a conversation under it.
+}
+
+/// One line of the history: a folder's header, or a conversation under it.
+class _HistoryLine {
+  const _HistoryLine.header(WorkspaceGroup this.group) : session = null;
+  const _HistoryLine.row(SessionSummary this.session) : group = null;
+
+  final WorkspaceGroup? group;
+  final SessionSummary? session;
+}
+
+/// The folder row. Tapping its label folds the group, `+` starts a conversation
+/// in that folder, `⋮` holds what the list and the operating system can do.
+///
+/// The three targets are siblings in one row at one height. Nesting an icon
+/// button inside the fold target is how the sidebar footer ended up with a gear
+/// that lit the whole row and answered to two names (`005b76c`).
+class _WorkspaceGroupRow extends StatelessWidget {
+  const _WorkspaceGroupRow({
+    required this.group,
+    required this.collapsed,
+    required this.isCurrent,
+    required this.onToggle,
+    required this.onNewSession,
+    required this.menu,
+  });
+
+  final WorkspaceGroup group;
+  final bool collapsed;
+  final bool isCurrent;
+  final VoidCallback onToggle;
+  final VoidCallback? onNewSession;
+  final List<DswMenuEntry> menu;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.dsw;
+    final step = MediaQuery.textScalerOf(context).scale(1);
+    final label = group.isUnassigned
+        ? context.tr('unassignedWorkspace')
+        : group.displayName;
+    return Semantics(
+      // The fold state has to be sayable, not only drawn: a chevron that flips
+      // is nothing to a screen reader.
+      expanded: !collapsed,
+      container: true,
+      child: Row(
+        children: [
+          Expanded(
+            child: DswHoverTap(
+              onTap: onToggle,
+              semanticLabel: label,
+              builder: (context, hovered, focused) => Container(
+                height: DswShape.rowSession * step,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  color: hovered ? color.interactiveBgHover : null,
+                  borderRadius: BorderRadius.circular(DswShape.control),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      collapsed
+                          ? LucideIcons.chevron_right
+                          : LucideIcons.chevron_down,
+                      size: DswShape.iconTiny,
+                      color: color.labelTertiary,
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(
+                      group.isUnassigned
+                          ? LucideIcons.inbox
+                          : collapsed
+                          ? LucideIcons.folder
+                          : LucideIcons.folder_open,
+                      size: DswShape.iconTiny,
+                      color: color.labelSecondary,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: DswType.xs13.copyWith(
+                          height: 18 / 13,
+                          fontWeight: FontWeight.w500,
+                          color: color.labelSecondary,
+                        ),
+                      ),
+                    ),
+                    if (isCurrent) ...[
+                      const SizedBox(width: 6),
+                      // "This is the folder you are in" as a dot, the same
+                      // token the session row uses for "this one is open".
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: color.brandPrimary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const SizedBox.square(dimension: 6),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (onNewSession != null)
+            DswIconButton(
+              icon: LucideIcons.plus,
+              tooltip: context.tr('newSessionHere'),
+              onTap: onNewSession,
+              size: 24 * step,
+              iconSize: DswShape.iconTiny,
+            ),
+          if (menu.isNotEmpty)
+            DswMenu(
+              label: context.tr('workspaceActions'),
+              items: (_) => menu,
+              trigger: (context) => Icon(
+                LucideIcons.ellipsis,
+                size: DswShape.iconTiny,
+                color: color.labelSecondary,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One line of text asked for the right way: shad's dialog, shad's field, and
+/// the `float` radius a dialog owns (ADR-0029). Returns null when dismissed.
+Future<String?> _promptForText(
+  BuildContext context, {
+  required String title,
+  required String initial,
+}) async {
+  final controller = TextEditingController(text: initial);
+  final step = MediaQuery.textScalerOf(context).scale(1);
+  final result = await showShadDialog<String>(
+    context: context,
+    builder: (context) => ShadDialog(
+      radius: BorderRadius.circular(DswShape.float),
+      title: Text(title, style: DswType.sStrong14),
+      actions: [
+        ShadButton.outline(
+          height: 24 * step,
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(context.tr('planCancel')),
+        ),
+        ShadButton(
+          height: 24 * step,
+          onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+          child: Text(context.tr('renameSession')),
+        ),
+      ],
+      child: ShadInput(
+        controller: controller,
+        style: DswType.s14,
+        autofocus: true,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
+      ),
+    ),
+  );
+  controller.dispose();
+  return result;
+}
+
+/// The section line above the groups: what the list is called, how it is
+/// arranged, and a way to bring another folder into it.
+///
+/// The second screenshot asks for exactly this row — a 「项目」 head with a `⋮`
+/// and a `+` at its right. The organize choice lives in the menu rather than in
+/// the settings page because it is a decision about this list, made while
+/// looking at it.
+class _HistorySectionRow extends StatelessWidget {
+  const _HistorySectionRow({
+    required this.organize,
+    required this.onOrganizeChanged,
+    required this.onAddWorkspace,
+  });
+
+  final HistoryOrganize organize;
+  final ValueChanged<HistoryOrganize>? onOrganizeChanged;
+  final VoidCallback? onAddWorkspace;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.dsw;
+    final step = MediaQuery.textScalerOf(context).scale(1);
+    return SizedBox(
+      height: DswShape.rowSession * step,
+      child: Row(
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                context.tr('workspaces'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: DswType.xxs12.copyWith(
+                  height: 16 / 12,
+                  fontWeight: FontWeight.w500,
+                  color: color.labelTertiary,
+                ),
+              ),
+            ),
+          ),
+          if (onOrganizeChanged != null)
+            DswMenu(
+              label: context.tr('historyView'),
+              items: (context) => [
+                DswMenuEntry(
+                  label: context.tr('groupByWorkspace'),
+                  icon: LucideIcons.folder_tree,
+                  trailing: organize == HistoryOrganize.project
+                      ? Icon(
+                          LucideIcons.check,
+                          size: DswShape.iconTiny,
+                          color: color.labelPrimary,
+                        )
+                      : null,
+                  onTap: () => onOrganizeChanged!(HistoryOrganize.project),
+                ),
+                DswMenuEntry(
+                  label: context.tr('flatList'),
+                  icon: LucideIcons.list,
+                  trailing: organize == HistoryOrganize.flat
+                      ? Icon(
+                          LucideIcons.check,
+                          size: DswShape.iconTiny,
+                          color: color.labelPrimary,
+                        )
+                      : null,
+                  onTap: () => onOrganizeChanged!(HistoryOrganize.flat),
+                ),
+              ],
+              trigger: (context) => Icon(
+                LucideIcons.ellipsis,
+                size: DswShape.iconTiny,
+                color: color.labelSecondary,
+              ),
+            ),
+          if (onAddWorkspace != null)
+            DswIconButton(
+              icon: LucideIcons.plus,
+              tooltip: context.tr('addWorkspace'),
+              onTap: onAddWorkspace,
+              size: 24 * step,
+              iconSize: DswShape.iconTiny,
+            ),
+        ],
+      ),
+    );
   }
 }
 

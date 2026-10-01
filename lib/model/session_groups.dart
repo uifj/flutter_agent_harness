@@ -53,17 +53,27 @@ class WorkspaceGroup {
   DateTime get newest => sessions.first.updatedAt;
 }
 
-/// Groups [sessions] by the folder they happened in; [currentWorkspace] leads
-/// the list when it is among them. The input list is never mutated.
+/// Groups [sessions] by the folder they happened in.
+///
+/// [currentWorkspace] leads the list when it is among them. [knownWorkspaces]
+/// are the folders the user has opened but has no conversation in yet: they get
+/// an empty group, because the reference implementation lists projects from its
+/// tab registry and lets sessions attach — a folder that only appears once its
+/// first run is saved reads as a missing project, and its "remove" action would
+/// have nothing to sit on. The input list is never mutated.
 List<WorkspaceGroup> groupSessionsByWorkspace({
   required List<SessionSummary> sessions,
   String? currentWorkspace,
+  Iterable<String> knownWorkspaces = const [],
 }) {
   final byKey = <String, List<SessionSummary>>{};
   for (final session in sessions) {
     final root = session.workspaceRoot;
     final key = root == null ? unassignedKey : workspaceKey(root);
     (byKey[key] ??= <SessionSummary>[]).add(session);
+  }
+  for (final folder in knownWorkspaces) {
+    byKey.putIfAbsent(workspaceKey(folder), () => <SessionSummary>[]);
   }
 
   final groups = <WorkspaceGroup>[];
@@ -72,7 +82,9 @@ List<WorkspaceGroup> groupSessionsByWorkspace({
     groups.add(
       WorkspaceGroup(
         key: key,
-        workspaceRoot: members.first.workspaceRoot,
+        workspaceRoot: members.isNotEmpty
+            ? members.first.workspaceRoot
+            : (key == unassignedKey ? null : key),
         sessions: members,
       ),
     );
@@ -84,6 +96,12 @@ List<WorkspaceGroup> groupSessionsByWorkspace({
     final aIsCurrent = a.key == workspaceKey(currentWorkspace ?? '');
     final bIsCurrent = b.key == workspaceKey(currentWorkspace ?? '');
     if (aIsCurrent != bIsCurrent) return aIsCurrent ? -1 : 1;
+    // An empty folder cannot outrank a folder with history in it: with no
+    // timestamp to compare, the newest conversation wins.
+    if (a.sessions.isEmpty != b.sessions.isEmpty) {
+      return a.sessions.isEmpty ? 1 : -1;
+    }
+    if (a.sessions.isEmpty) return a.key.compareTo(b.key);
     return b.newest.compareTo(a.newest);
   });
   return groups;

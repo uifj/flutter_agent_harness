@@ -349,6 +349,47 @@ class _DshAppState extends ConsumerState<DshApp> {
                               .read(layoutProvider)
                               .toggleDetails,
                           detailsOpen: ref.watch(layoutProvider).details != 0,
+                          // The grouped history (ADR-0039): which folder is
+                          // current, which ones are known, and the view state
+                          // that belongs to the prefs document rather than to
+                          // the settings one (a fold must never restart the
+                          // runtime).
+                          currentWorkspace: doc.workspaceRoot,
+                          knownWorkspaces: doc.recentWorkspaces,
+                          historyOrganize: prefs.historyOrganize,
+                          collapsedWorkspaces: prefs.collapsedWorkspaces,
+                          onToggleWorkspaceCollapsed: (key) => ref
+                              .read(prefsStoreProvider)
+                              .save(
+                                prefs.withWorkspaceCollapsed(
+                                  key,
+                                  !prefs.workspaceCollapsed(key),
+                                ),
+                              ),
+                          onHistoryOrganizeChanged: (organize) => ref
+                              .read(prefsStoreProvider)
+                              .save(prefs.withHistoryOrganize(organize)),
+                          onNewSessionInWorkspace: (path) async {
+                            await scope.adoptRecent(path);
+                            await scope.newSession();
+                          },
+                          onOpenWorkspaceTree: (path) async {
+                            // The tree has to point at a folder the app may
+                            // read, so switching is the first half of the
+                            // gesture — and `setWorkspace` stays the only path
+                            // that changes folders.
+                            await scope.adoptRecent(path);
+                            scope.workbench.openFolder(path);
+                          },
+                          onRemoveWorkspace: (path) => scope.save(
+                            doc.copyWith(
+                              recentWorkspaces: [
+                                for (final recent in doc.recentWorkspaces)
+                                  if (recent != path) recent,
+                              ],
+                            ),
+                          ),
+                          onAddWorkspace: scope.pickFromHero,
                         ),
                       ),
                       center: _centerPane(doc),
