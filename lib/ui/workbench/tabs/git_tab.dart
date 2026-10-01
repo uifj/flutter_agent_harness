@@ -16,10 +16,10 @@
 //     the port's `visible` — since a body kept alive in an [IndexedStack]
 //     (see pane.dart) is off-stage, not gone.
 //
-// The XY-letter helpers (`badgeOf` and friends) live here rather than in
-// `git.dart` because they are this view's vocabulary, exactly as they live in
-// GitView.tsx in the source — and being pure, they are testable without a
-// repository or a widget binding.
+// The XY-letter helpers (`badgeOf` and friends) used to live here because this
+// was the only reader and the source keeps them in GitView.tsx. The file tree
+// became the second reader, so they moved to `host/git.dart` next to the type
+// they read (ADR-0043) — still pure, still testable without a repository.
 
 import 'dart:async';
 
@@ -43,33 +43,6 @@ import '../../primitives/confirm_dialog.dart';
 import '../../primitives/icon_button.dart';
 
 // ---- The view vocabulary, ported from GitView.tsx --------------------------
-
-/// The XY status letters a row badge shows (X = index, Y = worktree).
-String badgeOf(GitStatusEntry entry) {
-  final index = entry.xy[0];
-  final worktree = entry.xy[1];
-  if (index != ' ' && index != '?') return index;
-  if (worktree != ' ' && worktree != '?') return worktree;
-  return '?';
-}
-
-/// Whether the entry carries STAGED (index) changes — the X letter is set.
-bool isStagedEntry(GitStatusEntry entry) {
-  final index = entry.xy[0];
-  return index != ' ' && index != '?';
-}
-
-/// Whether the entry carries UNSTAGED (worktree) changes — the Y letter is set
-/// (untracked `??` counts as unstaged: it is a worktree-only change). A file
-/// with both letters set ('MM') lands in BOTH sections.
-bool isUnstagedEntry(GitStatusEntry entry) {
-  if (entry.xy == '??') return true;
-  final worktree = entry.xy[1];
-  return worktree != ' ' && worktree != '?';
-}
-
-/// Whether the entry is untracked (`??`): git diff never includes it.
-bool isUntracked(GitStatusEntry entry) => badgeOf(entry) == '?';
 
 /// The ref names of one log row's decorations (`HEAD -> main` → `main`), deduped.
 List<String> refNames(String refs) {

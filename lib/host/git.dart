@@ -38,6 +38,40 @@ class GitStatusEntry {
   String toString() => '$xy $path';
 }
 
+// ---- The XY letters, as vocabulary ---------------------------------------
+//
+// These moved out of the source-control tab when the file tree became a second
+// reader (ADR-0043). A row's letter is a property of `xy`, not of whichever
+// panel happens to draw it — and two panels spelling "modified" differently is
+// the same defect ADR-0035 closed for tool results.
+
+/// The XY status letters a row badge shows (X = index, Y = worktree).
+String badgeOf(GitStatusEntry entry) {
+  final index = entry.xy[0];
+  final worktree = entry.xy[1];
+  if (index != ' ' && index != '?') return index;
+  if (worktree != ' ' && worktree != '?') return worktree;
+  return '?';
+}
+
+/// Whether the entry carries STAGED (index) changes — the X letter is set.
+bool isStagedEntry(GitStatusEntry entry) {
+  final index = entry.xy[0];
+  return index != ' ' && index != '?';
+}
+
+/// Whether the entry carries UNSTAGED (worktree) changes — the Y letter is set
+/// (untracked `??` counts as unstaged: it is a worktree-only change). A file
+/// with both letters set ('MM') lands in BOTH sections.
+bool isUnstagedEntry(GitStatusEntry entry) {
+  if (entry.xy == '??') return true;
+  final worktree = entry.xy[1];
+  return worktree != ' ' && worktree != '?';
+}
+
+/// Whether the entry is untracked (`??`): git diff never includes it.
+bool isUntracked(GitStatusEntry entry) => badgeOf(entry) == '?';
+
 /// The source-control panel's snapshot.
 class GitStatusResult {
   const GitStatusResult({
