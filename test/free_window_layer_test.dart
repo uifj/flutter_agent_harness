@@ -21,6 +21,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'amplified_text_probe.dart';
 import 'fake_terminal_process.dart';
+import 'fake_git.dart';
 import 'fake_turn_source.dart';
 
 void main() {
@@ -67,6 +68,7 @@ void main() {
               workbench: workbench,
               conversation: conversation,
               terminals: terminals.manager(),
+              status: FakeGit.inert(),
             ),
           ),
         ),

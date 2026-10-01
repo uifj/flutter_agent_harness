@@ -24,6 +24,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:xterm/xterm.dart';
 
 import 'fake_terminal_process.dart';
+import 'fake_git.dart';
 import 'fake_turn_source.dart';
 
 void main() {
@@ -94,6 +95,7 @@ void main() {
             workbench: withWorkbench ?? workbench,
             conversation: conversation,
             terminals: manager,
+            status: FakeGit.inert(),
             onClose: () {},
           ),
         ),

@@ -140,12 +140,9 @@ class Workbench extends StatelessWidget {
     this.sideChat,
     TerminalManager? terminals,
     GitRunner? git,
-    GitStatusStore? status,
+    required this.status,
   }) : terminals = terminals ?? TerminalManager(),
-       git = git ?? runGit,
-       // A test that passes a fake runner gets a cache over that same fake; the
-       // app passes one shared with the bottom panel and the floats (ADR-0043).
-       status = status ?? GitStatusStore(runner: git ?? runGit) {
+       git = git ?? runGit {
     _registerBuiltinTabs();
   }
 

@@ -32,6 +32,7 @@ import 'package:path/path.dart' as p;
 import '../../../theme/dsw_shad_bridge.dart';
 import '../../../../theme/dsw_shape.dart';
 import '../../../l10n/locales.dart';
+import '../../../host/git.dart';
 import '../../../model/fs_revision.dart';
 import '../../../model/workspace.dart';
 import '../../../theme/dsw_alias.dart';
@@ -39,11 +40,13 @@ import '../../../theme/dsw_motion.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
 import '../../../model/sidebar_tab.dart';
+import '../../../state/git_status_store.dart';
 import '../../../state/workbench_controller.dart';
 import '../../primitives/icon_button.dart';
 import '../../primitives/menu.dart';
 import '../../primitives/reveal.dart';
 import '../../primitives/tappable.dart';
+import 'git_tab.dart' show GitHost;
 
 /// Row height. 22px is the source's `--row-h`; it is also what fits a 13px label
 /// with the 4px hit-target padding a click needs.
@@ -91,6 +94,15 @@ class _FileTreeTabState extends State<FileTreeTab> {
   /// ignored (a search that respected it could not find anything).
   String _filter = '';
 
+  /// The header's "changed files only" switch. Off by default: a tree that
+  /// hides the unmodified majority unless you ask is a tree you cannot
+  /// navigate (ADR-0043 D4).
+  bool _onlyChanged = false;
+
+  /// The shared git reading, resolved from [GitHost] on the first dependency
+  /// pass. The tree never polls and never owns a status of its own.
+  GitStatusStore? _store;
+
   @override
   void initState() {
     super.initState();
@@ -105,24 +117,99 @@ class _FileTreeTabState extends State<FileTreeTab> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_store != null) return;
+    _store = GitHost.statusOf(context)
+      // The panel can be the one that asks; when it does, this tree repaints
+      // from the same reading instead of showing its own last-known copy.
+      ..addListener(_onGitStatus);
+    _askGit();
+  }
+
+  void _onGitStatus() {
+    if (mounted) setState(() {});
+  }
+
+  /// The root the cache was last asked about, so moving to another folder asks
+  /// once rather than on every notification.
+  String? _askedRoot;
+
+  /// One question to the cache. A reading that is not there yet is simply no
+  /// badge on screen — the tree does not nag git, and says nothing when git
+  /// says nothing (that failure is the panel's to report).
+  void _askGit() {
+    final root = _root;
+    if (root.isEmpty || root == _askedRoot) return;
+    _askedRoot = root;
+    _store?.read(root);
+  }
+
+  @override
   void dispose() {
     widget.workbench.removeListener(_onWorkbench);
     fsRevision.removeListener(_onFsRevision);
+    _store?.removeListener(_onGitStatus);
     super.dispose();
   }
 
   /// The agent wrote something: drop every listing and re-read what is open —
   /// the same walk as the refresh control, arrived at from the other side.
-  void _onFsRevision() => _refresh();
+  void _onFsRevision() {
+    _refresh();
+    // The cached status is now the old world; asking again is what puts a
+    // letter on the file that was just created.
+    final root = _root;
+    if (root.isEmpty) return;
+    _store?.invalidate(root);
+    _store?.read(root);
+    _askedRoot = root;
+  }
 
   /// The folder this tab is rooted at, falling back to the workspace.
   String get _root => widget.tab.path ?? widget.workbench.workspaceRoot ?? '';
+
+  /// The shared reading, or null when git has nothing to say about this root.
+  GitStatusResult? get _git {
+    final store = _store;
+    final root = _root;
+    if (store == null || root.isEmpty) return null;
+    final reading = store.reading(root);
+    return reading == null || !reading.isRepo ? null : reading;
+  }
+
+  /// Absolute path of every changed file. Keyed off the repository's top level,
+  /// which is what `status --porcelain` counts from — the tree can be rooted
+  /// anywhere below it.
+  Map<String, GitStatusEntry> get _changed {
+    final reading = _git;
+    final top = reading?.root;
+    if (top == null) return const {};
+    return {
+      for (final entry in reading!.entries) p.join(top, entry.path): entry,
+    };
+  }
+
+  /// Directories with a change below them — the tree's answer to the source's
+  /// per-directory dot (`WorkspaceFileTreeRowView.tsx:307`).
+  Set<String> get _changedDirs {
+    final result = <String>{};
+    for (final path in _changed.keys) {
+      var directory = p.dirname(path);
+      while (directory.isNotEmpty && directory != p.dirname(directory)) {
+        result.add(directory);
+        directory = p.dirname(directory);
+      }
+    }
+    return result;
+  }
 
   /// A newly expanded directory has to be read, and the expansion set is in the
   /// controller — so the read is triggered from the notification rather than from
   /// the tap handler, which keeps it working when something else expands a path
   /// (the git panel's "expand in file tree" arrives through exactly this door).
   void _onWorkbench() {
+    _askGit();
     for (final path in widget.workbench.state.expanded) {
       if (!_children.containsKey(path) &&
           !_failed.containsKey(path) &&
@@ -196,7 +283,8 @@ class _FileTreeTabState extends State<FileTreeTab> {
   /// through a single [ListView.builder] rather than nesting a scroll view per
   /// level.
   List<_Row> _flatten() {
-    if (_filter.isEmpty) {
+    final query = _filter.toLowerCase();
+    if (query.isEmpty && !_onlyChanged) {
       final expanded = widget.workbench.state.expanded;
       final rows = <_Row>[];
       void walk(String directory, int depth) {
@@ -214,29 +302,44 @@ class _FileTreeTabState extends State<FileTreeTab> {
       return rows;
     }
 
-    // Match-mode: a file shows when its basename matches, a directory when it
-    // or any descendant does — ancestors of a match are the only way a deep
-    // match is reachable, so they ride along at their own depth. The expansion
-    // set is ignored, which is why directories in match-mode draw expanded.
-    return _matchRows(_root, 0, _filter.toLowerCase());
+    // Either filter is the same shape: a file shows when it qualifies, a
+    // directory when it or any descendant does — ancestors of a match are the
+    // only way a deep match is reachable, so they ride along at their own
+    // depth. The expansion set is ignored, which is why directories in a
+    // filtered tree draw expanded.
+    if (query.isNotEmpty) {
+      return _matchingRows(
+        _root,
+        0,
+        (row) => p.basename(row.path).toLowerCase().contains(query),
+      );
+    }
+    final changed = _changed;
+    // A toggle that is on while nothing is changed shows an empty tree, not the
+    // whole one: the switch would be lying about what it filtered.
+    if (changed.isEmpty) return const [];
+    return _matchingRows(_root, 0, (row) => changed.containsKey(row.path));
   }
 
-  /// The matching rows under [directory] at [depth]: files whose basename
-  /// contains [query], directories that match or contain a match.
-  List<_Row> _matchRows(String directory, int depth, String query) {
+  /// The rows under [directory] at [depth] that [qualifies], plus the ancestors
+  /// that make a deep one reachable.
+  List<_Row> _matchingRows(
+    String directory,
+    int depth,
+    bool Function(_Row row) qualifies,
+  ) {
     final rows = <_Row>[];
     for (final row in _children[directory] ?? const <_Row>[]) {
-      final name = p.basename(row.path).toLowerCase();
       if (row.isDirectory) {
-        // Reads the folder even when it is collapsed: a match below a
-        // collapsed directory is the whole point of the search box.
+        // Reads the folder even when it is collapsed: a match below a collapsed
+        // directory is the whole point of filtering.
         _read(row.path);
-        final descendants = _matchRows(row.path, depth + 1, query);
-        if (name.contains(query) || descendants.isNotEmpty) {
+        final descendants = _matchingRows(row.path, depth + 1, qualifies);
+        if (qualifies(row) || descendants.isNotEmpty) {
           rows.add(_Row(path: row.path, isDirectory: true, depth: depth));
           rows.addAll(descendants);
         }
-      } else if (name.contains(query)) {
+      } else if (qualifies(row)) {
         rows.add(_Row(path: row.path, isDirectory: false, depth: depth));
       }
     }
@@ -263,6 +366,10 @@ class _FileTreeTabState extends State<FileTreeTab> {
     }
     final rows = _flatten();
     final current = _currentFile;
+    // Built once per frame for the whole list: both are derived from the one
+    // shared reading, and per row they would be O(rows × entries).
+    final changed = _changed;
+    final changedDirs = _changedDirs;
     return Column(
       children: [
         _header(color),
@@ -270,9 +377,11 @@ class _FileTreeTabState extends State<FileTreeTab> {
         Expanded(
           child: rows.isEmpty
               ? _Empty(
-                  message: _filter.isEmpty
-                      ? context.tr('folderEmpty')
-                      : context.tr('noMatches', {'query': _filter}),
+                  message: switch ((_filter.isNotEmpty, _onlyChanged)) {
+                    (true, _) => context.tr('noMatches', {'query': _filter}),
+                    (_, true) => context.tr('nothingChanged'),
+                    _ => context.tr('folderEmpty'),
+                  },
                 )
               : ListView.builder(
                   primary: false,
@@ -284,7 +393,8 @@ class _FileTreeTabState extends State<FileTreeTab> {
                   itemCount: rows.length,
                   itemBuilder: (context, index) {
                     final row = rows[index];
-                    final filtering = _filter.isNotEmpty;
+                    final filtering = _filter.isNotEmpty || _onlyChanged;
+                    final entry = changed[row.path];
                     return DswContextMenu(
                       items: (context) => _rowMenuItems(context, row),
                       child: _TreeRow(
@@ -294,6 +404,10 @@ class _FileTreeTabState extends State<FileTreeTab> {
                             widget.workbench.state.expanded.contains(row.path),
                         selected: row.path == current,
                         error: _failed[row.path],
+                        badge: entry == null ? null : badgeOf(entry),
+                        hasChanges: row.isDirectory
+                            ? changedDirs.contains(row.path)
+                            : entry != null,
                         onTap: () => row.isDirectory
                             ? widget.workbench.toggleExpanded(row.path)
                             : widget.workbench.openFile(row.path),
@@ -422,6 +536,17 @@ class _FileTreeTabState extends State<FileTreeTab> {
             overflow: TextOverflow.ellipsis,
           ),
         ),
+        // Offered only when git has something to filter to — the source gates
+        // the same control on `gitStatusAvailable` (`WorkspaceFileTree.tsx:693`).
+        if (_changed.isNotEmpty)
+          DswIconButton(
+            icon: LucideIcons.list_filter,
+            tooltip: context.tr('showOnlyChanged'),
+            selected: _onlyChanged,
+            onTap: () => setState(() => _onlyChanged = !_onlyChanged),
+            size: 20,
+            iconSize: DswShape.iconTiny,
+          ),
         DswIconButton(
           icon: LucideIcons.refresh_cw,
           tooltip: context.tr('refresh'),
@@ -441,6 +566,8 @@ class _TreeRow extends StatelessWidget {
     required this.selected,
     required this.error,
     required this.onTap,
+    this.badge,
+    this.hasChanges = false,
   });
 
   final _Row row;
@@ -450,6 +577,14 @@ class _TreeRow extends StatelessWidget {
   /// Why this directory could not be read, shown as a tooltip on the row rather
   /// than as an alert: the row is where the user can act on it.
   final String? error;
+
+  /// The XY letter for a changed file, from the shared reading (ADR-0043). Null
+  /// means git has nothing to say about this path — including "not a repository".
+  final String? badge;
+
+  /// A directory with a change somewhere below it. The source marks the same
+  /// fact with a dot (`WorkspaceFileTreeRowView.tsx:307`).
+  final bool hasChanges;
 
   final VoidCallback onTap;
 
@@ -496,6 +631,25 @@ class _TreeRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 6),
+        // A margin note, not the panel's boxed badge: in the git panel the
+        // change is the row's subject, here the row's subject is the file. Same
+        // letter from the same function either way.
+        if (badge case final mark?) ...[
+          Text(
+            mark,
+            style: DswType.xxxs11.copyWith(color: color.labelTertiary),
+          ),
+          const SizedBox(width: 6),
+        ] else if (hasChanges) ...[
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: color.brandPrimary,
+              shape: BoxShape.circle,
+            ),
+            child: const SizedBox.square(dimension: 6),
+          ),
+          const SizedBox(width: 6),
+        ],
       ],
     );
 

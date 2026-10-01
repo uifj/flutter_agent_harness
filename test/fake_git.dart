@@ -5,6 +5,10 @@
 // command is a bug worth failing on — hence [unknownResponse]'s strict default).
 
 import 'package:agent_harness/host/git.dart';
+import 'package:agent_harness/state/git_status_store.dart';
+
+/// The command key `git status` answers under.
+const fakeStatusKey = 'status --porcelain=v1 -z --untracked-files=all';
 
 /// The command key `git log` answers under, for page [skip] at batch [count].
 String fakeLogKey({int count = 20, int skip = 0}) =>
@@ -20,6 +24,14 @@ class FakeGit {
   final calls = <(String, List<String>)>[];
   final responses = <String, String>{};
 
+  /// A cache that answers "not a repository" without spawning anything.
+  ///
+  /// Anything pumped through a [Workbench] needs one: the real runner arms a 30s
+  /// process-timeout timer inside the test's fake-async zone, and a pending timer
+  /// fails the test for a reason that has nothing to do with what it was checking.
+  static GitStatusStore inert() =>
+      GitStatusStore(runner: (cwd, args) async => '');
+
   /// Command keys that fail, with stderr `boom: <key>`.
   final failures = <String>{};
 
@@ -28,7 +40,7 @@ class FakeGit {
   void stubRepo({String root = '/fake/repo'}) {
     responses['rev-parse --show-toplevel'] = '$root\n';
     responses['rev-parse --abbrev-ref HEAD'] = 'main\n';
-    responses['status --porcelain=v1 -z --untracked-files=all'] =
+    responses[fakeStatusKey] =
         'M  staged.txt\x00 M unstaged.txt\x00?? new.txt\x00';
     responses['for-each-ref --format=%(refname:short) refs/heads'] =
         'main\ndev\n';

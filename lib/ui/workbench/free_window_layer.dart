@@ -63,10 +63,9 @@ class FreeWindowLayer extends StatelessWidget {
     this.sideChat,
     TerminalManager? terminals,
     GitRunner? git,
-    GitStatusStore? status,
+    required this.status,
   }) : terminals = terminals ?? TerminalManager(),
-       git = git ?? runGit,
-       status = status ?? GitStatusStore(runner: git ?? runGit);
+       git = git ?? runGit;
 
   final WorkbenchController workbench;
 

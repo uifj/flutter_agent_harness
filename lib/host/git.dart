@@ -79,7 +79,14 @@ class GitStatusResult {
     this.branch,
     this.entries = const [],
     this.truncated = false,
+    this.root,
   });
+
+  /// The repository's top level, which `status --porcelain` paths are relative
+  /// to. Null when there is no reading to be relative to. A reader rooted
+  /// anywhere below it needs this to turn an entry path into an absolute one
+  /// (the file tree is that reader — ADR-0043).
+  final String? root;
 
   /// False when the workspace turned out not to be a work tree at all.
   final bool isRepo;
@@ -319,6 +326,7 @@ class GitRepo {
     }
     return GitStatusResult(
       isRepo: true,
+      root: root,
       branch: branch,
       entries: truncated ? parsed.sublist(0, gitStatusLimit) : parsed,
       truncated: truncated,

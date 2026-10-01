@@ -20,6 +20,7 @@ import 'package:agent_harness/host/terminal_manager.dart';
 import 'package:agent_harness/model/workbench_prefs.dart';
 import 'package:agent_harness/model/fs_revision.dart';
 import 'package:agent_harness/model/sidebar_tab.dart';
+import 'package:agent_harness/state/git_status_store.dart';
 import 'package:agent_harness/state/workbench_controller.dart';
 import 'package:agent_harness/state/workbench_store.dart';
 import 'package:agent_harness/ui/primitives/menu.dart' show DswMenuRow;
@@ -35,6 +36,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:xterm/xterm.dart';
+
+import 'fake_git.dart';
 
 import 'amplified_text_probe.dart';
 import 'fake_terminal_process.dart';
@@ -84,6 +87,7 @@ void main() {
     WorkbenchController? controller,
     WorkbenchPrefs prefs = const WorkbenchPrefs(),
     double? scale,
+    GitStatusStore? status,
   ]) => tester.pumpWidget(
     MaterialApp(
       // Above the Navigator, like the app's own composition: this walk opens
@@ -101,6 +105,7 @@ void main() {
               workbench: controller ?? workbench,
               conversation: conversation,
               terminals: pool,
+              status: status ?? FakeGit.inert(),
               onClose: () => closed++,
             ),
           ),
@@ -504,6 +509,64 @@ void main() {
       expect(find.text('notes.md'), findsOneWidget);
     });
 
+    testWidgets(
+      'a dirty file wears its letter and the header can show only those',
+      (tester) async {
+        final root = workspace();
+        File('${root.path}/notes.md').writeAsStringSync('quiet');
+        Directory('${root.path}/src').createSync();
+        File('${root.path}/src/main.dart').writeAsStringSync('void main() {}');
+
+        final git = FakeGit()..stubRepo(root: root.path);
+        git.responses[fakeStatusKey] = ' M src/main.dart\x00';
+        final store = GitStatusStore(runner: git.runner);
+        // The cache answers for the tree; the tree itself never runs git.
+        await store.read(root.path);
+
+        workbench.workspaceRoot = root.path;
+        workbench.openFolder(root.path);
+        await pump(tester, workbench, const WorkbenchPrefs(), null, store);
+        await pumpUntil(tester, find.text('notes.md'));
+        await tester.tap(find.text('src'));
+        await pumpUntil(tester, find.text('main.dart'));
+
+        expect(
+          find.text('M'),
+          findsOneWidget,
+          reason: 'the same badgeOf the git panel prints',
+        );
+        expect(find.byIcon(LucideIcons.list_filter), findsOneWidget);
+
+        await tester.tap(find.byIcon(LucideIcons.list_filter));
+        await tester.pumpAndSettle();
+
+        expect(find.text('main.dart'), findsOneWidget);
+        expect(
+          find.text('notes.md'),
+          findsNothing,
+          reason: 'the changed path, and the ancestors that reach it',
+        );
+        expect(find.text('src'), findsOneWidget);
+      },
+    );
+
+    testWidgets('no repository means no letters and no filter switch', (
+      tester,
+    ) async {
+      final root = workspace();
+      File('${root.path}/notes.md').writeAsStringSync('quiet');
+
+      workbench.workspaceRoot = root.path;
+      workbench.openFolder(root.path);
+      await pump(tester);
+      await pumpUntil(tester, find.text('notes.md'));
+
+      // The default cache runs the real binary against a plain directory, which
+      // answers "not a repository" — and the tree must then look exactly as it
+      // did before this feature existed.
+      expect(find.byIcon(LucideIcons.list_filter), findsNothing);
+    });
+
     testWidgets('says so when there is no workspace to list', (tester) async {
       workbench.openFolder('');
       await pump(tester);
@@ -531,6 +594,7 @@ void main() {
                   workbench: workbench,
                   conversation: conversation,
                   terminals: pool,
+                  status: FakeGit.inert(),
                   onClose: () {},
                 ),
               ),
@@ -541,6 +605,7 @@ void main() {
                   workbench: workbench,
                   conversation: conversation,
                   terminals: pool,
+                  status: FakeGit.inert(),
                   onClose: () {},
                   panel: WorkbenchPanel.bottom,
                 ),

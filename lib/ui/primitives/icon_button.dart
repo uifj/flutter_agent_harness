@@ -33,6 +33,7 @@ class DswIconButton extends StatelessWidget {
     required this.onTap,
     this.size = DswShape.controlMd,
     this.iconSize = DswShape.iconSm,
+    this.selected = false,
   }) : outlined = false,
        destructive = false;
 
@@ -72,8 +73,15 @@ class DswIconButton extends StatelessWidget {
     required this.onTap,
     this.size = DswShape.controlMd,
     this.iconSize = DswShape.iconSm,
+    this.selected = false,
   }) : outlined = true,
        destructive = false;
+
+  /// "This control's state is on", for the toggles that live in a bar: the
+  /// wash and the glyph both move, so the switch is readable without a label —
+  /// and a toggle whose on-state cannot be seen is the same lie as a control
+  /// that does nothing (ADR-0043, for the tree's changed-only switch).
+  final bool selected;
 
   final bool outlined;
 
@@ -87,6 +95,7 @@ class DswIconButton extends StatelessWidget {
     required this.onTap,
     this.size = DswShape.controlMd,
     this.iconSize = DswShape.iconSm,
+    this.selected = false,
   }) : outlined = false,
        destructive = true;
 
@@ -107,6 +116,7 @@ class DswIconButton extends StatelessWidget {
         message: tooltip,
         child: Semantics(
           button: true,
+          selected: selected,
           label: tooltip,
           child: ShadIconButton.ghost(
             onPressed: onTap,
@@ -118,12 +128,16 @@ class DswIconButton extends StatelessWidget {
             height: size,
             padding: EdgeInsets.zero,
             icon: Icon(icon, size: iconSize),
-            backgroundColor: Colors.transparent,
+            backgroundColor: selected
+                ? color.interactiveSelected
+                : Colors.transparent,
             hoverBackgroundColor: color.interactiveBgHover,
             foregroundColor: !enabled
                 ? color.labelCaption
                 : destructive
                 ? color.labelTertiary
+                : selected
+                ? color.labelPrimary
                 : color.labelSecondary,
             hoverForegroundColor: destructive
                 ? color.stateErrorPrimary
