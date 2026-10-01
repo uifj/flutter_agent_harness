@@ -6,6 +6,12 @@ ADR-0039 / ADR-0041 / ADR-0042 / ADR-0043 四批改动的**真机签收单**。�
 用法：按顺序走，一格一行；不通过就在那格后面写一句现象（哪一档亮度、什么窗口宽），
 我按现象立 ADR 再改。全绿之后把 ADR-0039 从 IN-PROGRESS 改 RESOLVED，并回填这一页的链接。
 
+**开工前先备两样，否则第 1.1 与 1.11 两格走不动**（这台机器的现状已核过：`<support>/sessions/sessions.json` 还不存在，
+`.pointers` 下只有 2 条会话，且 `listSessions` 从不填 `workspaceRoot`，所以它们**全部**落在「未归属」，屏幕上只有一个文件夹的分组可看）：
+① **随便再开一个文件夹**（里面有没有文件都行），在里面起 2–3 次会话——这样才会有第二个组头，1.1 的"当前那组排第一"与 1.11 的"在**不是当前**的那组上按 `+`"才成立；
+② 走 §3 之前先**把 `<support>` 目录复制一份**（`~/Library/Application Support/com.stow.agentHarness/`），万一恢复只恢复了一半，还有原件可回。
+另外两件事不在这张单子上、也不该由我代你做：**推 `develop` 上未推送的那批提交**（数法：`git rev-list --count origin/develop..HEAD`，等你说），以及 ADR-0012/0013/0014 那三条要 `DEEPSEEK_API_KEY` 的真实链路签收（`DEEPSEEK_API_KEY=… dart run spike/runtime_smoke.dart`，判成败别看接了管道的退出码）。
+
 ## 1. 侧栏的历史（ADR-0039）
 
 | # | 步骤 | 应当看到 | 已由测试证过 |
