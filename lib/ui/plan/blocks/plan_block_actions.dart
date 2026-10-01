@@ -16,15 +16,29 @@ import '../../../theme/dsw_shape.dart';
 import '../../../theme/dsw_theme.dart';
 
 /// The block menu a block's gutter offers. Turn-into and styling ride the
-/// slash menu / markup toolbar — this menu is the structural answer.
+/// slash menu / markup toolbar — this menu is the structural answer. Copy /
+/// Paste are the internal block clipboard (AC3-19's first increment); the
+/// system-clipboard interop upstream layers on top does not exist here yet.
 List<DswMenuEntry> planBlockActions(
   BuildContext context,
   PlanBlockDocument document,
   PlanBlock block,
 ) => [
   DswMenuEntry(
-    label: context.tr('planActionDuplicate'),
+    label: context.tr('planActionCopy'),
     icon: LucideIcons.copy,
+    onTap: () => PlanBlockClipboard.copy(block),
+  ),
+  DswMenuEntry(
+    label: context.tr('planActionPaste'),
+    icon: LucideIcons.clipboard_paste,
+    onTap: PlanBlockClipboard.hasContent
+        ? () => document.pasteBlocks(block.id, PlanBlockClipboard.take())
+        : null,
+  ),
+  DswMenuEntry(
+    label: context.tr('planActionDuplicate'),
+    icon: LucideIcons.copy_plus,
     onTap: () => document.duplicate(block.id),
   ),
   DswMenuEntry(
@@ -79,6 +93,35 @@ List<DswMenuEntry> planTableRowActions(
     destructive: true,
     onTap: () => doc.tableDeleteRow(rowId),
   ),
+];
+
+/// The column menu a header cell offers — the Cell/Row/Column tab trio
+/// collapses into row-shaped (above) and column-shaped (here) answers, since
+/// a markdown table can only carry those two dimensions. Delete drops out at
+/// one column rather than shipping a no-op entry.
+List<DswMenuEntry> planTableColumnActions(
+  BuildContext context,
+  PlanBlockDocument doc,
+  String rowId,
+  int cellIndex,
+) => [
+  DswMenuEntry(
+    label: context.tr('planTableInsertLeft'),
+    icon: LucideIcons.arrow_left,
+    onTap: () => doc.tableInsertColumn(rowId, left: true),
+  ),
+  DswMenuEntry(
+    label: context.tr('planTableInsertRight'),
+    icon: LucideIcons.arrow_right,
+    onTap: () => doc.tableInsertColumn(rowId, left: false),
+  ),
+  if (doc.tableColumnCount(rowId) > 1)
+    DswMenuEntry(
+      label: context.tr('planTableDeleteColumn'),
+      icon: LucideIcons.trash,
+      destructive: true,
+      onTap: () => doc.tableDeleteColumn(rowId, cellIndex),
+    ),
 ];
 
 /// The icon-only trigger that opens a context menu on tap — every icon-only

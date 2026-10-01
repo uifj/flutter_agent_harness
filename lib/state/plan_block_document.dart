@@ -97,15 +97,18 @@ class PlanBlockDocument extends ChangeNotifier {
     String? background,
     PlanAlign? align,
     bool? checked,
+    String? iconEmoji,
   }) => PlanText(
     text: text ?? content.text,
     style: style ?? content.style,
     marks: marks ?? content.marks,
-    color: color,
-    background: background,
+    // Every field is independent upstream: a text edit, an alignment change
+    // or one colour change must not silently wipe the others.
+    color: color ?? content.color,
+    background: background ?? content.background,
     align: align ?? content.align,
     checked: checked ?? content.checked,
-    iconEmoji: content.iconEmoji,
+    iconEmoji: iconEmoji ?? content.iconEmoji,
   );
 
   // ---- ledger -------------------------------------------------------------
@@ -223,12 +226,73 @@ class PlanBlockDocument extends ChangeNotifier {
   void setAlign(String blockId, PlanAlign align) =>
       _editText(blockId, (content) => _textContent(content, align: align));
 
-  /// Text colour and background take a `ThemeColor` name; null clears.
+  /// Text colour and background take a `ThemeColor` name; null clears. These
+  /// two build the content directly (not through [_textContent]) because
+  /// "null" here means clear, not keep — and each leaves the other field alone.
   void setTextColor(String blockId, String? name) =>
-      _editText(blockId, (content) => _textContent(content, color: name));
+      _editText(blockId, (content) {
+        if (content.color == name) return content;
+        return PlanText(
+          text: content.text,
+          style: content.style,
+          marks: content.marks,
+          color: name,
+          background: content.background,
+          align: content.align,
+          checked: content.checked,
+          iconEmoji: content.iconEmoji,
+        );
+      });
 
   void setTextBackground(String blockId, String? name) =>
-      _editText(blockId, (content) => _textContent(content, background: name));
+      _editText(blockId, (content) {
+        if (content.background == name) return content;
+        return PlanText(
+          text: content.text,
+          style: content.style,
+          marks: content.marks,
+          color: content.color,
+          background: name,
+          align: content.align,
+          checked: content.checked,
+          iconEmoji: content.iconEmoji,
+        );
+      });
+
+  /// The callout's emoji icon (`Block.kt:105-106`). The slash menu seeds
+  /// '💡'; this is how the user changes it afterwards. Null clears the icon.
+  void setCalloutIcon(String blockId, String? emoji) =>
+      _editText(blockId, (content) {
+        if (content.iconEmoji == emoji) return content;
+        return PlanText(
+          text: content.text,
+          style: content.style,
+          marks: content.marks,
+          color: content.color,
+          background: content.background,
+          align: content.align,
+          checked: content.checked,
+          iconEmoji: emoji,
+          iconImageId: content.iconImageId,
+        );
+      });
+
+  /// Records a bookmark's URL. There is no fetch pipeline in this workspace,
+  /// so a non-empty URL lands straight in `done` — the `fetching` state stays
+  /// in the enum for the round trip, nothing here produces it.
+  void setBookmarkUrl(String blockId, String url) => _edit(blockId, (block) {
+    final content = block.content;
+    if (content is! PlanBookmark) return block;
+    final trimmed = url.trim();
+    return block.copyWith(
+      content: PlanBookmark(
+        url: trimmed.isEmpty ? null : trimmed,
+        state: trimmed.isEmpty
+            ? PlanBookmarkState.empty
+            : PlanBookmarkState.done,
+      ),
+    );
+  });
 
   // ---- marks --------------------------------------------------------------
 
@@ -334,6 +398,34 @@ class PlanBlockDocument extends ChangeNotifier {
     final moved = working.removeAt(index);
     working.insert(target, moved);
   });
+
+  /// Inserts cloned [subtrees] below [afterId] (or at the end) and returns the
+  /// first new id. Every id is minted fresh — a paste is a new subtree, not a
+  /// second reference to the copied one.
+  String pasteBlocks(String? afterId, List<PlanBlock> subtrees) {
+    var firstId = '';
+    _mutate((working, mint) {
+      PlanBlock clone(PlanBlock source) => PlanBlock(
+        id: mint.next(),
+        content: source.content,
+        children: [for (final child in source.children) clone(child)],
+      );
+      final copies = [for (final subtree in subtrees) clone(subtree)];
+      if (copies.isEmpty) return;
+      firstId = copies.first.id;
+      if (afterId != null) {
+        for (final siblings in _siblingLists(working)) {
+          final index = siblings.indexWhere((entry) => entry.id == afterId);
+          if (index >= 0) {
+            siblings.insertAll(index + 1, copies);
+            return;
+          }
+        }
+      }
+      working.addAll(copies);
+    });
+    return firstId;
+  }
 
   // ---- table --------------------------------------------------------------
 
@@ -468,4 +560,29 @@ class PlanBlockDocument extends ChangeNotifier {
           );
         }
       });
+
+  /// Columns in the run [rowId] belongs to — the column menu reads this to
+  /// keep its Delete entry honest (a one-column table has nothing to delete).
+  int tableColumnCount(String rowId) {
+    final run = _tableRun(_blocks, rowId);
+    return run.isEmpty ? 0 : run.first.children.length;
+  }
+}
+
+/// The editor's internal block clipboard (upstream keeps one alongside the
+/// system clipboard — `clipboard/.../AnytypeClipboard.kt:17-41`). This first
+/// increment is process-memory only: blocks are shared by reference and every
+/// paste mints fresh ids, so what sits here is never mutated through.
+class PlanBlockClipboard {
+  PlanBlockClipboard._();
+
+  static List<PlanBlock> _blocks = const [];
+
+  static bool get hasContent => _blocks.isNotEmpty;
+
+  static void copy(PlanBlock block) => _blocks = [block];
+
+  static List<PlanBlock> take() => _blocks;
+
+  static void clear() => _blocks = const [];
 }

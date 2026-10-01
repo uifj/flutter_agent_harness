@@ -75,16 +75,16 @@
 | 子功能 | 上游档位 | 状态 | 施工 | 代码路径 | 状态层 | shadcn 组件 |
 | --- | --- | --- | --- | --- | --- | --- |
 | 14 样式建模 / 11 可插（AC3-1，含 QUOTE 更正） | ✅ | ✅ 已复刻 | P1(更正 10-01) | `lib/model/plan_block.dart:36-52` | — | — |
-| slash 菜单（AC3-2；主菜单插入集合照上游；table(NxM) 夹 1–25） | ✅ | ✅ 已复刻（P8-c）：输入过滤随打字收窄；Style/Media/Other 三段全插；**Simple table 落真表格（3×3 表头行，table(NxM) 解析模型就绪、尺寸输入待接）**；Objects/Properties 诚实空态；对齐/颜色/背景由工具栏回答；Actions 由块菜单回答 | P5/P8-c | `plan_block_editor.dart`（_SlashSheetState）+ store.`insertTable` | PlanBlockDocument | ShadDialog + ShadInput |
+| slash 菜单（AC3-2；主菜单插入集合照上游；table(NxM) 夹 1–25） | ✅ | ✅ 已复刻（P8-c）：输入过滤随打字收窄；Style/Media/Other 三段全插；**Simple table 落真表格（3×3 表头行）；table(RxC) 尺寸输入已落（P9/ADR-0040：过滤输入携带模式，浮出尺寸 chip 走 `parseTablePattern`）**；Objects/Properties 诚实空态；对齐/颜色/背景由工具栏回答；Actions 由块菜单回答 | P5/P8-c/P9 | `plan_block_editor.dart`（_SlashSheetState）+ store.`insertTable` | PlanBlockDocument | ShadDialog + ShadInput |
 | 选区工具栏 8 mark（AC3-3） | ✅ | ✅ 大部分已落（P8-c）：选区工具栏 bold/italic/strike/underline/keyboard/link 六钮 + 颜色/背景改选区优先（outlined=未应用/ghost=已应用）；MENTION/EMOJI/OBJECT 仍为渲染态 mark；**编辑面非所见即所得**（ShadInput 纯文本；富文本外观仅读视图/搜索态/Preview——WYSIWYG 需富文本编辑依赖，另立 ADR） | P5/P8-c | `plan_block_editor.dart`（选区回调+mark 钮）+ `plan_block_view.dart`（选区上报） | PlanBlockDocument.applyMark | DswIconButton.outlined |
 | 颜色 11 档 × 文本/背景（AC3-4） | ✅ | ✅ 已复刻（P5：工具栏两个颜色菜单，作用于聚焦块；mark 级颜色随上一行） | P5 | `plan_block_editor.dart`（_ColorSelect）+ `planLadderColor` | PlanBlockDocument | DswContextMenu |
 | 对齐左中右；JUSTIFY ⛔（AC3-4） | ⛔ | ✅ 已复刻（justify.isInsertable=false；HIGHLIGHT 无中档已入模型） | P1 | `plan_block.dart`（PlanAlign/supportsCenterAlignment） | — | — |
-| Toggle / Callout / 分隔线 / TOC / FeaturedRelations / Relation 块 / 嵌套（AC3-5） | ✅ | ✅ 已复刻（P5 渲染器；toggle 展开态与 callout 图标编辑 🔨） | P5 | `lib/ui/plan/blocks/plan_block_view.dart` | PlanBlockDocument | — |
+| Toggle / Callout / 分隔线 / TOC / FeaturedRelations / Relation 块 / 嵌套（AC3-5） | ✅ | ✅ 已复刻（P5 渲染器；P9/ADR-0040 补齐：toggle chevron 展开/收起（会话态，不落盘）、numbered 连续序号、quote 品牌竖条（两面前）、callout 容器 + iconEmoji 图标选择（精选集，🔁 规模差异照登记）、读视图补 checkbox/bullet/序号/chevron 行头） | P5/P9 | `lib/ui/plan/blocks/plan_block_view.dart` | PlanBlockDocument | — |
 | ROW/COLUMN 展平（AC3-6） | ⛔ | ✅ 已复刻 | P1/P5 | `plan_block.dart` + `plan_block_view.dart`（PlanBlockRow 递归） | — | — |
-| 表格块三 tab 动作（AC3-7，死代码动作 ⛔ 不做） | ✅/⛔ | ✅ 部分已落（P5）：行级插入/移动/复制/清空/删除进块菜单；Cell 清空走 store；列级插入/删除在 store 有、UI 🔨；Sort/Copy ⛔ 照上游死代码不做 | P5 | `plan_block_actions.dart`（planTableRowActions）+ `plan_block_document.dart` 表格族 | PlanBlockDocument | DswContextMenu |
+| 表格块三 tab 动作（AC3-7，死代码动作 ⛔ 不做） | ✅/⛔ | ✅ 已落（P5 + P9/ADR-0040）：行级插入/移动/复制/清空/删除进块菜单；Cell 清空走 store；**列级插入/删除已落（表头单元格列菜单，仅剩一列时 Delete 不出）**；Sort/Copy ⛔ 照上游死代码不做 | P5/P9 | `plan_block_actions.dart`（planTableRowActions/planTableColumnActions）+ `plan_block_document.dart` 表格族 | PlanBlockDocument | DswContextMenu |
 | 文件块 6 型 4 态；PDF/FILE 文件卡（AC3-8） | ✅ | ✅ 部分已落（P5）：四态渲染 + 按型分图标；图片全屏/选择器 🔨（笔记面尚无上传管线） | P5 | `plan_block_view.dart`（_FileBlock） | PlanBlockDocument | ShadCard 形状 |
 | 视频/音频内嵌播放 | ✅(上游) | 🔁 偏差：本仓库无播放器依赖 → 首版按文件卡+外部打开；要内嵌须另立 ADR 加依赖 | P5 | — | — | — |
-| 书签 4 态 + URL 可编辑（AC3-9） | ✅ | ✅ 部分已落（P5）：四态渲染；URL 录入对话框 🔨 | P5 | `plan_block_view.dart`（_BookmarkBlock） | PlanBlockDocument | ShadCard 形状 |
+| 书签 4 态 + URL 可编辑（AC3-9） | ✅ | ✅ 已落（P5 + P9/ADR-0040）：四态渲染；**URL 录入对话框已落（插入即问 URL、卡片点击改 URL，`setBookmarkUrl` 落 done；无抓取管线，fetching 态保留在枚举里诚实不产）** | P5/P9 | `plan_block_view.dart`（_BookmarkBlock）+ `plan_block_editor.dart`（_editBookmarkUrl） | PlanBlockDocument | ShadCard 形状 |
 | 链接块四组枚举 + 外观面板（AC3-10） | ✅ | ✅ 部分已落（P5）：text/card 两形态按 cardStyle 渲染；外观面板 🔨 | P5 | `plan_block_view.dart`（_LinkBlock） | PlanBlockDocument | — |
 | @提及面板（Date/ObjectType/Profile/Task/Deleted）（AC3-11） | ✅ | 🔨 P6（提及的目标对象随对象库到达；mention mark 渲染已落） | P6 | `lib/ui/plan/blocks/` | store 查询 | ShadPopover |
 | 嵌入 24 provider 统一占位卡（AC3-12） | ⛔ | ✅ 已复刻（占位卡标注 opens-externally / not-available） | P1 模型 / P5 UI | `plan_block_view.dart`（_EmbedBlock） | — | ShadCard 形状 |
@@ -95,7 +95,7 @@
 | 编辑器 8 模式 + 锁/解锁（AC3-16；SAM=拖拽映射 🔁） | ✅ | ✅ 部分已落（P5）：Edit/Read 两面 + 搜索自动转只读（与上游同一决定）；Locked/Select/Styling/Table 独立模式 🔨 | P5 | `plan_block_editor.dart`（readOnly/searching） | PlanBlockDocument | — |
 | 动作集合 20 项按条件装配（AC3-17） | ✅ | ✅ 部分已落（P5）：duplicate/delete/moveRoot 按块装配；TurnInto/样式走工具栏；其余（MoveTo/Rename/Download…）随媒体与对象屏 🔨 | P5 | `plan_block_actions.dart` | PlanBlockDocument | DswContextMenu |
 | 拖拽三段落点 + 自动滚动 200px/350px·60ms（AC3-18） | ✅ | 🔨（第一版为工具栏 moveRoot 上/下移；三段落点拖拽待接） | P5+ | `plan_block_document.dart`（moveRoot） | — | — |
-| 剪贴板：内部块 + 系统 HTML 粘贴（AC3-19） | ✅ | 🔨 | P5+ | — | — | — |
+| 剪贴板：内部块 + 系统 HTML 粘贴（AC3-19） | ✅ | ✅ 第一增量已落（P9/ADR-0040）：`PlanBlockClipboard` 内部块剪贴板 + 块菜单 Copy/Paste（Paste 无货时禁用行，副本铸全新 id）；系统剪贴板 HTML 互操作另立阶段 | P9 | `plan_block_document.dart`（PlanBlockClipboard/pasteBlocks）+ `plan_block_actions.dart` | PlanBlockDocument | DswContextMenu |
 | 文内搜索 6 事件（AC3-20） | ✅ | ✅ 已复刻（Query/Search 计数/Next/Previous/Clear/Cancel；搜索自动转只读；ensureVisible 滚动定位） | P5 | `plan_block_editor.dart`（_search* 族） | PlanBlockDocument | ShadInput |
 | 撤销/重做（AC3-21） | ✅(服务端) | ✅ 已复刻（🔁 扩展：本地快照栈，深度 50，id 保持） | P5 | `plan_block_document.dart`（_undoStack/undo/redo） | PlanBlockDocument | DswIconButton |
 | 限制位 ObjectRestriction 11 / DataViewRestriction 3（AC3-22） | ✅ | 模型 ✅P1；UI 按位禁用 🔨 P6（数据视图的 3 档已在 P3 落：views/relation/createObject 门 +、新建与抽屉） | P1/P3/P6 | `plan_struct.dart:60-91`、`plan_data_view_screen.dart` | — | — |

@@ -48,6 +48,10 @@ class PlanBlockView extends StatelessWidget {
     this.onSelectionChanged,
     this.keyFor,
     this.searchQuery,
+    this.collapsedToggles = const {},
+    this.onToggleCollapse,
+    this.onEditBookmark,
+    this.onPickCalloutIcon,
   });
 
   final PlanBlockDocument document;
@@ -73,6 +77,18 @@ class PlanBlockView extends StatelessWidget {
   /// In-document search: the active query (already lowercased).
   final String? searchQuery;
 
+  /// Toggle blocks whose children are folded away. Session state of the
+  /// editor, not of the document — upstream keeps the same split
+  /// (the tree always carries the children; folding is view state).
+  final Set<String> collapsedToggles;
+  final void Function(String blockId)? onToggleCollapse;
+
+  /// Opens the URL dialog for a bookmark block (edit face only).
+  final void Function(String blockId)? onEditBookmark;
+
+  /// Opens the emoji picker for a callout block (edit face only).
+  final void Function(String blockId)? onPickCalloutIcon;
+
   @override
   Widget build(BuildContext context) {
     final blocks = document.blocks;
@@ -85,24 +101,45 @@ class PlanBlockView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final block in blocks) ...[
+        for (final (index, block) in blocks.indexed) ...[
           PlanBlockRow(
             key: keyFor?.call(block.id),
             document: document,
             block: block,
             indent: 0,
+            ordinal: planNumberedOrdinal(blocks, index),
             readOnly: readOnly,
             onInsertSlash: onInsertSlash,
             onFocusedBlock: onFocusedBlock,
             onSelectionChanged: onSelectionChanged,
             headings: headings,
             searchQuery: searchQuery,
+            collapsedToggles: collapsedToggles,
+            onToggleCollapse: onToggleCollapse,
+            onEditBookmark: onEditBookmark,
+            onPickCalloutIcon: onPickCalloutIcon,
           ),
         ],
         if (!readOnly) _AddBlockRow(onTap: () => onInsertSlash?.call(null)),
       ],
     );
   }
+}
+
+/// The 1-based position of a numbered block inside its run of consecutive
+/// numbered siblings. The model stores no counter (the disk form is a plain
+/// `1. ` line anyway), so the renderer counts — an interrupted run restarts.
+int planNumberedOrdinal(List<PlanBlock> siblings, int index) {
+  var ordinal = 1;
+  for (var i = index - 1; i >= 0; i--) {
+    final content = siblings[i].content;
+    if (content is PlanText && content.style == PlanTextStyle.numbered) {
+      ordinal++;
+    } else {
+      break;
+    }
+  }
+  return ordinal;
 }
 
 /// One block: the hover gutter (add below, actions), the body by content type,
@@ -115,16 +152,24 @@ class PlanBlockRow extends StatelessWidget {
     required this.indent,
     required this.readOnly,
     required this.headings,
+    this.ordinal,
     this.onInsertSlash,
     this.onFocusedBlock,
     this.onSelectionChanged,
     this.keyFor,
     this.searchQuery,
+    this.collapsedToggles = const {},
+    this.onToggleCollapse,
+    this.onEditBookmark,
+    this.onPickCalloutIcon,
   });
 
   final PlanBlockDocument document;
   final PlanBlock block;
   final double indent;
+
+  /// Set when this block is a numbered run member; null renders no counter.
+  final int? ordinal;
   final bool readOnly;
   final void Function(String? afterBlockId)? onInsertSlash;
   final void Function(String blockId)? onFocusedBlock;
@@ -136,10 +181,18 @@ class PlanBlockRow extends StatelessWidget {
   final Key? Function(String blockId)? keyFor;
   final List<PlanBlock> headings;
   final String? searchQuery;
+  final Set<String> collapsedToggles;
+  final void Function(String blockId)? onToggleCollapse;
+  final void Function(String blockId)? onEditBookmark;
+  final void Function(String blockId)? onPickCalloutIcon;
 
   @override
   Widget build(BuildContext context) {
     final content = block.content;
+    final isCollapsedToggle =
+        content is PlanText &&
+        content.style == PlanTextStyle.toggle &&
+        collapsedToggles.contains(block.id);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -148,44 +201,61 @@ class PlanBlockRow extends StatelessWidget {
           child: _BlockBody(
             document: document,
             block: block,
+            ordinal: ordinal,
             readOnly: readOnly,
             onInsertSlash: onInsertSlash,
             onFocusedBlock: onFocusedBlock,
             onSelectionChanged: onSelectionChanged,
             headings: headings,
             searchQuery: searchQuery,
+            collapsed: isCollapsedToggle,
+            onToggleCollapse: onToggleCollapse,
+            onEditBookmark: onEditBookmark,
+            onPickCalloutIcon: onPickCalloutIcon,
           ),
         ),
         // Layout containers carry no view of their own (the client flattens
         // them — `DefaultBlockViewRenderer.kt:660-684`): the children draw at
         // the same visual level, one step in.
         if (content is PlanLayout)
-          for (final child in block.children)
+          for (final (index, child) in block.children.indexed)
             PlanBlockRow(
               key: keyFor?.call(child.id),
               document: document,
               block: child,
               indent: indent + _kIndentStep,
+              ordinal: planNumberedOrdinal(block.children, index),
               readOnly: readOnly,
               onInsertSlash: onInsertSlash,
               onFocusedBlock: onFocusedBlock,
               onSelectionChanged: onSelectionChanged,
               headings: headings,
               searchQuery: searchQuery,
+              collapsedToggles: collapsedToggles,
+              onToggleCollapse: onToggleCollapse,
+              onEditBookmark: onEditBookmark,
+              onPickCalloutIcon: onPickCalloutIcon,
             ),
-        if (content is! PlanLayout && content is! PlanTableBlock)
-          for (final child in block.children)
+        if (content is! PlanLayout &&
+            content is! PlanTableBlock &&
+            !isCollapsedToggle)
+          for (final (index, child) in block.children.indexed)
             PlanBlockRow(
               key: keyFor?.call(child.id),
               document: document,
               block: child,
               indent: indent + _kIndentStep,
+              ordinal: planNumberedOrdinal(block.children, index),
               readOnly: readOnly,
               onInsertSlash: onInsertSlash,
               onFocusedBlock: onFocusedBlock,
               onSelectionChanged: onSelectionChanged,
               headings: headings,
               searchQuery: searchQuery,
+              collapsedToggles: collapsedToggles,
+              onToggleCollapse: onToggleCollapse,
+              onEditBookmark: onEditBookmark,
+              onPickCalloutIcon: onPickCalloutIcon,
             ),
       ],
     );
@@ -198,14 +268,20 @@ class _BlockBody extends StatelessWidget {
     required this.block,
     required this.readOnly,
     required this.headings,
+    this.ordinal,
     this.onInsertSlash,
     this.onFocusedBlock,
     this.onSelectionChanged,
     this.searchQuery,
+    this.collapsed = false,
+    this.onToggleCollapse,
+    this.onEditBookmark,
+    this.onPickCalloutIcon,
   });
 
   final PlanBlockDocument document;
   final PlanBlock block;
+  final int? ordinal;
   final bool readOnly;
   final void Function(String? afterBlockId)? onInsertSlash;
   final void Function(String blockId)? onFocusedBlock;
@@ -213,6 +289,13 @@ class _BlockBody extends StatelessWidget {
   onSelectionChanged;
   final List<PlanBlock> headings;
   final String? searchQuery;
+
+  /// A collapsed toggle hides its children (the row above skips them); the
+  /// chevron reads it, the tap bubbles to the editor.
+  final bool collapsed;
+  final void Function(String blockId)? onToggleCollapse;
+  final void Function(String blockId)? onEditBookmark;
+  final void Function(String blockId)? onPickCalloutIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -223,10 +306,14 @@ class _BlockBody extends StatelessWidget {
           document: document,
           block: block,
           content: content,
+          ordinal: ordinal,
           readOnly: readOnly,
           onFocusedBlock: onFocusedBlock,
           onSelectionChanged: onSelectionChanged,
           searchQuery: searchQuery,
+          collapsed: collapsed,
+          onToggleCollapse: onToggleCollapse,
+          onPickCalloutIcon: onPickCalloutIcon,
         );
       case PlanLayout():
         // Flattened by the row above; nothing to draw here.
@@ -257,7 +344,12 @@ class _BlockBody extends StatelessWidget {
       case PlanFile(:final kind, :final state, :final name):
         return _FileBlock(kind: kind, state: state, name: name);
       case PlanBookmark(:final url, :final state):
-        return _BookmarkBlock(url: url, state: state, readOnly: readOnly);
+        return _BookmarkBlock(
+          url: url,
+          state: state,
+          readOnly: readOnly,
+          onTap: readOnly ? null : () => onEditBookmark?.call(block.id),
+        );
       case PlanLink(:final target, :final cardStyle, :final description):
         return _LinkBlock(
           document: document,
@@ -325,19 +417,27 @@ class _TextBlock extends StatelessWidget {
     required this.block,
     required this.content,
     required this.readOnly,
+    this.ordinal,
     this.onFocusedBlock,
     this.onSelectionChanged,
     this.searchQuery,
+    this.collapsed = false,
+    this.onToggleCollapse,
+    this.onPickCalloutIcon,
   });
 
   final PlanBlockDocument document;
   final PlanBlock block;
   final PlanText content;
+  final int? ordinal;
   final bool readOnly;
   final void Function(String blockId)? onFocusedBlock;
   final void Function(String blockId, PlanMarkRange? selection)?
   onSelectionChanged;
   final String? searchQuery;
+  final bool collapsed;
+  final void Function(String blockId)? onToggleCollapse;
+  final void Function(String blockId)? onPickCalloutIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -353,6 +453,10 @@ class _TextBlock extends StatelessWidget {
       return _TextReadView(
         content: content,
         style: effectiveStyle,
+        ordinal: ordinal,
+        collapsed: collapsed,
+        onToggleCollapse: onToggleCollapse,
+        blockId: block.id,
         searchQuery: searchQuery,
       );
     }
@@ -375,23 +479,92 @@ class _TextBlock extends StatelessWidget {
           color: color.labelTertiary,
         ),
       );
+    } else if (effectiveStyle == PlanTextStyle.numbered && ordinal != null) {
+      prefix = Padding(
+        padding: EdgeInsets.only(top: 3 * step, right: DswShape.sm),
+        child: Text(
+          '$ordinal.',
+          style: DswType.xs13.copyWith(color: color.labelTertiary),
+        ),
+      );
+    } else if (effectiveStyle == PlanTextStyle.toggle) {
+      prefix = DswHoverTap(
+        onTap: () => onToggleCollapse?.call(block.id),
+        semanticLabel: context.tr('planBlockToggle'),
+        builder: (context, hovered, focused) => Padding(
+          padding: const EdgeInsets.only(top: 3, right: DswShape.xs),
+          child: Icon(
+            collapsed ? LucideIcons.chevron_right : LucideIcons.chevron_down,
+            size: DswShape.iconSm,
+            color: color.labelTertiary,
+          ),
+        ),
+      );
+    }
+
+    final fieldChild = _BlockTextField(
+      document: document,
+      blockId: block.id,
+      content: content,
+      style: effectiveStyle,
+      onFocusedBlock: onFocusedBlock,
+      onSelectionChanged: onSelectionChanged,
+    );
+
+    Widget field;
+    // The callout is a container block: tinted card, the emoji as a leading
+    // chip the user can tap to change (upstream edits it through the block
+    // menu; the chip is the same command, one surface earlier).
+    if (effectiveStyle == PlanTextStyle.callout) {
+      field = Container(
+        padding: const EdgeInsets.all(DswShape.sm),
+        decoration: BoxDecoration(
+          color: color.bgLayer2,
+          borderRadius: BorderRadius.circular(DswShape.inner),
+        ),
+        child: _FieldRow(
+          prefix: DswHoverTap(
+            onTap: () => onPickCalloutIcon?.call(block.id),
+            semanticLabel: context.tr('planCalloutIcon'),
+            builder: (context, hovered, focused) => Padding(
+              padding: const EdgeInsets.only(right: DswShape.sm),
+              child: SizedBox(
+                width: DswShape.iconLg,
+                child: Text(
+                  content.iconEmoji ?? '＋',
+                  textAlign: TextAlign.center,
+                  style: DswType.base16.copyWith(color: color.labelPrimary),
+                ),
+              ),
+            ),
+          ),
+          child: fieldChild,
+        ),
+      );
+    } else {
+      field = _FieldRow(prefix: prefix, child: fieldChild);
+      // HIGHLIGHT (quote) draws a brand rule along the row — the one visual
+      // answer a non-WYSIWYG field can still give the style.
+      if (effectiveStyle == PlanTextStyle.quote) {
+        field = DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(color: color.brandPrimary, width: 2),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.only(left: DswShape.sm),
+            child: field,
+          ),
+        );
+      }
     }
 
     return _BlockChrome(
       document: document,
       block: block,
       readOnly: readOnly,
-      child: _FieldRow(
-        prefix: prefix,
-        child: _BlockTextField(
-          document: document,
-          blockId: block.id,
-          content: content,
-          style: effectiveStyle,
-          onFocusedBlock: onFocusedBlock,
-          onSelectionChanged: onSelectionChanged,
-        ),
-      ),
+      child: field,
     );
   }
 }
@@ -604,21 +777,32 @@ TextStyle _textStyle(BuildContext context, PlanTextStyle style) {
 int? _ladderIndex(String name) => PlanThemeColors.names.indexOf(name);
 
 /// The read answer of one text block: full mark rendering — this is where
-/// bold/italic/links/mentions finally look like themselves.
+/// bold/italic/links/mentions finally look like themselves. The row prefixes
+/// (checkbox, bullet, counter, toggle chevron) draw here too: search flips
+/// the whole document read-only and the rows must not lose who they are.
 class _TextReadView extends StatelessWidget {
   const _TextReadView({
     required this.content,
     required this.style,
+    required this.blockId,
+    this.ordinal,
+    this.collapsed = false,
+    this.onToggleCollapse,
     this.searchQuery,
   });
 
   final PlanText content;
   final PlanTextStyle style;
+  final String blockId;
+  final int? ordinal;
+  final bool collapsed;
+  final void Function(String blockId)? onToggleCollapse;
   final String? searchQuery;
 
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
+    final step = MediaQuery.textScalerOf(context).scale(1);
     final base = _textStyle(context, style);
 
     if (style == PlanTextStyle.codeSnippet) {
@@ -638,6 +822,93 @@ class _TextReadView extends StatelessWidget {
       );
     }
 
+    Widget body = Padding(
+      padding: const EdgeInsets.symmetric(vertical: DswShape.xs),
+      child: Text.rich(
+        TextSpan(children: _spans(context, base)),
+        textAlign: switch (content.align) {
+          PlanAlign.center => TextAlign.center,
+          PlanAlign.end => TextAlign.right,
+          _ => TextAlign.start,
+        },
+      ),
+    );
+
+    if (style == PlanTextStyle.quote) {
+      body = DecoratedBox(
+        decoration: BoxDecoration(
+          color: color.bgLayer2,
+          border: Border(left: BorderSide(color: color.brandPrimary, width: 2)),
+        ),
+        child: Padding(padding: const EdgeInsets.all(DswShape.sm), child: body),
+      );
+    }
+
+    if (style == PlanTextStyle.callout && content.iconEmoji != null) {
+      body = Container(
+        padding: const EdgeInsets.all(DswShape.sm),
+        decoration: BoxDecoration(
+          color: color.bgLayer2,
+          borderRadius: BorderRadius.circular(DswShape.inner),
+        ),
+        child: _FieldRow(
+          prefix: Padding(
+            padding: const EdgeInsets.only(right: DswShape.sm),
+            child: SizedBox(
+              width: DswShape.iconLg,
+              child: Text(
+                content.iconEmoji!,
+                textAlign: TextAlign.center,
+                style: DswType.base16.copyWith(color: color.labelPrimary),
+              ),
+            ),
+          ),
+          child: body,
+        ),
+      );
+    }
+
+    Widget? prefix;
+    if (style == PlanTextStyle.checkbox) {
+      prefix = Padding(
+        padding: const EdgeInsets.only(top: 2, right: DswShape.xs),
+        child: PlanCheckbox(checked: content.checked ?? false),
+      );
+    } else if (style == PlanTextStyle.bullet) {
+      prefix = Padding(
+        padding: EdgeInsets.only(top: 10 * step, right: DswShape.sm),
+        child: Icon(
+          LucideIcons.circle,
+          size: DswShape.iconCaption,
+          color: color.labelTertiary,
+        ),
+      );
+    } else if (style == PlanTextStyle.numbered && ordinal != null) {
+      prefix = Padding(
+        padding: EdgeInsets.only(top: 3 * step, right: DswShape.sm),
+        child: Text(
+          '$ordinal.',
+          style: DswType.xs13.copyWith(color: color.labelTertiary),
+        ),
+      );
+    } else if (style == PlanTextStyle.toggle) {
+      prefix = Padding(
+        padding: const EdgeInsets.only(top: 3, right: DswShape.xs),
+        child: Icon(
+          collapsed ? LucideIcons.chevron_right : LucideIcons.chevron_down,
+          size: DswShape.iconSm,
+          color: color.labelTertiary,
+        ),
+      );
+    }
+    if (prefix != null) {
+      body = _FieldRow(prefix: prefix, child: body);
+    }
+
+    return body;
+  }
+
+  List<InlineSpan> _spans(BuildContext context, TextStyle base) {
     final spans = <InlineSpan>[];
     var cursor = 0;
     for (final mark in content.marks) {
@@ -654,18 +925,7 @@ class _TextReadView extends StatelessWidget {
     if (cursor < content.text.length) {
       spans.add(_plainSpan(context, content.text.substring(cursor)));
     }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: DswShape.xs),
-      child: Text.rich(
-        TextSpan(children: spans, style: base),
-        textAlign: switch (content.align) {
-          PlanAlign.center => TextAlign.center,
-          PlanAlign.end => TextAlign.right,
-          _ => TextAlign.start,
-        },
-      ),
-    );
+    return spans;
   }
 
   TextSpan _plainSpan(BuildContext context, String text) {
@@ -783,11 +1043,16 @@ class _BookmarkBlock extends StatelessWidget {
     required this.url,
     required this.state,
     required this.readOnly,
+    this.onTap,
   });
 
   final String? url;
   final PlanBookmarkState state;
   final bool readOnly;
+
+  /// Edit face only: the card is the "set or change the URL" affordance —
+  /// upstream opens `OpenBookmarkSetter` the same way (`Command.kt:27`).
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -798,32 +1063,38 @@ class _BookmarkBlock extends StatelessWidget {
       PlanBookmarkState.error => context.tr('planBookmarkError'),
       _ => context.tr('planBookmarkEmpty'),
     };
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: DswShape.xs),
-      padding: const EdgeInsets.all(DswShape.sm),
-      decoration: BoxDecoration(
-        color: color.bgLayer2,
-        borderRadius: BorderRadius.circular(DswShape.inner),
-        border: Border.all(color: color.borderL2),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            LucideIcons.bookmark,
-            size: DswShape.iconSm,
-            color: color.brandPrimary,
-          ),
-          const SizedBox(width: DswShape.sm),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: DswType.xs13.copyWith(color: color.labelSecondary),
+    return DswHoverTap(
+      onTap: onTap,
+      semanticLabel: context.tr('planBookmarkPrompt'),
+      builder: (context, hovered, focused) => Container(
+        margin: const EdgeInsets.symmetric(vertical: DswShape.xs),
+        padding: const EdgeInsets.all(DswShape.sm),
+        decoration: BoxDecoration(
+          color: hovered && onTap != null
+              ? color.interactiveBgHover
+              : color.bgLayer2,
+          borderRadius: BorderRadius.circular(DswShape.inner),
+          border: Border.all(color: color.borderL2),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              LucideIcons.bookmark,
+              size: DswShape.iconSm,
+              color: color.brandPrimary,
             ),
-          ),
-        ],
+            const SizedBox(width: DswShape.sm),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: DswType.xs13.copyWith(color: color.labelSecondary),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1044,7 +1315,7 @@ class _TableRowBlock extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final cell in block.children)
+          for (final (index, cell) in block.children.indexed)
             Expanded(
               child: Container(
                 padding: const EdgeInsets.symmetric(
@@ -1068,10 +1339,31 @@ class _TableRowBlock extends StatelessWidget {
                               )
                             : DswType.xs13.copyWith(color: color.labelPrimary),
                       )
-                    : _CellField(
-                        document: document,
-                        cell: cell,
-                        isHeader: isHeader,
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: _CellField(
+                              document: document,
+                              cell: cell,
+                              isHeader: isHeader,
+                            ),
+                          ),
+                          // The Column tab of upstream's table menu lives on
+                          // the header cells here — the row tab stays on the
+                          // row trigger at the right edge.
+                          if (isHeader)
+                            Builder(
+                              builder: (menuContext) => PlanMenuTrigger(
+                                semanticLabel: context.tr('planColumnMenu'),
+                                items: planTableColumnActions(
+                                  menuContext,
+                                  document,
+                                  block.id,
+                                  index,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
               ),
             ),

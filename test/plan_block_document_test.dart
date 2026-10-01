@@ -115,6 +115,60 @@ void main() {
       doc.setTextColor(id, null);
       expect(_textOf(doc, id).color, isNull);
     });
+
+    test('the two colour fields are independent, and edits keep them', () {
+      final id = doc.insertBelow(null, PlanText(text: 'coloured'));
+      doc.setTextColor(id, 'red');
+      doc.setTextBackground(id, 'blue');
+      expect(_textOf(doc, id).color, 'red');
+      expect(_textOf(doc, id).background, 'blue');
+
+      // Setting one never wipes the other.
+      doc.setTextColor(id, 'teal');
+      expect(_textOf(doc, id).background, 'blue');
+      doc.setTextBackground(id, 'lime');
+      expect(_textOf(doc, id).color, 'teal');
+
+      // Plain typing and an alignment change keep both.
+      doc.editText(id, 'coloured text');
+      expect(_textOf(doc, id).color, 'teal');
+      expect(_textOf(doc, id).background, 'lime');
+      doc.setAlign(id, PlanAlign.center);
+      expect(_textOf(doc, id).color, 'teal');
+      expect(_textOf(doc, id).background, 'lime');
+
+      // Null still clears — but only its own field.
+      doc.setTextColor(id, null);
+      expect(_textOf(doc, id).color, isNull);
+      expect(_textOf(doc, id).background, 'lime');
+    });
+
+    test('setCalloutIcon swaps the emoji and can clear it', () {
+      final id = doc.insertBelow(
+        null,
+        const PlanText(
+          text: 'note',
+          style: PlanTextStyle.callout,
+          iconEmoji: '💡',
+        ),
+      );
+      doc.setCalloutIcon(id, '🔥');
+      expect(_textOf(doc, id).iconEmoji, '🔥');
+      doc.setCalloutIcon(id, null);
+      expect(_textOf(doc, id).iconEmoji, isNull);
+    });
+
+    test('setBookmarkUrl lands done, an empty URL returns to empty', () {
+      final id = doc.insertBelow(null, const PlanBookmark());
+      doc.setBookmarkUrl(id, '  https://example.com  ');
+      final content = doc.block(id)!.content as PlanBookmark;
+      expect(content.url, 'https://example.com');
+      expect(content.state, PlanBookmarkState.done);
+      doc.setBookmarkUrl(id, '   ');
+      final cleared = doc.block(id)!.content as PlanBookmark;
+      expect(cleared.url, isNull);
+      expect(cleared.state, PlanBookmarkState.empty);
+    });
   });
 
   group('structure ops', () {
@@ -155,6 +209,33 @@ void main() {
       final before = doc.blocks.map((block) => block.id).toList();
       doc.moveRoot(before[1], up: true);
       expect(doc.blocks.map((block) => block.id).toList()[0], before[1]);
+    });
+
+    test('pasteBlocks lands a fresh-id clone right below the anchor', () {
+      final anchor = doc.insertBelow(null, PlanText(text: 'anchor'));
+      final subtree = PlanBlock(
+        id: 'keep-this',
+        content: const PlanText(text: 'copied root'),
+        children: const [
+          PlanBlock(
+            id: 'child-1',
+            content: PlanText(text: 'copied child'),
+          ),
+        ],
+      );
+
+      final firstId = doc.pasteBlocks(anchor, [subtree]);
+      final pasted = doc.block(firstId)!;
+      expect(pasted.id, isNot('keep-this'));
+      expect((pasted.content as PlanText).text, 'copied root');
+      expect(pasted.children.single.id, isNot('child-1'));
+      expect((pasted.children.single.content as PlanText).text, 'copied child');
+      // The copy sits between the anchor and whatever came after it.
+      final ids = doc.blocks.map((block) => block.id).toList();
+      expect(ids.indexOf(anchor) + 1, ids.indexOf(firstId));
+      // The original subtree object is untouched.
+      expect(subtree.id, 'keep-this');
+      expect(subtree.children.single.id, 'child-1');
     });
   });
 
@@ -200,6 +281,26 @@ void main() {
       for (final cell in row.children) {
         expect((cell.content as PlanText).text, '');
       }
+    });
+
+    test('tableColumnCount answers the run, zero off any table', () {
+      final rowId = doc.blocks
+          .firstWhere((block) => block.content is PlanTableBlock)
+          .id;
+      expect(doc.tableColumnCount(rowId), 2);
+      expect(doc.tableColumnCount('no-such-row'), 0);
+    });
+  });
+
+  group('the internal clipboard', () {
+    test('copy takes the block, take hands it back, clear empties', () {
+      expect(PlanBlockClipboard.hasContent, isFalse);
+      final block = doc.blocks.first;
+      PlanBlockClipboard.copy(block);
+      expect(PlanBlockClipboard.hasContent, isTrue);
+      expect(PlanBlockClipboard.take().single.id, block.id);
+      PlanBlockClipboard.clear();
+      expect(PlanBlockClipboard.hasContent, isFalse);
     });
   });
 

@@ -50,6 +50,10 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
   /// mark buttons act on; null once the caret collapses.
   PlanMarkRange? _activeSelection;
 
+  /// Folded toggle blocks — session state, like upstream's `expandedToggles`:
+  /// the document always carries the children, this only answers "draw them".
+  final Set<String> _collapsedToggles = {};
+
   /// Applies a mark to the active selection, or reports there was none.
   void _applyMark(PlanMarkType type, {String? param}) {
     final blockId = _activeBlockId;
@@ -213,12 +217,23 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
       ),
     );
     if (name == null || !mounted) return;
+    // A typed `table(RxC)` answers with a table of that size — the pattern
+    // the filter field carries, parsed and clamped by the model.
+    final pattern = RegExp(r'^table\(\d+x\d+\)$').hasMatch(name.trim());
+    if (pattern) {
+      final size = PlanSlashItem.parseTablePattern(name);
+      final id = widget.document.insertTable(
+        rows: size.rows,
+        columns: size.columns,
+      );
+      setState(() => _activeBlockId = id);
+      return;
+    }
     final item = PlanSlashItem.values
         .where((entry) => entry.name == name)
         .first;
     // The Simple table item lands a real table run — the default 3×3
-    // (CreateTable's DEFAULT_ROW/COLUMN_COUNT upstream); `table(NxM)` sizes
-    // it once the filter input is on hand to carry the pattern.
+    // (CreateTable's DEFAULT_ROW/COLUMN_COUNT upstream).
     if (item == PlanSlashItem.table) {
       final id = widget.document.insertTable(rows: 3, columns: 3);
       setState(() => _activeBlockId = id);
@@ -229,6 +244,60 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
       _SlashSheetState.contentFor(item),
     );
     setState(() => _activeBlockId = id);
+    // An empty bookmark is a dead card: the URL dialog is part of the same
+    // insertion, the way upstream walks `SetupBookmark` right after the block
+    // exists (`Orchestrator.kt:525-546`).
+    if (item == PlanSlashItem.bookmark) await _editBookmarkUrl(id);
+  }
+
+  /// The bookmark's URL dialog — set on insert, re-opened from the card.
+  Future<void> _editBookmarkUrl(String blockId) async {
+    if (!mounted) return;
+    final content = widget.document.block(blockId)?.content;
+    final current = content is PlanBookmark ? content.url : null;
+    final url = await showShadDialog<String>(
+      context: context,
+      builder: (dialogContext) => ShadDialog(
+        radius: BorderRadius.circular(DswShape.float),
+        title: Text(context.tr('planBookmarkPrompt'), style: DswType.sStrong14),
+        actions: [
+          ShadButton.outline(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(context.tr('planCancel')),
+          ),
+        ],
+        child: _LinkInput(
+          initial: current,
+          onSubmitted: (value) => Navigator.of(dialogContext).pop(value),
+        ),
+      ),
+    );
+    if (url == null || !mounted) return;
+    widget.document.setBookmarkUrl(blockId, url);
+  }
+
+  /// The callout's emoji picker — a curated set (the full upstream emoji.json
+  /// is a registered scale difference), one dialog, write-through on tap.
+  Future<void> _pickCalloutIcon(String blockId) async {
+    if (!mounted) return;
+    final content = widget.document.block(blockId)?.content;
+    final current = content is PlanText ? content.iconEmoji : null;
+    final emoji = await showShadDialog<String>(
+      context: context,
+      builder: (dialogContext) => ShadDialog(
+        radius: BorderRadius.circular(DswShape.float),
+        title: Text(context.tr('planCalloutIcon'), style: DswType.sStrong14),
+        child: SizedBox(
+          width: 320,
+          child: _EmojiGrid(
+            current: current,
+            onPick: (value) => Navigator.of(dialogContext).pop(value),
+          ),
+        ),
+      ),
+    );
+    if (emoji == null || !mounted) return;
+    widget.document.setCalloutIcon(blockId, emoji);
   }
 
   // ---- build ---------------------------------------------------------------
@@ -315,6 +384,12 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
               },
               keyFor: (id) => _rowKeys[id],
               searchQuery: _query,
+              collapsedToggles: _collapsedToggles,
+              onToggleCollapse: (id) => setState(() {
+                if (!_collapsedToggles.remove(id)) _collapsedToggles.add(id);
+              }),
+              onEditBookmark: _editBookmarkUrl,
+              onPickCalloutIcon: _pickCalloutIcon,
             ),
           ),
         ),
@@ -599,7 +674,8 @@ class _ColorSelect extends StatelessWidget {
 }
 
 /// A small toolbar chip that opens a context menu; icon-free on purpose, so
-/// the label is its own accessible name.
+/// the label is its own accessible name. One line of chrome: the height
+/// follows the text step (ADR-0017 S3), or the label gets cut when it grows.
 class _ToolbarChip extends StatelessWidget {
   const _ToolbarChip({required this.label});
 
@@ -608,8 +684,9 @@ class _ToolbarChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
+    final step = MediaQuery.textScalerOf(context).scale(1);
     return Container(
-      height: DswShape.controlMd,
+      height: DswShape.controlMd * step,
       padding: const EdgeInsets.symmetric(horizontal: DswShape.sm),
       alignment: Alignment.center,
       decoration: BoxDecoration(
@@ -707,6 +784,12 @@ class _SlashSheetState extends State<_SlashSheet> {
       _query.isEmpty ||
       slashLabel(context, item).toLowerCase().contains(_query);
 
+  /// A typed `table(RxC)` in the filter surfaces a size chip — the same
+  /// command-palette answer upstream's `table(NxM)` parse feeds
+  /// (`SlashExtensions.kt:308-325`).
+  bool get _hasTablePattern =>
+      RegExp(r'^table\(\d+x\d+\)$').hasMatch(_query.trim());
+
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
@@ -733,6 +816,40 @@ class _SlashSheetState extends State<_SlashSheet> {
           ),
         ),
         const SizedBox(height: DswShape.sm),
+        if (_hasTablePattern)
+          Padding(
+            padding: const EdgeInsets.only(bottom: DswShape.sm),
+            child: Wrap(
+              spacing: DswShape.xs,
+              runSpacing: DswShape.xs,
+              children: [
+                DswHoverTap(
+                  onTap: () => Navigator.of(context).pop(_query.trim()),
+                  semanticLabel: context.tr('planSlashTable'),
+                  builder: (context, hovered, focused) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DswShape.sm,
+                      vertical: DswShape.xs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: hovered
+                          ? color.interactiveBgHover
+                          : color.bgLayer2,
+                      borderRadius: BorderRadius.circular(DswShape.inner),
+                      border: Border.all(color: color.borderL2),
+                    ),
+                    child: Text(
+                      _query.trim(),
+                      style: DswType.xs13.copyWith(
+                        color: color.labelPrimary,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         for (final (title, items) in sections) ...[
           if (items.any(_matches)) ...[
             Text(
@@ -790,16 +907,18 @@ class _SlashSheetState extends State<_SlashSheet> {
   }
 }
 
-/// The URL field behind the link mark: one input, submit or button confirms.
+/// The URL field behind the link mark and the bookmark card: one input,
+/// submit or button confirms.
 class _LinkInput extends StatelessWidget {
-  const _LinkInput({required this.onSubmitted});
+  const _LinkInput({required this.onSubmitted, this.initial});
 
   final ValueChanged<String> onSubmitted;
+  final String? initial;
 
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    final controller = TextEditingController();
+    final controller = TextEditingController(text: initial);
     return dswEnsureShadTheme(
       context,
       Column(
@@ -823,6 +942,79 @@ class _LinkInput extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The callout's emoji picker: a curated grid, not the upstream emoji.json —
+/// the scale difference is registered in the parity table (🔁).
+class _EmojiGrid extends StatelessWidget {
+  const _EmojiGrid({required this.current, required this.onPick});
+
+  final String? current;
+  final ValueChanged<String> onPick;
+
+  /// Cover the everyday annotation cases; order is presentation only.
+  static const _emoji = [
+    '💡',
+    '📌',
+    '📎',
+    '📝',
+    '✅',
+    '⚠️',
+    '🔥',
+    '⭐',
+    '❤️',
+    '🎯',
+    '📅',
+    '🕐',
+    '🚀',
+    '🧠',
+    '🎨',
+    '📊',
+    '🔗',
+    '💬',
+    '🏷️',
+    '⚙️',
+    '🧩',
+    '🗂️',
+    '🌱',
+    '🧭',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.dsw;
+    // The tile holds one glyph of text, so the seat grows with the text step.
+    final size = 44.0 * MediaQuery.textScalerOf(context).scale(1);
+    return Wrap(
+      spacing: DswShape.xs,
+      runSpacing: DswShape.xs,
+      children: [
+        for (final emoji in _emoji)
+          DswHoverTap(
+            onTap: () => onPick(emoji),
+            semanticLabel: emoji,
+            builder: (context, hovered, focused) => Container(
+              width: size,
+              height: size,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: emoji == current
+                    ? color.interactiveSelected
+                    : hovered
+                    ? color.interactiveBgHover
+                    : color.bgLayer2,
+                borderRadius: BorderRadius.circular(DswShape.inner),
+                border: Border.all(color: color.borderL2),
+              ),
+              child: Text(
+                emoji,
+                style: DswType.base16.copyWith(color: color.labelPrimary),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
