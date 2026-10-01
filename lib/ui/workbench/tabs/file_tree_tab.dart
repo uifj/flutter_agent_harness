@@ -178,29 +178,12 @@ class _FileTreeTabState extends State<FileTreeTab> {
     return reading == null || !reading.isRepo ? null : reading;
   }
 
-  /// Absolute path of every changed file, **spelled the way the rows are**.
-  ///
-  /// `status --porcelain` counts from the repository's top level, and git
-  /// reports that top level *resolved* — while these rows are spelled from the
-  /// path the user picked. Through a symlink the two name one folder
-  /// differently (`/var` and `/private/var` on this machine), so an entry
-  /// anchored at git's spelling is a key no row can match: the badge would
-  /// silently never appear rather than report anything. Entries are therefore
-  /// rebased onto this tree's own root, and the ones that land outside it (a
-  /// tree rooted inside a repository does not show its siblings) are dropped
-  /// rather than kept as keys that cannot be painted.
+  /// Absolute path of every changed file, **spelled the way the rows are** —
+  /// which is `changedPaths`'s job, and the reason it exists is written there.
   Map<String, GitStatusEntry> get _changed {
     final reading = _git;
-    final top = reading?.root;
-    if (top == null) return const {};
-    final root = _root;
-    final here = _resolvedRoot ?? root;
-    final changed = <String, GitStatusEntry>{};
-    for (final entry in reading!.entries) {
-      final row = p.join(root, p.relative(p.join(top, entry.path), from: here));
-      if (p.isWithin(root, row)) changed[row] = entry;
-    }
-    return changed;
+    if (reading == null) return const {};
+    return changedPaths(reading, root: _root, resolvedRoot: _resolvedRoot);
   }
 
   String? _resolvedFor;

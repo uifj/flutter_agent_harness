@@ -24,6 +24,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:path/path.dart' as p;
+
 /// A parsed `git status --porcelain=v1 -z` entry.
 class GitStatusEntry {
   const GitStatusEntry({required this.path, required this.xy});
@@ -71,6 +73,34 @@ bool isUnstagedEntry(GitStatusEntry entry) {
 
 /// Whether the entry is untracked (`??`): git diff never includes it.
 bool isUntracked(GitStatusEntry entry) => badgeOf(entry) == '?';
+
+/// The changes in [reading], keyed the way a listing of [root] keys them.
+///
+/// `status --porcelain` counts from the repository's top level, which git reports
+/// **resolved** (measured against a real repository: asking from a symlink answers
+/// the real directory), while a listing built from the path the user picked keeps
+/// that path's own spelling. Joining an entry onto git's top level therefore
+/// produces a key no row can match as soon as a symlink is in the way — and a key
+/// that matches nothing paints no badge at all, so the feature would look absent
+/// rather than broken. Rebasing through [resolvedRoot] (the resolved form of
+/// [root], which the caller caches because resolving is a syscall) keeps one
+/// answer with one spelling. Entries landing outside [root] are dropped: a tree
+/// rooted inside a repository does not show its siblings.
+Map<String, GitStatusEntry> changedPaths(
+  GitStatusResult reading, {
+  required String root,
+  String? resolvedRoot,
+}) {
+  final top = reading.root;
+  if (top == null || !reading.isRepo) return const {};
+  final here = resolvedRoot ?? root;
+  final changed = <String, GitStatusEntry>{};
+  for (final entry in reading.entries) {
+    final row = p.join(root, p.relative(p.join(top, entry.path), from: here));
+    if (p.isWithin(root, row)) changed[row] = entry;
+  }
+  return changed;
+}
 
 /// The source-control panel's snapshot.
 class GitStatusResult {
