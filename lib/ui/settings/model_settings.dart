@@ -24,7 +24,16 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:shadcn_ui/shadcn_ui.dart'
-    show ShadInput, ShadOption, ShadSwitch;
+    show
+        ShadAccordion,
+        ShadAccordionController,
+        ShadAccordionItem,
+        ShadBorder,
+        ShadCard,
+        ShadInput,
+        ShadOption,
+        ShadSeparator,
+        ShadSwitch;
 
 import '../../genkit/models_endpoint.dart';
 import '../../l10n/locales.dart';
@@ -46,6 +55,7 @@ import '../primitives/tappable.dart';
 import '../primitives/feedback.dart';
 import '../primitives/menu.dart';
 import '../primitives/capsule_button.dart';
+import '../primitives/icon_button.dart';
 import 'widgets/settings_card.dart';
 
 /// Which section the rail is pointing at.
@@ -151,11 +161,14 @@ class _SettingsPanelState extends State<SettingsPanel> {
   /// adopts that provider and moves the card there. Null: every card closed.
   late LlmProvider? _expanded = widget.settings.model.provider;
 
-  /// The "Customized" disclosure inside the editor card. Collapsed by
-  /// default, like dsh's `<details>`: a key is the field that decides whether
-  /// the connection works at all; the endpoint and the model id are the
-  /// fields a working default already answers.
-  bool _customizedOpen = false;
+  /// The "Customized" disclosure inside the editor card, owned by the accordion
+  /// rather than by a bool here: the panel used to hold the open flag *and* the
+  /// widget used to animate it, which is the same fact in two places (§1B S8).
+  /// Collapsed by default, like dsh's `<details>` — a key is the field that
+  /// decides whether the connection works at all; the endpoint and the model id
+  /// are the fields a working default already answers.
+  final ShadAccordionController<String> _disclosure =
+      ShadAccordionController<String>();
 
   /// The language choice, held and committed like the theme.
   late settings.LocaleMode _locale = widget.settings.locale;
@@ -243,6 +256,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
       _workspace,
       _skills,
       ..._servers.expand((draft) => draft.controllers),
+      _disclosure,
     ];
     for (final controller in controllers) {
       // Dirty state is derived from the controllers, so the actions have to be
@@ -399,7 +413,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
     setState(() {
       _provider = provider;
       _expanded = provider;
-      _customizedOpen = false;
+      _disclosure.value = const <String>[];
       _endpointModels = const [];
       _probeError = null;
       _probeCount = null;
@@ -642,7 +656,13 @@ class _SettingsPanelState extends State<SettingsPanel> {
                 onTap: _save,
               ),
               const SizedBox(width: 8),
-              _CloseButton(onTap: _close),
+              DswIconButton(
+                icon: LucideIcons.x,
+                tooltip: context.tr('closeSettings'),
+                onTap: _close,
+                size: 28,
+                iconSize: DswShape.iconSm,
+              ),
             ],
           ),
         ),
@@ -805,12 +825,13 @@ class _SettingsPanelState extends State<SettingsPanel> {
   /// `.rowCard`: outlined on the panel fill so the filled editor card it
   /// expands into reads as the nested object. dsh's `padding: 12px 14px`
   /// (vertical 12, horizontal 14), column gap 12.
-  Widget _providerRowCard(DswAlias color, LlmProvider provider) => Container(
+  /// A `ShadCard` wearing the bridge's card skin (`borderL2` at `shell`, ADR-0029)
+  /// with the page's own fill left showing through: this row is a container
+  /// *inside* a section card, and a second fill would say two surfaces where
+  /// there is one (§1B S6).
+  Widget _providerRowCard(DswAlias color, LlmProvider provider) => ShadCard(
     padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(DswShape.shell),
-      border: Border.all(color: color.borderL2),
-    ),
+    backgroundColor: Colors.transparent,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -879,12 +900,13 @@ class _SettingsPanelState extends State<SettingsPanel> {
   /// `--dsw-alias-bg-module-platform`: radius 12, `padding: 14px 16px`, column
   /// gap 14, so the outlined row reads as the container and this as the
   /// object in it.
-  Widget _editorCard(DswAlias color, LlmProvider provider) => Container(
+  /// The filled inner surface: `ShadCard` for the corner and the padding, and it
+  /// says its own two differences from the bridge's card tier — the module fill,
+  /// and no stroke, because a fill already ends where it begins (ADR-0029).
+  Widget _editorCard(DswAlias color, LlmProvider provider) => ShadCard(
     padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-    decoration: BoxDecoration(
-      color: color.bgModulePlatform,
-      borderRadius: BorderRadius.circular(DswShape.shell),
-    ),
+    backgroundColor: color.bgModulePlatform,
+    border: ShadBorder.all(width: 0),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -908,39 +930,44 @@ class _SettingsPanelState extends State<SettingsPanel> {
           ),
         ),
         const SizedBox(height: 14),
-        _CustomizedDisclosure(
-          open: _customizedOpen,
-          onToggle: () => setState(() => _customizedOpen = !_customizedOpen),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _Field(
-                label: context.tr('baseUrl'),
-                controller: _baseUrl,
-                // Empty means the provider's own endpoint — only the
-                // OpenAI-compatible path has a default worth hinting.
-                hint: provider == LlmProvider.openai
-                    ? defaultBaseUrl
-                    : context.tr('providerDefault'),
+        ShadAccordion<String>(
+          controller: _disclosure,
+          children: [
+            ShadAccordionItem<String>(
+              value: 'customized',
+              title: Text(context.tr('customized')),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _Field(
+                    label: context.tr('baseUrl'),
+                    controller: _baseUrl,
+                    // Empty means the provider's own endpoint — only the
+                    // OpenAI-compatible path has a default worth hinting.
+                    hint: provider == LlmProvider.openai
+                        ? defaultBaseUrl
+                        : context.tr('providerDefault'),
+                  ),
+                  const SizedBox(height: 12),
+                  _Field(
+                    label: context.tr('model'),
+                    controller: _model,
+                    hint: defaultModelFor(provider),
+                    // The model id is a wire value, and reads as one.
+                    code: true,
+                    // The quick select over the fetched list — free text stays
+                    // valid, the list is an offer, not a constraint.
+                    trailing: widget.modelsFetcher == null
+                        ? null
+                        : _ModelPickButton(
+                            models: _endpointModels,
+                            onPick: (id) => setState(() => _model.text = id),
+                          ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              _Field(
-                label: context.tr('model'),
-                controller: _model,
-                hint: defaultModelFor(provider),
-                // The model id is a wire value, and reads as one.
-                code: true,
-                // The quick select over the fetched list — free text stays
-                // valid, the list is an offer, not a constraint.
-                trailing: widget.modelsFetcher == null
-                    ? null
-                    : _ModelPickButton(
-                        models: _endpointModels,
-                        onPick: (id) => setState(() => _model.text = id),
-                      ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
         const SizedBox(height: 14),
         // The probe row: one button, one sentence of outcome, dsh's
@@ -1324,13 +1351,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
   /// One server, as a bordered card of four fields plus its remove button.
   /// Args are space-separated here and split at commit — the field is a
   /// single line either way.
-  Widget _serverCard(DswAlias color, _ServerDraft draft) => Container(
+  /// Exactly the tier the bridge answers for a card, so nothing is restated here.
+  Widget _serverCard(DswAlias color, _ServerDraft draft) => ShadCard(
     padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-    decoration: BoxDecoration(
-      color: color.bgLayer1,
-      borderRadius: BorderRadius.circular(DswShape.shell),
-      border: Border.all(color: color.borderL2),
-    ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1354,7 +1377,13 @@ class _SettingsPanelState extends State<SettingsPanel> {
               ),
             ),
             const SizedBox(width: 6),
-            _RemoveButton(onTap: () => _removeServer(draft)),
+            DswIconButton.destructive(
+              icon: LucideIcons.x,
+              tooltip: context.tr('removeServer'),
+              onTap: () => _removeServer(draft),
+              size: 28,
+              iconSize: DswShape.iconMd,
+            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -1522,33 +1551,41 @@ class _SettingCellRow<T> extends StatelessWidget {
         12 +
         14 +
         28;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(
-        border: last ? null : Border(bottom: BorderSide(color: color.borderL2)),
-      ),
-      child: LayoutBuilder(
-        builder: (context, box) {
-          if (beside <= box.maxWidth) {
-            return Row(
-              children: [
-                ...leadingCells,
-                text,
-                const SizedBox(width: 8),
-                _menu(color),
-              ],
-            );
-          }
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [...leadingCells, text]),
-              SizedBox(height: 12 * MediaQuery.textScalerOf(context).scale(1)),
-              _menu(color),
-            ],
-          );
-        },
-      ),
+    // The line under every row but the last is the library's separator rather
+    // than a border on the row's own box: a section is a column of rows with a
+    // line *between* them, which is what `ShadSeparator` is for (§1B S7).
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: LayoutBuilder(
+            builder: (context, box) {
+              if (beside <= box.maxWidth) {
+                return Row(
+                  children: [
+                    ...leadingCells,
+                    text,
+                    const SizedBox(width: 8),
+                    _menu(color),
+                  ],
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [...leadingCells, text]),
+                  SizedBox(
+                    height: 12 * MediaQuery.textScalerOf(context).scale(1),
+                  ),
+                  _menu(color),
+                ],
+              );
+            },
+          ),
+        ),
+        if (!last) ShadSeparator.horizontal(color: color.borderL2),
+      ],
     );
   }
 }
@@ -1697,45 +1734,16 @@ class _RecentRowState extends State<_RecentRow> {
             ),
           ),
         if (hovered)
-          _ForgetButton(onTap: widget.onForget, label: context.tr('forget')),
+          DswIconButton(
+            icon: LucideIcons.x,
+            tooltip: context.tr('forget'),
+            onTap: widget.onForget,
+            size: 20,
+            iconSize: DswShape.iconTiny,
+          ),
       ],
     ),
   );
-}
-
-/// The recents' trailing forget button: 20px square, hover fill, subdued ink —
-/// a destructive-looking affordance for a non-destructive action.
-class _ForgetButton extends StatelessWidget {
-  const _ForgetButton({required this.onTap, required this.label});
-
-  final VoidCallback onTap;
-
-  /// The X glyph alone is unnamed to a screen reader; the row passes
-  /// `t('forget')` in.
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = context.dsw;
-    return DswHoverTap(
-      onTap: onTap,
-      semanticLabel: label,
-      excludeSemantics: true,
-      builder: (context, hovered, _) => Container(
-        width: 20,
-        height: 20,
-        decoration: BoxDecoration(
-          color: hovered ? color.interactiveBgHover : Colors.transparent,
-          borderRadius: BorderRadius.circular(DswShape.inset),
-        ),
-        child: Icon(
-          LucideIcons.x,
-          size: DswShape.iconTiny,
-          color: hovered ? color.labelPrimary : color.labelTertiary,
-        ),
-      ),
-    );
-  }
 }
 
 /// One row of the nav's filterable list — the section it points at, the label
@@ -1747,8 +1755,12 @@ class _NavItem {
   final IconData icon;
 }
 
-/// The nav's search field: a 32px box with a leading search glyph, matching
-/// the `_Field` height so the nav reads as one rhythm.
+/// The nav's search field — one `ShadInput`, whose frame is the one the bridge
+/// gives every field and whose glyph sits in the library's own `leading` slot
+/// (`input.dart:112`). It used to be a hand-drawn box around a borderless field,
+/// which is the same question answered twice on one surface (§1B S5): the row
+/// comment even said "the row's hairline is the frame", while a field is allowed
+/// to have a frame of its own.
 class _SearchField extends StatelessWidget {
   const _SearchField({required this.controller, required this.hint});
 
@@ -1758,50 +1770,26 @@ class _SearchField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    return Container(
-      // One line of chrome: the field's text is 14/22, and a nailed 32 left it
-      // 30.0 of box where 40.0 was needed at the system's 1.8x step - the guard
-      // quotes that pair if this line goes back to a constant.
-      height: 32 * MediaQuery.textScalerOf(context).scale(1),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(DswShape.control),
-        border: Border.all(color: color.borderL2),
+    return ShadInput(
+      // Named, so a test can tell this field from the ones under it: it sits
+      // above every section and is a `ShadInput` like they are.
+      key: const ValueKey('settings-search'),
+      controller: controller,
+      style: DswType.s14.copyWith(color: color.labelPrimary),
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 8, right: 6),
+        child: Icon(
+          LucideIcons.search,
+          size: DswShape.iconSm,
+          color: color.labelTertiary,
+        ),
       ),
-      child: Row(
-        children: [
-          const SizedBox(width: 8),
-          Icon(
-            LucideIcons.search,
-            size: DswShape.iconSm,
-            color: color.labelTertiary,
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: dswEnsureShadTheme(
-              context,
-              ShadInput(
-                // Named, so a test can tell this field from the ones under it:
-                // it sits above every section and is a `ShadInput` like they are.
-                key: const ValueKey('settings-search'),
-                controller: controller,
-                style: DswType.s14.copyWith(color: color.labelPrimary),
-                // The row's own hairline is the frame; a field inside it that
-                // drew a second one would say "two boxes" where there is one.
-                decoration: dswBareInput,
-                // The seat above is the truth (32 at the designed step); a
-                // field that adds its own 8+8 inside it overflows the box it
-                // was put in. Material's collapsed decorator hid that by
-                // clipping silently, shad's flex says so out loud.
-                padding: EdgeInsets.zero,
-                placeholder: dswInputHint(hint),
-                placeholderStyle: DswType.s14.copyWith(
-                  color: color.labelDimmed,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+      // The seat is the text line plus this gutter; the box then *is* 32 at the
+      // designed step instead of being nailed to it, which is what let the old
+      // hand-drawn frame hide a field that overflowed its own row.
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      placeholder: dswInputHint(hint),
+      placeholderStyle: DswType.s14.copyWith(color: color.labelDimmed),
     );
   }
 }
@@ -1875,45 +1863,6 @@ class _NavCellState extends State<_NavCell> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// `.close`: a 28px circle with a 14px glyph.
-class _CloseButton extends StatefulWidget {
-  const _CloseButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  State<_CloseButton> createState() => _CloseButtonState();
-}
-
-class _CloseButtonState extends State<_CloseButton> {
-  @override
-  Widget build(BuildContext context) {
-    final color = context.dsw;
-    final label = context.tr('closeSettings');
-    return Tooltip(
-      message: label,
-      child: DswHoverTap(
-        onTap: widget.onTap,
-        semanticLabel: label,
-        excludeSemantics: true,
-        builder: (context, hovered, _) => Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: hovered ? color.interactiveBgHover : null,
-          ),
-          child: Icon(
-            LucideIcons.x,
-            size: DswShape.iconSm,
-            color: color.labelPrimary,
-          ),
         ),
       ),
     );
@@ -2075,10 +2024,12 @@ class _Stepper extends StatelessWidget {
         const SizedBox(height: 6),
         Row(
           children: [
-            _StepButton(
+            DswIconButton.outlined(
               icon: LucideIcons.minus,
-              label: context.tr('decrease'),
+              tooltip: context.tr('decrease'),
               onTap: value > min ? () => onChanged(value - 1) : null,
+              size: 28,
+              iconSize: DswShape.iconSm,
             ),
             SizedBox(
               // A one-line readout, so both of its dimensions ride the text
@@ -2097,10 +2048,12 @@ class _Stepper extends StatelessWidget {
                 ),
               ),
             ),
-            _StepButton(
+            DswIconButton.outlined(
               icon: LucideIcons.plus,
-              label: context.tr('increase'),
+              tooltip: context.tr('increase'),
               onTap: value < max ? () => onChanged(value + 1) : null,
+              size: 28,
+              iconSize: DswShape.iconSm,
             ),
           ],
         ),
@@ -2109,96 +2062,24 @@ class _Stepper extends StatelessWidget {
   }
 }
 
-/// One stepper side: 28px square, radius 6, subdued until hovered — the
-/// `_RevealButton` shape with the minus/plus glyphs the stepper asks for.
-class _StepButton extends StatefulWidget {
-  const _StepButton({
-    required this.icon,
-    required this.onTap,
-    required this.label,
-  });
-
-  final IconData icon;
-
-  /// Null at the range's end — the cap is visible, not silent.
-  final VoidCallback? onTap;
-
-  /// "Increase" / "Decrease" — the +/- glyph alone is unnamed.
-  final String label;
-
-  @override
-  State<_StepButton> createState() => _StepButtonState();
-}
-
-class _StepButtonState extends State<_StepButton> {
-  @override
-  Widget build(BuildContext context) {
-    final color = context.dsw;
-    return DswHoverTap(
-      onTap: widget.onTap,
-      enabled: widget.onTap != null,
-      semanticLabel: widget.label,
-      excludeSemantics: true,
-      builder: (context, hovered, _) => Container(
-        width: 28,
-        height: 28,
-        decoration: BoxDecoration(
-          color: hovered && widget.onTap != null
-              ? color.interactiveBgHover
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(DswShape.inner),
-          border: Border.all(color: color.borderL2),
-        ),
-        child: Icon(
-          widget.icon,
-          size: DswShape.iconSm,
-          color: widget.onTap != null
-              ? color.labelSecondary
-              : color.labelCaption,
-        ),
-      ),
-    );
-  }
-}
-
-/// `.iconButton`: a 28px square, radius 6, tertiary glyph.
-class _RevealButton extends StatefulWidget {
+/// The key field's reveal. It is the one affordance that belongs to the field
+/// rather than the card around it, so it rides `ShadInput.trailing` — and its
+/// body is the shared icon control (ADR-0024), which is what says a press, a Tab
+/// stop and the accessible name all arrive together.
+class _RevealButton extends StatelessWidget {
   const _RevealButton({required this.revealed, required this.onTap});
 
   final bool revealed;
   final VoidCallback onTap;
 
   @override
-  State<_RevealButton> createState() => _RevealButtonState();
-}
-
-class _RevealButtonState extends State<_RevealButton> {
-  @override
   Widget build(BuildContext context) {
-    final color = context.dsw;
-    final label = widget.revealed
-        ? context.tr('hideKey')
-        : context.tr('showKey');
-    return Tooltip(
-      message: label,
-      child: DswHoverTap(
-        onTap: widget.onTap,
-        semanticLabel: label,
-        excludeSemantics: true,
-        builder: (context, hovered, _) => Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: hovered ? color.interactiveBgHover : null,
-            borderRadius: BorderRadius.circular(DswShape.inner),
-          ),
-          child: Icon(
-            widget.revealed ? LucideIcons.eye_off : LucideIcons.eye,
-            size: DswShape.iconMd,
-            color: hovered ? color.labelPrimary : color.labelTertiary,
-          ),
-        ),
-      ),
+    return DswIconButton(
+      icon: revealed ? LucideIcons.eye_off : LucideIcons.eye,
+      tooltip: revealed ? context.tr('hideKey') : context.tr('showKey'),
+      onTap: onTap,
+      size: 28,
+      iconSize: DswShape.iconMd,
     );
   }
 }
@@ -2232,123 +2113,25 @@ class _CredentialDot extends StatelessWidget {
   }
 }
 
-/// `.rowActions .secondaryButton`: the dense capsule — 28px, radius 14, hairline
-/// border — that a provider row's Edit affordance takes, with the SOLID hover
-/// wash dsh's row-action buttons use (`interactive-bg-hover-solid`). The label
-/// flips to "Close" on the row whose card is open, since that is what the tap
-/// then does.
-class _RowEditButton extends StatefulWidget {
+/// The provider row's trailing control: the same small outline capsule the rest
+/// of this page uses for a labelled action (保存, 添加服务器, 测试连接), because a
+/// second spelling of "small bordered button" in the same panel is the
+/// inconsistency the screenshot was filed for (ADR-0036 §1B S4). Its body is
+/// shad's `ShadButton` already, so keyboard, focus and the disabled dimming come
+/// from there. The label flips to "Close" on the row whose card is open, since
+/// that is what the tap then does.
+class _RowEditButton extends StatelessWidget {
   const _RowEditButton({required this.expanded, required this.onTap});
 
   final bool expanded;
   final VoidCallback onTap;
 
   @override
-  State<_RowEditButton> createState() => _RowEditButtonState();
-}
-
-class _RowEditButtonState extends State<_RowEditButton> {
-  @override
-  Widget build(BuildContext context) {
-    final color = context.dsw;
-    return DswHoverTap(
-      onTap: widget.onTap,
-      builder: (context, hovered, _) => AnimatedContainer(
-        duration: DswMotion.respecting(context, DswMotion.fast),
-        // One line of chrome: the 12/18 label needed 32.0 at the system's 1.8x
-        // where this seat, less its own stroke, gave it 26.0.
-        height: 28 * MediaQuery.textScalerOf(context).scale(1),
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: hovered ? color.interactiveBgHoverSolid : null,
-          borderRadius: BorderRadius.circular(DswShape.float),
-          border: Border.all(color: color.borderL2),
-        ),
-        child: Center(
-          child: Text(
-            widget.expanded ? context.tr('close') : context.tr('edit'),
-            style: DswType.xxs12.copyWith(
-              color: hovered ? color.labelPrimary : color.labelSecondary,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// `.customized`: dsh's `<details>` — a hairline top border, a summary row
-/// (pad 2/4, r6, hover to labelPrimary) with a rotating chevron, and the body
-/// below when open with 12px of its own air. The endpoint and model fields
-/// hide behind it because a working default already answers both; the key is
-/// the field a user opening this card is actually here for.
-class _CustomizedDisclosure extends StatefulWidget {
-  const _CustomizedDisclosure({
-    required this.open,
-    required this.onToggle,
-    required this.child,
-  });
-
-  final bool open;
-  final VoidCallback onToggle;
-  final Widget child;
-
-  @override
-  State<_CustomizedDisclosure> createState() => _CustomizedDisclosureState();
-}
-
-class _CustomizedDisclosureState extends State<_CustomizedDisclosure> {
-  @override
-  Widget build(BuildContext context) {
-    final color = context.dsw;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
-          padding: const EdgeInsets.only(top: 10),
-          decoration: BoxDecoration(
-            border: Border(top: BorderSide(color: color.borderL2)),
-          ),
-          child: DswHoverTap(
-            onTap: widget.onToggle,
-            builder: (context, hovered, _) => Container(
-              padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(DswShape.inner),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AnimatedRotation(
-                    turns: widget.open ? 0.25 : 0,
-                    duration: DswMotion.respecting(context, DswMotion.fast),
-                    child: Icon(
-                      LucideIcons.chevron_right,
-                      size: DswShape.iconSm,
-                      color: hovered
-                          ? color.labelPrimary
-                          : color.labelSecondary,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    context.tr('customized'),
-                    style: DswType.xxsStrong12.copyWith(
-                      color: hovered
-                          ? color.labelPrimary
-                          : color.labelSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        if (widget.open)
-          Padding(padding: const EdgeInsets.only(top: 12), child: widget.child),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => CapsuleButton(
+    label: expanded ? context.tr('close') : context.tr('edit'),
+    onTap: onTap,
+    size: CapsuleSize.sm,
+  );
 }
 
 /// The model field's quick-select: the `_RevealButton` box shape opening a
@@ -2515,43 +2298,6 @@ class _ServerDraft {
 /// The trailing X on a server card: the `_RevealButton` shape with a
 /// destructive glyph, since removing a row is the one destructive action the
 /// panel can take.
-class _RemoveButton extends StatefulWidget {
-  const _RemoveButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  State<_RemoveButton> createState() => _RemoveButtonState();
-}
-
-class _RemoveButtonState extends State<_RemoveButton> {
-  @override
-  Widget build(BuildContext context) {
-    final color = context.dsw;
-    return Tooltip(
-      message: context.tr('removeServer'),
-      child: DswHoverTap(
-        onTap: widget.onTap,
-        semanticLabel: context.tr('removeServer'),
-        excludeSemantics: true,
-        builder: (context, hovered, _) => Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: hovered ? color.interactiveBgHover : null,
-            borderRadius: BorderRadius.circular(DswShape.inner),
-          ),
-          child: Icon(
-            LucideIcons.x,
-            size: DswShape.iconMd,
-            color: hovered ? color.stateErrorPrimary : color.labelTertiary,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// A settings row with a title, description, and a trailing action button.
 /// Used by the backup section for export/import actions.
 class _ActionRow extends StatelessWidget {

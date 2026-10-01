@@ -139,7 +139,9 @@ void main() {
 
       // The quick select lives inside the Customized disclosure.
       await tester.tap(find.text('Customized'));
-      await tester.pump();
+      // The accordion animates its height, so one frame leaves the trigger
+      // mid-flight and a tap there misses.
+      await tester.pumpAndSettle();
       await tester.tap(find.byIcon(LucideIcons.list));
       await tester.pumpAndSettle();
       expect(find.text('gpt-4o'), findsOneWidget);
@@ -178,7 +180,7 @@ void main() {
           await tester.tap(find.text('Test connection'));
           await tester.pump();
           await tester.tap(find.text('Customized'));
-          await tester.pump();
+          await tester.pumpAndSettle();
           await tester.tap(find.byIcon(LucideIcons.list));
           await tester.pumpAndSettle();
 

@@ -25,9 +25,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadSeparator;
 
 import '../../../l10n/locales.dart';
 import '../../../model/app_settings.dart' as settings;
+import '../../../theme/dsw_shad_bridge.dart';
 import '../../../theme/dsw_shape.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
@@ -241,7 +243,12 @@ class _QuickMenuState extends State<_QuickMenu> {
           onChanged: (v) => _apply(_settings.copyWith(fontSize: v)),
         ),
         const SizedBox(height: 4),
-        Divider(height: 1, thickness: 1, color: color.borderL2),
+        // The library's separator, not Material's: this panel is shad-skinned
+        // end to end since ADR-0036, and a 1px line is one of its components.
+        dswEnsureShadTheme(
+          context,
+          ShadSeparator.horizontal(thickness: 1, color: color.borderL2),
+        ),
         _OpenSettingsRow(onTap: widget.onOpenSettings),
       ],
     );

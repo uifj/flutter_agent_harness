@@ -33,7 +33,8 @@ class DswIconButton extends StatelessWidget {
     required this.onTap,
     this.size = DswShape.controlMd,
     this.iconSize = DswShape.iconSm,
-  });
+  }) : outlined = false,
+       destructive = false;
 
   final IconData icon;
 
@@ -59,6 +60,37 @@ class DswIconButton extends StatelessWidget {
       : size <= DswShape.controlMd
       ? DswShape.inner
       : DswShape.control;
+
+  /// The same control with the library's outline variant: a hairline that says
+  /// "this is a button" where there is no row chrome to borrow one from — the
+  /// stepper's two sides beside a bare number. shad has the variant
+  /// (`ShadIconButton.outline`), so this is the one spelling of it.
+  const DswIconButton.outlined({
+    super.key,
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+    this.size = DswShape.controlMd,
+    this.iconSize = DswShape.iconSm,
+  }) : outlined = true,
+       destructive = false;
+
+  final bool outlined;
+
+  /// The library's destructive spelling: the glyph goes to the error colour when
+  /// the pointer is on it, which is the only warning a one-glyph "remove" gives
+  /// before it removes.
+  const DswIconButton.destructive({
+    super.key,
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+    this.size = DswShape.controlMd,
+    this.iconSize = DswShape.iconSm,
+  }) : outlined = false,
+       destructive = true;
+
+  final bool destructive;
 
   @override
   Widget build(BuildContext context) {
@@ -88,17 +120,23 @@ class DswIconButton extends StatelessWidget {
             icon: Icon(icon, size: iconSize),
             backgroundColor: Colors.transparent,
             hoverBackgroundColor: color.interactiveBgHover,
-            foregroundColor: enabled
-                ? color.labelSecondary
-                : color.labelCaption,
-            hoverForegroundColor: color.labelPrimary,
+            foregroundColor: !enabled
+                ? color.labelCaption
+                : destructive
+                ? color.labelTertiary
+                : color.labelSecondary,
+            hoverForegroundColor: destructive
+                ? color.stateErrorPrimary
+                : color.labelPrimary,
             decoration: ShadDecoration(
               border: ShadBorder.all(
-                width: 0,
+                width: outlined ? 1 : 0,
+                color: color.borderL2,
                 radius: DswShape.radius(_radius),
               ),
               focusedBorder: ShadBorder.all(
-                width: 0,
+                width: outlined ? 1 : 0,
+                color: color.borderL2,
                 radius: DswShape.radius(_radius),
               ),
             ),

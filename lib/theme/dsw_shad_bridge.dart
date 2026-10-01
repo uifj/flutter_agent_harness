@@ -108,6 +108,17 @@ ShadThemeData dswShadTheme(Brightness brightness, {double textScale = 1}) {
         border: ShadBorder.all(color: c.borderL2, width: 1),
         focusedBorder: ShadBorder.all(color: c.brandPrimary, width: 1),
         errorBorder: ShadBorder.all(color: c.stateErrorPrimary, width: 1),
+        // The second outline. `ShadDecorator` merges the *variant's*
+        // `decorationTheme()` before this decoration (`decorator.dart:120`), and
+        // that one carries `secondaryFocusedBorder = 2px ring, offset 4`
+        // (`default_theme_variant.dart:362`) — so a focused field painted our
+        // hairline with the library's ring four pixels outside it, which is the
+        // doubled frame in the settings screenshot. A field answers "where is the
+        // keyboard" with one stroke, so the ring is said off here rather than at
+        // the five call sites that wanted no frame anyway (`dswBareInput`).
+        secondaryBorder: ShadBorder.none,
+        secondaryFocusedBorder: ShadBorder.none,
+        secondaryErrorBorder: ShadBorder.none,
       ),
     ),
     // The on/off (ADR-0036 row 25). Geometry first: this design's pill is
