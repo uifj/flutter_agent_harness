@@ -144,7 +144,7 @@ const enStrings = <String, String>{
   'deleteSessionBody':
       'The conversation stays on disk; it only leaves this list.',
   'sessionDeleted': 'Session removed from the list',
-  'revealFailed': 'Could not open that folder',
+  'revealFailed': 'Could not open that location',
   'historyNotSaved': 'The list changed, but that could not be saved',
   'addWorkspace': 'Add a folder',
   'expandAll': 'Expand all',
@@ -886,7 +886,7 @@ const zhStrings = <String, String>{
   'deleteSessionTitle': '删除这个会话？',
   'deleteSessionBody': '会话仍留在磁盘上，只是不再出现在列表里。',
   'sessionDeleted': '已从列表移除该会话',
-  'revealFailed': '打不开那个文件夹',
+  'revealFailed': '打不开那个位置',
   'historyNotSaved': '改动已生效，但没能存盘',
   'addWorkspace': '添加文件夹',
   'expandAll': '全部展开',

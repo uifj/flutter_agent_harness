@@ -46,6 +46,8 @@ ADR-0039 把「按工作区走到一次对话」做完了：历史分组、组�
    本 ADR 再加两棵菜单就是第四、第五遍。所以先收成 `lib/ui/primitives/reveal.dart` 的
    `revealInFilesOrReport(context, path)`：它调 `lib/host/reveal.dart` 那一枚（架构规则 5 要求 `lib/ui` 不直接 `dart:io`），
    不成则 `showFeedback(…, destructive: true)` 说一声。调用点各自只剩一行。
+   失败那句也跟着从「打不开那个文件夹」改成「打不开那个位置」——树里的**文件**行与 git 变更行都会走到它，
+   说"文件夹"就是一句对不上对象的文案（ADR-0033 那条律在失败提示上的形态）。
 3. **文件树行菜单加一格露出**，紧跟已有的两格复制之后。这一格会先逼出 `lib/host/reveal.dart` 的一个空白：
    它现在只认目录（`:16` 的 `Directory(path).exists()`），而树里的**文件行**和 git 变更行给的都是文件路径。
    所以同一枚函数按路径是文件还是目录分两条 argv：macOS `open -R <file>`（在 Finder 里选中它）、
