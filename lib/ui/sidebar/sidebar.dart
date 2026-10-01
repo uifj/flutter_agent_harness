@@ -1426,14 +1426,17 @@ Future<String?> _promptForText(
 /// arranged, whether every folder is folded, and a way to bring another folder
 /// into it.
 ///
-/// The second screenshot asks for exactly this row. Upstream's head carries a
-/// **single** glyph that reads the fold state and flips with it
-/// (`WorkspaceSidebar.tsx:1074-1095`: Minimize2 when everything is expanded,
+/// The fold glyph follows upstream's **task-list** head, which carries a
+/// **single** button that reads the fold state and flips with it
+/// (`WorkspaceSidebar.tsx:1071-1095`: Minimize2 when everything is expanded,
 /// Maximize2 when everything is folded, disabled when there is nothing to
-/// fold), so this does the same rather than offering "expand all" and "collapse
-/// all" as two menu rows that both have to be guessed at. The organize choice
-/// stays in the `⋮` because a two-option segmented control would cost the
-/// section name its seat in a 280px column.
+/// fold) — not "expand all" and "collapse all" as two rows that each have to be
+/// guessed at. The 「项目」 head in the reference screenshot is a *different*
+/// row (`WorkspacePurposeSection.tsx:56-94`, the projects section) and its
+/// dotted glyph really is a `GripVertical` sort handle, which this app has no
+/// section ordering to copy; see ADR-0039 addendum 6. The organize choice stays
+/// in the `⋮` because a two-option segmented control would cost the section
+/// name its seat in a 280px column.
 class _HistorySectionRow extends StatelessWidget {
   const _HistorySectionRow({
     required this.organize,
