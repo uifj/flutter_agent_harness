@@ -1,9 +1,12 @@
 // The one sentence this file holds: the 企划/代理 switch resets the plan
-// extension panel on the starkins schedule — leaving plan closes it, entering
-// plan starts at the document view — and the extension rows are their own
+// collection panel on the starkins schedule — leaving plan closes it, entering
+// plan starts at the document view — and the collection rows are their own
 // toggles.
 //
-// This is the ADR-0007 S2 guard. The controller is pure view state (nothing
+// The ADR-0007 S2 guard, carried over to the ADR-0037 shape: the old
+// hard-coded extension panels (board / calendar / table) retired on
+// 2026-10-01, and the extension area lists plan collections, so the panel
+// state is one collection id. The controller is pure view state (nothing
 // persisted), so what matters is exactly the reset semantics the UI relies on.
 
 import 'package:agent_harness/state/workspace_mode_controller.dart';
@@ -29,31 +32,42 @@ void main() {
     expect(controller.extensionView, PlanExtensionView.none);
   });
 
-  test('leaving plan closes its extension panel', () {
+  test('leaving plan closes its collection panel', () {
     controller
       ..selectMode(WorkspaceMode.plan)
-      ..toggleExtension(PlanExtensionView.board);
-    expect(controller.extensionView, PlanExtensionView.board);
+      ..openCollection('set-tasks');
+    expect(controller.extensionView, PlanExtensionView.collection);
+    expect(controller.openCollectionId, 'set-tasks');
 
     controller.selectMode(WorkspaceMode.agent);
     expect(controller.mode, WorkspaceMode.agent);
     expect(controller.extensionView, PlanExtensionView.none);
   });
 
-  test('an extension row toggles: open once, close again', () {
-    controller.toggleExtension(PlanExtensionView.calendar);
+  test('a collection row toggles: open once, close again', () {
+    controller.openCollection('set-tasks');
     expect(controller.mode, WorkspaceMode.plan);
-    expect(controller.extensionView, PlanExtensionView.calendar);
+    expect(controller.extensionView, PlanExtensionView.collection);
+    expect(controller.openCollectionId, 'set-tasks');
 
-    controller.toggleExtension(PlanExtensionView.calendar);
-    expect(controller.mode, WorkspaceMode.plan);
+    controller.openCollection('set-tasks');
     expect(controller.extensionView, PlanExtensionView.none);
+    expect(controller.openCollectionId, isNull);
   });
 
-  test('opening an extension from the agent workspace enters plan', () {
-    controller.toggleExtension(PlanExtensionView.table);
+  test('opening a collection from the agent workspace enters plan', () {
+    controller.openCollection('col-inbox');
     expect(controller.mode, WorkspaceMode.plan);
-    expect(controller.extensionView, PlanExtensionView.table);
+    expect(controller.extensionView, PlanExtensionView.collection);
+  });
+
+  test('switching collections keeps the panel up and moves the id', () {
+    controller
+      ..selectMode(WorkspaceMode.plan)
+      ..openCollection('set-tasks')
+      ..openCollection('col-inbox');
+    expect(controller.extensionView, PlanExtensionView.collection);
+    expect(controller.openCollectionId, 'col-inbox');
   });
 
   test('listeners fire only on real changes', () {

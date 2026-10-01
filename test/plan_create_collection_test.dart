@@ -79,7 +79,7 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('Save'));
     // The write is real IO inside a fake-async zone: hand the loop real time
-    // until the store answers (the pumpUntil shape plan_extensions_view_test
+    // until the store answers (the pumpUntil shape the dataview tests
     // established).
     for (var i = 0; i < 100; i++) {
       if (store.collections.any(

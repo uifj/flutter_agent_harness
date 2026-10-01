@@ -832,68 +832,10 @@ final class WorkspaceModeProvider
 
 String _$workspaceModeHash() => r'2e17f5e7553863c2043fd1b432ee7e2ed7ab4734';
 
-/// The plan side's task list (ADR-0007 D4), the one record the board, the
-/// calendar, and the table all project. Same bootstrap shape as the settings
-/// store: `main` opens it before the first frame and overrides this provider —
-/// the default throws because there is no meaningful default for "where do the
-/// tasks live".
-
-@ProviderFor(planTaskStore)
-final planTaskStoreProvider = PlanTaskStoreProvider._();
-
-/// The plan side's task list (ADR-0007 D4), the one record the board, the
-/// calendar, and the table all project. Same bootstrap shape as the settings
-/// store: `main` opens it before the first frame and overrides this provider —
-/// the default throws because there is no meaningful default for "where do the
-/// tasks live".
-
-final class PlanTaskStoreProvider
-    extends $FunctionalProvider<PlanTaskStore, PlanTaskStore, PlanTaskStore>
-    with $Provider<PlanTaskStore> {
-  /// The plan side's task list (ADR-0007 D4), the one record the board, the
-  /// calendar, and the table all project. Same bootstrap shape as the settings
-  /// store: `main` opens it before the first frame and overrides this provider —
-  /// the default throws because there is no meaningful default for "where do the
-  /// tasks live".
-  PlanTaskStoreProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'planTaskStoreProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$planTaskStoreHash();
-
-  @$internal
-  @override
-  $ProviderElement<PlanTaskStore> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
-
-  @override
-  PlanTaskStore create(Ref ref) {
-    return planTaskStore(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(PlanTaskStore value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<PlanTaskStore>(value),
-    );
-  }
-}
-
-String _$planTaskStoreHash() => r'e5bf21593487422478a4d3379bd960134c61f420';
-
 /// The plan workspace's object store (ADR-0037 P2): records, types, relations,
 /// viewers, templates and widgets for one plan space. Same bootstrap rule as
-/// [planTaskStore] — `main` opens it before the first frame and overrides this,
-/// and the default throws because a store needs a real directory.
+/// the settings store — `main` opens it before the first frame and overrides
+/// this, and the default throws because a store needs a real directory.
 ///
 /// The mock data lives in ONE place: the seed `main` passes to `open`. Nothing
 /// below reads a flag for "is this mock", which is what keeps swapping in a
@@ -904,8 +846,8 @@ final planObjectStoreProvider = PlanObjectStoreProvider._();
 
 /// The plan workspace's object store (ADR-0037 P2): records, types, relations,
 /// viewers, templates and widgets for one plan space. Same bootstrap rule as
-/// [planTaskStore] — `main` opens it before the first frame and overrides this,
-/// and the default throws because a store needs a real directory.
+/// the settings store — `main` opens it before the first frame and overrides
+/// this, and the default throws because a store needs a real directory.
 ///
 /// The mock data lives in ONE place: the seed `main` passes to `open`. Nothing
 /// below reads a flag for "is this mock", which is what keeps swapping in a
@@ -917,8 +859,8 @@ final class PlanObjectStoreProvider
     with $Provider<PlanObjectStore> {
   /// The plan workspace's object store (ADR-0037 P2): records, types, relations,
   /// viewers, templates and widgets for one plan space. Same bootstrap rule as
-  /// [planTaskStore] — `main` opens it before the first frame and overrides this,
-  /// and the default throws because a store needs a real directory.
+  /// the settings store — `main` opens it before the first frame and overrides
+  /// this, and the default throws because a store needs a real directory.
   ///
   /// The mock data lives in ONE place: the seed `main` passes to `open`. Nothing
   /// below reads a flag for "is this mock", which is what keeps swapping in a

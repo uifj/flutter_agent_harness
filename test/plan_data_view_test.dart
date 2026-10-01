@@ -4,7 +4,7 @@
 // ADR-0037 P3 的守卫。四条历史教训都挂在这里：
 //  1) 渲染 store 的面必须订阅 store（ADR-0007 那次"表格只读不听"的缺陷）；
 //  2) `testWidgets` 里**不等** store 的写盘（FakeAsync 不交回真实事件循环，`await`
-//     会把整轮挂死且没有栈）——沿 `plan_extensions_view_test` 的 `unawaited` + 轮询 finder；
+//     会把整轮挂死且没有栈）——沿本文件最初从旧扩展面板测试带来的 `unawaited` + 轮询 finder；
 //  3) 放大文本两档（1.8x / 2.2x），尺子挂在 `MaterialApp.builder` 那道缝上；
 //  4) 图标即控件必须自报姓名（`unlabelledIconControls`）。
 
@@ -142,13 +142,18 @@ void main() {
     expect(find.text('Effort'), findsNothing);
   });
 
-  testWidgets('calendar answers "not available here", in words', (
+  testWidgets('calendar renders the month grid with dated records', (
     tester,
   ) async {
+    // The calendar capability moved here from the retired plan panel (user
+    // decision 2026-10-01) — an extension over the mobile client's own
+    // unsupported card, registered in the parity ledger.
     await pump(tester);
     await tester.tap(find.text('Calendar'));
-    await settled(tester, find.text(_calendarCopy));
-    expect(find.text('Ship the viewer bar'), findsNothing);
+    await settled(tester, find.text('Ship the viewer bar'));
+    // The dated record (dueDate 2026-10-02) sits in a day cell; the graph
+    // kind is the one that still answers with the honest card.
+    expect(find.text(_calendarCopy), findsNothing);
   });
 
   testWidgets('the sort sheet shows what is sorted on, and a new order lands', (

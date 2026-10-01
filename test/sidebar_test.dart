@@ -80,8 +80,12 @@ void main() {
                   sessions: index,
                   mode: mode,
                   onSelectMode: mode == null ? null : (_) {},
-                  extensionView: PlanExtensionView.calendar,
-                  onToggleExtension: (_) {},
+                  collections: const [
+                    (id: 'set-tasks', name: 'Delivery board'),
+                    (id: 'col-inbox', name: 'Reading inbox'),
+                  ],
+                  openCollectionId: 'col-inbox',
+                  onOpenCollection: (_) {},
                   profile: profile,
                   onNewSession: () {},
                   onToggle: onToggle ?? () {},
@@ -406,7 +410,8 @@ void main() {
         final designed = step == 1.0;
         // The rail draws glyphs only, so there the walk just measures.
         if (!collapsed) {
-          expect(find.text('Calendar'), findsOneWidget);
+          // The extension area now lists the plan collections (2026-10-01).
+          expect(find.text('Reading inbox'), findsOneWidget);
           expect(find.text(profile.email), findsOneWidget);
           expect(
             find.text('Plan'),
@@ -417,7 +422,8 @@ void main() {
           );
           expect(namedCell, designed ? findsNothing : findsOneWidget);
         } else {
-          expect(find.byIcon(LucideIcons.calendar), findsOneWidget);
+          // The rail draws one glyph per collection (kanban/inbox alternating).
+          expect(find.byIcon(LucideIcons.kanban), findsOneWidget);
         }
         expect(
           textDefects(tester),

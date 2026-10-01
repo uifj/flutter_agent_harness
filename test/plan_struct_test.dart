@@ -308,15 +308,19 @@ void main() {
   });
 
   group('viewers answer with data, not with absence', () {
-    test('six kinds, four rendered — the two that are not say so', () {
+    test('six kinds, five rendered locally — graph alone says no', () {
       expect(PlanViewerKind.values.length, 6);
       expect(
         PlanViewerKind.values.where((kind) => kind.renderedByClient).length,
-        4,
+        5,
+        reason:
+            'calendar renders locally since 2026-10-01 (the retired plan '
+            'calendar panel moved into the collection view) — a registered '
+            'extension over the mobile client, which renders four',
       );
       expect(
-        PlanViewerKind.calendar.unsupportedL10nKey,
-        'planViewCalendarUnsupported',
+        PlanViewerKind.graph.unsupportedL10nKey,
+        'planViewGraphUnsupported',
       );
       expect(
         PlanViewerKind.graph.unsupportedL10nKey,

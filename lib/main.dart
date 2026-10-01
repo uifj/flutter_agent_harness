@@ -32,7 +32,6 @@ import 'state/details_selection.dart';
 import 'state/hotkey_service.dart';
 import 'model/plan_mock_content.dart';
 import 'state/plan_object_store.dart';
-import 'state/plan_task_store.dart';
 import 'state/prefs_store.dart';
 import 'state/settings_store.dart';
 import 'state/tray_service.dart';
@@ -45,7 +44,6 @@ import 'ui/appearance_scope.dart';
 import 'ui/conversation/conversation_root.dart';
 import 'ui/conversation/details_panel.dart';
 import 'ui/conversation/hero_workspace_picker.dart';
-import 'ui/plan/plan_extensions_view.dart';
 import 'ui/plan/dataview/plan_data_view_screen.dart';
 import 'ui/plan/plan_workspace.dart';
 import 'ui/settings/model_settings.dart';
@@ -62,9 +60,6 @@ Future<void> main() async {
   final support = await getApplicationSupportDirectory();
   final settings = await SettingsStore.open(support);
   final prefsStore = await PrefsStore.open(support);
-  // The plan side's tasks (ADR-0007): same bootstrap rule — opened before the
-  // first frame, never from a provider body.
-  final planTasks = await PlanTaskStore.open(support);
   // The plan workspace's object store (ADR-0037): the same bootstrap rule, and
   // the only place the mock seed is named.
   final planSpace = await PlanObjectStore.open(support, seed: planMockSeed());
@@ -85,7 +80,6 @@ Future<void> main() async {
       supportDirectoryProvider.overrideWithValue(support),
       settingsStoreProvider.overrideWithValue(settings),
       prefsStoreProvider.overrideWithValue(prefsStore),
-      planTaskStoreProvider.overrideWithValue(planTasks),
       planObjectStoreProvider.overrideWithValue(planSpace),
     ],
   );
@@ -277,44 +271,63 @@ class _DshAppState extends ConsumerState<DshApp> {
                     listenable: ref.watch(workspaceModeProvider),
                     builder: (context, _) => AppFrame(
                       layout: ref.watch(layoutProvider),
-                      sidebarBuilder: (context, collapsed, width) => Sidebar(
-                        collapsed: collapsed,
-                        width: width,
-                        sessions: ref.watch(sessionsProvider),
-                        // The identity the footer avatar shows. `.value` — the
-                        // avatar renders a placeholder until the (mock, later Supabase)
-                        // source resolves; riverpod stays out of the widget tree.
-                        profile: ref.watch(userProfileProvider).value,
-                        // The footer quick-menu edits these live (theme/locale/width
-                        // never rebuild the runtime), so it needs the document and the
-                        // save path — the same `scope.save` the settings panel uses.
-                        // `ref.read` in the callback (audit F7): the save path is an
-                        // action, not data, and keepAlive makes it identical either
-                        // way — this is the riverpod-lint-conventional spelling.
-                        settings: doc,
-                        onSettingsChanged: (next) =>
-                            ref.read(appScopeProvider).save(next),
-                        // The 企划/代理 switch (ADR-0007).
-                        mode: ref.watch(workspaceModeProvider).mode,
-                        onSelectMode: ref
-                            .watch(workspaceModeProvider)
-                            .selectMode,
-                        // The plan extension panels' open view + toggle.
-                        extensionView: ref
-                            .watch(workspaceModeProvider)
-                            .extensionView,
-                        onToggleExtension: ref
-                            .watch(workspaceModeProvider)
-                            .toggleExtension,
-                        onNewSession: scope.newSession,
-                        onToggle: ref.read(layoutProvider).toggleSidebar,
-                        onOpenSession: scope.openSession,
-                        onOpenSettings: () =>
-                            setState(() => _settingsOpen = true),
-                        // The frame rebuilds the sidebar on every layout write, so the
-                        // open state read here is never stale.
-                        onToggleDetails: ref.read(layoutProvider).toggleDetails,
-                        detailsOpen: ref.watch(layoutProvider).details != 0,
+                      // The plan-object store is a ChangeNotifier the
+                      // providers cannot re-project; the builder re-reads its
+                      // collections on every write so the sidebar's extension
+                      // area and the center pane agree on what exists.
+                      sidebarBuilder: (context, collapsed, width) => ListenableBuilder(
+                        listenable: ref.watch(planObjectStoreProvider),
+                        builder: (context, _) => Sidebar(
+                          collapsed: collapsed,
+                          width: width,
+                          sessions: ref.watch(sessionsProvider),
+                          // The identity the footer avatar shows. `.value` — the
+                          // avatar renders a placeholder until the (mock, later Supabase)
+                          // source resolves; riverpod stays out of the widget tree.
+                          profile: ref.watch(userProfileProvider).value,
+                          // The footer quick-menu edits these live (theme/locale/width
+                          // never rebuild the runtime), so it needs the document and the
+                          // save path — the same `scope.save` the settings panel uses.
+                          // `ref.read` in the callback (audit F7): the save path is an
+                          // action, not data, and keepAlive makes it identical either
+                          // way — this is the riverpod-lint-conventional spelling.
+                          settings: doc,
+                          onSettingsChanged: (next) =>
+                              ref.read(appScopeProvider).save(next),
+                          // The 企划/代理 switch (ADR-0007).
+                          mode: ref.watch(workspaceModeProvider).mode,
+                          onSelectMode: ref
+                              .watch(workspaceModeProvider)
+                              .selectMode,
+                          // The plan collections the extension area lists,
+                          // re-read on every store write by the
+                          // ListenableBuilder wrapping this Sidebar (the store
+                          // is a ChangeNotifier, not a provider rebuild).
+                          collections: [
+                            for (final collection
+                                in ref
+                                    .watch(planObjectStoreProvider)
+                                    .collections)
+                              (id: collection.id, name: collection.name),
+                          ],
+                          openCollectionId: ref
+                              .watch(workspaceModeProvider)
+                              .openCollectionId,
+                          onOpenCollection: ref
+                              .watch(workspaceModeProvider)
+                              .openCollection,
+                          onNewSession: scope.newSession,
+                          onToggle: ref.read(layoutProvider).toggleSidebar,
+                          onOpenSession: scope.openSession,
+                          onOpenSettings: () =>
+                              setState(() => _settingsOpen = true),
+                          // The frame rebuilds the sidebar on every layout write, so the
+                          // open state read here is never stale.
+                          onToggleDetails: ref
+                              .read(layoutProvider)
+                              .toggleDetails,
+                          detailsOpen: ref.watch(layoutProvider).details != 0,
+                        ),
                       ),
                       center: _centerPane(doc),
                       details: DetailsPanel(
@@ -374,12 +387,6 @@ class _DshAppState extends ConsumerState<DshApp> {
               modes.openCollectionId ??
               planStore.collections.firstOrNull?.id ??
               '',
-        ),
-        PlanExtensionView.board ||
-        PlanExtensionView.calendar ||
-        PlanExtensionView.table => PlanExtensionsView(
-          store: ref.watch(planTaskStoreProvider),
-          view: modes.extensionView,
         ),
       };
     }

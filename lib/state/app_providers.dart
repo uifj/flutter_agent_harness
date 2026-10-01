@@ -35,7 +35,6 @@ import '../host/terminal_manager.dart';
 import 'layout_controller.dart';
 import 'model_directory.dart';
 import 'plan_object_store.dart';
-import 'plan_task_store.dart';
 import 'prefs_store.dart';
 import 'session_index.dart';
 import 'settings_store.dart';
@@ -187,19 +186,10 @@ WorkspaceModeController workspaceMode(Ref ref) {
   return controller;
 }
 
-/// The plan side's task list (ADR-0007 D4), the one record the board, the
-/// calendar, and the table all project. Same bootstrap shape as the settings
-/// store: `main` opens it before the first frame and overrides this provider —
-/// the default throws because there is no meaningful default for "where do the
-/// tasks live".
-@Riverpod(keepAlive: true)
-PlanTaskStore planTaskStore(Ref ref) =>
-    throw UnimplementedError('override planTaskStore in main or tests');
-
 /// The plan workspace's object store (ADR-0037 P2): records, types, relations,
 /// viewers, templates and widgets for one plan space. Same bootstrap rule as
-/// [planTaskStore] — `main` opens it before the first frame and overrides this,
-/// and the default throws because a store needs a real directory.
+/// the settings store — `main` opens it before the first frame and overrides
+/// this, and the default throws because a store needs a real directory.
 ///
 /// The mock data lives in ONE place: the seed `main` passes to `open`. Nothing
 /// below reads a flag for "is this mock", which is what keeps swapping in a

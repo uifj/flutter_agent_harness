@@ -1,11 +1,17 @@
-// Which top-level workspace the user is in (ADR-0007).
+// Which top-level workspace the user is in (ADR-0007, revised 2026-10-01).
 //
 // The app grew a second face: 代理 (agent) — the conversation harness this app
-// has always been — and 企划 (plan) — the markdown vault over the current
-// workspace, with its extension panels (board / calendar / table). This
+// has always been — and 企划 (plan) — the document vault over the current
+// workspace plus the plan collections as data views (ADR-0037). This
 // controller is the one switch both share; it is view state, the same category
 // as `LayoutController`'s column opens, and deliberately NOT persisted — a
 // relaunch starts in the agent workspace, as starkins's tab provider does.
+//
+// The old hard-coded extension panels (board / calendar / table over
+// `PlanTaskStore`) retired on 2026-10-01 by user decision: the extension area
+// lists the plan collections, and the calendar capability lives inside a
+// collection's Calendar view. `PlanExtensionView` therefore answers one
+// question only — is a collection panel up.
 //
 // A ChangeNotifier (not a riverpod Notifier) because riverpod imports are
 // confined to `main.dart` + `app_providers.dart` (the ADR-0002 boundary); the
@@ -26,26 +32,20 @@ enum WorkspaceMode {
   };
 }
 
-/// The plan workspace's extension panels (ADR-0007 D4). `none` is the document
-/// view — the vault tree + editor. These live only inside [WorkspaceMode.plan];
-/// selecting `agent` resets to [PlanExtensionView.none], the same reset
-/// semantics starkins's `_switchTab` applies to the other tab's pages.
+/// What the plan workspace's center pane shows. `none` is the document view —
+/// the vault tree + editor; `collection` is one plan collection's data view,
+/// identified by [WorkspaceModeController.openCollectionId]. These live only
+/// inside [WorkspaceMode.plan]; selecting `agent` resets to
+/// [PlanExtensionView.none], the same reset semantics starkins's `_switchTab`
+/// applies to the other tab's pages.
 enum PlanExtensionView {
   none,
-  board,
-  calendar,
-  table,
 
   /// One plan collection shown as an Anytype-shaped data view (ADR-0037 P3).
-  /// Which collection is up is [WorkspaceModeController.openCollectionId],
-  /// because a collection is data, not a fourth hard-coded panel.
   collection;
 
   String get name => switch (this) {
     none => 'none',
-    board => 'board',
-    calendar => 'calendar',
-    table => 'table',
     collection => 'collection',
   };
 }
@@ -76,22 +76,10 @@ class WorkspaceModeController extends ChangeNotifier {
     if (changed || _extension != PlanExtensionView.none) notifyListeners();
   }
 
-  /// Opens a plan extension panel (and enters 企划 if not there). Opening the
-  /// panel that is already open closes it — the extension group's row is its
-  /// own toggle, the same affordance starkins's nav rows carry.
-  void toggleExtension(PlanExtensionView view) {
-    if (view == PlanExtensionView.none) return;
-    if (_mode == WorkspaceMode.plan && _extension == view) {
-      _extension = PlanExtensionView.none;
-    } else {
-      _mode = WorkspaceMode.plan;
-      _extension = view;
-    }
-    notifyListeners();
-  }
-
-  /// Opens one plan collection as a data view. Re-selecting the collection that
-  /// is already up closes the panel — the same toggle the other rows carry.
+  /// Opens one plan collection as a data view (and enters 企划 if not there).
+  /// Re-selecting the collection that is already up closes the panel — the
+  /// extension row is its own toggle, the same affordance starkins's nav rows
+  /// carry.
   void openCollection(String collectionId) {
     if (_mode == WorkspaceMode.plan &&
         _extension == PlanExtensionView.collection &&

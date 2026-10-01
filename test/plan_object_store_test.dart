@@ -144,21 +144,22 @@ void main() {
       },
     );
 
-    test(
-      'calendar and graph are reachable states that answer unsupported',
-      () async {
-        final store = await open();
-        for (final (id, key) in [
-          ('v-calendar', 'planViewCalendarUnsupported'),
-          ('v-graph', 'planViewGraphUnsupported'),
-        ]) {
-          final stage = store.stageFor(PlanMockKeys.taskSet, viewerId: id);
-          expect(stage.isUnsupported, isTrue);
-          expect(stage.unsupportedReasonKey, key);
-          expect(stage.ids, isEmpty);
-        }
-      },
-    );
+    test('graph alone is a reachable state that answers unsupported', () async {
+      final store = await open();
+      final graph = store.stageFor(PlanMockKeys.taskSet, viewerId: 'v-graph');
+      expect(graph.isUnsupported, isTrue);
+      expect(graph.unsupportedReasonKey, 'planViewGraphUnsupported');
+      expect(graph.ids, isEmpty);
+      // Calendar renders locally since 2026-10-01 (the retired plan
+      // calendar panel moved into the collection view): the stage answers
+      // records, not an excuse.
+      final calendar = store.stageFor(
+        PlanMockKeys.taskSet,
+        viewerId: 'v-calendar',
+      );
+      expect(calendar.isUnsupported, isFalse);
+      expect(calendar.ids, isNotEmpty);
+    });
 
     test(
       'a collection stage uses its membership list, not a type query',

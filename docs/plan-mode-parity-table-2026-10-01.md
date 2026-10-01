@@ -45,7 +45,7 @@
 | Table（GRID）渲染：表头/行共用横向滚动器、单元格按格式分发 | ✅ | ✅ 已复刻 | P3 | `lib/ui/plan/dataview/plan_viewers.dart` | `planObjectStore.stageFor` | ShadCheckbox；单元格经 `plan_cell_value.dart` |
 | List 三行型 Default/Profile/Task(done)（AC1-1） | ✅ | ✅ 已复刻 | P3 | `plan_viewers.dart`（PlanListViewer） | 同上 | DswHoverTap（勾选） |
 | Gallery 两卡型 Default/Cover + largeCards（AC1-2） | ✅ | ✅ 已复刻 | P3 | `plan_viewers.dart`（PlanGalleryViewer，cardSize 三档） | 同上 | ShadCard 形状走 DswShape |
-| Calendar / Graph 占位（⛔照上游 Viewer.Unsupported） | ⛔ | ✅ 已复刻（占位） | P3 | `plan_viewers.dart`（PlanUnsupportedViewer） | — | ShadCard |
+| Calendar 视图 | ⛔(上游) | 🔁 扩展（2026-10-01 用户拍板：旧日程面板能力迁入集合 Calendar 视图，MonthView 宿主画格，超出上游移动端"不支持"作答；Graph 仍为诚实占位） | P3+ | `plan_calendar_viewer.dart`（PlanUnsupportedViewer 只剩 graph） | stage.records 按日期键分组 | board_panel MonthView |
 | 排序 UI：ASC/DESC + 空值首/尾；CUSTOM 仅内部（AC1-4） | ✅ | ✅ 已复刻 | P3 | `plan_viewer_sheets.dart` | store.`_writeViewer` | ShadSelect |
 | 筛选 UI：AND/OR/NO + 按格式条件子集 + 15 日期快捷（AC1-5） | ✅ | ✅ 已复刻 | P3 | `plan_viewer_sheets.dart`；求值 `lib/model/plan_filter_engine.dart` | 同上 | ShadSelect + ShadPopover |
 | 高级/嵌套筛选 | ⛔ | ⛔ 占位（模型保留形状，UI 只显示占位名） | P3 | `plan_dataview.dart:390-452` | — | — |
@@ -143,7 +143,7 @@
 | 操作 CRUD + 下拉动作（applies 门）（AC7-4） | ✅ | ✅ 已复刻（applies 门：仅 Bin 给 Empty Bin；remove/changeLayout/favorite 写回 store；换布局循环五档 = 第二屏选择器等价） | P1/P7 | `plan_widgets_screen.dart` | store.`removeWidget/changeWidgetLayout` | DswContextMenu |
 | 两屏选择器：源三段 → 布局按源 1–4 项（AC7-5） | ✅ | 🔨（桌面增量：换布局循环 + 新建走 createCollection；完整两屏 🔨） | P7+ | — | store | ShadDialog |
 | Android Glance 桌面组件（AC7-6） | 🚧 | ❌ N/A（上游 manifest 全 disabled）；"组件读快照"设计保留 = store 内存快照 | — | — | store | — |
-| 侧栏集合列表 + PlanExtensionView 泛化 | ✅ | ✅ 部分已落（集合列表 + openCollection 已接线 P3；封闭枚举 board/calendar/table 旧值保留为 ADR-0007 遗产，彻底泛化待下一笔） | P3/P7 | `sidebar.dart` + `workspace_mode_controller.dart` | — | — |
+| 侧栏集合列表 + PlanExtensionView 泛化 | ✅ | ✅ 已复刻（2026-10-01 用户拍板：扩展区列出 store 的集合，看板/表格行删除、日程迁 Calendar 视图；枚举收敛 {none, collection}；PlanTaskStore/plan_extensions_view 退役，plan_tasks.json 磁盘与备份清单保留兼容） | P3/P7 | `sidebar.dart`（_extensionGroup）+ `workspace_mode_controller.dart` | store.collections | DswHoverTap 行 |
 
 ## 8. 守卫与门禁映射（每阶段）
 

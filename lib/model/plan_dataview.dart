@@ -21,7 +21,11 @@ enum PlanViewerKind {
   list('List', true),
   gallery('Gallery', true),
   board('Board', true),
-  calendar('Calendar', false),
+  // Calendar renders locally (user decision 2026-10-01: the retired plan
+  // calendar panel's capability moved into the collection's Calendar view) —
+  // an extension over the mobile client's own answer, registered in the
+  // parity ledger. Graph stays an honest unsupported card.
+  calendar('Calendar', true),
   graph('Graph', false);
 
   const PlanViewerKind(this.formattedName, this.renderedByClient);

@@ -53,8 +53,9 @@ class Sidebar extends StatefulWidget {
     this.onSettingsChanged,
     this.mode,
     this.onSelectMode,
-    this.extensionView,
-    this.onToggleExtension,
+    this.collections = const [],
+    this.openCollectionId,
+    this.onOpenCollection,
     required this.onNewSession,
     required this.onToggle,
     required this.onOpenSession,
@@ -85,10 +86,13 @@ class Sidebar extends StatefulWidget {
   final WorkspaceMode? mode;
   final ValueChanged<WorkspaceMode>? onSelectMode;
 
-  /// The plan workspace's open extension panel, and its toggle (ADR-0007 D4).
-  /// Null (group hidden) when no mode switch is wired.
-  final PlanExtensionView? extensionView;
-  final ValueChanged<PlanExtensionView>? onToggleExtension;
+  /// The plan collections the extension area lists (ADR-0037 P7, user
+  /// decision 2026-10-01: the area answers "which collection is open", not
+  /// three hard-coded panels). Empty (group hidden) when no mode switch is
+  /// wired or the store has no collections.
+  final List<({String id, String name})> collections;
+  final String? openCollectionId;
+  final void Function(String collectionId)? onOpenCollection;
 
   final VoidCallback onNewSession;
   final VoidCallback onToggle;
@@ -294,25 +298,19 @@ class _SidebarState extends State<Sidebar> {
     );
   }
 
-  /// The plan workspace's extension panels (ADR-0007 D4) — starkins's
-  /// `_ExtensionGroup`: a labelled group of rows, each a toggle for one panel
-  /// (board / calendar / table). Only shown in 企划 mode with a wired toggle.
+  /// The plan collections (ADR-0037; user decision 2026-10-01): a labelled
+  /// group of rows, one per collection, each toggling its data view. Only
+  /// shown in 企划 mode with a wired toggle.
   Widget _extensionGroup(DswAlias color, {required bool wide}) {
-    final onToggle = widget.onToggleExtension;
-    if (onToggle == null) return const SizedBox.shrink();
-    final open = widget.extensionView ?? PlanExtensionView.none;
+    final onOpen = widget.onOpenCollection;
+    final collections = widget.collections;
+    if (onOpen == null || collections.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final openId = widget.openCollectionId;
     // Only the expanded row carries a label, so only its seat rides the step:
-    // a nailed 32 cut 'Board'/'Calendar'/'Table' at 40.0 wanted, 1.8x's measure.
+    // a nailed 32 cut labels at 40.0 wanted, 1.8x's measure.
     final step = MediaQuery.textScalerOf(context).scale(1);
-    final entries = [
-      (PlanExtensionView.board, LucideIcons.kanban, context.tr('planBoard')),
-      (
-        PlanExtensionView.calendar,
-        LucideIcons.calendar,
-        context.tr('planCalendar'),
-      ),
-      (PlanExtensionView.table, LucideIcons.table, context.tr('planTable')),
-    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -320,21 +318,23 @@ class _SidebarState extends State<Sidebar> {
           Padding(
             padding: const EdgeInsets.only(left: 8, bottom: 4),
             child: Text(
-              context.tr('planExtensions'),
+              context.tr('planCollections'),
               style: DswType.xxxs11.copyWith(color: color.labelTertiary),
             ),
           ),
-        for (final (view, icon, label) in entries)
+        for (final (index, collection) in collections.indexed)
           Padding(
             padding: const EdgeInsets.only(bottom: 2),
             child: _Pressable(
-              onTap: () => onToggle(view),
+              onTap: () => onOpen(collection.id),
               borderRadius: BorderRadius.circular(DswShape.control),
               child: Container(
                 height: wide ? 32 * step : 36,
                 padding: EdgeInsets.symmetric(horizontal: wide ? 8 : 0),
                 decoration: BoxDecoration(
-                  color: open == view ? color.interactiveBgHover : null,
+                  color: openId == collection.id
+                      ? color.interactiveBgHover
+                      : null,
                   borderRadius: BorderRadius.circular(DswShape.control),
                 ),
                 child: Row(
@@ -343,9 +343,9 @@ class _SidebarState extends State<Sidebar> {
                       : MainAxisAlignment.center,
                   children: [
                     Icon(
-                      icon,
+                      index.isEven ? LucideIcons.kanban : LucideIcons.inbox,
                       size: wide ? 15 : 18,
-                      color: open == view
+                      color: openId == collection.id
                           ? color.labelPrimary
                           : color.labelSecondary,
                     ),
@@ -353,11 +353,11 @@ class _SidebarState extends State<Sidebar> {
                       const SizedBox(width: 8),
                       Flexible(
                         child: Text(
-                          label,
+                          collection.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: DswType.s14.copyWith(
-                            color: open == view
+                            color: openId == collection.id
                                 ? color.labelPrimary
                                 : color.labelSecondary,
                           ),

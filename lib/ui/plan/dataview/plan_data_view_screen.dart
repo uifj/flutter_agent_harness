@@ -3,7 +3,7 @@
 //
 // The store arrives as a constructor argument, not through a provider:
 // `check_architecture` rule 6 keeps riverpod in `main.dart` +
-// `app_providers.dart`, and this is the same seam `PlanExtensionsView` uses.
+// `app_providers.dart`, and this is the same seam the plan screens use.
 //
 // Two local rules. First, the panel LISTENS: the store is the only truth, and a
 // surface that reads it without subscribing is the bug ADR-0007 already recorded
@@ -32,6 +32,7 @@ import '../../primitives/feedback.dart';
 import '../../primitives/menu.dart';
 import '../../primitives/tappable.dart';
 import 'plan_board_viewer.dart';
+import 'plan_calendar_viewer.dart';
 import 'plan_cell_value.dart';
 import 'plan_viewer_bar.dart';
 import 'plan_viewer_sheets.dart';
@@ -320,7 +321,14 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
             ? (optionId) => _addRow(collection, viewer, status: optionId)
             : null,
       ),
-      PlanViewerKind.calendar ||
+      PlanViewerKind.calendar => PlanCalendarViewer(
+        viewer: viewer,
+        records: stage.records,
+        relationsByKey: relationsByKey,
+        revision: stage.revision,
+        onOpen: (record) => _openRecord(record, viewer, relationsByKey),
+        onToggleDone: (id) => _store.toggleRecord(id),
+      ),
       PlanViewerKind.graph => PlanUnsupportedViewer(kind: viewer.kind),
     };
   }
