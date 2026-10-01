@@ -109,12 +109,16 @@ class SessionIndex extends ChangeNotifier {
   SessionSummary _decorateOne(SessionSummary session) {
     final registry = _registry;
     if (registry == null) return session;
+    final meta = registry.metaOf(session.id);
     return SessionSummary(
       id: session.id,
       updatedAt: session.updatedAt,
-      title: registry.titleOf(session.id) ?? session.title,
-      workspaceRoot: registry.metaOf(session.id).workspaceRoot,
-      pinnedAt: registry.pinnedAt(session.id),
+      title: meta.title ?? session.title,
+      // The registry is where the folder gets recorded, and today it is the
+      // only source — but a summary that already carries one is not thrown
+      // away for that. Discarding an input is how a field becomes a lie.
+      workspaceRoot: meta.workspaceRoot ?? session.workspaceRoot,
+      pinnedAt: meta.pinnedAt,
     );
   }
 
