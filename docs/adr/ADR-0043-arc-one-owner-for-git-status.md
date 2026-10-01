@@ -2,7 +2,7 @@
 
 - 分类: ARC
 - 优先级: P2
-- 状态: RESOLVED（2026-10-02，`e3d8c94`/`6af9b41`/`e4e56de`/`d5c46f2`/`6deab0b`；余 macOS 真机走查：大仓里第一次打开树的停顿）
+- 状态: RESOLVED（2026-10-02，`e3d8c94`/`6af9b41`/`e4e56de`/`d5c46f2`/`6deab0b`，另见下方**修订** `1258bc9`；余 macOS 真机走查：大仓里第一次打开树的停顿）
 
 ## 背景
 
@@ -100,3 +100,26 @@
 - **不做 HEAD 差异之外的状态**（stash、bisect、submodule）：`lib/host/git.dart` 没有这些命令，
   要加是独立能力。
 - **不给树加 `Directory.watch`**：`file_tree_tab.dart:12-17` 的取舍不变，本 ADR 也不改它。
+
+## 修订（2026-10-02，`1258bc9`）：一份读数的"键"本行没写，于是它错了两次
+
+决策 1 写了"按 repo root 持有一份读数"，但**没说那个 key 由谁定**。落地时它等于"谁先来问就用谁的字符串"，
+这在本 ADR 自己的两个读者身上正好不成立——因为它们是**用两种拼法问同一个仓库**的：
+
+1. **面板问顶层，树可以问子目录。** 同一仓库于是两份读数、两次 `git status` 进程，正是本 ADR 要消掉的那件东西。
+   现在答案一律记在 `rev-parse` 报回的顶层下面，问过它的每个路径都留下一条别名（`_asked`），
+   `reading`/`isFresh`/`invalidate`/`errorFor` 都走这把别名。守卫：`git_status_store_test` 的
+   `the same repository asked about from inside it is still one reading`（先红 `Expected: <1> Actual: <2>`）。
+   一条诚实的残余：两份**同时**冷启动、又来自不同子目录的请求仍可能各跑一次——问之前不知道顶层，
+   这是不额外多跑一次 `rev-parse` 的代价，写在 `_fetch` 的注释里。
+2. **git 报的是解析过的路径，行是用户选中的那个拼法。** 中间隔一个符号链接时两者指的是同一个目录而字符串不同
+   （这台机器上就是 `/var` 与 `/private/var`，那条既有的 `app_scope_test` 失败是同一对）。
+   把 entry 拼在 git 的顶层上，得到的键没有任何一行能匹配——于是徽标**不是画错，是静默不画**，
+   功能看起来像"没有这个功能"。现在树把 entry 重新锚到自己的根上（`_resolvedRoot` 做一次性解析，按根缓存，
+   因为那是 syscall 而 `_changed` 每帧都跑），并丢掉落在树外的键。守卫：`workbench_ui_test` 的
+   `a folder reached through a link still wears its letters`（先红在 `Found 0 widgets with text "M"`）。
+
+一条可复用的判词：**共享一份事实的存储，键必须是那个事实自己的身份，不是调用者的问法**。
+本 ADR 的决策 1 该在一开始就把这句话写进去——它写的"按 repo root"看起来已经说完了，实际把"root 从谁来"留空了。
+另一条：**静默失效的功能比报错的功能更难发现**，所以这一类的守卫要断"那一格确实画出来了"，
+而不是断"没有报错"。套件 `+1232 -2` → `+1234 -2`（两条既有失败未变多）。
