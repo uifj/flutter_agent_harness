@@ -295,7 +295,7 @@ void main() {
   /// by the inner `Container`, and both are read as drawn rather than as widget
   /// arguments: `theme_token_test` already proves the two tokens differ, so what
   /// still needed proving is that this row is the thing that puts them on.
-  BoxDecoration? _hoverWash(WidgetTester tester, String label) {
+  BoxDecoration? hoverWash(WidgetTester tester, String label) {
     final w = tester.widget<AnimatedContainer>(
       find
           .ancestor(
@@ -307,7 +307,7 @@ void main() {
     return w.decoration is BoxDecoration ? w.decoration as BoxDecoration : null;
   }
 
-  BoxDecoration? _selectWash(WidgetTester tester, String label) {
+  BoxDecoration? selectWash(WidgetTester tester, String label) {
     final w = tester.widget<Container>(
       find
           .ancestor(of: find.text(label), matching: find.byType(Container))
@@ -327,17 +327,17 @@ void main() {
     await pump(tester);
 
     expect(
-      _selectWash(tester, 'session a')?.color,
+      selectWash(tester, 'session a')?.color,
       DswAlias.light.interactiveSelected,
     );
-    expect(_hoverWash(tester, 'session a')?.color, isNull);
+    expect(hoverWash(tester, 'session a')?.color, isNull);
 
     final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await pointer.addPointer(location: Offset.zero);
     await pointer.moveTo(tester.getCenter(find.text('session b')));
     await tester.pumpAndSettle();
 
-    final hovered = _hoverWash(tester, 'session b')?.color;
+    final hovered = hoverWash(tester, 'session b')?.color;
     expect(hovered, DswAlias.light.interactiveBgHover);
     expect(
       hovered,
@@ -349,7 +349,7 @@ void main() {
     await pointer.moveTo(Offset.zero);
     await tester.pumpAndSettle();
     expect(
-      _hoverWash(tester, 'session b')?.color,
+      hoverWash(tester, 'session b')?.color,
       isNull,
       reason: 'and it lifts',
     );
