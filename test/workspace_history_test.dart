@@ -48,7 +48,20 @@ void main() {
     workspaceRoot: workspaceRoot,
   );
 
+  final folded = <String>[];
+  final created = <String>[];
+  final removed = <String>[];
+  final trees = <String>[];
+
   setUp(() {
+    // These collectors are per-file and every guard asserts them with exact
+    // equality — left over from the previous test, a guard would read another
+    // test's gesture as its own. (This is how the removal guard first failed: it
+    // saw the earlier header tap in `folded`, not anything it had done.)
+    folded.clear();
+    created.clear();
+    removed.clear();
+    trees.clear();
     support = Directory.systemTemp.createTempSync('workspace_history');
     registry = SessionRegistry.open(support);
     source = FakeTurnSource();
@@ -60,11 +73,6 @@ void main() {
     registry.dispose();
     if (support.existsSync()) support.deleteSync(recursive: true);
   });
-
-  final folded = <String>[];
-  final created = <String>[];
-  final removed = <String>[];
-  final trees = <String>[];
 
   Future<void> pump(
     WidgetTester tester, {
@@ -319,6 +327,35 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(created, ['/work/beta']);
+    },
+  );
+
+  // Upstream documents the failure this guard exists for, in its own source: in a
+  // collapsed group, clicking "remove" first reached the row's open handler, so
+  // the workspace was re-added instead of removed (`WorkspaceSidebarItem.tsx:
+  // 334-340` - "表现为删不掉", fixed there by swallowing the click at the menu
+  // layer). Here the menu button is a sibling of the fold's tap target, and
+  // `removed` had been collected by the harness without ever being asserted.
+  testWidgets(
+    'removing a group hands over its own folder, and folds nothing on the way',
+    (tester) async {
+      source.sessions = [
+        session('a', workspaceRoot: '/work/alpha'),
+        session('b', workspaceRoot: '/work/beta'),
+      ];
+      await pump(tester);
+
+      await tester.tap(find.byTooltip('Workspace actions').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Remove from list'));
+      await tester.pumpAndSettle();
+
+      expect(removed, ['/work/beta']);
+      expect(
+        folded,
+        isEmpty,
+        reason: 'one gesture, one fact: removing a group is not also a fold',
+      );
     },
   );
 
