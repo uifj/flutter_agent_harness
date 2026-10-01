@@ -42,6 +42,7 @@ import '../../../model/sidebar_tab.dart';
 import '../../../state/workbench_controller.dart';
 import '../../primitives/icon_button.dart';
 import '../../primitives/menu.dart';
+import '../../primitives/reveal.dart';
 import '../../primitives/tappable.dart';
 
 /// Row height. 22px is the source's `--row-h`; it is also what fits a 13px label
@@ -120,7 +121,7 @@ class _FileTreeTabState extends State<FileTreeTab> {
   /// A newly expanded directory has to be read, and the expansion set is in the
   /// controller — so the read is triggered from the notification rather than from
   /// the tap handler, which keeps it working when something else expands a path
-  /// (`reveal`, from a tool call).
+  /// (the git panel's "expand in file tree" arrives through exactly this door).
   void _onWorkbench() {
     for (final path in widget.workbench.state.expanded) {
       if (!_children.containsKey(path) &&
@@ -386,6 +387,13 @@ class _FileTreeTabState extends State<FileTreeTab> {
         icon: LucideIcons.file_symlink,
         label: context.tr('copyAbsolute'),
         onTap: () => Clipboard.setData(ClipboardData(text: row.path)),
+      ),
+      // The same glyph the history uses for the same action: "where is this on
+      // disk" is one question no matter which list asked it (ADR-0041).
+      DswMenuEntry(
+        icon: LucideIcons.external_link,
+        label: context.tr('revealInFiles'),
+        onTap: () => revealInFilesOrReport(context, row.path),
       ),
       if (row.isDirectory)
         DswMenuEntry(

@@ -37,6 +37,7 @@ import '../../../theme/dsw_typography.dart';
 import '../../../model/sidebar_tab.dart';
 import '../../../state/workbench_controller.dart';
 import '../../primitives/menu.dart';
+import '../../primitives/reveal.dart';
 import '../../primitives/tappable.dart';
 import '../../primitives/confirm_dialog.dart';
 import '../../primitives/icon_button.dart';
@@ -447,6 +448,14 @@ class _GitTabState extends State<GitTab> {
     // host guard rejects it. The menu hides the action for that checkout
     // rather than offering a no-op.
     final openable = widget.workbench.workspace?.tryResolve(absolute);
+    // Whether this row can point at a tree at all: `openFolder` refuses a
+    // disabled tab type, and a menu entry that does nothing is the defect
+    // ADR-0022 names — so it is not offered rather than being half-offered.
+    final treeRoot = widget.workbench.workspaceRoot;
+    final hasTree =
+        openable != null &&
+        treeRoot != null &&
+        !widget.workbench.disabledTabs.contains(BuiltinTabType.explorer);
     // Read while this context is certainly good: the strings are used after an
     // await inside the action below.
     final discardTitle = context.tr('discardChanges');
@@ -485,6 +494,22 @@ class _GitTabState extends State<GitTab> {
         label: context.tr('copyAbsolute'),
         onTap: () => _copy(absolute),
       ),
+      DswMenuEntry(
+        icon: LucideIcons.external_link,
+        label: context.tr('revealInFiles'),
+        onTap: () => revealInFilesOrReport(context, absolute),
+      ),
+      // Two existing verbs in this order: without the first, the second expands
+      // ancestors in a tree that is not on screen (ADR-0041).
+      if (hasTree)
+        DswMenuEntry(
+          icon: LucideIcons.folder_tree,
+          label: context.tr('revealInTree'),
+          onTap: () {
+            widget.workbench.openFolder(treeRoot);
+            widget.workbench.reveal([absolute]);
+          },
+        ),
     ];
   }
 

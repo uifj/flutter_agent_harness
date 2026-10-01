@@ -139,6 +139,10 @@ class _EditorTabState extends State<EditorTab> {
   /// Source is the default because that is what a save edits.
   bool _preview = false;
 
+  /// Whether long lines fold. Off by default: a code editor that folds by
+  /// default hides indentation structure, which is the thing the gutter is for.
+  bool _wrap = false;
+
   /// Translation that is safe before the first build. [_load] starts in
   /// initState, where registering an inherited dependency is not allowed — so
   /// this reads the locale scope without depending on it. English, as ever,
@@ -353,6 +357,16 @@ class _EditorTabState extends State<EditorTab> {
             ),
             const SizedBox(width: 6),
           ],
+          // Fold is a question about the source; the rendered pane already wraps.
+          if (content is _Text && !_preview) ...[
+            _BarIcon(
+              icon: LucideIcons.text_wrap,
+              tooltip: context.tr('wrapLines'),
+              active: _wrap,
+              onTap: () => setState(() => _wrap = !_wrap),
+            ),
+            const SizedBox(width: 6),
+          ],
           _BarIcon(
             icon: LucideIcons.refresh_cw,
             tooltip: context.tr('reload'),
@@ -436,7 +450,7 @@ class _EditorTabState extends State<EditorTab> {
         child: CodeEditor(
           controller: controller,
           readOnly: readOnly,
-          wordWrap: false,
+          wordWrap: _wrap,
           padding: const EdgeInsets.symmetric(vertical: 6),
           style: CodeEditorStyle(
             fontSize: 12,

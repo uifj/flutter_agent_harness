@@ -282,6 +282,44 @@ void main() {
     expect(clipboard.text, 'staged.txt');
   });
 
+  // The two ways out of a change row that are not a diff (ADR-0041).
+  testWidgets('the file menu walks the row into the file tree', (tester) async {
+    await pumpTab(tester);
+    await settle(tester);
+
+    await tester.tap(find.text('unstaged.txt'), buttons: kSecondaryButton);
+    await tester.pumpAndSettle();
+    // Presence only: the reveal entry starts an operating-system process, and
+    // a test that opened Finder would be measuring the wrong thing.
+    expect(find.text('Reveal in file manager'), findsOneWidget);
+
+    await tester.tap(find.text('Expand in file tree'));
+    await tester.pumpAndSettle();
+
+    // Both verbs, in this order: a tree tab on screen, and the folder holding
+    // the file among the expanded set. Without the first the second expands a
+    // tree nobody is looking at.
+    expect(
+      workbench.state.tabs.map((tab) => tab.type),
+      contains(BuiltinTabType.explorer),
+    );
+    expect(workbench.state.expanded, contains(support.path));
+  });
+
+  testWidgets('no tree to walk to means no such entry', (tester) async {
+    // `openFolder` refuses a disabled tab type, so the menu must not offer an
+    // action that does nothing (ADR-0022's rule, applied to a menu row).
+    workbench.disabledTabs = {BuiltinTabType.explorer};
+    await pumpTab(tester);
+    await settle(tester);
+
+    await tester.tap(find.text('unstaged.txt'), buttons: kSecondaryButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Expand in file tree'), findsNothing);
+    expect(find.text('Reveal in file manager'), findsOneWidget);
+  });
+
   // The panel's own seats, and the two menus that only exist once opened.
   //
   // The workbench walk already pumps this tab, but over a directory that is

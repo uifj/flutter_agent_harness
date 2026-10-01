@@ -18,7 +18,6 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:shadcn_ui/shadcn_ui.dart'
     show ShadButton, ShadDialog, ShadInput, showShadDialog;
 
-import '../../host/reveal.dart';
 import '../../l10n/locales.dart';
 import '../../model/app_settings.dart' as appcfg;
 import '../../model/conversation.dart';
@@ -38,6 +37,7 @@ import '../primitives/confirm_dialog.dart';
 import '../primitives/feedback.dart';
 import '../primitives/icon_button.dart';
 import '../primitives/menu.dart';
+import '../primitives/reveal.dart';
 import '../primitives/segmented.dart';
 import '../primitives/tappable.dart';
 import '../settings/widgets/settings_quick_menu.dart';
@@ -846,13 +846,9 @@ class _SidebarState extends State<Sidebar> {
             : () => widget.onOpenWorkspaceTree!(root),
       ),
       DswMenuEntry(
-        label: context.tr('revealInFinder'),
+        label: context.tr('revealInFiles'),
         icon: LucideIcons.external_link,
-        onTap: () async {
-          if (await revealInFileManager(root)) return;
-          if (!mounted) return;
-          showFeedback(context, context.tr('revealFailed'), destructive: true);
-        },
+        onTap: () => revealInFilesOrReport(context, root),
       ),
       const DswMenuEntry.divider(),
       DswMenuEntry(
@@ -899,13 +895,9 @@ class _SidebarState extends State<Sidebar> {
       // is usually "where did this conversation's files go", which is about the
       // conversation, not about a folder header.
       DswMenuEntry(
-        label: context.tr('revealInFinder'),
+        label: context.tr('revealInFiles'),
         icon: LucideIcons.external_link,
-        onTap: () async {
-          if (await revealInFileManager(session.workspaceRoot!)) return;
-          if (!mounted) return;
-          showFeedback(context, context.tr('revealFailed'), destructive: true);
-        },
+        onTap: () => revealInFilesOrReport(context, session.workspaceRoot!),
       ),
     ],
     DswMenuEntry(

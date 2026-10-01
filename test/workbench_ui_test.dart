@@ -457,6 +457,32 @@ void main() {
       await pumpUntil(tester, find.text('lib/main.dart'));
     });
 
+    testWidgets('a row reaches the file manager, not only the clipboard', (
+      tester,
+    ) async {
+      final root = workspace();
+      File('${root.path}/README.md').writeAsStringSync('# hi\n');
+
+      workbench.workspaceRoot = root.path;
+      workbench.openFolder(root.path);
+      await pump(tester);
+      await pumpUntil(tester, find.text('README.md'));
+
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.text('README.md')),
+        kind: PointerDeviceKind.mouse,
+        buttons: kSecondaryButton,
+      );
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      // Presence only. The entry starts an operating-system process; what a
+      // test could observe about that is not the interesting half (ADR-0041),
+      // and the git panel's guard covers the verb that is pure state.
+      expect(find.text('Reveal in file manager'), findsOneWidget);
+      expect(find.text('Copy absolute path'), findsOneWidget);
+    });
+
     testWidgets('an agent write refreshes the listing without a button', (
       tester,
     ) async {

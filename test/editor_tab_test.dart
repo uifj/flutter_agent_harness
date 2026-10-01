@@ -3,8 +3,9 @@
 // The editor's buffer mechanics (highlighting, the dirty flag, Cmd-S) belong
 // to re_editor and are not re-tested here. What belongs to THIS tab is the bar
 // above the buffer: the path shown relative to the workspace, the preview
-// toggle that only a markdown file earns, the reload that re-reads the disk,
-// and the failure notices for the files that cannot be opened at all. Those
+// toggle that only a markdown file earns, the fold switch that only the source
+// earns, the reload that re-reads the disk, and the failure notices for the
+// files that cannot be opened at all. Those
 // are the tab's own contract with the disk, behind the same guard the tools
 // use, so they get pumped against a real directory.
 //
@@ -148,6 +149,9 @@ void main() {
       expect(find.byType(AssistantMarkdown), findsOneWidget);
       expect(find.text('Title', findRichText: true), findsOneWidget);
       expect(find.byType(CodeEditor), findsNothing);
+      // Rendered prose already wraps, so the fold switch retires with the
+      // source it was a switch for.
+      expect(find.byIcon(LucideIcons.text_wrap), findsNothing);
 
       // And back: the eye is a toggle, not a one-way door.
       await tester.tap(find.byIcon(LucideIcons.eye));
@@ -169,6 +173,33 @@ void main() {
       // The reload is still there: a source file cannot be previewed, but it
       // can always be stale.
       expect(find.byIcon(LucideIcons.refresh_cw), findsOneWidget);
+      await settle(tester);
+    });
+
+    testWidgets('long lines fold when asked, and only when asked', (
+      tester,
+    ) async {
+      final root = workspace();
+      final file = File('${root.path}/main.dart')
+        ..writeAsStringSync('void main() {}\n');
+      workbench.workspaceRoot = root.path;
+
+      await pumpTab(tester, SidebarTab.editor(file.path));
+      await pumpUntil(tester, find.byType(CodeEditor));
+
+      CodeEditor editor() => tester.widget<CodeEditor>(find.byType(CodeEditor));
+
+      // Off by default: a folding code editor hides the indentation the gutter
+      // exists to show (ADR-0041).
+      expect(editor().wordWrap, isFalse);
+
+      await tester.tap(find.byIcon(LucideIcons.text_wrap));
+      await tester.pump();
+      expect(editor().wordWrap, isTrue, reason: 'the narrow column asks');
+
+      await tester.tap(find.byIcon(LucideIcons.text_wrap));
+      await tester.pump();
+      expect(editor().wordWrap, isFalse, reason: 'it is a toggle, not a door');
       await settle(tester);
     });
   });

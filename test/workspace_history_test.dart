@@ -288,7 +288,7 @@ void main() {
     expect(find.text('Rename'), findsOneWidget);
     expect(find.text('Delete'), findsOneWidget);
     expect(find.text('Copy session id'), findsOneWidget);
-    expect(find.text('Reveal in Finder'), findsOneWidget);
+    expect(find.text('Reveal in file manager'), findsOneWidget);
 
     await tester.tap(find.text('Pin to top'));
     await tester.pumpAndSettle();
@@ -351,7 +351,7 @@ void main() {
 
     expect(find.text('Copy session id'), findsOneWidget);
     expect(find.text('Copy workspace path'), findsNothing);
-    expect(find.text('Reveal in Finder'), findsNothing);
+    expect(find.text('Reveal in file manager'), findsNothing);
   });
 
   testWidgets('flat mode draws the old list with no headers at all', (
