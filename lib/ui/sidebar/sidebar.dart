@@ -846,6 +846,11 @@ class _SidebarState extends State<Sidebar> {
             : () => widget.onOpenWorkspaceTree!(root),
       ),
       DswMenuEntry(
+        label: context.tr('copyWorkspacePath'),
+        icon: LucideIcons.copy,
+        onTap: () => Clipboard.setData(ClipboardData(text: root)),
+      ),
+      DswMenuEntry(
         label: context.tr('revealInFiles'),
         icon: LucideIcons.external_link,
         onTap: () => revealInFilesOrReport(context, root),

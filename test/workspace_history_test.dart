@@ -23,6 +23,7 @@ import 'package:agent_harness/ui/sidebar/sidebar.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import 'fake_turn_source.dart';
+import 'clipboard_probe.dart';
 
 /// The clock the rows are written against. `formatRelativeTime` reads
 /// `DateTime.now()` at paint time, so a fixed 2026 date would land in the future
@@ -259,21 +260,35 @@ void main() {
     );
   });
 
-  testWidgets('the group menu offers the tree, the reveal and the removal', (
-    tester,
-  ) async {
-    source.sessions = [session('a', workspaceRoot: '/work/alpha')];
-    await pump(tester);
+  testWidgets(
+    'the group menu offers the tree, the path, the reveal and the removal',
+    (tester) async {
+      // The probe answers the clipboard channel; the real messenger never would,
+      // and the copy's await would hang the test.
+      final clipboard = ClipboardProbe(tester.binding.defaultBinaryMessenger);
+      source.sessions = [session('a', workspaceRoot: '/work/alpha')];
+      await pump(tester);
 
-    await tester.tap(find.byTooltip('Workspace actions'));
-    await tester.pumpAndSettle();
-    expect(find.text('Show file tree'), findsOneWidget);
-    expect(find.text('Remove from list'), findsOneWidget);
+      await tester.tap(find.byTooltip('Workspace actions'));
+      await tester.pumpAndSettle();
+      expect(find.text('Show file tree'), findsOneWidget);
+      expect(find.text('Copy workspace path'), findsOneWidget);
+      expect(find.text('Reveal in file manager'), findsOneWidget);
+      expect(find.text('Remove from list'), findsOneWidget);
 
-    await tester.tap(find.text('Show file tree'));
-    await tester.pumpAndSettle();
-    expect(trees, ['/work/alpha']);
-  });
+      await tester.tap(find.text('Show file tree'));
+      await tester.pumpAndSettle();
+      expect(trees, ['/work/alpha']);
+
+      // The path the group is named after is the thing a user pastes elsewhere,
+      // so it is read from the clipboard rather than assumed from the row.
+      await tester.tap(find.byTooltip('Workspace actions'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Copy workspace path'));
+      await tester.pumpAndSettle();
+      expect(clipboard.text, '/work/alpha');
+    },
+  );
 
   testWidgets('a conversation right-click can pin, rename and delete', (
     tester,
