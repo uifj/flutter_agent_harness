@@ -465,7 +465,7 @@ class PlanViewer {
     this.coverFit = false,
     this.coverRelationKey,
     this.groupRelationKey,
-    this.groupBackgroundColors = const [],
+    this.groupBackgroundColors = false,
     this.hideIcon = false,
     this.defaultTemplateId,
     this.defaultObjectTypeId,
@@ -483,9 +483,11 @@ class PlanViewer {
   final bool coverFit;
   final String? coverRelationKey;
 
-  /// Board: the status relation whose options become columns.
+  /// Board: the status relation whose options become columns, and whether the
+  /// columns carry their option colours (`Block.kt:290-291`, a Boolean — the
+  /// colour itself comes from each option's ladder index).
   final String? groupRelationKey;
-  final List<int> groupBackgroundColors;
+  final bool groupBackgroundColors;
 
   final bool hideIcon;
   final String? defaultTemplateId;
@@ -513,7 +515,7 @@ class PlanViewer {
     bool? coverFit,
     String? coverRelationKey,
     String? groupRelationKey,
-    List<int>? groupBackgroundColors,
+    bool? groupBackgroundColors,
     bool? hideIcon,
     String? defaultTemplateId,
     String? defaultObjectTypeId,
@@ -574,11 +576,7 @@ class PlanViewer {
     coverFit: json['coverFit'] == true,
     coverRelationKey: json['coverRelationKey'] as String?,
     groupRelationKey: json['groupRelationKey'] as String?,
-    groupBackgroundColors: [
-      for (final value
-          in (json['groupBackgroundColors'] as List<Object?>? ?? const []))
-        if (value is num) value.toInt(),
-    ],
+    groupBackgroundColors: json['groupBackgroundColors'] == true,
     hideIcon: json['hideIcon'] == true,
     defaultTemplateId: json['defaultTemplateId'] as String?,
     defaultObjectTypeId: json['defaultObjectTypeId'] as String?,

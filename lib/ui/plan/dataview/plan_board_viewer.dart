@@ -34,6 +34,11 @@ class _RecordCard extends BoardPanelGroupItem {
   String get id => record.id;
 }
 
+/// The column window — upstream's `DEFAULT_LIMIT = 50`
+/// (`presentation/relations/ObjectSetConfig.kt:27`), grown per column when the
+/// column's scroll reaches its end.
+const int boardPageLimit = 50;
+
 class PlanBoardViewer extends StatefulWidget {
   const PlanBoardViewer({
     super.key,
@@ -113,6 +118,11 @@ class _PlanBoardViewerState extends State<PlanBoardViewer> {
         widget.onReorderColumns(order);
       },
     );
+    // The whole column goes into the group data; the package windows it to
+    // [boardPageLimit] and grows the window when the column's scroll reaches
+    // its end — the `hasLoadedRecords` answer upstream carries on every board
+    // column (`Viewer.kt:152-155`), with the store holding the full list
+    // instead of a per-column subscription.
     widget.groups.forEach((optionId, ids) {
       _groupIds.add(optionId);
       controller.addGroup(
@@ -140,6 +150,14 @@ class _PlanBoardViewerState extends State<PlanBoardViewer> {
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
+    final groupRelation = widget.relationsByKey[widget.viewer.groupRelationKey];
+    Color? columnColor(String optionId) {
+      if (!widget.viewer.groupBackgroundColors) return null;
+      final index = groupRelation?.option(optionId)?.colorIndex;
+      if (index == null) return null;
+      return planLadderColor(color, index);
+    }
+
     return BoardPanel(
       controller: _board,
       boardScrollController: _scroll,
@@ -158,7 +176,7 @@ class _PlanBoardViewerState extends State<PlanBoardViewer> {
           vertical: DswShape.xs,
         ),
         stretchGroupHeight: true,
-        cardPageSize: 0,
+        cardPageSize: boardPageLimit,
       ),
       cardBuilder: (context, group, groupItem) {
         final record = (groupItem as _RecordCard).record;
@@ -177,25 +195,33 @@ class _PlanBoardViewerState extends State<PlanBoardViewer> {
           ),
         );
       },
-      headerBuilder: (context, columnData) => BoardPanelGroupHeader(
-        height: planRowSeat(context),
-        addIcon: Icon(
-          LucideIcons.plus,
-          size: DswShape.iconTiny,
-          color: color.labelTertiary,
-        ),
-        onAddButtonClick: widget.onAddToColumn == null
-            ? null
-            : () => widget.onAddToColumn!(columnData.id),
-        title: Expanded(
-          child: Text(
-            columnData.headerData.groupName,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: DswType.sStrong14.copyWith(color: color.labelPrimary),
+      headerBuilder: (context, columnData) {
+        final band = columnColor(columnData.id);
+        final header = BoardPanelGroupHeader(
+          height: planRowSeat(context),
+          addIcon: Icon(
+            LucideIcons.plus,
+            size: DswShape.iconTiny,
+            color: color.labelTertiary,
           ),
-        ),
-      ),
+          onAddButtonClick: widget.onAddToColumn == null
+              ? null
+              : () => widget.onAddToColumn!(columnData.id),
+          title: Expanded(
+            child: Text(
+              columnData.headerData.groupName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: DswType.sStrong14.copyWith(color: color.labelPrimary),
+            ),
+          ),
+        );
+        // "Color columns" paints the option colour onto the header band — the
+        // one surface this builder owns; a whole-column wash needs a
+        // per-group background on the package, which it does not expose yet.
+        if (band == null) return header;
+        return ColoredBox(color: band, child: header);
+      },
     );
   }
 }

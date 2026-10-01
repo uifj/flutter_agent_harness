@@ -180,7 +180,7 @@ List<PlanCollection> _collections() => const [
           name: 'Board',
           kind: PlanViewerKind.board,
           groupRelationKey: PlanMockKeys.status,
-          groupBackgroundColors: [1, 7, 5, 9],
+          groupBackgroundColors: true,
           relations: [
             PlanViewerRelation(key: PlanRelationKeys.name),
             PlanViewerRelation(key: PlanMockKeys.dueDate),

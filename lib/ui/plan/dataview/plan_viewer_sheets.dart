@@ -870,8 +870,13 @@ class PlanLayoutSheet extends StatelessWidget {
           _SectionTitle(text: context.tr('planLayoutGroupBy')),
           _Rows(
             rows: [
+              // The upstream grouping whitelist is {STATUS, TAG, CHECKBOX}
+              // (`BoardColumnQuery.kt:18-22`) — checkbox reads as the two
+              // checked-state columns.
               for (final relation in relations.where(
-                (r) => r.format.hasOptions,
+                (r) =>
+                    r.format.hasOptions ||
+                    r.format == PlanRelationFormat.checkbox,
               ))
                 _Row(
                   label: relation.name,
@@ -879,6 +884,19 @@ class PlanLayoutSheet extends StatelessWidget {
                   onTap: () =>
                       onChange(viewer.copyWith(groupRelationKey: relation.key)),
                 ),
+            ],
+          ),
+          _Rows(
+            rows: [
+              _Row(
+                label: context.tr('planLayoutColorColumns'),
+                selected: viewer.groupBackgroundColors,
+                onTap: () => onChange(
+                  viewer.copyWith(
+                    groupBackgroundColors: !viewer.groupBackgroundColors,
+                  ),
+                ),
+              ),
             ],
           ),
         ],

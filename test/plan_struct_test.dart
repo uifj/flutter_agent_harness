@@ -379,7 +379,7 @@ void main() {
           ),
         ],
         groupRelationKey: 'status',
-        groupBackgroundColors: const [1, 7],
+        groupBackgroundColors: true,
         defaultObjectTypeId: PlanObjectTypeIds.task,
       );
       final dataView = PlanDataView(
@@ -399,7 +399,7 @@ void main() {
       expect(decoded.activeViewer?.visibleRelationKeys, ['name', 'dueDate']);
       expect(decoded.activeViewer?.relations.last.includeTime, isTrue);
       expect(decoded.activeViewer?.relations.last.width, PlanViewerSize.small);
-      expect(decoded.activeViewer?.groupBackgroundColors, [1, 7]);
+      expect(decoded.activeViewer?.groupBackgroundColors, isTrue);
       expect(decoded.objectOrders['v'], ['a', 'b']);
       expect(decoded.groupOrders['v'], ['todo', 'doing']);
       expect(decoded.viewerById('nope'), isNull);

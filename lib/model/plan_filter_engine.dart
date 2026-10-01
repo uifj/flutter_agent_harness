@@ -324,6 +324,16 @@ Map<String, List<String>> groupPlanRecordIds({
     }
   }
   if (buckets.containsKey('')) ordered[''] = buckets['']!;
+
+  // A checkbox group reads as the two checked-state columns upstream draws
+  // (`BoardColumnQuery.kt:41-59`: the Checkbox column queries EQUAL true or
+  // false, and the "no value" synthesis is reserved for status/tag) — so an
+  // unset record joins the unchecked column and both columns always exist.
+  if (relation?.format == PlanRelationFormat.checkbox) {
+    final unchecked = [...?ordered.remove(''), ...?ordered.remove('false')];
+    final checked = [...?ordered.remove('true')];
+    return {'false': unchecked, 'true': checked};
+  }
   return ordered;
 }
 

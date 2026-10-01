@@ -330,6 +330,12 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
   String _columnTitle(PlanViewer viewer, String optionId) {
     if (optionId.isEmpty) return context.tr('planColumnNoStatus');
     final relation = _store.relationByKey(viewer.groupRelationKey ?? '');
+    // A checkbox group reads as the two checked states, not option ids.
+    if (relation?.format == PlanRelationFormat.checkbox) {
+      return context.tr(
+        optionId == 'true' ? 'planColumnChecked' : 'planColumnUnchecked',
+      );
+    }
     return relation?.optionText(optionId) ?? optionId;
   }
 
