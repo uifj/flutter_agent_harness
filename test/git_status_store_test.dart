@@ -53,6 +53,33 @@ void main() {
   });
 
   test(
+    'the same repository asked about from inside it is still one reading',
+    () async {
+      // The panel asks about the top level; a file tree can be rooted at a
+      // subfolder of the same repository. Keying the cache by whichever path
+      // arrived first would give that repository two statuses and two answers
+      // to "what is dirty" — the exact split this store exists to prevent.
+      final git = repo();
+      final store = GitStatusStore(runner: git.runner);
+
+      await store.read('$root/packages/foo');
+      final fromTop = await store.read(root);
+
+      expect(
+        statusCalls(git),
+        1,
+        reason: 'one repository, one process, whoever asks',
+      );
+      expect(store.reading('$root/packages/foo'), same(fromTop));
+      expect(
+        fromTop.root,
+        root,
+        reason: 'the answer is keyed by the repository, not by the question',
+      );
+    },
+  );
+
+  test(
     'an action invalidates, so the next reader sees the tree as it is now',
     () async {
       final git = repo();

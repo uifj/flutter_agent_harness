@@ -39,14 +39,25 @@ class GitStatusStore extends ChangeNotifier {
   final Map<String, Future<GitStatusResult>> _inFlight = {};
   final Map<String, String> _errors = {};
 
+  /// Which repository each asked path turned out to be inside.
+  ///
+  /// The panel asks about the repository's top level; a file tree can be rooted
+  /// anywhere below it. Keying by whichever string arrived first would hand that
+  /// repository two readings and two processes — the split this store exists to
+  /// prevent — so an answer is filed under the top level git reported, and every
+  /// path that asked about it is remembered as an alias for that key.
+  final Map<String, String> _asked = {};
+
+  String _key(String asked) => _asked[asked] ?? asked;
+
   /// The last reading for [root], or null while none has landed.
   ///
   /// Views paint from this and listen to the notifier; only [read] runs git.
-  GitStatusResult? reading(String root) => _readings[root];
+  GitStatusResult? reading(String root) => _readings[_key(root)];
 
   /// Whether [root] has a reading newer than [freshness].
   bool isFresh(String root) {
-    final at = _fetchedAt[root];
+    final at = _fetchedAt[_key(root)];
     return at != null && _now().difference(at) < freshness;
   }
 
@@ -55,19 +66,28 @@ class GitStatusStore extends ChangeNotifier {
   /// Concurrent calls for the same root share one run, so the panel's tick and a
   /// tree that just mounted cannot start two `git status` processes.
   Future<GitStatusResult> read(String root, {bool force = false}) {
-    final existing = _inFlight[root];
+    final key = _key(root);
+    final existing = _inFlight[key];
     if (existing != null && !force) return existing;
-    if (!force && _readings[root] != null && isFresh(root)) {
-      return Future.value(_readings[root]);
+    if (!force && _readings[key] != null && isFresh(root)) {
+      return Future.value(_readings[key]);
     }
     final run = _fetch(root);
-    _inFlight[root] = run;
-    return run.whenComplete(() => _inFlight.remove(root));
+    _inFlight[key] = run;
+    return run.whenComplete(() => _inFlight.remove(key));
   }
 
-  Future<GitStatusResult> _fetch(String root) async {
-    final result = await _attempt(root);
-    _adopt(root, result);
+  Future<GitStatusResult> _fetch(String asked) async {
+    final result = await _attempt(asked);
+    // File the answer under the repository's own top level, so the next reader —
+    // asking about any folder inside it — hits this reading. `rev-parse` failing
+    // means there is no top level, and that answer stays keyed by the path that
+    // asked. The in-flight slot is released under the pre-fetch key it was taken
+    // under; two *simultaneous* cold asks from different folders can still each
+    // run, which is the price of not knowing the top level before asking.
+    final top = result.root ?? asked;
+    _asked[asked] = top;
+    _adopt(top, result);
     return result;
   }
 
@@ -94,13 +114,15 @@ class GitStatusStore extends ChangeNotifier {
   }
 
   /// Why the last read for [root] failed, or null. Only the panel reads this —
-  /// the tree stays silent, because it never asked.
-  String? errorFor(String root) => _errors[root];
+  /// the tree stays silent, because it never asked. Looked up by the asking path
+  /// as well as the repository key, because a failure can happen before either
+  /// is known.
+  String? errorFor(String root) => _errors[_key(root)] ?? _errors[root];
 
   /// After a stage / commit / discard / checkout: the next read must not be
   /// answered from the cache the action just invalidated.
   void invalidate(String root) {
-    _fetchedAt.remove(root);
+    _fetchedAt.remove(_key(root));
   }
 
   void _adopt(String root, GitStatusResult result) {

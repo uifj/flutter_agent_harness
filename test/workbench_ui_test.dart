@@ -550,6 +550,37 @@ void main() {
       },
     );
 
+    // ADR-0043's own hole: git spells a repository the way the filesystem
+    // resolves it, while the rows here are spelled from the path the user
+    // picked. Through a link those two disagree, and a key no row can match is
+    // a badge that silently never appears - the feature would look absent, not
+    // broken.
+    testWidgets('a folder reached through a link still wears its letters', (
+      tester,
+    ) async {
+      final parent = workspace();
+      final repo = Directory('${parent.path}/real')..createSync();
+      File('${repo.path}/notes.md').writeAsStringSync('dirty');
+      Link('${parent.path}/link').createSync(repo.path);
+
+      final git = FakeGit()..stubRepo(root: repo.path);
+      git.responses[fakeStatusKey] = ' M notes.md\x00';
+      final store = GitStatusStore(runner: git.runner);
+      await store.read('${parent.path}/link');
+
+      workbench.workspaceRoot = '${parent.path}/link';
+      workbench.openFolder('${parent.path}/link');
+      await pump(tester, workbench, const WorkbenchPrefs(), null, store);
+      await pumpUntil(tester, find.text('notes.md'));
+
+      expect(
+        find.text('M'),
+        findsOneWidget,
+        reason: 'the row is /link/notes.md, git answered /real/notes.md',
+      );
+      expect(find.byIcon(LucideIcons.list_filter), findsOneWidget);
+    });
+
     testWidgets('no repository means no letters and no filter switch', (
       tester,
     ) async {
