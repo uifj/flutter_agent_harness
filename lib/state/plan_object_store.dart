@@ -1013,6 +1013,43 @@ class PlanObjectStore extends ChangeNotifier {
     return template;
   }
 
+  /// A duplicate is a new template with the same blocks, "(1)" appended —
+  /// the shape the type-screen menu offers (`TemplatesModalList.kt:213-278`).
+  Future<PlanTemplate?> duplicateTemplate(String id) async {
+    final source = _templates
+        .where((template) => template.id == id)
+        .firstOrNull;
+    if (source == null || !PlanObjectTypeIds.allowsTemplates(source.typeKey)) {
+      return null;
+    }
+    final copy = PlanTemplate(
+      id: _newId('tpl'),
+      name: '${source.name} (1)',
+      typeKey: source.typeKey,
+      blocks: source.blocks,
+    );
+    _templates = [..._templates, copy];
+    await _commit();
+    return copy;
+  }
+
+  /// "Set as template" from an object menu (`ObjectAction.USE_AS_TEMPLATE`):
+  /// the record's fields become the template's starting block content, and
+  /// the template answers with the record's type.
+  Future<PlanTemplate?> createTemplateFromObject(String recordId) async {
+    final record = _objects[recordId];
+    if (record == null) return null;
+    if (!PlanObjectTypeIds.allowsTemplates(record.typeKey)) return null;
+    final template = PlanTemplate(
+      id: _newId('tpl'),
+      name: record.name.isEmpty ? 'Untitled' : record.name,
+      typeKey: record.typeKey,
+    );
+    _templates = [..._templates, template];
+    await _commit();
+    return template;
+  }
+
   Future<void> deleteTemplate(String id) async {
     _templates = [
       for (final template in _templates)
