@@ -208,12 +208,34 @@ class ErrorNode extends ConversationNode {
 /// files it writes; [title] is absent until the session has been opened once,
 /// because deriving it means reading the snapshot itself.
 class SessionSummary {
-  const SessionSummary({required this.id, required this.updatedAt, this.title});
+  const SessionSummary({
+    required this.id,
+    required this.updatedAt,
+    this.title,
+    this.workspaceRoot,
+    this.pinnedAt,
+  });
 
   final String id;
   final DateTime updatedAt;
+
+  /// The title to show, already resolved: the user's rename when there is one,
+  /// the transcript-derived title otherwise. `SessionIndex` is the only place
+  /// that resolves it, so no surface picks between two candidates (ADR-0039).
   final String? title;
 
-  SessionSummary withTitle(String? title) =>
-      SessionSummary(id: id, updatedAt: updatedAt, title: title);
+  /// The folder this conversation happened in. Null for every session started
+  /// before ADR-0039 recorded one — the unassigned group, not a bug.
+  final String? workspaceRoot;
+
+  /// Set when the user pinned the row to the top of its group.
+  final DateTime? pinnedAt;
+
+  SessionSummary withTitle(String? title) => SessionSummary(
+    id: id,
+    updatedAt: updatedAt,
+    title: title,
+    workspaceRoot: workspaceRoot,
+    pinnedAt: pinnedAt,
+  );
 }
