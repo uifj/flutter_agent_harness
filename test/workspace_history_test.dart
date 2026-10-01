@@ -3,7 +3,8 @@
 // 而删除只是把行从列表里拿走，不碰快照。
 //
 // 分组规则本身在 `session_groups_test.dart` 里当纯函数钉；这一棵守的是**画出来的
-// 那一棵**：折叠的组不建行、行右侧是相对时间、菜单只在点开之后才在树里。
+// 那一棵**：折叠的组不建行、行右侧是相对时间、菜单只在点开之后才在树里，
+// 而侧车存不下的那一次改动要在动手的那一下就说出来。
 
 import 'dart:io';
 
@@ -16,8 +17,10 @@ import 'package:agent_harness/model/workbench_prefs.dart';
 import 'package:agent_harness/state/session_index.dart';
 import 'package:agent_harness/state/session_registry.dart';
 import 'package:agent_harness/ui/layout/columns.dart';
+import 'package:agent_harness/theme/dsw_shad_bridge.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
 import 'package:agent_harness/ui/sidebar/sidebar.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 import 'fake_turn_source.dart';
 
@@ -69,12 +72,21 @@ void main() {
     bool flat = false,
     List<HistoryOrganize>? organizes,
     List<Set<String>>? foldSets,
+    bool withStrip = false,
   }) async {
     // The index fills itself from a scan, so every mount here starts from a
     // fresh one — the same order the app reaches the list in.
     await index.refresh();
     await tester.pumpWidget(
       MaterialApp(
+        // `main.dart`'s seam: the host for the app's one feedback surface sits
+        // above the Navigator, and takes its colours from the bridge.
+        builder: withStrip
+            ? (context, child) => ShadTheme(
+                data: dswShadTheme(Brightness.light),
+                child: ShadSonner(child: child!),
+              )
+            : null,
         theme: dswThemeData(Brightness.light),
         home: Scaffold(
           body: Row(
@@ -281,6 +293,51 @@ void main() {
     await tester.tap(find.text('Pin to top'));
     await tester.pumpAndSettle();
     expect(registry.pinnedAt('a'), isNotNull);
+  });
+
+  // The strip dismisses itself on a timer; a run outlives any default so the
+  // tree never goes away with it still pending.
+  Future<void> expire(WidgetTester tester) async {
+    await tester.pump(const Duration(seconds: 30));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('a pin the sidecar could not keep says so', (tester) async {
+    source.sessions = [session('a', workspaceRoot: '/work/alpha')];
+    // Nothing can move into the slot the document wants.
+    Directory('${support.path}/sessions.json').createSync();
+
+    await pump(tester, withStrip: true);
+    await tester.tap(find.text('session a'), buttons: kSecondaryButton);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pin to top'));
+    await tester.pump();
+
+    expect(registry.pinnedAt('a'), isNotNull, reason: 'the list still answers');
+    expect(index.metadataError, isNotNull);
+    expect(
+      find.text('The list changed, but that could not be saved'),
+      findsOneWidget,
+    );
+    expect(
+      tester.widget<ShadToast>(find.byType(ShadToast)).variant,
+      ShadToastVariant.destructive,
+    );
+
+    await expire(tester);
+  });
+
+  testWidgets('a pin the sidecar kept stays quiet', (tester) async {
+    source.sessions = [session('a', workspaceRoot: '/work/alpha')];
+
+    await pump(tester, withStrip: true);
+    await tester.tap(find.text('session a'), buttons: kSecondaryButton);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pin to top'));
+    await tester.pump();
+
+    expect(index.metadataError, isNull);
+    expect(find.byType(ShadToast), findsNothing);
   });
 
   testWidgets('a row with no folder offers no path to reveal', (tester) async {

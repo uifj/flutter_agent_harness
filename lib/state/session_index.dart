@@ -72,6 +72,12 @@ class SessionIndex extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Set when the sidecar could not be written. The list still answers from
+  /// memory, so the user has to be told at the action that failed — a value
+  /// with no reader is the defect class `settings_reach_test` exists for
+  /// (ADR-0022), and a silent persistence failure is its worse twin.
+  String? get metadataError => _registry?.errorMessage;
+
   /// Every folder any session was started in — the history's own half of the
   /// group list, which the surface unions with `AppSettings.recentWorkspaces`.
   Set<String> get knownWorkspaces => _registry?.knownWorkspaces ?? const {};

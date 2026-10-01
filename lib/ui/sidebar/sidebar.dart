@@ -871,8 +871,10 @@ class _SidebarState extends State<Sidebar> {
         session.pinnedAt == null ? 'pinSession' : 'unpinSession',
       ),
       icon: LucideIcons.pin,
-      onTap: () =>
-          widget.sessions.setPinned(session.id, session.pinnedAt == null),
+      onTap: () {
+        widget.sessions.setPinned(session.id, session.pinnedAt == null);
+        _warnIfNotSaved();
+      },
     ),
     DswMenuEntry(
       label: context.tr('renameSession'),
@@ -922,6 +924,16 @@ class _SidebarState extends State<Sidebar> {
     );
     if (next == null || next.isEmpty) return;
     widget.sessions.rename(session.id, next);
+    _warnIfNotSaved();
+  }
+
+  /// The sidecar write is the one thing these rows can lose without the screen
+  /// showing it: the list answers from memory either way, so the only honest
+  /// surface is the action that just failed. Returns whether it failed.
+  bool _warnIfNotSaved() {
+    if (widget.sessions.metadataError == null) return false;
+    showFeedback(context, context.tr('historyNotSaved'), destructive: true);
+    return true;
   }
 
   Future<void> _delete(SessionSummary session) async {
@@ -933,6 +945,7 @@ class _SidebarState extends State<Sidebar> {
     );
     if (!confirmed || !mounted) return;
     widget.sessions.remove(session.id);
+    if (_warnIfNotSaved()) return;
     showFeedback(context, context.tr('sessionDeleted'));
   }
 
