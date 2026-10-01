@@ -355,6 +355,44 @@ void main() {
     expect(sets.last, isEmpty);
   });
 
+  testWidgets('the sidecar, not the snapshot, is what puts a row under its '
+      'folder — the path production actually takes', (tester) async {
+    // `listSessions` cannot report a folder: genkit owns that document. Every
+    // real row therefore arrives with no workspace and gets one only from
+    // `sessions.json`. Testing the source field alone would pass while the
+    // shipped path was broken.
+    source.sessions = [
+      SessionSummary(id: 'a', updatedAt: _now, title: 'session a'),
+    ];
+    registry.noteWorkspace('a', '/work/from-sidecar');
+
+    await pump(tester);
+
+    expect(find.text('from-sidecar'), findsOneWidget);
+    expect(find.text('Unassigned'), findsNothing);
+  });
+
+  testWidgets('a rename from the sidecar wins over the derived title, once', (
+    tester,
+  ) async {
+    source.sessions = [session('a', workspaceRoot: '/work/alpha')];
+
+    await pump(tester);
+    expect(find.text('session a'), findsOneWidget);
+
+    index.rename('a', '改过的名字');
+    await tester.pumpAndSettle();
+
+    expect(find.text('改过的名字'), findsOneWidget);
+    expect(find.text('session a'), findsNothing);
+    expect(
+      source.sessions.single.title,
+      'session a',
+      reason:
+          'the override lives in the sidecar; the snapshot keeps its own truth',
+    );
+  });
+
   testWidgets('an empty history still says so under the section head', (
     tester,
   ) async {
