@@ -536,7 +536,12 @@ void main() {
     expect(chosen, [HistoryOrganize.flat]);
   });
 
-  testWidgets('collapse all folds every group, expand all unfolds them', (
+  // The head carries ONE glyph that reads the fold state, as upstream does
+  // (`WorkspaceSidebar.tsx:1074-1095`: Minimize2 while anything is expanded,
+  // Maximize2 once everything is folded). Two menu rows can both be pressed
+  // without knowing which one matches the list; one glyph cannot be wrong about
+  // what the user is looking at.
+  testWidgets('the head glyph folds every group, then reads as unfold', (
     tester,
   ) async {
     source.sessions = [
@@ -547,15 +552,24 @@ void main() {
 
     await pump(tester, foldSets: sets);
 
-    await tester.tap(find.byTooltip('History view'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Collapse all'));
+    expect(find.byTooltip('Collapse all'), findsOneWidget);
+    await tester.tap(find.byTooltip('Collapse all'));
     await tester.pumpAndSettle();
     expect(sets.single, {'/work/alpha', '/work/beta'});
 
-    await tester.tap(find.byTooltip('History view'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Expand all'));
+    // The same control after the list changed: it now offers the opposite,
+    // because the state it shows is the state of the groups.
+    await pump(
+      tester,
+      foldSets: sets,
+      collapsed: {'/work/alpha', '/work/beta'},
+    );
+    expect(
+      find.byTooltip('Collapse all'),
+      findsNothing,
+      reason: 'nothing left to fold, so nothing offered',
+    );
+    await tester.tap(find.byTooltip('Expand all'));
     await tester.pumpAndSettle();
     expect(sets.last, isEmpty);
   });

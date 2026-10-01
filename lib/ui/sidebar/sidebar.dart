@@ -756,6 +756,7 @@ class _SidebarState extends State<Sidebar> {
               for (final line in lines)
                 if (line.group != null) line.group!.key,
             ],
+            collapsed: widget.collapsedWorkspaces,
             onCollapseAll: widget.onSetCollapsedWorkspaces == null
                 ? null
                 : (keys) => widget.onSetCollapsedWorkspaces!(keys),
@@ -1422,18 +1423,24 @@ Future<String?> _promptForText(
 }
 
 /// The section line above the groups: what the list is called, how it is
-/// arranged, and a way to bring another folder into it.
+/// arranged, whether every folder is folded, and a way to bring another folder
+/// into it.
 ///
-/// The second screenshot asks for exactly this row — a 「项目」 head with a `⋮`
-/// and a `+` at its right. The organize choice lives in the menu rather than in
-/// the settings page because it is a decision about this list, made while
-/// looking at it.
+/// The second screenshot asks for exactly this row. Upstream's head carries a
+/// **single** glyph that reads the fold state and flips with it
+/// (`WorkspaceSidebar.tsx:1074-1095`: Minimize2 when everything is expanded,
+/// Maximize2 when everything is folded, disabled when there is nothing to
+/// fold), so this does the same rather than offering "expand all" and "collapse
+/// all" as two menu rows that both have to be guessed at. The organize choice
+/// stays in the `⋮` because a two-option segmented control would cost the
+/// section name its seat in a 280px column.
 class _HistorySectionRow extends StatelessWidget {
   const _HistorySectionRow({
     required this.organize,
     required this.onOrganizeChanged,
     required this.onAddWorkspace,
     required this.groupKeys,
+    required this.collapsed,
     required this.onCollapseAll,
   });
 
@@ -1444,6 +1451,10 @@ class _HistorySectionRow extends StatelessWidget {
   /// Every folder currently drawn as a group — what "collapse all" means.
   final List<String> groupKeys;
 
+  /// Which of those are folded right now. The head's one glyph is decided by
+  /// this, so it shows a state rather than a wish.
+  final Set<String> collapsed;
+
   /// One writer for the whole fold set, so collapsing everything is one write
   /// rather than one notification per folder.
   final ValueChanged<Set<String>>? onCollapseAll;
@@ -1453,6 +1464,7 @@ class _HistorySectionRow extends StatelessWidget {
     final color = context.dsw;
     final step = MediaQuery.textScalerOf(context).scale(1);
     final canFold = onCollapseAll != null && groupKeys.isNotEmpty;
+    final allFolded = canFold && groupKeys.every(collapsed.contains);
     return SizedBox(
       height: DswShape.rowSession * step,
       child: Row(
@@ -1472,56 +1484,37 @@ class _HistorySectionRow extends StatelessWidget {
               ),
             ),
           ),
-          // The menu belongs to the section, not to the organize choice: a
-          // caller that only wired the fold actions still gets the menu, and
-          // each block inside it appears only with its own action.
-          if (onOrganizeChanged != null || canFold)
+          // The menu is the organize choice now that the fold has a glyph of
+          // its own: one door per fact, and the fold's state is on the head
+          // where it can be seen.
+          if (onOrganizeChanged != null)
             DswMenu(
               label: context.tr('historyView'),
               items: (context) => [
-                if (onOrganizeChanged != null) ...[
-                  DswMenuEntry(
-                    label: context.tr('groupByWorkspace'),
-                    icon: LucideIcons.folder_tree,
-                    trailing: organize == HistoryOrganize.project
-                        ? Icon(
-                            LucideIcons.check,
-                            size: DswShape.iconTiny,
-                            color: color.labelPrimary,
-                          )
-                        : null,
-                    onTap: () => onOrganizeChanged!(HistoryOrganize.project),
-                  ),
-                  DswMenuEntry(
-                    label: context.tr('flatList'),
-                    icon: LucideIcons.list,
-                    trailing: organize == HistoryOrganize.flat
-                        ? Icon(
-                            LucideIcons.check,
-                            size: DswShape.iconTiny,
-                            color: color.labelPrimary,
-                          )
-                        : null,
-                    onTap: () => onOrganizeChanged!(HistoryOrganize.flat),
-                  ),
-                ],
-                if (canFold) ...[
-                  const DswMenuEntry.divider(),
-                  // Upstream ships these as two header glyphs
-                  // (`WorkspaceSidebar.tsx:1072-1095`); in a menu they cost no
-                  // seat in a 280px column, which is the constraint that made
-                  // the reference's own chrome shed labels first.
-                  DswMenuEntry(
-                    label: context.tr('expandAll'),
-                    icon: LucideIcons.chevron_down,
-                    onTap: () => onCollapseAll!(const {}),
-                  ),
-                  DswMenuEntry(
-                    label: context.tr('collapseAll'),
-                    icon: LucideIcons.chevron_right,
-                    onTap: () => onCollapseAll!(groupKeys.toSet()),
-                  ),
-                ],
+                DswMenuEntry(
+                  label: context.tr('groupByWorkspace'),
+                  icon: LucideIcons.folder_tree,
+                  trailing: organize == HistoryOrganize.project
+                      ? Icon(
+                          LucideIcons.check,
+                          size: DswShape.iconTiny,
+                          color: color.labelPrimary,
+                        )
+                      : null,
+                  onTap: () => onOrganizeChanged!(HistoryOrganize.project),
+                ),
+                DswMenuEntry(
+                  label: context.tr('flatList'),
+                  icon: LucideIcons.list,
+                  trailing: organize == HistoryOrganize.flat
+                      ? Icon(
+                          LucideIcons.check,
+                          size: DswShape.iconTiny,
+                          color: color.labelPrimary,
+                        )
+                      : null,
+                  onTap: () => onOrganizeChanged!(HistoryOrganize.flat),
+                ),
               ],
               trigger: (context) => Icon(
                 LucideIcons.ellipsis,
@@ -1529,6 +1522,18 @@ class _HistorySectionRow extends StatelessWidget {
                 color: color.labelSecondary,
               ),
             ),
+          // One glyph, one state: what it does is what the picture of the list
+          // says it will do. Disabled rather than hidden when there is no group
+          // to fold, because a control that vanishes is a missing control.
+          DswIconButton(
+            icon: allFolded ? LucideIcons.maximize_2 : LucideIcons.minimize_2,
+            tooltip: context.tr(allFolded ? 'expandAll' : 'collapseAll'),
+            onTap: canFold
+                ? () => onCollapseAll!(allFolded ? const {} : groupKeys.toSet())
+                : null,
+            size: 24 * step,
+            iconSize: DswShape.iconTiny,
+          ),
           if (onAddWorkspace != null)
             DswIconButton(
               icon: LucideIcons.plus,
