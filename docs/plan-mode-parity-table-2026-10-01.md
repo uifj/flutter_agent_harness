@@ -65,9 +65,9 @@
 | 三种身份同构（成员同、限制不同） | ✅ | ✅ 已复刻 | P1 | `lib/model/plan_dataview.dart:675-804` | — | — |
 | 创建跳过选模板（null 模板=空白） | ✅ | ✅ 已复刻（语义） | P1/P2 | `lib/state/plan_object_store.dart` createRecord | store | — |
 | 从类型生成 Set（CreateSet/OpenSet/Hidden 三态） | ✅ | 🔨 P6（🔁 扩展：替上游补完未接线入口） | P6 | `lib/ui/plan/library/` | store.createCollection | ShadDialog |
-| All Content 5 tab（PAGES/LISTS/MEDIA/BOOKMARKS/FILES） | ✅ | 🔨 P6 | P6 | `lib/ui/plan/library/all_content*.dart` | store.recordsOfType 查询 | ShadTabs |
-| All Content 两种菜单模式 AllContent/Unlinked + 状态恢复 | ✅ | 🔨 P6 | P6 | 同上 | 恢复=纯函数+store 偏好 | ShadSelect |
-| 时间分组 Today/Yesterday/Previous7Days/… | ✅ | 🔨 P6 | P6 | 同上 | 纯函数 | — |
+| All Content 5 tab（PAGES/LISTS/MEDIA/BOOKMARKS/FILES） | ✅ | ✅ 已复刻 | P6 | `lib/ui/plan/library/plan_all_content_screen.dart` + `lib/model/plan_all_content.dart` | store.objects 按 tab 的类型清单过滤 | DswHoverTap 签条 |
+| All Content 两种菜单模式 AllContent/Unlinked + 状态恢复 | ✅ | ✅ 已复刻（状态经 onStateChanged 回流；持久化随工作区偏好 🔨） | P6 | 同上 | PlanAllContentState（RestoreAllContentState 等价） | — |
+| 时间分组 Today/Yesterday/Previous7Days/14Days/Month/Year | ✅ | ✅ 已复刻（now 可注入，空桶丢弃，未来日期读作今天） | P6 | `plan_all_content.dart`（groupPlanAllContent） | 纯函数 | — |
 
 ## 3. 模块 3：文档块（Block）
 
