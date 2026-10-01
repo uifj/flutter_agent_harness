@@ -74,30 +74,30 @@
 | 子功能 | 上游档位 | 状态 | 施工 | 代码路径 | 状态层 | shadcn 组件 |
 | --- | --- | --- | --- | --- | --- | --- |
 | 14 样式建模 / 11 可插（AC3-1，含 QUOTE 更正） | ✅ | ✅ 已复刻 | P1(更正 10-01) | `lib/model/plan_block.dart:36-52` | — | — |
-| slash 菜单（AC3-2；9 段主菜单，插入集合照上游；table(NxM) 夹 1–25） | ✅ | 模型 ✅P1；9 段全量 UI 🔨 P5 | P5 | `plan_block.dart:640-732`、`lib/ui/plan/blocks/` | — | DswMenu（封装） |
-| 选区工具栏 8 mark（AC3-3） | ✅ | 模型 ✅P1；UI 🔨 P5 | P5 | `plan_block.dart:79-` | — | DswHoverTap + DswIconButton |
-| 颜色 11 档 × 文本/背景（AC3-4） | ✅ | 模型 ✅P1；UI 🔨 P5 | P5 | `plan_block.dart` + `dsw_alias` 映射 | — | ShadPopover |
+| slash 菜单（AC3-2；主菜单插入集合照上游；table(NxM) 夹 1–25） | ✅ | ✅ 部分已落（P5）：Style/Media/Other 三段可插；Objects/Properties 两段给出"随对象库（P6）到达"的诚实空态；Alignment/Colour/Background 三段由工具栏的 turn-into/颜色/对齐回答；Actions 段由块菜单回答；`table(NxM)` 解析在模型、表格插入第一版为固定 3×3 🔨 | P5 | `plan_block_editor.dart`（_SlashSheet） | PlanBlockDocument | ShadDialog + DswHoverTap |
+| 选区工具栏 8 mark（AC3-3） | ✅ | ✅ 部分（P5）：11 种 mark 在读视图全部渲染（TextSpan 分发）；编辑面对文本选区应用/清除 mark 的工具栏 🔨（第一版编辑面为纯文本，mark 随编辑自动移位/裁剪已落） | P5 | `plan_block_view.dart`（_TextReadView/_markSpan）+ `plan_block_document.dart`（applyMark/editText） | PlanBlockDocument | — |
+| 颜色 11 档 × 文本/背景（AC3-4） | ✅ | ✅ 已复刻（P5：工具栏两个颜色菜单，作用于聚焦块；mark 级颜色随上一行） | P5 | `plan_block_editor.dart`（_ColorSelect）+ `planLadderColor` | PlanBlockDocument | DswContextMenu |
 | 对齐左中右；JUSTIFY ⛔（AC3-4） | ⛔ | ✅ 已复刻（justify.isInsertable=false；HIGHLIGHT 无中档已入模型） | P1 | `plan_block.dart`（PlanAlign/supportsCenterAlignment） | — | — |
-| Toggle / Callout / 分隔线 / TOC / FeaturedRelations / Relation 块 / 嵌套（AC3-5） | ✅ | 模型 ✅P1；UI 🔨 P5 | P5 | `plan_block.dart`（sealed 树）、`lib/ui/plan/blocks/` | — | — |
-| ROW/COLUMN 展平（AC3-6） | ⛔ | ✅ 已复刻（isStructural=false） | P1 | `plan_block.dart` | — | — |
-| 表格块三 tab 动作（AC3-7，死代码动作 ⛔ 不做） | ✅/⛔ | 模型 ✅P1；UI 🔨 P5 | P5 | `plan_block.dart`（PlanTableBlock） | — | DswMenu |
-| 文件块 6 型 4 态；图片全屏、PDF/FILE 文件卡（AC3-8） | ✅ | 模型 ✅P1；UI 🔨 P5 | P5 | `plan_block.dart`（PlanFile） | — | ShadDialog（全屏） |
+| Toggle / Callout / 分隔线 / TOC / FeaturedRelations / Relation 块 / 嵌套（AC3-5） | ✅ | ✅ 已复刻（P5 渲染器；toggle 展开态与 callout 图标编辑 🔨） | P5 | `lib/ui/plan/blocks/plan_block_view.dart` | PlanBlockDocument | — |
+| ROW/COLUMN 展平（AC3-6） | ⛔ | ✅ 已复刻 | P1/P5 | `plan_block.dart` + `plan_block_view.dart`（PlanBlockRow 递归） | — | — |
+| 表格块三 tab 动作（AC3-7，死代码动作 ⛔ 不做） | ✅/⛔ | ✅ 部分已落（P5）：行级插入/移动/复制/清空/删除进块菜单；Cell 清空走 store；列级插入/删除在 store 有、UI 🔨；Sort/Copy ⛔ 照上游死代码不做 | P5 | `plan_block_actions.dart`（planTableRowActions）+ `plan_block_document.dart` 表格族 | PlanBlockDocument | DswContextMenu |
+| 文件块 6 型 4 态；PDF/FILE 文件卡（AC3-8） | ✅ | ✅ 部分已落（P5）：四态渲染 + 按型分图标；图片全屏/选择器 🔨（笔记面尚无上传管线） | P5 | `plan_block_view.dart`（_FileBlock） | PlanBlockDocument | ShadCard 形状 |
 | 视频/音频内嵌播放 | ✅(上游) | 🔁 偏差：本仓库无播放器依赖 → 首版按文件卡+外部打开；要内嵌须另立 ADR 加依赖 | P5 | — | — | — |
-| 书签 4 态 + URL 可编辑（AC3-9） | ✅ | 模型 ✅P1；UI 🔨 P5 | P5 | `plan_block.dart`（PlanBookmark） | — | ShadDialog + ShadInput |
-| 链接块四组枚举 + 外观面板（AC3-10） | ✅ | 模型 ✅P1；UI 🔨 P5 | P5 | `plan_block.dart`（PlanLink） | — | ShadPopover |
-| @提及面板（Date/ObjectType/Profile/Task/Deleted）（AC3-11） | ✅ | 🔨 P5 | P5 | `lib/ui/plan/blocks/` | store 查询 | ShadPopover |
-| 嵌入 24 provider 统一占位卡（AC3-12） | ⛔ | ✅ 已复刻（占位；15 需 URL 的可外部打开） | P1 模型 / P5 UI | `plan_block.dart`（PlanEmbedProcessor） | — | ShadCard |
-| LaTeX 渲染但无插入入口 | ✅/⛔ | ⛔ 占位（照上游；渲染经 gpt_markdown 已有能力） | P5 | — | — | — |
+| 书签 4 态 + URL 可编辑（AC3-9） | ✅ | ✅ 部分已落（P5）：四态渲染；URL 录入对话框 🔨 | P5 | `plan_block_view.dart`（_BookmarkBlock） | PlanBlockDocument | ShadCard 形状 |
+| 链接块四组枚举 + 外观面板（AC3-10） | ✅ | ✅ 部分已落（P5）：text/card 两形态按 cardStyle 渲染；外观面板 🔨 | P5 | `plan_block_view.dart`（_LinkBlock） | PlanBlockDocument | — |
+| @提及面板（Date/ObjectType/Profile/Task/Deleted）（AC3-11） | ✅ | 🔨 P6（提及的目标对象随对象库到达；mention mark 渲染已落） | P6 | `lib/ui/plan/blocks/` | store 查询 | ShadPopover |
+| 嵌入 24 provider 统一占位卡（AC3-12） | ⛔ | ✅ 已复刻（占位卡标注 opens-externally / not-available） | P1 模型 / P5 UI | `plan_block_view.dart`（_EmbedBlock） | — | ShadCard 形状 |
+| LaTeX 渲染但无插入入口 | ✅/⛔ | ✅ 已复刻（gpt_markdown 渲染；无插入入口照上游） | P5 | `plan_block_view.dart`（_LatexBlock） | — | — |
 | 对象图标（emoji/自定义图/矢量图标）（AC3-13） | ✅ | 🔨 P5/P6；🔁 规模差异：上游 391 枚矢量图标与全量 emoji.json 不整体搬运，用精选集 | P5/P6 | — | — | ShadPopover |
 | 封面（8 渐变+12 纯色+设备图）（AC3-14）；Unsplash | ✅/❌ | 🔨 P6；Unsplash ❌ N/A（无网络源，登记） | P6 | — | — | ShadDialog |
 | 空间壁纸 Solid/Gradient/None（AC3-15） | ✅ | 🔁 扩展：作用于企划工作台容器 | P6 | — | — | ShadSelect |
-| 编辑器 8 模式 + 锁/解锁（AC3-16；SAM=拖拽映射 🔁） | ✅ | 🔨 P5 | P5 | `lib/ui/plan/blocks/` | 块文档 store | — |
-| 动作集合 20 项按条件装配（AC3-17） | ✅ | 🔨 P5 | P5 | — | — | DswMenu |
-| 拖拽三段落点 + 自动滚动 200px/350px·60ms（AC3-18） | ✅ | 🔨 P5 | P5 | — | — | — |
-| 剪贴板：内部块 + 系统 HTML 粘贴（AC3-19） | ✅ | 🔨 P5 | P5 | — | — | — |
-| 文内搜索 6 事件（AC3-20） | ✅ | 🔨 P5 | P5 | — | — | ShadInput |
-| 撤销/重做（AC3-21） | ✅(服务端) | 🔁 扩展：本地命令栈（无核心） | P5 | 块文档 store | — | — |
-| 限制位 ObjectRestriction 11 / DataViewRestriction 3（AC3-22） | ✅ | 模型 ✅P1；UI 按位禁用 🔨 P5/P6 | P1/P5 | `plan_block.dart` 引 `plan_struct.dart:60-91` | — | — |
+| 编辑器 8 模式 + 锁/解锁（AC3-16；SAM=拖拽映射 🔁） | ✅ | ✅ 部分已落（P5）：Edit/Read 两面 + 搜索自动转只读（与上游同一决定）；Locked/Select/Styling/Table 独立模式 🔨 | P5 | `plan_block_editor.dart`（readOnly/searching） | PlanBlockDocument | — |
+| 动作集合 20 项按条件装配（AC3-17） | ✅ | ✅ 部分已落（P5）：duplicate/delete/moveRoot 按块装配；TurnInto/样式走工具栏；其余（MoveTo/Rename/Download…）随媒体与对象屏 🔨 | P5 | `plan_block_actions.dart` | PlanBlockDocument | DswContextMenu |
+| 拖拽三段落点 + 自动滚动 200px/350px·60ms（AC3-18） | ✅ | 🔨（第一版为工具栏 moveRoot 上/下移；三段落点拖拽待接） | P5+ | `plan_block_document.dart`（moveRoot） | — | — |
+| 剪贴板：内部块 + 系统 HTML 粘贴（AC3-19） | ✅ | 🔨 | P5+ | — | — | — |
+| 文内搜索 6 事件（AC3-20） | ✅ | ✅ 已复刻（Query/Search 计数/Next/Previous/Clear/Cancel；搜索自动转只读；ensureVisible 滚动定位） | P5 | `plan_block_editor.dart`（_search* 族） | PlanBlockDocument | ShadInput |
+| 撤销/重做（AC3-21） | ✅(服务端) | ✅ 已复刻（🔁 扩展：本地快照栈，深度 50，id 保持） | P5 | `plan_block_document.dart`（_undoStack/undo/redo） | PlanBlockDocument | DswIconButton |
+| 限制位 ObjectRestriction 11 / DataViewRestriction 3（AC3-22） | ✅ | 模型 ✅P1；UI 按位禁用 🔨 P6（数据视图的 3 档已在 P3 落：views/relation/createObject 门 +、新建与抽屉） | P1/P3/P6 | `plan_struct.dart:60-91`、`plan_data_view_screen.dart` | — | — |
 
 ## 4. 模块 4：对象类型（23 key）
 
