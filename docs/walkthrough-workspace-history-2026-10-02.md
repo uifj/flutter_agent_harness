@@ -17,7 +17,7 @@ ADR-0039 / ADR-0041 / ADR-0042 / ADR-0043 四批改动的**真机签收单**。�
 | 1.5 | 置顶一条 → 重启应用 | 它仍在组内最前；相对时间从 `刚刚` 依次变 `59分`/`23天` | `a pinned conversation sits above a newer one`、`relative_time_test` 四档边界 |
 | 1.6 | 删除一条 | 行消失、弹一条"已从列表移除该会话"；**盘上快照还在**（`<support>/sessions/…` 未被动过），重启后仍不在列表里 | `deleting a row leaves the snapshot listing alone` |
 | 1.7 | 组头 `⋮` 四格逐一点 | 显示文件树 → 右栏开出该文件夹的树；复制工作区路径 → 粘出来是那个绝对路径；在文件管理器中显示 → Finder 真的打开；从列表中移除 → 只少这一组，会话还在 | 前三格由 `the group menu offers the tree, the path, the reveal and the removal` 守住（剪贴板读的是值本身）；**Finder 真打开只能你看** |
-| 1.8 | 老会话（这次改动之前建的） | 落在最末一档「未归属」，不丢、不报错 | `a session with no folder lands in the unassigned bucket` |
+| 1.8 | 老会话（这次改动之前建的） | 落在最末一档「未归属」，不丢、不报错 | `a session with no folder lands in the unassigned bucket`。**本机实况已核对**：`~/Library/Application Support/com.stow.agentHarness/sessions/global/.pointers` 下 `.pointers` 有 **2** 个文件（=两条会话），而 `global/` 有 **7** 份快照——多出来的是同一批会话的快照链（新的那份带 `parentId` 指向上一份），`listSessions` **按指针列**，所以它们不该变成行，而侧车 `sessions.json` 还不存在——`listSessions` 从不填 `workspaceRoot`（`agent_runtime.dart:1364`），归属只在**新会话第一次落盘**时由 `AppScope.onSessionPersisted` → `noteWorkspace` 记下（`app_scope.dart:94`）。所以这台机器上屏幕上应当正好是 **2 行**（指针数），且这两条**全部**出现在「未归属」——看到 7 行、或看到它们被分到某个文件夹组里，才是问题 |
 | 1.9 | 侧栏收起成 rail，再展开 | 收起时 rail 上没有一个字；展开后分组原样回来（淡入未 settle 时点在空气上——测试里踩过，所以真机请慢一点） | `both forms carry a working collapse control` |
 | 1.10 | macOS 系统设置里把文字调大（四档各一次） | 组头、行、时间列都不被裁；整列还能滚到最后一行 | 两档（1.8x/2.2x）机器量过；**四档真机没量过** |
 
@@ -55,6 +55,10 @@ ADR-0039 / ADR-0041 / ADR-0042 / ADR-0043 四批改动的**真机签收单**。�
 
 ## 4. 还没做、等你点的候选（都带判据，不是待修 bug）
 
+- **要不要一格"把这行归到当前工作区"**：本机核对过，那两条老会话在这台机器上**会全部**落在「未归属」，
+  因为归属只在会话第一次落盘那一刻记下（之后换工作区不再改，这是 ADR-0039 的决策），而快照里没有可回溯的字段。
+  上游没有这格（它的每条 task 建出来就带 `workspacePath`），所以这不是"漏移植"而是一件**新功能**：
+  它等于让用户手写一条本来由系统记下的事实。要就说要，我按 ADR 流程立一条再动；不要就维持现状。
 - **对话流的"全部展开/收起工具卡"与卡内搜索**：上游有（`ModelTrajectoryPane` 头部那排），
   但它那棵的正文要读服务端持久化的 transcript 目录，我们只有一半可搬。要哪一半请点一下。
 - **窄窗胶囊的三条出口**（最小窗口宽 / 改吃 `constraints` / 接受为文档化退化）：仍无人拍板，
