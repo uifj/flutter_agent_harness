@@ -42,7 +42,7 @@ ADR-0039 / ADR-0041 / ADR-0042 / ADR-0043 四批改动的**真机签收单**。�
 | 2B.5 | 在 git 面板 stage 一个文件 | 面板里那行进了"已暂存"，**同时**树里那行的字母变掉（同一份读数的两个读者） | `git_status_store_test`「an action invalidates, so the next reader sees the tree as it is now」证 store 层；两棵树**同时**变是眼睛的活 |
 | 2B.6 | 让 agent 写一个文件（`write` 工具） | 树重列之后，新建的文件带 `?` 字母、它的目录带点——不需要你按刷新 | `_onFsRevision` 那条路径（`fsRevision` 抬 → `invalidate` + 再读）；**字母与"agent 刚写的那个文件"对得上没对上要看** |
 | 2B.7 | 大仓（几万文件）第一次打开树 | 允许量一次停顿：`git status` 是百毫秒级的真实开销，且只在树真的挂上时发生。若这一下不可接受，回来登记，再谈"要不要把首次读数挪到后台" | 机器证不了——需要真实仓库与秒表 |
-| 2B.8 | **通过符号链接**选中一个文件夹当工作区（例如 `~/link-to-repo` 指向真仓库），打开树 | 徽标与目录点照样出现。这一格是修出来的：git 报解析过的顶层，而行是用户选中的拼法，两者不同时旧代码会**静默不画**（看起来像没这功能） | `a folder reached through a link still wears its letters`（先红在 `Found 0 widgets with text "M"`）；**只剩"你的 Finder 里那条链接真的解析到同一个仓库"这一眼** |
+| 2B.8 | **通过符号链接**选中一个文件夹当工作区（例如 `~/link-to-repo` 指向真仓库），打开树 | 徽标与目录点照样出现。这一格是修出来的：git 报解析过的顶层，而行是用户选中的拼法，两者不同时旧代码会**静默不画**（看起来像没这功能） | 前提与拼法都已用**真 git + 真目录**量过（`test/git_status_real_test.dart`：从 `/link` 问 `rev-parse --show-toplevel` 答 `/private/.../real`，且 `changedPaths` 的每个键都落在真的列表里；反向验过：退回直接拼在 git 顶层即红）。**只剩"你选的那条链接是否真的指向同一仓库"这一眼** |
 | 2B.9 | 亮/暗两档、放大字号两档各看一次树 | 字母（11px 页边注）不被裁、行不横向溢；开关那枚 20px 座位在放大后仍能按 | `no tab body spills or cuts a label (1.8x / 2.2x)` 现在**把字母建在树里**再量（此前那两档走查用的是"非仓库"缓存，字母根本没进树——所以这一格今天才真正量到）；**淡不淡（`labelTertiary`）是眼睛的活** |
 
 ## 3. 备份与恢复（ADR-0042，顺手一起走）

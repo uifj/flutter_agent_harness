@@ -2,7 +2,7 @@
 
 - 分类: ARC
 - 优先级: P2
-- 状态: RESOLVED（2026-10-02，`e3d8c94`/`6af9b41`/`e4e56de`/`d5c46f2`/`6deab0b`，另见下方**修订** `1258bc9`；余 macOS 真机走查：大仓里第一次打开树的停顿）
+- 状态: RESOLVED（2026-10-02，`e3d8c94`/`6af9b41`/`e4e56de`/`d5c46f2`/`6deab0b`，修订 `1258bc9`、真 git 验证 `9cd6d18`；余 macOS 真机走查：大仓里第一次打开树的停顿）
 
 ## 背景
 
@@ -123,3 +123,27 @@
 本 ADR 的决策 1 该在一开始就把这句话写进去——它写的"按 repo root"看起来已经说完了，实际把"root 从谁来"留空了。
 另一条：**静默失效的功能比报错的功能更难发现**，所以这一类的守卫要断"那一格确实画出来了"，
 而不是断"没有报错"。套件 `+1232 -2` → `+1234 -2`（两条既有失败未变多）。
+
+### 再补一刀（`9cd6d18`）：那条前提第一次用真 git 量过
+
+第 2 条修复压在一句没验过的外部事实上：**`git rev-parse --show-toplevel` 回答的是解析过的路径**。
+整批守卫此前都吃假 runner 的字符串，那能证解析器与缓存，证不了外面这台 git 到底怎么说——
+而它要是反过来说（回答未解析的那份），重锚就是白写。实测（本机 git，`/tmp` 本身就是软链）：
+
+```
+ln -s /tmp/gtp/real /tmp/gtp/link
+git -C /tmp/gtp/link     rev-parse --show-toplevel  →  /private/tmp/gtp/real
+git -C /tmp/gtp/link/sub rev-parse --show-toplevel  →  /private/tmp/gtp/real
+git -C /tmp/gtp/link     status --porcelain=v1 -z   →  " M notes.md\0?? sub/mid.md\0"
+```
+
+前提成立，而且**从子目录问也答同一个顶层**——那正是别名那半边修复的依据。这件事现在钉在
+`test/git_status_real_test.dart`：真仓库、真进程、真目录列表，五种形状各一枚（`R ` 重命名对、
+`M ` 已暂存、` M` 未暂存、`??` 未跟踪、子目录里的一处），并且断"两份问法拿到同一个对象、
+中间新加的文件要等 `invalidate` 才进得来"。全是普通 `test()`，不进 FakeAsync，因此也不会把
+`runGit` 那道 30s 计时器带进任何 pump。
+
+顺带把拼法从 widget 里提成了 `host/git.dart` 的 `changedPaths(reading, root:, resolvedRoot:)`——
+**测试要调产品代码，不是在测试里把公式重算一遍**。反向验过：让它退回直接拼在 git 顶层上，
+真仓库那棵红在 `Expected: non-empty Actual: []`，widget 那棵红在 `Found 0 widgets with text "M"`。
+套件 → `+1239 -2`。走查页 2B.8 因此只剩"你那条链接是否真的指向同一仓库"这一格需要眼睛。
