@@ -71,6 +71,17 @@ void main() {
     }
   }
 
+  /// Switches the note surface to Source mode: the block editor owns Edit,
+  /// and these two tests pin the raw-buffer save contract, which lives on the
+  /// Source face (the block editor's own encode-on-save has its test in
+  /// `plan_blocks_test.dart`).
+  Future<void> gotoSource(WidgetTester tester) async {
+    // The capsule shows the CURRENT face and cycles Edit → Source → Preview;
+    // from the freshly opened note one tap reaches Source.
+    await tester.tap(find.text('Edit'));
+    await tester.pump();
+  }
+
   /// Types into the note editor. re_editor is not an `EditableText` — it owns
   /// a `TextInput` delta connection — and pushing values through the test
   /// input service mangles its content; driving the CONTROLLER's text setter
@@ -131,6 +142,7 @@ void main() {
     expect(find.text('Unsaved changes'), findsNothing);
     expect(find.text('Save'), findsOneWidget);
 
+    await gotoSource(tester);
     await typeInto(tester, '# Edited\n');
     await tester.pump();
     expect(find.text('Unsaved changes'), findsOneWidget);
@@ -150,6 +162,7 @@ void main() {
     await tester.tap(find.text('readme.md'));
     // The note's readAsString is real IO — wait for the editor toolbar.
     await pumpUntil(tester, find.text('Save'));
+    await gotoSource(tester);
     await typeInto(tester, 'uncommitted');
     await tester.pump();
     expect(find.text('Unsaved changes'), findsOneWidget);

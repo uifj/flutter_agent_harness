@@ -19,7 +19,12 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show compute;
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+
+import '../../state/plan_block_document.dart';
+import 'blocks/plan_block_editor.dart';
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:shadcn_ui/shadcn_ui.dart'
@@ -77,12 +82,16 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
   String? _selected;
 
   CodeLineEditingController? _controller;
+
+  /// The block document the Edit mode draws — the codec's takeover of the
+  /// note, decoded once on open and re-encoded on save (ADR-0037 P5).
+  PlanBlockDocument? _document;
   bool _dirty = false;
   bool _saving = false;
 
-  /// The Source/Preview toggle; preview renders with the transcript's own
-  /// markdown renderer so a note and a chat reply read identically.
-  bool _preview = false;
+  /// Edit draws the block editor, Source the raw markdown, Preview the
+  /// transcript's own markdown renderer.
+  _PlanNoteMode _mode = _PlanNoteMode.edit;
 
   /// Expanded directory paths in the tree.
   Set<String> _expandedDirs = <String>{};
@@ -101,6 +110,8 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
     if (widget.workspaceRoot != old.workspaceRoot) {
       _controller?.dispose();
       _controller = null;
+      _document?.dispose();
+      _document = null;
       setState(() {
         _selected = null;
         _notes = const [];
@@ -207,13 +218,16 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
     final text = await File(p.join(root, note.relative)).readAsString();
     if (!mounted) return;
     final old = _controller;
+    final oldDocument = _document;
     setState(() {
       _selected = note.relative;
       _dirty = false;
-      _preview = false;
+      _mode = _PlanNoteMode.edit;
       _controller = CodeLineEditingController.fromText(text);
+      _document = PlanBlockDocument.fromMarkdown(text);
     });
     old?.dispose();
+    oldDocument?.dispose();
   }
 
   Future<void> _save() async {
@@ -221,9 +235,19 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
     final controller = _controller;
     final selected = _selected;
     if (root == null || controller == null || selected == null) return;
+    // Edit mode saves the block tree's encoding — the codec guarantees the
+    // round trip; Source saves the raw buffer as before.
+    final text = _mode == _PlanNoteMode.edit
+        ? _document?.encode()
+        : controller.text;
+    if (text == null) return;
     setState(() => _saving = true);
     try {
-      await File(p.join(root, selected)).writeAsString(controller.text);
+      await File(p.join(root, selected)).writeAsString(text);
+      if (_mode == _PlanNoteMode.source) {
+        _document?.dispose();
+        _document = PlanBlockDocument.fromMarkdown(text);
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -605,47 +629,57 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
         children: [
           _toolbar(color, selected),
           Expanded(
-            child: _preview
-                ? _NotePreview(text: controller.text)
-                : CallbackShortcuts(
-                    bindings: {
-                      const SingleActivator(
-                        LogicalKeyboardKey.keyS,
-                        meta: true,
-                      ): _save,
-                      const SingleActivator(
-                        LogicalKeyboardKey.keyS,
-                        control: true,
-                      ): _save,
-                    },
-                    // The one-frame-late dirty bridge: re_editor notifies from
-                    // inside build on mount, and a plain listener would
-                    // false-positive the flag on every open. See
-                    // `editor_tab.dart`'s _DirtyBridge doc for the full story.
-                    child: _DirtyBridge(
-                      controller: controller,
-                      onDirty: _onBufferEdited,
-                      child: CodeEditor(
-                        controller: controller,
-                        wordWrap: true,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        style: CodeEditorStyle(
-                          fontSize: 13,
-                          fontHeight: 22 / 13,
-                          fontFamily: dswFontFamilyCode,
-                          fontFamilyFallback: dswFontFamilyCodeFallback,
-                          textColor: color.labelPrimary,
-                          backgroundColor: color.bgBase,
-                          selectionColor: color.bubbleHighlight,
-                          cursorColor: color.labelPrimary,
-                          cursorLineColor: color.interactiveBgHover,
-                        ),
-                      ),
+            child: switch (_mode) {
+              _PlanNoteMode.preview => _NotePreview(text: controller.text),
+              _PlanNoteMode.edit => CallbackShortcuts(
+                bindings: {
+                  const SingleActivator(LogicalKeyboardKey.keyS, meta: true):
+                      _save,
+                  const SingleActivator(LogicalKeyboardKey.keyS, control: true):
+                      _save,
+                },
+                child: _DocumentBridge(
+                  document: _document!,
+                  onDirty: _onBufferEdited,
+                  child: PlanBlockEditor(document: _document!, onSave: _save),
+                ),
+              ),
+              _PlanNoteMode.source => CallbackShortcuts(
+                bindings: {
+                  const SingleActivator(LogicalKeyboardKey.keyS, meta: true):
+                      _save,
+                  const SingleActivator(LogicalKeyboardKey.keyS, control: true):
+                      _save,
+                },
+                // The one-frame-late dirty bridge: re_editor notifies from
+                // inside build on mount, and a plain listener would
+                // false-positive the flag on every open. See
+                // `editor_tab.dart`'s _DirtyBridge doc for the full story.
+                child: _DirtyBridge(
+                  controller: controller,
+                  onDirty: _onBufferEdited,
+                  child: CodeEditor(
+                    controller: controller,
+                    wordWrap: true,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    style: CodeEditorStyle(
+                      fontSize: 13,
+                      fontHeight: 22 / 13,
+                      fontFamily: dswFontFamilyCode,
+                      fontFamilyFallback: dswFontFamilyCodeFallback,
+                      textColor: color.labelPrimary,
+                      backgroundColor: color.bgBase,
+                      selectionColor: color.bubbleHighlight,
+                      cursorColor: color.labelPrimary,
+                      cursorLineColor: color.interactiveBgHover,
                     ),
                   ),
+                ),
+              ),
+            },
           ),
         ],
       ),
@@ -690,12 +724,21 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
                 ],
               ),
             ),
+            // One capsule cycles the three faces and shows the current one —
+            // the title bar's width budget (tree pane + filename + Save)
+            // cannot carry a three-cell segmented control, and the cycle is
+            // the shape the old Preview/Source toggle already had.
             CapsuleButton(
-              label: _preview
-                  ? context.tr('planSource')
-                  : context.tr('planPreview'),
+              label: switch (_mode) {
+                _PlanNoteMode.edit => context.tr('planEditorEdit'),
+                _PlanNoteMode.source => context.tr('planEditorSource'),
+                _PlanNoteMode.preview => context.tr('planEditorPreview'),
+              },
               size: CapsuleSize.sm,
-              onTap: () => setState(() => _preview = !_preview),
+              onTap: () => setState(() {
+                _mode = _PlanNoteMode
+                    .values[(_mode.index + 1) % _PlanNoteMode.values.length];
+              }),
             ),
             const SizedBox(width: 8),
             CapsuleButton(
@@ -709,6 +752,65 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
         ),
       ),
     );
+  }
+}
+
+/// The block editor's dirty bridge: re-renders on every document revision and
+/// raises the dirty flag once per open — undo/redo and structure edits both
+/// notify, text edits notify too, and the first one after an open marks it.
+class _DocumentBridge extends StatefulWidget {
+  const _DocumentBridge({
+    required this.document,
+    required this.onDirty,
+    required this.child,
+  });
+
+  final PlanBlockDocument document;
+  final VoidCallback onDirty;
+  final Widget child;
+
+  @override
+  State<_DocumentBridge> createState() => _DocumentBridgeState();
+}
+
+class _DocumentBridgeState extends State<_DocumentBridge> {
+  int _seen = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.document.addListener(_onDocumentChanged);
+  }
+
+  @override
+  void didUpdateWidget(_DocumentBridge old) {
+    super.didUpdateWidget(old);
+    if (old.document != widget.document) {
+      old.document.removeListener(_onDocumentChanged);
+      widget.document.addListener(_onDocumentChanged);
+      _seen = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.document.removeListener(_onDocumentChanged);
+    super.dispose();
+  }
+
+  void _onDocumentChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.document.revision != _seen) {
+      _seen = widget.document.revision;
+      // Out of build first: the flag lives on PlanWorkspace, and a setState
+      // during this build phase is the exception the framework forbids.
+      scheduleMicrotask(widget.onDirty);
+    }
+    return widget.child;
   }
 }
 
@@ -925,3 +1027,7 @@ class _TreeNode {
   final bool isDir;
   final List<_TreeNode> children;
 }
+
+/// The note surface's three faces; Edit is the block editor, Source keeps the
+/// raw markdown the file actually stores, Preview reads like a chat reply.
+enum _PlanNoteMode { edit, source, preview }
