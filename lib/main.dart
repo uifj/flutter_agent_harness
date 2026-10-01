@@ -410,6 +410,7 @@ class _DshAppState extends ConsumerState<DshApp> {
                         conversation: ref.watch(conversationProvider),
                         sideChat: ref.watch(sideChatProvider),
                         terminals: ref.watch(terminalsProvider),
+                        status: ref.watch(appScopeProvider).gitStatus,
                         onClose: ref.read(layoutProvider).closeWorkbench,
                       ),
                       bottom: Workbench(
@@ -417,6 +418,7 @@ class _DshAppState extends ConsumerState<DshApp> {
                         conversation: ref.watch(conversationProvider),
                         sideChat: ref.watch(sideChatProvider),
                         terminals: ref.watch(terminalsProvider),
+                        status: ref.watch(appScopeProvider).gitStatus,
                         onClose: ref.read(layoutProvider).closeBottom,
                         panel: WorkbenchPanel.bottom,
                       ),
@@ -500,6 +502,7 @@ class _DshAppState extends ConsumerState<DshApp> {
       conversation: ref.watch(conversationProvider),
       sideChat: ref.watch(sideChatProvider),
       terminals: ref.watch(terminalsProvider),
+      status: ref.watch(appScopeProvider).gitStatus,
     );
   }
 

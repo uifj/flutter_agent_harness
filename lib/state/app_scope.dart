@@ -16,6 +16,7 @@ import 'package:flutter/foundation.dart' show compute;
 
 import '../genkit/agent_runtime.dart';
 import '../genkit/models_endpoint.dart';
+import '../host/git.dart';
 import '../host/project_folder_ops.dart';
 import '../host/terminal_manager.dart';
 import '../model/app_settings.dart' as cfg;
@@ -26,6 +27,7 @@ import 'approval_rule_store.dart';
 import 'checkpoint_store.dart';
 import 'conversation_controller.dart';
 import 'details_selection.dart';
+import 'git_status_store.dart';
 import 'layout_controller.dart';
 import 'model_directory.dart';
 import 'prefs_store.dart';
@@ -167,6 +169,10 @@ class AppScope {
   final _tail = StreamingTail();
   final _layout = LayoutController();
   final _terminals = TerminalManager();
+
+  /// The one git-status cache the workbench's readers share (ADR-0043): the
+  /// source-control panel and the file tree ask this, never git directly.
+  final _gitStatus = GitStatusStore(runner: runGit);
   final _sideChat = SideChatController();
 
   /// The composer's model seat — dsh's `ctx.modelDirectories`. Adopted on
@@ -210,6 +216,9 @@ class AppScope {
   StreamingTail get tail => _tail;
   LayoutController get layout => _layout;
   TerminalManager get terminals => _terminals;
+
+  /// The shared git-status cache.
+  GitStatusStore get gitStatus => _gitStatus;
   SideChatController get sideChat => _sideChat;
   ModelDirectory get modelDirectory => _modelDirectory;
   ConversationController get conversation => _conversation;
@@ -234,6 +243,7 @@ class AppScope {
     // state teardown at app exit is not guaranteed to run each body's dispose,
     // and a shell that outlives its window is a leak on the host.
     _terminals.dispose();
+    _gitStatus.dispose();
     _selection.dispose();
     _layout.dispose();
     _tail.dispose();

@@ -35,6 +35,7 @@ import '../../../theme/dsw_shape.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
 import '../../../model/sidebar_tab.dart';
+import '../../../state/git_status_store.dart';
 import '../../../state/workbench_controller.dart';
 import '../../primitives/menu.dart';
 import '../../primitives/reveal.dart';
@@ -106,9 +107,19 @@ String relativeTime(String iso, {DateTime Function()? now}) {
 /// what rides on the scope, because a repo is a function of the workspace root,
 /// which the tab re-resolves when it changes.
 class GitHost extends InheritedWidget {
-  const GitHost({super.key, required this.runner, required super.child});
+  const GitHost({
+    super.key,
+    required this.runner,
+    required this.status,
+    required super.child,
+  });
 
   final GitRunner runner;
+
+  /// The one cache behind every "what is dirty" in the workbench: the panel and
+  /// the file tree read the same reading, and one of them pays for it
+  /// (ADR-0043).
+  final GitStatusStore status;
 
   /// The runner below [context]. Throws rather than defaulting: a git tab
   /// outside a GitHost is a wiring bug, and a silent fallback would spawn real
@@ -121,8 +132,19 @@ class GitHost extends InheritedWidget {
     return host.runner;
   }
 
+  /// The shared status cache. Same rule as [of]: no silent fallback to the real
+  /// binary, because the fake runner is what keeps these tabs testable.
+  static GitStatusStore statusOf(BuildContext context) {
+    final host = context.dependOnInheritedWidgetOfExactType<GitHost>();
+    if (host == null) {
+      throw StateError('git readers need a GitHost ancestor');
+    }
+    return host.status;
+  }
+
   @override
-  bool updateShouldNotify(GitHost oldWidget) => runner != oldWidget.runner;
+  bool updateShouldNotify(GitHost oldWidget) =>
+      runner != oldWidget.runner || status != oldWidget.status;
 }
 
 // ---- The tab ----------------------------------------------------------------
@@ -167,23 +189,39 @@ class _GitTabState extends State<GitTab> {
 
   Timer? _poll;
 
+  /// The shared status cache, taken from [GitHost] on the first dependency pass.
+  GitStatusStore? _store;
+
   @override
   void initState() {
     super.initState();
     widget.workbench.addListener(_onWorkbench);
-    _poll = Timer.periodic(const Duration(seconds: 2), _tick);
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _runner ??= GitHost.of(context);
+    if (_store == null) {
+      _store = GitHost.statusOf(context)
+        // The tree can be the one that asks git; when it does, this panel is a
+        // reader of the same answer rather than a viewer of its own last one.
+        ..addListener(_onStoreChange);
+      // The interval is the store's number, not a literal in this view: one
+      // freshness for both readers (ADR-0043 D2).
+      _poll = Timer.periodic(GitStatusStore.freshness, _tick);
+    }
     _openRepo();
+  }
+
+  void _onStoreChange() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
     _poll?.cancel();
+    _store?.removeListener(_onStoreChange);
     widget.workbench.removeListener(_onWorkbench);
     _commitMsg.dispose();
     super.dispose();
@@ -257,12 +295,25 @@ class _GitTabState extends State<GitTab> {
   /// repo identity check after every await.
   Future<void> _refresh({bool silent = false}) async {
     final repo = _repo;
-    if (repo == null || _refreshing) return;
+    final store = _store;
+    if (repo == null || store == null || _refreshing) return;
     _refreshing = true;
     if (!silent) setState(() => _loading = true);
     try {
-      final status = await repo.status();
+      // The cache decides what "fresh" means; a manual press or an action
+      // forces, a poll does not, and a tree that asked first is not re-asked.
+      final status = await store.read(repo.root, force: !silent);
       if (!mounted || _repo != repo) return;
+      final failure = store.errorFor(repo.root);
+      if (failure != null) {
+        // This panel asked on purpose, so it is the reader that says why. The
+        // tree stays silent about the same failure.
+        setState(() {
+          _error = failure;
+          _loading = false;
+        });
+        return;
+      }
       if (silent) {
         // A poll may update status alone; everything else waits for a manual
         // or action-driven refresh, as in the source.
@@ -316,6 +367,9 @@ class _GitTabState extends State<GitTab> {
     });
     try {
       await action();
+      // The command just changed the working tree's answer, so the next reader
+      // — this panel or the file tree — must not be served the pre-action cache.
+      _store?.invalidate(repo.root);
       await _refresh();
     } on GitCommandError catch (error) {
       if (mounted) {

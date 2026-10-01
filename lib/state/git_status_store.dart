@@ -37,6 +37,7 @@ class GitStatusStore extends ChangeNotifier {
   final Map<String, GitStatusResult> _readings = {};
   final Map<String, DateTime> _fetchedAt = {};
   final Map<String, Future<GitStatusResult>> _inFlight = {};
+  final Map<String, String> _errors = {};
 
   /// The last reading for [root], or null while none has landed.
   ///
@@ -73,16 +74,28 @@ class GitStatusStore extends ChangeNotifier {
   Future<GitStatusResult> _attempt(String root) async {
     try {
       final repo = await openRepo(root, runner: _runner);
-      if (repo == null) return const GitStatusResult(isRepo: false);
-      return await repo.status();
+      if (repo == null) {
+        _errors.remove(root);
+        return const GitStatusResult(isRepo: false);
+      }
+      final status = await repo.status();
+      _errors.remove(root);
+      return status;
+    } on GitCommandError catch (error) {
+      // The panel asked on purpose and shows the message, so the failure is kept
+      // for it rather than flattened into "not a repository".
+      _errors[root] = error.message;
+      return _readings[root] ?? const GitStatusResult(isRepo: false);
     } on Object {
-      // Not a work tree, no git binary, a repository mid-write: "there is no
-      // status" is the answer, and it is cached like any other. The panel that
-      // asked on purpose still shows its own error box — it has the message,
-      // this store only keeps the fact.
-      return const GitStatusResult(isRepo: false);
+      // No git binary, a directory that vanished: "there is no status" is the
+      // answer, and it is cached like any other.
+      return _readings[root] ?? const GitStatusResult(isRepo: false);
     }
   }
+
+  /// Why the last read for [root] failed, or null. Only the panel reads this —
+  /// the tree stays silent, because it never asked.
+  String? errorFor(String root) => _errors[root];
 
   /// After a stage / commit / discard / checkout: the next read must not be
   /// answered from the cache the action just invalidated.

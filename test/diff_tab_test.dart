@@ -13,6 +13,7 @@ import 'dart:io';
 
 import 'package:agent_harness/model/sidebar_tab.dart';
 import 'package:agent_harness/state/workbench_controller.dart';
+import 'package:agent_harness/state/git_status_store.dart';
 import 'package:agent_harness/state/workbench_store.dart';
 import 'package:agent_harness/ui/workbench/tabs/diff_tab.dart';
 import 'package:agent_harness/ui/workbench/tabs/git_tab.dart';
@@ -282,6 +283,7 @@ void main() {
         home: Scaffold(
           body: GitHost(
             runner: fake.runner,
+            status: GitStatusStore(runner: fake.runner),
             child: DiffTab(workbench: workbench, tab: SidebarTab.diff(ref)),
           ),
         ),

@@ -20,6 +20,7 @@ import '../../state/conversation_controller.dart';
 import '../../state/side_chat_controller.dart';
 import '../../theme/dsw_theme.dart';
 import '../../model/sidebar_tab.dart';
+import '../../state/git_status_store.dart';
 import '../../state/workbench_controller.dart';
 import 'split_view.dart';
 import 'tab_registry.dart';
@@ -139,8 +140,12 @@ class Workbench extends StatelessWidget {
     this.sideChat,
     TerminalManager? terminals,
     GitRunner? git,
+    GitStatusStore? status,
   }) : terminals = terminals ?? TerminalManager(),
-       git = git ?? runGit {
+       git = git ?? runGit,
+       // A test that passes a fake runner gets a cache over that same fake; the
+       // app passes one shared with the bottom panel and the floats (ADR-0043).
+       status = status ?? GitStatusStore(runner: git ?? runGit) {
     _registerBuiltinTabs();
   }
 
@@ -175,6 +180,9 @@ class Workbench extends StatelessWidget {
   /// passes a fake so the whole panel runs without a repository.
   final GitRunner git;
 
+  /// The one git-status cache this workbench's readers share.
+  final GitStatusStore status;
+
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
@@ -185,6 +193,7 @@ class Workbench extends StatelessWidget {
       ),
       child: GitHost(
         runner: git,
+        status: status,
         child: TerminalHost(
           manager: terminals,
           child: SubagentHost(

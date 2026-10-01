@@ -30,6 +30,7 @@ import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../../model/sidebar_state.dart';
+import '../../state/git_status_store.dart';
 import '../../state/workbench_controller.dart';
 import 'tab_registry.dart';
 import '../primitives/menu.dart';
@@ -62,8 +63,10 @@ class FreeWindowLayer extends StatelessWidget {
     this.sideChat,
     TerminalManager? terminals,
     GitRunner? git,
+    GitStatusStore? status,
   }) : terminals = terminals ?? TerminalManager(),
-       git = git ?? runGit;
+       git = git ?? runGit,
+       status = status ?? GitStatusStore(runner: git ?? runGit);
 
   final WorkbenchController workbench;
 
@@ -82,9 +85,13 @@ class FreeWindowLayer extends StatelessWidget {
   /// How the git tab talks to git.
   final GitRunner git;
 
+  /// The git-status cache the floated tabs share with the docked ones.
+  final GitStatusStore status;
+
   @override
   Widget build(BuildContext context) => GitHost(
     runner: git,
+    status: status,
     child: TerminalHost(
       manager: terminals,
       child: SubagentHost(

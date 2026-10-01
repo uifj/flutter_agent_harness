@@ -15,6 +15,7 @@ import 'dart:io';
 
 import 'package:agent_harness/model/sidebar_tab.dart';
 import 'package:agent_harness/state/workbench_controller.dart';
+import 'package:agent_harness/state/git_status_store.dart';
 import 'package:agent_harness/state/workbench_store.dart';
 import 'package:agent_harness/ui/primitives/menu.dart' show DswSelect;
 import 'package:agent_harness/ui/workbench/tabs/git_tab.dart';
@@ -74,6 +75,7 @@ void main() {
               step: step,
               child: GitHost(
                 runner: fake.runner,
+                status: GitStatusStore(runner: fake.runner),
                 child: GitTab(workbench: workbench, tab: SidebarTab.git),
               ),
             ),
