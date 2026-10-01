@@ -21,10 +21,8 @@ enum PlanWidgetLayout {
 
   final int code;
 
-  static PlanWidgetLayout fromCode(int code) => values.firstWhere(
-    (value) => value.code == code,
-    orElse: () => list,
-  );
+  static PlanWidgetLayout fromCode(int code) =>
+      values.firstWhere((value) => value.code == code, orElse: () => list);
 }
 
 /// `BundledWidgetSourceIds` (`widgets/Widgets.kt:4-12`).
@@ -141,23 +139,23 @@ enum PlanWidgetForm {
 sealed class PlanWidgetSource {
   const PlanWidgetSource();
 
-  bool get isBundled => this is Bundled;
+  bool get isBundled => this is PlanWidgetBundledSource;
 
   /// A bundled source has no object to open, so "remove the object" actions
   /// do not apply to it.
   bool get canBeOpened => !isBundled;
+}
 
-  class Default extends PlanWidgetSource {
-    const Default(this.objectId);
+final class PlanWidgetDefaultSource extends PlanWidgetSource {
+  const PlanWidgetDefaultSource(this.objectId);
 
-    final String objectId;
-  }
+  final String objectId;
+}
 
-  class Bundled extends PlanWidgetSource {
-    const Bundled(this.id);
+final class PlanWidgetBundledSource extends PlanWidgetSource {
+  const PlanWidgetBundledSource(this.id);
 
-    final String id;
-  }
+  final String id;
 }
 
 /// One widget in the home strip.
@@ -184,15 +182,14 @@ class PlanWidget {
   PlanWidgetForm get form => PlanWidgetForm.resolve(
     layout: layout,
     isBundledSource: source.isBundled,
-    bundledId: source is PlanWidgetSource.Bundled
-        ? (source as PlanWidgetSource.Bundled).id
+    bundledId: source is PlanWidgetBundledSource
+        ? (source as PlanWidgetBundledSource).id
         : null,
   );
 
-  String? get objectId => switch (source) {
-    final PlanWidgetSource.Default value => value.objectId,
-    _ => null,
-  };
+  String? get objectId => source is PlanWidgetDefaultSource
+      ? (source as PlanWidgetDefaultSource).objectId
+      : null;
 
   /// `WidgetConfig.resolveListWidgetLimit` (`WidgetConfig.kt:36`): a widget
   /// without a stored limit reads the default, and the default is not zero —
@@ -219,9 +216,10 @@ class PlanWidget {
 
   Map<String, Object?> toJson() => {
     'id': id,
-    'source': source.isBundled
-        ? (source as PlanWidgetSource.Bundled).id
-        : (source as PlanWidgetSource.Default).objectId,
+    'source': switch (source) {
+      final PlanWidgetBundledSource bundled => bundled.id,
+      final PlanWidgetDefaultSource defaultSource => defaultSource.objectId,
+    },
     'bundled': source.isBundled,
     'layout': layout.code,
     if (limit != null) 'limit': limit,
@@ -235,8 +233,8 @@ class PlanWidget {
     return PlanWidget(
       id: json['id'] as String? ?? '',
       source: isBundled
-          ? PlanWidgetSource.Bundled(key)
-          : PlanWidgetSource.Default(key),
+          ? PlanWidgetBundledSource(key)
+          : PlanWidgetDefaultSource(key),
       layout: PlanWidgetLayout.fromCode(
         (json['layout'] as num?)?.toInt() ?? PlanWidgetLayout.list.code,
       ),
@@ -262,18 +260,20 @@ enum PlanWidgetAction {
 
   /// Only a Bin widget offers "empty bin"; only a source that names an object
   /// can be favourited — Anytype gates both on the source, not the layout.
-  static bool applies(
-    PlanWidgetAction action,
-    PlanWidget widget,
-  ) => switch (action) {
-    PlanWidgetAction.emptyBin => widget.source.isBundled &&
-        (widget.source as PlanWidgetSource.Bundled).id ==
-            PlanBundledWidgetSourceIds.bin,
-    PlanWidgetAction.favoriteObject ||
-    PlanWidgetAction.unfavoriteObject ||
-    PlanWidgetAction.createObjectOfType => widget.source.canBeOpened,
-    _ => true,
-  };
+  static bool applies(PlanWidgetAction action, PlanWidget widget) {
+    if (action == PlanWidgetAction.emptyBin) {
+      // Only a Bin widget offers "empty bin".
+      final source = widget.source;
+      return source is PlanWidgetBundledSource &&
+          source.id == PlanBundledWidgetSourceIds.bin;
+    }
+    if (action == PlanWidgetAction.favoriteObject ||
+        action == PlanWidgetAction.unfavoriteObject ||
+        action == PlanWidgetAction.createObjectOfType) {
+      return widget.source.canBeOpened;
+    }
+    return true;
+  }
 }
 
 /// Ordering result for the strip: widgets within a section keep their stored
