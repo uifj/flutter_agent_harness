@@ -13,7 +13,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:shadcn_ui/shadcn_ui.dart'
-    show ShadDialog, ShadInput, showShadDialog;
+    show ShadButton, ShadDialog, ShadInput, showShadDialog;
 
 import '../../../l10n/locales.dart';
 import '../../../model/plan_block.dart';
@@ -45,6 +45,59 @@ class PlanBlockEditor extends StatefulWidget {
 
 class _PlanBlockEditorState extends State<PlanBlockEditor> {
   String? _activeBlockId;
+
+  /// The focused field's non-empty selection — the stretch the toolbar's
+  /// mark buttons act on; null once the caret collapses.
+  PlanMarkRange? _activeSelection;
+
+  /// Applies a mark to the active selection, or reports there was none.
+  void _applyMark(PlanMarkType type, {String? param}) {
+    final blockId = _activeBlockId;
+    final selection = _activeSelection;
+    if (blockId == null || selection == null) return;
+    widget.document.applyMark(blockId, type, selection, param: param);
+  }
+
+  /// Whether the selection already carries the mark, so a toolbar button can
+  /// show the applied state (`outlined`).
+  bool _hasMark(PlanMarkType type) {
+    final blockId = _activeBlockId;
+    final selection = _activeSelection;
+    if (blockId == null || selection == null) return false;
+    final content = widget.document.block(blockId)?.content;
+    return content is PlanText &&
+        content.marks.any(
+          (mark) =>
+              mark.type == type &&
+              mark.range.start < selection.end &&
+              selection.start < mark.range.end,
+        );
+  }
+
+  /// The link mark needs a URL: one small dialog, then the mark.
+  Future<void> _applyLink() async {
+    final blockId = _activeBlockId;
+    final selection = _activeSelection;
+    if (blockId == null || selection == null || !mounted) return;
+    final url = await showShadDialog<String>(
+      context: context,
+      builder: (dialogContext) => ShadDialog(
+        radius: BorderRadius.circular(DswShape.float),
+        title: Text(context.tr('planLinkPrompt'), style: DswType.sStrong14),
+        actions: [
+          ShadButton.outline(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(context.tr('planCancel')),
+          ),
+        ],
+        child: _LinkInput(
+          onSubmitted: (value) => Navigator.of(dialogContext).pop(value),
+        ),
+      ),
+    );
+    if (url == null || url.trim().isEmpty) return;
+    _applyMark(PlanMarkType.link, param: url.trim());
+  }
 
   bool _searching = false;
   String _query = '';
@@ -163,9 +216,17 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
     final item = PlanSlashItem.values
         .where((entry) => entry.name == name)
         .first;
+    // The Simple table item lands a real table run — the default 3×3
+    // (CreateTable's DEFAULT_ROW/COLUMN_COUNT upstream); `table(NxM)` sizes
+    // it once the filter input is on hand to carry the pattern.
+    if (item == PlanSlashItem.table) {
+      final id = widget.document.insertTable(rows: 3, columns: 3);
+      setState(() => _activeBlockId = id);
+      return;
+    }
     final id = widget.document.insertBelow(
       afterBlockId,
-      _SlashSheet.contentFor(item),
+      _SlashSheetState.contentFor(item),
     );
     setState(() => _activeBlockId = id);
   }
@@ -183,6 +244,10 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
           canUndo: doc.canUndo,
           canRedo: doc.canRedo,
           activeBlockId: _activeBlockId,
+          selection: _activeSelection,
+          hasMark: _hasMark,
+          onApplyMark: _applyMark,
+          onApplyLink: _applyLink,
           searching: _searching,
           matchCount: _matches.length,
           matchIndex: _matchIndex,
@@ -202,10 +267,28 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
             if (_activeBlockId != null) doc.turnInto(_activeBlockId!, style);
           },
           onTextColor: (name) {
-            if (_activeBlockId != null) doc.setTextColor(_activeBlockId!, name);
+            final selection = _activeSelection;
+            if (_activeBlockId != null && selection != null) {
+              doc.applyMark(
+                _activeBlockId!,
+                PlanMarkType.textColor,
+                selection,
+                param: name,
+              );
+            } else if (_activeBlockId != null) {
+              doc.setTextColor(_activeBlockId!, name);
+            }
           },
           onBackground: (name) {
-            if (_activeBlockId != null) {
+            final selection = _activeSelection;
+            if (_activeBlockId != null && selection != null) {
+              doc.applyMark(
+                _activeBlockId!,
+                PlanMarkType.backgroundColor,
+                selection,
+                param: name,
+              );
+            } else if (_activeBlockId != null) {
               doc.setTextBackground(_activeBlockId!, name);
             }
           },
@@ -222,6 +305,14 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
               readOnly: widget.readOnly || _searching,
               onInsertSlash: _openSlash,
               onFocusedBlock: (id) => setState(() => _activeBlockId = id),
+              onSelectionChanged: (id, selection) {
+                if (_activeBlockId == id || selection != null) {
+                  setState(() {
+                    _activeBlockId = id;
+                    _activeSelection = selection;
+                  });
+                }
+              },
               keyFor: (id) => _rowKeys[id],
               searchQuery: _query,
             ),
@@ -238,6 +329,10 @@ class _Toolbar extends StatelessWidget {
     required this.canUndo,
     required this.canRedo,
     required this.activeBlockId,
+    required this.selection,
+    required this.hasMark,
+    required this.onApplyMark,
+    required this.onApplyLink,
     required this.searching,
     required this.matchCount,
     required this.matchIndex,
@@ -260,6 +355,10 @@ class _Toolbar extends StatelessWidget {
   final bool canUndo;
   final bool canRedo;
   final String? activeBlockId;
+  final PlanMarkRange? selection;
+  final bool Function(PlanMarkType type) hasMark;
+  final void Function(PlanMarkType type, {String? param}) onApplyMark;
+  final Future<void> Function() onApplyLink;
   final bool searching;
   final int matchCount;
   final int matchIndex;
@@ -351,6 +450,48 @@ class _Toolbar extends StatelessWidget {
               tooltip: context.tr('planSearchInDoc'),
               onTap: onSearchToggle,
             ),
+          if (!searching && activeBlockId != null && selection != null) ...[
+            for (final (type, icon, tip, _) in const [
+              (PlanMarkType.bold, LucideIcons.bold, 'planMarkBold', false),
+              (
+                PlanMarkType.italic,
+                LucideIcons.italic,
+                'planMarkItalic',
+                false,
+              ),
+              (
+                PlanMarkType.strikethrough,
+                LucideIcons.strikethrough,
+                'planMarkStrike',
+                false,
+              ),
+              (
+                PlanMarkType.underline,
+                LucideIcons.underline,
+                'planMarkUnderline',
+                false,
+              ),
+              (PlanMarkType.keyboard, LucideIcons.code, 'planMarkCode', false),
+              (PlanMarkType.link, LucideIcons.link, 'planMarkLink', false),
+            ])
+              // Applied marks read as ghost buttons; the outlined frame is
+              // the "not yet on this stretch" state.
+              hasMark(type)
+                  ? DswIconButton(
+                      icon: icon,
+                      tooltip: context.tr(tip),
+                      onTap: type == PlanMarkType.link
+                          ? onApplyLink
+                          : () => onApplyMark(type),
+                    )
+                  : DswIconButton.outlined(
+                      icon: icon,
+                      tooltip: context.tr(tip),
+                      onTap: type == PlanMarkType.link
+                          ? onApplyLink
+                          : () => onApplyMark(type),
+                    ),
+          ],
           if (!searching && activeBlockId != null) ...[
             SizedBox(
               width: 132,
@@ -513,13 +654,28 @@ String slashLabel(BuildContext context, PlanSlashItem item) => switch (item) {
 
 /// The slash sheet: the sections the client actually answers in this
 /// increment, each item mapped onto the block it inserts.
-class _SlashSheet extends StatelessWidget {
+class _SlashSheet extends StatefulWidget {
   const _SlashSheet();
 
+  @override
+  State<_SlashSheet> createState() => _SlashSheetState();
+}
+
+class _SlashSheetState extends State<_SlashSheet> {
+  final _filterController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _filterController.dispose();
+    super.dispose();
+  }
+
+  /// The block a chosen slash item inserts. Style items answer through the
+  /// model's own mapping — the single source of truth that already records
+  /// "Title is H1, Highlighted is QUOTE" (the audit caught this sheet
+  /// drifting from it).
   static PlanBlockContent contentFor(PlanSlashItem item) => switch (item) {
-    // The style items answer through the model's own mapping — the single
-    // source of truth that already records "Title is H1, Highlighted is
-    // QUOTE" (the audit caught this sheet drifting from it).
     PlanSlashItem.styleText ||
     PlanSlashItem.styleTitle ||
     PlanSlashItem.styleHeading ||
@@ -547,6 +703,10 @@ class _SlashSheet extends StatelessWidget {
     _ => const PlanUnsupported(),
   };
 
+  bool _matches(PlanSlashItem item) =>
+      _query.isEmpty ||
+      slashLabel(context, item).toLowerCase().contains(_query);
+
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
@@ -555,13 +715,26 @@ class _SlashSheet extends StatelessWidget {
       (context.tr('planSlashMedia'), PlanSlashItem.mediaSection),
       (context.tr('planSlashOther'), PlanSlashItem.otherSection),
     ];
-    return Padding(
-      padding: const EdgeInsets.all(DswShape.md),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final (title, items) in sections) ...[
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        dswEnsureShadTheme(
+          context,
+          ShadInput(
+            controller: _filterController,
+            autofocus: true,
+            placeholder: dswInputHint(
+              context.tr('planSlashPlaceholder'),
+              style: DswType.xs13.copyWith(color: color.labelTertiary),
+            ),
+            style: DswType.s14,
+            onChanged: (text) => setState(() => _query = text.toLowerCase()),
+          ),
+        ),
+        const SizedBox(height: DswShape.sm),
+        for (final (title, items) in sections) ...[
+          if (items.any(_matches)) ...[
             Text(
               title,
               style: DswType.xxsStrong12.copyWith(color: color.labelTertiary),
@@ -572,31 +745,36 @@ class _SlashSheet extends StatelessWidget {
               runSpacing: DswShape.xs,
               children: [
                 for (final item in items)
-                  DswHoverTap(
-                    onTap: () => Navigator.of(context).pop(item.name),
-                    semanticLabel: slashLabel(context, item),
-                    builder: (context, hovered, focused) => Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: DswShape.sm,
-                        vertical: DswShape.xs,
-                      ),
-                      decoration: BoxDecoration(
-                        color: hovered
-                            ? color.interactiveBgHover
-                            : color.bgLayer2,
-                        borderRadius: BorderRadius.circular(DswShape.inner),
-                        border: Border.all(color: color.borderL2),
-                      ),
-                      child: Text(
-                        slashLabel(context, item),
-                        style: DswType.xs13.copyWith(color: color.labelPrimary),
+                  if (_matches(item))
+                    DswHoverTap(
+                      onTap: () => Navigator.of(context).pop(item.name),
+                      semanticLabel: slashLabel(context, item),
+                      builder: (context, hovered, focused) => Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DswShape.sm,
+                          vertical: DswShape.xs,
+                        ),
+                        decoration: BoxDecoration(
+                          color: hovered
+                              ? color.interactiveBgHover
+                              : color.bgLayer2,
+                          borderRadius: BorderRadius.circular(DswShape.inner),
+                          border: Border.all(color: color.borderL2),
+                        ),
+                        child: Text(
+                          slashLabel(context, item),
+                          style: DswType.xs13.copyWith(
+                            color: color.labelPrimary,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
               ],
             ),
             const SizedBox(height: DswShape.md),
           ],
+        ],
+        if (_query.isEmpty) ...[
           Text(
             context.tr('planSlashObjectsEmpty'),
             style: DswType.xs13.copyWith(color: color.labelTertiary),
@@ -605,6 +783,43 @@ class _SlashSheet extends StatelessWidget {
           Text(
             context.tr('planSlashPropertiesEmpty'),
             style: DswType.xs13.copyWith(color: color.labelTertiary),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// The URL field behind the link mark: one input, submit or button confirms.
+class _LinkInput extends StatelessWidget {
+  const _LinkInput({required this.onSubmitted});
+
+  final ValueChanged<String> onSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.dsw;
+    final controller = TextEditingController();
+    return dswEnsureShadTheme(
+      context,
+      Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ShadInput(
+            controller: controller,
+            autofocus: true,
+            placeholder: dswInputHint(
+              'https://',
+              style: DswType.xs13.copyWith(color: color.labelTertiary),
+            ),
+            style: DswType.s14,
+            onSubmitted: onSubmitted,
+          ),
+          const SizedBox(height: DswShape.sm),
+          ShadButton(
+            onPressed: () => onSubmitted(controller.text.trim()),
+            child: Text(context.tr('planSave')),
           ),
         ],
       ),

@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
+import 'package:agent_harness/model/plan_block.dart';
 import 'package:agent_harness/state/plan_block_document.dart';
 import 'package:agent_harness/theme/dsw_shad_bridge.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
@@ -128,6 +129,97 @@ void main() {
     await tester.tap(find.byTooltip('Undo'));
     await tester.pump();
     expect(documentOf(tester).blocks.length, before);
+  });
+
+  testWidgets('the slash sheet filters as you type and lands a real table', (
+    tester,
+  ) async {
+    await pump(tester);
+    final before = documentOf(tester).blocks.length;
+
+    await tester.tap(find.text('Add block'));
+    await tester.pump(const Duration(milliseconds: 400));
+    // The filter field narrows the sections: 'div' leaves the two dividers.
+    final filterField = find
+        .descendant(
+          of: find.byType(ShadDialog),
+          matching: find.byType(EditableText),
+        )
+        .first;
+    await tester.enterText(filterField, 'divider');
+    await tester.pump();
+    // Only labels containing the query survive - Three dots does not.
+    expect(find.text('Divider line'), findsOne);
+    expect(find.text('Three dots'), findsNothing);
+
+    await tester.enterText(filterField, 'table');
+    await tester.pump();
+    await tester.tap(find.text('Simple table'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    // A real table run (3 header cells), not the old unsupported chip.
+    final doc = documentOf(tester);
+    expect(doc.blocks.length, before + 3);
+    final header = doc.blocks
+        .where((block) => block.content is PlanTableBlock)
+        .first;
+    expect((header.content as PlanTableBlock).isHeader, isTrue);
+    expect(header.children, hasLength(3));
+  });
+
+  testWidgets('a selection takes the toolbar marks, and they survive a save', (
+    tester,
+  ) async {
+    await pump(tester);
+    // Select the paragraph text, then apply bold and underline.
+    final paragraph = find.byType(EditableText).at(1);
+    await tester.enterText(paragraph, 'hello marks');
+    await tester.pump();
+    // Selecting through the EditableText's widget controller: the widget
+    // carries the controller this state drives.
+    tester.widget<EditableText>(paragraph).controller.selection =
+        const TextSelection(baseOffset: 0, extentOffset: 5);
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Bold'));
+    await tester.pump();
+    await tester.tap(find.byTooltip('Underline'));
+    await tester.pump();
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 32));
+    }
+    final doc = documentOf(tester);
+    final marked = doc.blocks
+        .map((block) => block.content)
+        .whereType<PlanText>()
+        .where((content) => content.text == 'hello marks')
+        .first;
+    expect(
+      marked.marks.map((mark) => mark.type),
+      containsAll([PlanMarkType.bold, PlanMarkType.underline]),
+    );
+
+    // The marks survive the save — the envelope guarantees the round trip.
+    await tester.tap(find.text('Save'));
+    for (var i = 0; i < 100; i++) {
+      if (find.text('Unsaved changes').evaluate().isEmpty) break;
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 10)),
+      );
+      await tester.pump();
+    }
+    final saved = File('${root.path}/readme.md').readAsStringSync();
+    final reopened = PlanBlockDocument.fromMarkdown(saved);
+    final restored = reopened.blocks
+        .map((block) => block.content)
+        .whereType<PlanText>()
+        .where((content) => content.text == 'hello marks')
+        .first;
+    expect(
+      restored.marks.map((mark) => mark.type),
+      containsAll([PlanMarkType.bold, PlanMarkType.underline]),
+    );
   });
 
   testWidgets('search answers its six events in read mode', (tester) async {

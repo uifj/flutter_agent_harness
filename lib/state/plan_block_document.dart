@@ -337,6 +337,32 @@ class PlanBlockDocument extends ChangeNotifier {
 
   // ---- table --------------------------------------------------------------
 
+  /// Inserts a fresh [rows]×[columns] table run at the document end — the
+  /// slash menu's `table(NxM)` answer (the parsed-and-clamped pattern from
+  /// [PlanSlashItem.parseTablePattern] finally has an insert path).
+  String insertTable({required int rows, required int columns}) {
+    var firstId = '';
+    _mutate((working, mint) {
+      final tableBlocks = [
+        for (var r = 0; r < rows; r++)
+          PlanBlock(
+            id: mint.next(),
+            content: PlanTableBlock(isHeader: r == 0),
+            children: [
+              for (var c = 0; c < columns; c++)
+                PlanBlock(
+                  id: mint.next(),
+                  content: PlanText(text: r == 0 ? 'Column ${c + 1}' : ''),
+                ),
+            ],
+          ),
+      ];
+      firstId = tableBlocks.first.id;
+      working.addAll(tableBlocks);
+    });
+    return firstId;
+  }
+
   /// The table run a row belongs to: consecutive root-level table rows
   /// (`plan_markdown_codec.dart` decodes a markdown table into exactly this
   /// shape, the first row carrying `isHeader`).

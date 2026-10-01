@@ -45,6 +45,7 @@ class PlanBlockView extends StatelessWidget {
     required this.readOnly,
     this.onInsertSlash,
     this.onFocusedBlock,
+    this.onSelectionChanged,
     this.keyFor,
     this.searchQuery,
   });
@@ -60,6 +61,11 @@ class PlanBlockView extends StatelessWidget {
   /// The editor learns which block the caret is in, so the toolbar's
   /// style/colour/alignment controls answer the block being edited.
   final void Function(String blockId)? onFocusedBlock;
+
+  /// A text field's non-empty selection bubbles up here so the toolbar's
+  /// mark buttons can act on the highlighted stretch.
+  final void Function(String blockId, PlanMarkRange? selection)?
+  onSelectionChanged;
 
   /// Stable row keys the editor's search scrolls to; null draws keyless.
   final Key? Function(String blockId)? keyFor;
@@ -88,6 +94,7 @@ class PlanBlockView extends StatelessWidget {
             readOnly: readOnly,
             onInsertSlash: onInsertSlash,
             onFocusedBlock: onFocusedBlock,
+            onSelectionChanged: onSelectionChanged,
             headings: headings,
             searchQuery: searchQuery,
           ),
@@ -110,6 +117,7 @@ class PlanBlockRow extends StatelessWidget {
     required this.headings,
     this.onInsertSlash,
     this.onFocusedBlock,
+    this.onSelectionChanged,
     this.keyFor,
     this.searchQuery,
   });
@@ -120,6 +128,8 @@ class PlanBlockRow extends StatelessWidget {
   final bool readOnly;
   final void Function(String? afterBlockId)? onInsertSlash;
   final void Function(String blockId)? onFocusedBlock;
+  final void Function(String blockId, PlanMarkRange? selection)?
+  onSelectionChanged;
 
   /// Passed down so a match at any depth has a context the search can scroll
   /// to.
@@ -141,6 +151,7 @@ class PlanBlockRow extends StatelessWidget {
             readOnly: readOnly,
             onInsertSlash: onInsertSlash,
             onFocusedBlock: onFocusedBlock,
+            onSelectionChanged: onSelectionChanged,
             headings: headings,
             searchQuery: searchQuery,
           ),
@@ -158,6 +169,7 @@ class PlanBlockRow extends StatelessWidget {
               readOnly: readOnly,
               onInsertSlash: onInsertSlash,
               onFocusedBlock: onFocusedBlock,
+              onSelectionChanged: onSelectionChanged,
               headings: headings,
               searchQuery: searchQuery,
             ),
@@ -171,6 +183,7 @@ class PlanBlockRow extends StatelessWidget {
               readOnly: readOnly,
               onInsertSlash: onInsertSlash,
               onFocusedBlock: onFocusedBlock,
+              onSelectionChanged: onSelectionChanged,
               headings: headings,
               searchQuery: searchQuery,
             ),
@@ -187,6 +200,7 @@ class _BlockBody extends StatelessWidget {
     required this.headings,
     this.onInsertSlash,
     this.onFocusedBlock,
+    this.onSelectionChanged,
     this.searchQuery,
   });
 
@@ -195,6 +209,8 @@ class _BlockBody extends StatelessWidget {
   final bool readOnly;
   final void Function(String? afterBlockId)? onInsertSlash;
   final void Function(String blockId)? onFocusedBlock;
+  final void Function(String blockId, PlanMarkRange? selection)?
+  onSelectionChanged;
   final List<PlanBlock> headings;
   final String? searchQuery;
 
@@ -209,6 +225,7 @@ class _BlockBody extends StatelessWidget {
           content: content,
           readOnly: readOnly,
           onFocusedBlock: onFocusedBlock,
+          onSelectionChanged: onSelectionChanged,
           searchQuery: searchQuery,
         );
       case PlanLayout():
@@ -309,6 +326,7 @@ class _TextBlock extends StatelessWidget {
     required this.content,
     required this.readOnly,
     this.onFocusedBlock,
+    this.onSelectionChanged,
     this.searchQuery,
   });
 
@@ -317,6 +335,8 @@ class _TextBlock extends StatelessWidget {
   final PlanText content;
   final bool readOnly;
   final void Function(String blockId)? onFocusedBlock;
+  final void Function(String blockId, PlanMarkRange? selection)?
+  onSelectionChanged;
   final String? searchQuery;
 
   @override
@@ -369,6 +389,7 @@ class _TextBlock extends StatelessWidget {
           content: content,
           style: effectiveStyle,
           onFocusedBlock: onFocusedBlock,
+          onSelectionChanged: onSelectionChanged,
         ),
       ),
     );
@@ -460,6 +481,7 @@ class _BlockTextField extends StatefulWidget {
     required this.content,
     required this.style,
     this.onFocusedBlock,
+    this.onSelectionChanged,
   });
 
   final PlanBlockDocument document;
@@ -467,6 +489,11 @@ class _BlockTextField extends StatefulWidget {
   final PlanText content;
   final PlanTextStyle style;
   final void Function(String blockId)? onFocusedBlock;
+
+  /// The caret's non-empty selection, so the toolbar's mark buttons can act
+  /// on the highlighted stretch; null when the caret is collapsed.
+  final void Function(String blockId, PlanMarkRange? selection)?
+  onSelectionChanged;
 
   @override
   State<_BlockTextField> createState() => _BlockTextFieldState();
@@ -476,6 +503,23 @@ class _BlockTextFieldState extends State<_BlockTextField> {
   late final TextEditingController _controller = TextEditingController(
     text: widget.content.text,
   );
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_reportSelection);
+  }
+
+  void _reportSelection() {
+    final callback = widget.onSelectionChanged;
+    if (callback == null) return;
+    final selection = _controller.selection;
+    if (!selection.isValid || selection.isCollapsed) {
+      callback(widget.blockId, null);
+    } else {
+      callback(widget.blockId, PlanMarkRange(selection.start, selection.end));
+    }
+  }
 
   @override
   void didUpdateWidget(_BlockTextField old) {
@@ -498,6 +542,7 @@ class _BlockTextFieldState extends State<_BlockTextField> {
 
   @override
   void dispose() {
+    _controller.removeListener(_reportSelection);
     _controller.dispose();
     super.dispose();
   }

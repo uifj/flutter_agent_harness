@@ -75,8 +75,8 @@
 | 子功能 | 上游档位 | 状态 | 施工 | 代码路径 | 状态层 | shadcn 组件 |
 | --- | --- | --- | --- | --- | --- | --- |
 | 14 样式建模 / 11 可插（AC3-1，含 QUOTE 更正） | ✅ | ✅ 已复刻 | P1(更正 10-01) | `lib/model/plan_block.dart:36-52` | — | — |
-| slash 菜单（AC3-2；主菜单插入集合照上游；table(NxM) 夹 1–25） | ✅ | ✅ 部分已落（P5）：Style/Media/Other 三段可插；Objects/Properties 两段给出"随对象库（P6）到达"的诚实空态；Alignment/Colour/Background 三段由工具栏的 turn-into/颜色/对齐回答；Actions 段由块菜单回答；`table(NxM)` 解析在模型、表格插入第一版为固定 3×3 🔨 | P5 | `plan_block_editor.dart`（_SlashSheet） | PlanBlockDocument | ShadDialog + DswHoverTap |
-| 选区工具栏 8 mark（AC3-3） | ✅ | ✅ 部分（P5）：11 种 mark 在读视图全部渲染（TextSpan 分发）；编辑面对文本选区应用/清除 mark 的工具栏 🔨（第一版编辑面为纯文本，mark 随编辑自动移位/裁剪已落） | P5 | `plan_block_view.dart`（_TextReadView/_markSpan）+ `plan_block_document.dart`（applyMark/editText） | PlanBlockDocument | — |
+| slash 菜单（AC3-2；主菜单插入集合照上游；table(NxM) 夹 1–25） | ✅ | ✅ 已复刻（P8-c）：输入过滤随打字收窄；Style/Media/Other 三段全插；**Simple table 落真表格（3×3 表头行，table(NxM) 解析模型就绪、尺寸输入待接）**；Objects/Properties 诚实空态；对齐/颜色/背景由工具栏回答；Actions 由块菜单回答 | P5/P8-c | `plan_block_editor.dart`（_SlashSheetState）+ store.`insertTable` | PlanBlockDocument | ShadDialog + ShadInput |
+| 选区工具栏 8 mark（AC3-3） | ✅ | ✅ 大部分已落（P8-c）：选区工具栏 bold/italic/strike/underline/keyboard/link 六钮 + 颜色/背景改选区优先（outlined=未应用/ghost=已应用）；MENTION/EMOJI/OBJECT 仍为渲染态 mark；**编辑面非所见即所得**（ShadInput 纯文本；富文本外观仅读视图/搜索态/Preview——WYSIWYG 需富文本编辑依赖，另立 ADR） | P5/P8-c | `plan_block_editor.dart`（选区回调+mark 钮）+ `plan_block_view.dart`（选区上报） | PlanBlockDocument.applyMark | DswIconButton.outlined |
 | 颜色 11 档 × 文本/背景（AC3-4） | ✅ | ✅ 已复刻（P5：工具栏两个颜色菜单，作用于聚焦块；mark 级颜色随上一行） | P5 | `plan_block_editor.dart`（_ColorSelect）+ `planLadderColor` | PlanBlockDocument | DswContextMenu |
 | 对齐左中右；JUSTIFY ⛔（AC3-4） | ⛔ | ✅ 已复刻（justify.isInsertable=false；HIGHLIGHT 无中档已入模型） | P1 | `plan_block.dart`（PlanAlign/supportsCenterAlignment） | — | — |
 | Toggle / Callout / 分隔线 / TOC / FeaturedRelations / Relation 块 / 嵌套（AC3-5） | ✅ | ✅ 已复刻（P5 渲染器；toggle 展开态与 callout 图标编辑 🔨） | P5 | `lib/ui/plan/blocks/plan_block_view.dart` | PlanBlockDocument | — |
