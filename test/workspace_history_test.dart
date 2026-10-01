@@ -502,9 +502,8 @@ void main() {
     expect(find.text('Reveal in file manager'), findsNothing);
   });
 
-  testWidgets('flat mode draws the old list with no headers at all', (
-    tester,
-  ) async {
+  testWidgets('flat mode lists conversations with no group headers, and keeps '
+      'its section head', (tester) async {
     source.sessions = [
       session('a', workspaceRoot: '/work/alpha'),
       session('c', workspaceRoot: '/work/beta', minutesAgo: 5),
@@ -512,7 +511,11 @@ void main() {
 
     await pump(tester, flat: true);
 
-    expect(find.text('Workspaces'), findsNothing);
+    // What 平铺 drops is the *group* headers. The section head stays because the
+    // `⋮` inside it is the app's only writer of this preference — a head that
+    // disappears in the view it leaves behind is a one-way door. (This line used
+    // to assert `findsNothing`, which pinned that door.)
+    expect(find.text('Workspaces'), findsOneWidget);
     expect(find.text('alpha'), findsNothing);
     expect(find.text('session a'), findsOneWidget);
     expect(find.text('session c'), findsOneWidget);
@@ -572,6 +575,51 @@ void main() {
     await tester.tap(find.byTooltip('Expand all'));
     await tester.pumpAndSettle();
     expect(sets.last, isEmpty);
+  });
+
+  testWidgets('the flat view keeps its head — that menu is the only way back — '
+      'and sheds the fold glyph', (tester) async {
+    // "Flat" is not "no groups right now", it is "never any groups", so the one
+    // control that could never answer is not drawn (upstream's own visibility
+    // rule, `WorkspaceSidebar.tsx:854-857`). The head itself must stay: the `⋮`
+    // is the only writer of this preference anywhere in the app, so a head that
+    // disappears in the view it leaves behind is a one-way door.
+    source.sessions = [
+      session('a', workspaceRoot: '/work/alpha'),
+      session('c', workspaceRoot: '/work/beta', minutesAgo: 5),
+    ];
+    final sets = <Set<String>>[];
+    final chosen = <HistoryOrganize>[];
+
+    await pump(tester, flat: true, foldSets: sets, organizes: chosen);
+
+    expect(find.text('Workspaces'), findsOneWidget);
+    expect(find.byTooltip('Collapse all'), findsNothing);
+    expect(find.byTooltip('Expand all'), findsNothing);
+
+    await tester.tap(find.byTooltip('History view'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Group by workspace'));
+    await tester.pumpAndSettle();
+    expect(chosen, [
+      HistoryOrganize.project,
+    ], reason: 'the flat view can hand the view back');
+  });
+
+  testWidgets('an empty grouped view carries a dead glyph, not a missing one', (
+    tester,
+  ) async {
+    // Rows can arrive without the view changing, so the seat stays and says it
+    // cannot be used — a control that vanishes is a missing control.
+    final sets = <Set<String>>[];
+    source.sessions = [];
+    await pump(tester, foldSets: sets);
+
+    final glyph = find.byTooltip('Collapse all');
+    expect(glyph, findsOneWidget);
+    await tester.tap(glyph);
+    await tester.pumpAndSettle();
+    expect(sets, isEmpty, reason: 'nothing to fold yet, so it answers nothing');
   });
 
   testWidgets('the sidecar, not the snapshot, is what puts a row under its '

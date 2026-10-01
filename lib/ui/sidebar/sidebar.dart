@@ -722,21 +722,6 @@ class _SidebarState extends State<Sidebar> {
   /// sliver per group: one lazy list, and the folded rows simply are not in it.
   List<Widget> _sessionSlivers(DswAlias color) {
     final sessions = widget.sessions.sessions;
-    if (sessions.isEmpty && widget.historyOrganize == HistoryOrganize.flat) {
-      return [
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Text(
-              widget.sessions.isLoading
-                  ? context.tr('loading')
-                  : context.tr('noSessionsYet'),
-              style: DswType.xxs12.copyWith(color: color.labelTertiary),
-            ),
-          ),
-        ),
-      ];
-    }
 
     final lines = <_HistoryLine>[
       if (widget.historyOrganize == HistoryOrganize.flat)
@@ -746,22 +731,26 @@ class _SidebarState extends State<Sidebar> {
     ];
 
     return [
-      if (widget.historyOrganize == HistoryOrganize.project)
-        SliverToBoxAdapter(
-          child: _HistorySectionRow(
-            organize: widget.historyOrganize,
-            onOrganizeChanged: widget.onHistoryOrganizeChanged,
-            onAddWorkspace: widget.onAddWorkspace,
-            groupKeys: [
-              for (final line in lines)
-                if (line.group != null) line.group!.key,
-            ],
-            collapsed: widget.collapsedWorkspaces,
-            onCollapseAll: widget.onSetCollapsedWorkspaces == null
-                ? null
-                : (keys) => widget.onSetCollapsedWorkspaces!(keys),
-          ),
+      // The head belongs to the section, not to one of its two views: the `⋮`
+      // that switches between them is the only writer of that preference, so
+      // drawing the head only in the grouped view would make 平铺 a one-way
+      // door (`_HistorySectionRow` hides the fold glyph in the flat view, where
+      // there can never be a group to fold).
+      SliverToBoxAdapter(
+        child: _HistorySectionRow(
+          organize: widget.historyOrganize,
+          onOrganizeChanged: widget.onHistoryOrganizeChanged,
+          onAddWorkspace: widget.onAddWorkspace,
+          groupKeys: [
+            for (final line in lines)
+              if (line.group != null) line.group!.key,
+          ],
+          collapsed: widget.collapsedWorkspaces,
+          onCollapseAll: widget.onSetCollapsedWorkspaces == null
+              ? null
+              : (keys) => widget.onSetCollapsedWorkspaces!(keys),
         ),
+      ),
       if (lines.isEmpty)
         SliverToBoxAdapter(
           // Grouping must not eat the empty state: a first run has no folder
@@ -1466,7 +1455,15 @@ class _HistorySectionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = context.dsw;
     final step = MediaQuery.textScalerOf(context).scale(1);
-    final canFold = onCollapseAll != null && groupKeys.isNotEmpty;
+    // A flat list has no groups by definition, so a fold control there could
+    // never do anything — and upstream does not draw one either: its button is
+    // visible only in a mode that groups (`WorkspaceSidebar.tsx:854-857`).
+    // A grouped list that happens to be empty still gets the glyph, dead: rows
+    // can arrive without the view changing, and a control that vanishes is a
+    // missing control.
+    final showsFoldGlyph =
+        onCollapseAll != null && organize != HistoryOrganize.flat;
+    final canFold = showsFoldGlyph && groupKeys.isNotEmpty;
     final allFolded = canFold && groupKeys.every(collapsed.contains);
     return SizedBox(
       height: DswShape.rowSession * step,
@@ -1528,15 +1525,17 @@ class _HistorySectionRow extends StatelessWidget {
           // One glyph, one state: what it does is what the picture of the list
           // says it will do. Disabled rather than hidden when there is no group
           // to fold, because a control that vanishes is a missing control.
-          DswIconButton(
-            icon: allFolded ? LucideIcons.maximize_2 : LucideIcons.minimize_2,
-            tooltip: context.tr(allFolded ? 'expandAll' : 'collapseAll'),
-            onTap: canFold
-                ? () => onCollapseAll!(allFolded ? const {} : groupKeys.toSet())
-                : null,
-            size: 24 * step,
-            iconSize: DswShape.iconTiny,
-          ),
+          if (showsFoldGlyph)
+            DswIconButton(
+              icon: allFolded ? LucideIcons.maximize_2 : LucideIcons.minimize_2,
+              tooltip: context.tr(allFolded ? 'expandAll' : 'collapseAll'),
+              onTap: canFold
+                  ? () =>
+                        onCollapseAll!(allFolded ? const {} : groupKeys.toSet())
+                  : null,
+              size: 24 * step,
+              iconSize: DswShape.iconTiny,
+            ),
           if (onAddWorkspace != null)
             DswIconButton(
               icon: LucideIcons.plus,
