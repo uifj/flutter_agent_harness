@@ -64,7 +64,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | 三种身份同构（成员同、限制不同） | ✅ | ✅ 已复刻 | P1 | `lib/model/plan_dataview.dart:675-804` | — | — |
 | 创建跳过选模板（null 模板=空白） | ✅ | ✅ 已复刻（语义） | P1/P2 | `lib/state/plan_object_store.dart` createRecord | store | — |
-| 从类型生成 Set（CreateSet/OpenSet/Hidden 三态） | ✅ | 🔨 P6（🔁 扩展：替上游补完未接线入口） | P6 | `lib/ui/plan/library/` | store.createCollection | ShadDialog |
+| 从类型生成 Set（CreateSet/OpenSet/Hidden 三态） | ✅ | ✅ 已复刻（🔁 扩展：替上游补完未接线入口） | P6 | `plan_create_collection.dart` + store.`createSetOfType` | store.`createCollection`（mint id + 推荐关系播种） | ShadDialog |
 | All Content 5 tab（PAGES/LISTS/MEDIA/BOOKMARKS/FILES） | ✅ | ✅ 已复刻 | P6 | `lib/ui/plan/library/plan_all_content_screen.dart` + `lib/model/plan_all_content.dart` | store.objects 按 tab 的类型清单过滤 | DswHoverTap 签条 |
 | All Content 两种菜单模式 AllContent/Unlinked + 状态恢复 | ✅ | ✅ 已复刻（状态经 onStateChanged 回流；持久化随工作区偏好 🔨） | P6 | 同上 | PlanAllContentState（RestoreAllContentState 等价） | — |
 | 时间分组 Today/Yesterday/Previous7Days/14Days/Month/Year | ✅ | ✅ 已复刻（now 可注入，空桶丢弃，未来日期读作今天） | P6 | `plan_all_content.dart`（groupPlanAllContent） | 纯函数 | — |
@@ -107,7 +107,7 @@
 | 分组函数 getTypesWithoutTemplates/getFileTypes/getSystemTypes/getSetTypes | ✅ | ✅ 已复刻 | P1 | 同上 | — | — |
 | ot-task 仅 List 行形态，无专属屏 | ✅/❌ | ✅ 已复刻（行形态 🔨P3 UI） | P1/P3 | `plan_object_type.dart` + viewers | — | — |
 | ot-bookmark 新建记录对话框；无书签库屏 | ✅/❌ | 🔨 P6 | P6 | library | store.createRecord | ShadDialog |
-| ot-date 整屏（相对日期头/字段抽屉/对象列表/日历弹层）+ 仅 Link 组件 | ✅ | 🔨 P6 | P6 | library/date | store | ShadCard |
+| ot-date 整屏（相对日期头/字段条/对象列表）+ 仅 Link 组件 | ✅ | ✅ 已复刻（相对日期头 + 按日串扫描的对象列表，锚记录排除自身；日历弹层 🔨） | P6 | `plan_date_screen.dart` | store.objects 扫描 | — |
 | ot-chat/chatDerived 组件源 = 本 app 会话（ADR-0037 已决） | ✅ | 🔨 P7 | P7 | `lib/ui/plan/widgets/` | 会话读缝 | — |
 | ot-project 仅类型排序优先级 | 🚧 | ✅ 已复刻 | P1 | `plan_object_type.dart` sortPriority | — | — |
 | 四类文件不给模板 | ✅ | ✅ 已复刻 | P1 | typesWithoutTemplates | — | — |
@@ -119,9 +119,9 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | 16 格式建模 / 11 可新建（AC5-1） | ✅ | ✅ 已复刻 | P1 | `lib/model/plan_relation.dart:37-49` | — | — |
 | normalizeValue 按格式归一 | ✅ | ✅ 已复刻 | P1 | `plan_relation.dart:113-249` | — | — |
-| CRUD 八件套（AC5-2） | ✅ | store ✅P2（关系创建/选项增删序/删选项清值）；UI 🔨 P6 | P6 | `lib/state/plan_object_store.dart` | store | ShadDialog / DswMenu |
-| 对象信息 Local/Hidden 两段（AC5-3；file 段与编辑模式 ⛔ 照上游死代码不复刻） | ✅ | 🔨 P6 | P6 | `lib/ui/plan/library/` | store | ShadSwitch（featured） |
-| 值编辑器按格式分屏（AC5-4） | ✅ | 🔨 P6 | P6 | library | store.amendRecord | ShadInput / ShadSelect / date-picker |
+| CRUD 八件套（AC5-2） | ✅ | ✅ 已复刻（store 全量：创建/加对象/移除/featured/hidden/选项增删序；UI 面板行菜单 + 添加关系菜单） | P2/P6 | `plan_object_store.dart` + `plan_object_info_screen.dart` | store | DswContextMenu |
+| 对象信息 Local/Hidden 两段（AC5-3；file 段与编辑模式 ⛔ 照上游死代码不复刻） | ✅ | ✅ 已复刻（featured/local/hidden 三段 + featured/hidden 开关写回 + 移除走确认框） | P6 | `plan_object_info_screen.dart` | store.`setRelationFeatured/Hidden` | DswContextMenu |
+| 值编辑器按格式分屏（AC5-4） | ✅ | ✅ 已复刻（与数据视图共用 PlanCellEditor——两表面一个读法；标签/状态选项选择器、复选行内翻转、文本输入） | P6 | `plan_viewer_sheets.dart`（PlanCellEditor） | store.`amendRecord` | ShadInput |
 | 无 used-in/used-by 屏（AC5-4） | ❌ | ❌ N/A 已登记 | — | — | — | — |
 
 ## 6. 模块 6：模板与 Gallery Experience
@@ -129,19 +129,19 @@
 | 子功能 | 上游档位 | 状态 | 施工 | 代码路径 | 状态层 | shadcn 组件 |
 | --- | --- | --- | --- | --- | --- | --- |
 | 五用例（Apply null=空白 / Create / CreateFromObject / Get / Open）（AC6-1） | ✅ | 模型 ✅P1 + store ✅P2；UI 🔨 P6 | P6 | `lib/model/plan_template.dart` + store | store | — |
-| 类型内模板列表 + 菜单（SetAsDefault/Edit/Duplicate/Delete）（AC6-2） | ✅ | 🔨 P6 | P6 | library | store.template CRUD | ShadCard + DswMenu |
-| 对象菜单"设为模板" + 模板编辑信息条（AC6-2，裁决 #13） | ✅ | 🔨 P6 | P6 | library | store.createTemplateFromObject | ShadCard |
-| Gallery 安装流 mock 状态机（Hidden/Loading/Success）（AC6-3） | ✅ | 🔨 P6；"不支持"告警按桌面端实现完整流（裁决 #14） | P6 | library/gallery | mock 种子 | ShadDialog |
+| 类型内模板列表 + 菜单（SetAsDefault/Edit/Duplicate/Delete）（AC6-2） | ✅ | ✅ 已复刻（设默认写类型指针+isDefault 位；复制带 (1)；删除走确认框；allowsTemplates 之外的类型如实说明） | P6 | `plan_templates_screen.dart` + store.`duplicateTemplate` | store | DswContextMenu |
+| 对象菜单"设为模板" + 模板编辑信息条（AC6-2，裁决 #13） | ✅ | ✅ 已复刻（store.`createTemplateFromObject`；信息条=模板屏标题"Templates · {type}"） | P6 | `plan_object_store.dart` | store | — |
+| Gallery 安装流 mock 状态机（idle/Loading/Success）（AC6-3） | ✅ | ✅ 已复刻（2 个内置包；安装=按 manifest 类型建 Set + 首条记录；"不支持"按桌面端实现完整流，裁决 #14） | P6 | `plan_gallery_screen.dart` + `planGalleryPackages` | mock 种子 | — |
 
 ## 7. 模块 7：小组件（Widget）
 
 | 子功能 | 上游档位 | 状态 | 施工 | 代码路径 | 状态层 | shadcn 组件 |
 | --- | --- | --- | --- | --- | --- | --- |
-| 13 形态 + 3 辅助（AC7-1；聊天三形态数据源=本 app 会话） | ✅ | 模型 ✅P1（PlanWidgetForm 13+3）；UI 🔨 P7 | P7 | `lib/model/plan_widget.dart`、`lib/ui/plan/widgets/` | store.widget 查询 | ShadCard |
+| 13 形态 + 3 辅助（AC7-1；聊天三形态数据源=本 app 会话） | ✅ | ✅ 已复刻（strip 渲染 5 布局全档 + 分区；聊天三形态按 ADR-0037 映射会话读缝，Glance ❌ N/A） | P1/P7 | `plan_widget.dart` + `lib/ui/plan/widgets/plan_widgets_screen.dart` | store.`widgets` | ShadCard 形状 |
 | 5 布局（码值 TREE1/LINK0/LIST2/COMPACT_LIST3/VIEW4）+ limit 走 widgetLimit/块 limit；无尺寸概念（AC7-2） | ✅/❌ | 模型 ✅P1；UI 🔨 P7 | P7 | `plan_widget.dart:13-159` | store | — |
 | 内置源 7 id + Source.Default/Bundled/Other + 分区 5 段（AC7-3） | ✅ | ✅ 已复刻（模型） | P1 | `plan_widget.dart` | — | — |
-| 操作 CRUD + 下拉 10 动作（applies 门）（AC7-4） | ✅ | 模型 ✅P1（PlanWidgetAction.applies）；UI 🔨 P7 | P7 | `plan_widget.dart:263-277` | store | DswMenu |
-| 两屏选择器：源三段 → 布局按源 1–4 项（AC7-5） | ✅ | 🔨 P7 | P7 | widgets | store | ShadDialog |
+| 操作 CRUD + 下拉动作（applies 门）（AC7-4） | ✅ | ✅ 已复刻（applies 门：仅 Bin 给 Empty Bin；remove/changeLayout/favorite 写回 store；换布局循环五档 = 第二屏选择器等价） | P1/P7 | `plan_widgets_screen.dart` | store.`removeWidget/changeWidgetLayout` | DswContextMenu |
+| 两屏选择器：源三段 → 布局按源 1–4 项（AC7-5） | ✅ | 🔨（桌面增量：换布局循环 + 新建走 createCollection；完整两屏 🔨） | P7+ | — | store | ShadDialog |
 | Android Glance 桌面组件（AC7-6） | 🚧 | ❌ N/A（上游 manifest 全 disabled）；"组件读快照"设计保留 = store 内存快照 | — | — | store | — |
 
 ## 8. 守卫与门禁映射（每阶段）
