@@ -715,20 +715,13 @@ class ComposerState extends State<Composer> {
     );
   }
 
-  /// The input card itself, and the one place its three states are decided.
-  ///
-  /// ZCode's prompt editor carries `border-input-border` → `hover:` →
-  /// `focus-within:` (ChatPromptEditor.tsx:347). A single static stroke at 6%
-  /// alpha is why the card read as "边界不清": nothing told the user which
-  /// surface was about to receive the keystrokes. Focus wins over hover because
-  /// typing is the state that matters, and it lands on `brandPrimary` — the
-  /// same token every other focused control in this app resolves to.
+  /// The input card's stroke. It used to answer the keyboard with a third
+  /// colour (`brandPrimary` on focus, ZCode's `focus-within:`); the 2026-10-01
+  /// walkthrough judged the focus stroke noise — the caret already says where
+  /// the keystrokes land — and reverted the card to a two-state border:
+  /// rest at 6%, hover one notch brighter. ADR-0038 records the reversal.
   Widget _card(DswAlias color) {
-    final stroke = _focus.hasFocus
-        ? color.brandPrimary
-        : _cardHovered
-        ? color.borderL3
-        : color.borderL2DarkmodeThin;
+    final stroke = _cardHovered ? color.borderL3 : color.borderL2DarkmodeThin;
     return MouseRegion(
       onEnter: (_) => setState(() => _cardHovered = true),
       onExit: (_) => setState(() => _cardHovered = false),

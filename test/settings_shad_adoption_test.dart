@@ -137,11 +137,12 @@ void main() {
       );
       expect(
         strokes.single,
-        'frame 1.0: ${DswAlias.light.brandPrimary}',
+        'frame 1.0: ${DswAlias.light.borderL2}',
         reason:
-            'and it is the brand hairline that says where the keyboard is. '
-            'A ring entry here is the library own focus outline painted '
-            'outside it, which is the doubled frame in the screenshot.',
+            'ADR-0038: focus keeps the resting hairline — the caret already '
+            'says where the keyboard is. A brand stroke here would be the '
+            'recoloured frame the walkthrough rejected; a second entry would '
+            'be the library ring, the doubled frame in the screenshot.',
       );
     });
   });

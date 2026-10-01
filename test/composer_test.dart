@@ -921,7 +921,13 @@ void main() {
   // now. The states are reached the way a user reaches them — autofocus, `Tab`
   // away, pointer in and out, tap back in — and the strokes are read off the
   // painted decoration, so a regression to one static colour fails here.
-  testWidgets('the card shows which surface has the keyboard', (tester) async {
+  testWidgets('the card keeps its stroke when the keyboard lands', (
+    tester,
+  ) async {
+    // ADR-0038 reversed the three-state border: the focus stroke read as
+    // noise on the walkthrough (the caret already says where the keystrokes
+    // land), so the card now answers two states — idle and hover — and the
+    // focused frame is pixel-identical to the resting one.
     Color stroke() {
       final box = tester.widget<AnimatedContainer>(
         find.byWidgetPredicate(
@@ -943,37 +949,34 @@ void main() {
     await pump(tester);
     await tester.pumpAndSettle();
     final color = tester.element(find.byType(EditableText)).dsw;
+    final resting = stroke();
     expect(
-      stroke(),
-      color.brandPrimary,
-      reason: 'the draft autofocuses, so the card opens focused',
+      resting,
+      color.borderL2DarkmodeThin,
+      reason: 'the draft autofocuses, so the opened card IS the focused read',
     );
 
     await tester.sendKeyDownEvent(LogicalKeyboardKey.tab);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.tab);
     await tester.pumpAndSettle();
-    expect(stroke(), color.borderL2DarkmodeThin, reason: 'idle, pointer away');
 
     await pointer.moveTo(tester.getCenter(find.byType(EditableText)));
     await tester.pumpAndSettle();
-    expect(stroke(), color.borderL3, reason: 'hover, pointer on the card');
+    expect(stroke(), color.borderL3, reason: 'hover still brightens a notch');
+
+    // Tap back in. The pointer is still on the card, so hover holds the
+    // stroke; the focused frame is whatever the pointer says now — that is
+    // ADR-0038.
+    await tester.tapAt(tester.getCenter(find.byType(EditableText)));
+    await tester.pumpAndSettle();
+    expect(stroke(), color.borderL3, reason: 'pointer on the card, hover');
 
     await pointer.moveTo(const Offset(1, 1));
     await tester.pumpAndSettle();
-    expect(stroke(), color.borderL2DarkmodeThin, reason: 'back to idle');
-
-    await tester.tapAt(tester.getCenter(find.byType(EditableText)));
-    await tester.pumpAndSettle();
     expect(
       stroke(),
-      color.brandPrimary,
-      reason: 'focus outranks hover: typing is the state that matters',
-    );
-
-    // Three states, three colours — the same law ADR-0017 S2 set for selection.
-    expect(
-      {color.borderL2DarkmodeThin, color.borderL3, color.brandPrimary}.length,
-      3,
+      color.borderL2DarkmodeThin,
+      reason: 'focused again, pointer away — identical to idle (ADR-0038)',
     );
   });
 }

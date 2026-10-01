@@ -96,17 +96,17 @@ ShadThemeData dswShadTheme(Brightness brightness, {double textScale = 1}) {
     // A field's frame. `ShadInput` reads `inputTheme.decoration`, and the
     // library's default is an empty `ShadDecoration` — which paints nothing —
     // so every shad field has been drawing without the hairline the Material
-    // field it replaced had. Rest `borderL2`, focus `brandPrimary`: the same two
-    // steps the composer card's three-state stroke answers with, because a field
-    // and a card are asked the same question — where is the keyboard (ADR-0017
-    // S2b). Radius comes from the knob (`control`), so it is not restated here.
+    // field it replaced had. The frame is the same hairline at rest and on
+    // focus (ADR-0038: the focus stroke read as noise; the caret already says
+    // where the keystrokes land). Radius comes from the knob (`control`), so
+    // it is not restated here.
     inputTheme: ShadInputTheme(
       style: DswType.s14.copyWith(color: c.labelPrimary),
       placeholderStyle: DswType.s14.copyWith(color: c.labelTertiary),
       cursorColor: c.stateBusinessPrimary,
       decoration: ShadDecoration(
         border: ShadBorder.all(color: c.borderL2, width: 1),
-        focusedBorder: ShadBorder.all(color: c.brandPrimary, width: 1),
+        focusedBorder: ShadBorder.all(color: c.borderL2, width: 1),
         errorBorder: ShadBorder.all(color: c.stateErrorPrimary, width: 1),
         // The second outline. `ShadDecorator` merges the *variant's*
         // `decorationTheme()` before this decoration (`decorator.dart:120`), and
