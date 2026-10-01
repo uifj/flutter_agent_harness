@@ -39,6 +39,8 @@
 5. **相对时间是纯 Dart + 双字典键。** `lib/model/relative_time.dart` 的 `formatRelativeTime(at, now, tr)`，阈值照上游四档。放 model 而不是 ui：它要能被单测，且 `lib/ui` 不许直接 `dart:io`/自己造时间格式。
 6. **侧栏结构**（代理档；企划档不动，那里扩展区已经是企划库）：
    - 节头本身带一把 `⋮`：视图选择（按工作区分组 / 平铺）+ 全部展开 / 全部收起。上游把后两枚画成表头图标（`WorkspaceSidebar.tsx:1072-1095`），这里收进菜单，因为 280px 一列里先让位的从来是 chrome 的座位；「收起全部」一次写入整个折叠集合，不是一组一次通知。
+     **（2026-10-02 更正：上游那两枚不是一对图标，是一枚随状态翻转的**（`toggleAllTaskGroups`，`Minimize2`↔`Maximize2`），
+     本条原文的说法来自读错的截图。现在节头有同一枚钮，菜单里那两行删了——理由与守卫见下方追记第 5 条。）
    - 一节标题「工作区」，其下每组：**组头行** = 折叠 chevron + `Folder`/`FolderOpen` 图标 + 叶子名（`p.basename`）+ 行尾 `DswIconButton` 两枚：`+`（在该工作区新开会话）与 `⋮`（菜单：显示文件树 / 移除此工作区）；当前工作区那组默认展开并在名旁给一枚 `stateDot` 表示"就是这里"。
    - **会话行**沿用 `rowSession * step` 座位，标题 `Expanded` + ellipsis（行里自由文本必须有 flex 上界），右侧 `formatRelativeTime`，置顶的在标题前挂一枚小图标（不是换色，见 ADR-0017 S2）。
    - 右键走 `primitives/menu.dart` 的 `DswContextMenu`（ADR-0036 B6：`lib/ui` 里 `PopupMenuButton`/`showMenu` 必须保持 0）：重命名 / 置顶或取消置顶 / 删除 / 复制会话 id / 复制工作区路径 / 在访达中显示。reveal 挂在会话行而不是只挂组头，是照上游来的（`useTaskListItemContextActions.ts:168-175` 同时给两处）：用户问的通常是「这次对话的文件去哪了」，那是会话的问题，不是文件夹表头的问题。非 mac 上该项不出现，与 `project_folder_ops` 的 `isSupported` 同一个判据。
@@ -98,4 +100,12 @@
    而"结构避开了"这件事从此有了一条断言，不再只是巧合。
    顺带修掉一处 harness 的病：文件级 collector 从不清空，于是新守卫读到了上一棵测试的手势——**红在错误的理由上比不红更坏**，
    这条已进 workflow.md §4。
+5. **节头那第二枚图标不是拖拽把手，是"全部收起/展开"——现在照它做了。** 再看截图 2 时我先把它读成
+   `GripVertical`（组序拖拽，已明确不做），去源码里核对：`WorkspaceSidebar.tsx:1074-1095` 那枚是
+   `toggleAllTaskGroups`，图形按状态换（全展开→`Minimize2`，全收起→`Maximize2`），`canToggle` 为假时**禁用而不是隐藏**。
+   我们此前把这两个动作拆成 `⋮` 菜单里的两行，代码注释还写着"上游是两枚图标"——**那句是错的**，上游是一枚随状态翻转的。
+   现在节头有那一枚：图标与 tooltip 都由 `groupKeys.every(collapsed.contains)` 决定，没有组可折时 `onTap: null`
+   （禁用而非消失——看不见的控件就是缺控件），菜单里那两行随之删掉：**同一个动作留两扇门，就会有两扇门各自腐烂**。
+   守卫 `the head glyph folds every group, then reads as unfold` 钉的是"这枚钮说的是列表现在的样子"，
+   反向验过：把 `allFolded` 钉成常量即红（`Expected: no matching candidates  Actual: found 1`）。
 
