@@ -517,53 +517,29 @@ class _SlashSheet extends StatelessWidget {
   const _SlashSheet();
 
   static PlanBlockContent contentFor(PlanSlashItem item) => switch (item) {
-    PlanSlashItem.styleText => const PlanText(text: ''),
-    PlanSlashItem.styleTitle => const PlanText(
+    // The style items answer through the model's own mapping — the single
+    // source of truth that already records "Title is H1, Highlighted is
+    // QUOTE" (the audit caught this sheet drifting from it).
+    PlanSlashItem.styleText ||
+    PlanSlashItem.styleTitle ||
+    PlanSlashItem.styleHeading ||
+    PlanSlashItem.styleSubheading ||
+    PlanSlashItem.styleHighlighted ||
+    PlanSlashItem.styleCallout ||
+    PlanSlashItem.styleCheckbox ||
+    PlanSlashItem.styleBulleted ||
+    PlanSlashItem.styleNumbered ||
+    PlanSlashItem.styleToggle ||
+    PlanSlashItem.code => PlanText(
       text: '',
-      style: PlanTextStyle.title,
-    ),
-    PlanSlashItem.styleHeading => const PlanText(
-      text: '',
-      style: PlanTextStyle.h2,
-    ),
-    PlanSlashItem.styleSubheading => const PlanText(
-      text: '',
-      style: PlanTextStyle.h3,
-    ),
-    PlanSlashItem.styleHighlighted => const PlanText(
-      text: '',
-      style: PlanTextStyle.quote,
-    ),
-    PlanSlashItem.styleCallout => const PlanText(
-      text: '',
-      style: PlanTextStyle.callout,
-      iconEmoji: '💡',
-    ),
-    PlanSlashItem.styleCheckbox => const PlanText(
-      text: '',
-      style: PlanTextStyle.checkbox,
-      checked: false,
-    ),
-    PlanSlashItem.styleBulleted => const PlanText(
-      text: '',
-      style: PlanTextStyle.bullet,
-    ),
-    PlanSlashItem.styleNumbered => const PlanText(
-      text: '',
-      style: PlanTextStyle.numbered,
-    ),
-    PlanSlashItem.styleToggle => const PlanText(
-      text: '',
-      style: PlanTextStyle.toggle,
+      style: PlanSlashItem.textStyleFor(item),
+      checked: item == PlanSlashItem.styleCheckbox ? false : null,
+      iconEmoji: item == PlanSlashItem.styleCallout ? '💡' : null,
     ),
     PlanSlashItem.file => const PlanFile(kind: PlanFileKind.file),
     PlanSlashItem.picture => const PlanFile(kind: PlanFileKind.image),
     PlanSlashItem.video => const PlanFile(kind: PlanFileKind.video),
     PlanSlashItem.bookmark => const PlanBookmark(),
-    PlanSlashItem.code => const PlanText(
-      text: '',
-      style: PlanTextStyle.codeSnippet,
-    ),
     PlanSlashItem.line => const PlanDivider(PlanDividerStyle.line),
     PlanSlashItem.dots => const PlanDivider(PlanDividerStyle.dots),
     PlanSlashItem.tableOfContents => const PlanTableOfContents(),

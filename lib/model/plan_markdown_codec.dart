@@ -8,6 +8,17 @@
 // byte-for-byte. That is also why `toggle`, `callout` colour and the 24 embeds
 // are not invented here — upstream has no Markdown form for them either, and a
 // fake one would silently rewrite the user's file.
+//
+// The editor, however, can CREATE blocks markdown has no form for, and the
+// first audit (2026-10-01) caught those vanishing on save (`default: return
+// ''`) or writing literal `![null]()`. For blocks the editor produces but the
+// markdown vocabulary cannot carry, the codec writes a one-line envelope —
+// `<!-- plan:{json} -->`, the whole block as JSON — and reads it back on the
+// next decode. The file stays legal Markdown (an HTML comment renders as
+// nothing), the user's content survives, and hand-written files without the
+// envelope decode exactly as before.
+
+import 'dart:convert';
 
 import 'plan_block.dart';
 
@@ -20,6 +31,22 @@ List<PlanBlock> decodePlanMarkdown(String source, {String Function()? newId}) {
   for (var i = 0; i < lines.length; i++) {
     final line = lines[i];
     final trimmed = line.trimRight();
+
+    // The editor's envelope: a block markdown cannot express, saved as JSON.
+    if (trimmed.startsWith('<!-- plan:') && trimmed.endsWith('-->')) {
+      try {
+        final json = jsonDecode(
+          trimmed.substring('<!-- plan:'.length, trimmed.length - 3),
+        );
+        if (json is Map<String, Object?>) {
+          blocks.add(PlanBlock.fromJson(json));
+          continue;
+        }
+      } on FormatException {
+        // Not ours, or corrupt: fall through and keep the line as literal
+        // text — a comment the user wrote must not become a crash.
+      }
+    }
 
     // Fenced code: everything up to the closing fence is one text block.
     if (trimmed.startsWith('```')) {
@@ -109,7 +136,10 @@ List<PlanBlock> decodePlanMarkdown(String source, {String Function()? newId}) {
     }
 
     // Checkbox first: `- [x]` would otherwise be read as a bullet.
-    final checkbox = RegExp(r'^[-*]\s+\[( |x|X)\]\s+(.*)$').firstMatch(trimmed);
+    // The payload after the box may be empty — an unchecked row the user
+    // just created is `- [ ] ` with nothing after it, and it used to fall
+    // through to the bullet branch.
+    final checkbox = RegExp(r'^[-*]\s+\[( |x|X)\]\s*(.*)$').firstMatch(trimmed);
     if (checkbox != null) {
       final checked = checkbox.group(1)!.toLowerCase() == 'x';
       blocks.add(
@@ -204,24 +234,31 @@ String _encodeBlock(PlanBlock block) {
   switch (content) {
     case PlanRawLine(:final source):
       return source;
-    case PlanUnsupported(:final reason):
-      return '<!-- unsupported: $reason -->';
     case PlanDivider(:final style):
       return style == PlanDividerStyle.dots ? '***' : '---';
     case PlanLatex(:final source):
       return '\$\$\n$source\n\$\$';
-    case PlanFile(:final kind, :final target, :final name):
-      if (kind == PlanFileKind.image) {
-        return '![$name](${target ?? ''})';
-      }
-      return '[$name](${target ?? ''})';
     case PlanTableBlock(:final isHeader):
       final cells = [for (final child in block.children) _plainText(child)];
       final row = '| ${cells.join(' | ')} |';
       if (!isHeader) return row;
       final separator = '| ${cells.map((_) => '---').join(' | ')} |';
       return '$row\n$separator';
+    case PlanFile(:final kind, :final target, :final name, :final state):
+      // A real file line needs both its name and its target; anything else
+      // (the empty/uploading/error states the editor mints) used to write
+      // literal `![null]()` — the envelope carries the block instead.
+      if (state == PlanFileState.done && name != null && name.isNotEmpty) {
+        if (kind == PlanFileKind.image) {
+          return '![$name](${target ?? name})';
+        }
+        return '[$name](${target ?? name})';
+      }
+      return _envelope(block);
     case PlanText():
+      // Markdown carries this text block only if every field it styles has a
+      // vocabulary form; otherwise the envelope keeps the block whole.
+      if (!_markdownCarries(content)) return _envelope(block);
       final prefix = switch (content.style) {
         PlanTextStyle.h1 => '# ',
         PlanTextStyle.h2 => '## ',
@@ -237,10 +274,66 @@ String _encodeBlock(PlanBlock block) {
         return '```\n${content.text}\n```';
       }
       final text = _applyMarks(content.text, content.marks);
-      return content.text.isEmpty ? '' : '$prefix$text';
-    default:
+      // An empty list/check row is still a row: dropping the prefix silently
+      // deleted a checkbox the user had created.
+      return content.text.isEmpty && prefix.isEmpty ? '' : '$prefix$text';
+    case PlanBookmark():
+    case PlanLink():
+    case PlanTableOfContents():
+    case PlanEmbed():
+    case PlanRelationBlock():
+    case PlanFeaturedRelations():
+    case PlanWidgetBlock():
+      // These have no Markdown form at all; the envelope is the only way the
+      // block survives a save (they used to fall into `default: return ''`).
+      return _envelope(block);
+    case PlanUnsupported(:final reason):
+      return '<!-- unsupported: $reason -->';
+    case PlanLayout():
+      // A container has no line of its own; its children encode separately.
       return '';
   }
+}
+
+/// The one-line envelope: the whole block as JSON inside an HTML comment.
+/// Legal Markdown, renders as nothing, reads back as the block it was.
+String _envelope(PlanBlock block) =>
+    '<!-- plan:${jsonEncode(block.toJson())} -->';
+
+/// Whether every field of this text block has a Markdown form: a style with a
+/// prefix (or the code fence), marks that fold to markdown tokens, and no
+/// colour/alignment/emoji payload.
+bool _markdownCarries(PlanText content) {
+  final styled = switch (content.style) {
+    PlanTextStyle.h1 ||
+    PlanTextStyle.h2 ||
+    PlanTextStyle.h3 ||
+    PlanTextStyle.h4 ||
+    PlanTextStyle.quote ||
+    PlanTextStyle.bullet ||
+    PlanTextStyle.numbered ||
+    PlanTextStyle.checkbox ||
+    PlanTextStyle.codeSnippet ||
+    PlanTextStyle.paragraph => true,
+    _ => false,
+  };
+  if (!styled) return false;
+  if (content.color != null ||
+      content.background != null ||
+      content.iconEmoji != null ||
+      content.align != PlanAlign.start) {
+    return false;
+  }
+  return content.marks.every(
+    (mark) => switch (mark.type) {
+      PlanMarkType.bold ||
+      PlanMarkType.italic ||
+      PlanMarkType.strikethrough ||
+      PlanMarkType.keyboard ||
+      PlanMarkType.link => true,
+      _ => false,
+    },
+  );
 }
 
 String _plainText(PlanBlock block) =>

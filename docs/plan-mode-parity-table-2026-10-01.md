@@ -34,6 +34,7 @@
 | 16 | AC3-21 撤销/重做 | 上游=服务端历史（本项目无核心）→ 🔁 本地命令栈实现 | `domain/page/Undo.kt`、`Redo.kt` |
 | 17 | 新建视图 = 复制；SetActive 无 RPC | Plus 新建视图底层是 DuplicateDataViewViewer；activeViewerId 是会话态不是后端态 | `ViewerDelegate.kt:78-107` |
 | 18 | 对象信息关系列表 | file 段被 `if (false)` 关闭、整段"编辑模式"是注释死代码 → 不复刻这两样 | `RelationListViewModel.kt:204-208,493-507` |
+| 19 | 编辑器造块的盘上表达（P8-a 裁决，2026-10-01 审计） | Markdown 词汇装不下的块（Bookmark/TOC/Embed/Link/Widget/Relation/Featured/带色段/Toggle/Callout/Title/underline mark）写 `<!-- plan:{json} -->` 信封——合法 Markdown、渲染为空、重开还原；修复"保存即消失"与 `![null]()` 垃圾行；空 checkbox 行不再被吞；slash 的 Title 经模型 `textStyleFor` 单点映射（=H1，与 4ffb414 对齐） | `plan_markdown_codec.dart`（_envelope/_markdownCarries）、`plan_block_editor.dart`（contentFor） |
 
 ## 1. 模块 1：数据视图（Data View / Viewers）
 

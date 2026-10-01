@@ -565,4 +565,32 @@ void main() {
       expect(store.subscriptionsFor('never-subscribed'), 0);
     });
   });
+
+  // The groupOrders write-back is a registered extension over the mobile
+  // client (its columns are read-only there); the board's column drag lands
+  // here, so the store path needs its own pin.
+  group('group order write-back', () {
+    test('a viewer order survives a save and feeds the grouping', () async {
+      final store = await open();
+      addTearDown(store.dispose);
+      await store.setGroupOrder(PlanMockKeys.taskSet, 'v-board', [
+        'doing',
+        'todo',
+        'shipped',
+        'blocked',
+        '',
+      ]);
+      final readBack = store
+          .collectionById(PlanMockKeys.taskSet)!
+          .dataView
+          .groupOrders['v-board'];
+      expect(readBack, ['doing', 'todo', 'shipped', 'blocked', '']);
+
+      // The grouping engine answers columns in that order.
+      final groups = store
+          .stageFor(PlanMockKeys.taskSet, viewerId: 'v-board')
+          .groups;
+      expect(groups.keys.toList(), ['doing', 'todo', 'shipped', 'blocked', '']);
+    });
+  });
 }
