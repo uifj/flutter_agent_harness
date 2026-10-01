@@ -162,13 +162,15 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
                     label: context.tr('planFieldsTitle'),
                     count: planVisibleColumns(viewer).length,
                   ),
-                  content: (context, close) => PlanFieldsSheet(
-                    viewer: viewer,
-                    relations: relations,
-                    onChange: (columns) => _store.setViewerRelations(
-                      collection.id,
-                      viewer.id,
-                      columns,
+                  content: (context, close) => SingleChildScrollView(
+                    child: PlanFieldsSheet(
+                      viewer: viewer,
+                      relations: relations,
+                      onChange: (columns) => _store.setViewerRelations(
+                        collection.id,
+                        viewer.id,
+                        columns,
+                      ),
                     ),
                   ),
                 ),
@@ -181,11 +183,16 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
                     label: context.tr('planSortBy'),
                     count: viewer.sorts.length,
                   ),
-                  content: (context, close) => PlanSortSheet(
-                    viewer: viewer,
-                    relations: relations,
-                    onChanged: (sorts) =>
-                        _store.setViewerSorts(collection.id, viewer.id, sorts),
+                  content: (context, close) => SingleChildScrollView(
+                    child: PlanSortSheet(
+                      viewer: viewer,
+                      relations: relations,
+                      onChanged: (sorts) => _store.setViewerSorts(
+                        collection.id,
+                        viewer.id,
+                        sorts,
+                      ),
+                    ),
                   ),
                 ),
               if (viewer != null)
@@ -197,13 +204,15 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
                     label: context.tr('planFilterTitle'),
                     count: viewer.filters.length,
                   ),
-                  content: (context, close) => PlanFilterSheet(
-                    viewer: viewer,
-                    relations: relations,
-                    onChanged: (filters) => _store.setViewerFilters(
-                      collection.id,
-                      viewer.id,
-                      filters,
+                  content: (context, close) => SingleChildScrollView(
+                    child: PlanFilterSheet(
+                      viewer: viewer,
+                      relations: relations,
+                      onChanged: (filters) => _store.setViewerFilters(
+                        collection.id,
+                        viewer.id,
+                        filters,
+                      ),
                     ),
                   ),
                 ),
@@ -216,15 +225,17 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
                     label: context.tr('planLayoutTitle'),
                     count: 0,
                   ),
-                  content: (context, close) => PlanLayoutSheet(
-                    viewer: viewer,
-                    relations: relations,
-                    types: _store.types,
-                    templates: _store.templates,
-                    onChange: (next) => _store.setViewerLayoutFull(
-                      collection.id,
-                      viewer.id,
-                      next,
+                  content: (context, close) => SingleChildScrollView(
+                    child: PlanLayoutSheet(
+                      viewer: viewer,
+                      relations: relations,
+                      types: _store.types,
+                      templates: _store.templates,
+                      onChange: (next) => _store.setViewerLayoutFull(
+                        collection.id,
+                        viewer.id,
+                        next,
+                      ),
                     ),
                   ),
                 ),
