@@ -46,7 +46,9 @@
 | S4 | 已落 | `851f782` + `5357075` | `test/workspace_history_test.dart` 十二条，守画出来的那一棵：一组一头、当前档在前、折叠不建行、点表头回报被折的 key、空文件夹仍成组、相对时间、置顶压过更新的、删除只留墓碑（`source.sessions` 仍在）、组菜单与右键菜单、平铺档一头不画、未归属垫底。其中七条在修好"索引把来源报的 workspaceRoot 覆盖成 null"之前是红的 |
 | S5 | 已接线，守待在真机 | `851f782` | 组菜单两项在 `main.dart` 落到 `scope.adoptRecent` + `scope.workbench.openFolder`，与"只从 `recentWorkspaces` 摘掉"的 `doc.copyWith`；widget 层已由 S4 的菜单两条守住回调契约，剩下的换档观感与 `在访达中显示` 属 macOS 走查 |
 
-**门禁现状（要说清）**：S1–S4 落完时全量 `flutter test` = `+1180 -3`，比基线 `+1158 -2` 多 22 条通过。那 3 条里只有 `app_scope_test`（`/var`↔`/private/var`）是既有失败；另外两条是 `plan_workspace_test` 与 `plan_blocks_test` **加载失败**，原因是同一时间另一批在做的 ADR-0040（企划块词表）在 `lib/ui/plan/blocks/plan_block_editor.dart` 里改了 `_LinkInput` 的参数而调用点未同步——不属于本切片，本切片一行未碰。等那批活落地后这两条会回到它们自己的位置（`plan_workspace_test` 原本那条 `find.text('notes')` 失败也被这次加载失败盖住了）。
+| 补 | 已落 | `8906fff` | 上游清单里另外两件**有依据**的：会话行的「在访达中显示」（reveal 在上游同时挂在任务行，`useTaskListItemContextActions.ts:168-175`）与节头菜单的「全部展开 / 全部收起」（一次写入整个折叠集合）。顺带修掉一处自造的门控错误：节头那把 `⋮` 原先只在"能改视图"时才画，只接折叠动作时整把菜单根本不存在——这条是新增的守卫 `collapse all folds every group` 先红出来的 |
+
+**门禁现状（要说清）**：本切片全部落完后全量 `flutter test` = **`+1204 -7`**（基线 `+1158 -2`，净 +46 通过）。那 7 条里属于本仓库文档基线的是两条既有的（`app_scope_test` 的 `/var`↔`/private/var`、`plan_workspace_test` 的 `find.text('notes')`）；另外 **5 条全在 `plan_blocks_test`**（read face / bookmark URL / header cells / block menu / new faces seats），来自同一时间另一批在做的 **ADR-0040（企划块词表）**——那批改的是 `lib/ui/plan/blocks/` 与 `plan_block_document.dart`，本切片一行未碰、也未替它们改断言。我自己的三棵在同一批里全绿：`workspace_history_test` 14、`sidebar_test` 12、`app_frame_test` 13（含"图标即控件必须自报姓名"与 1.8x/2.2x 两档），`check_architecture` = 「7 recorded, 0 new（163 文件）」，`dart format` 与 `dart analyze --fatal-infos` 对本切片范围零告警。剩下的仍是 macOS 真机走查那一眼。
 
 
 - 三条门禁命令的输出；`flutter test` 的通过数与失败集（对比基线）。

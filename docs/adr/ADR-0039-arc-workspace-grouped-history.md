@@ -38,9 +38,10 @@
 4. **删除 = 墓碑。** `deletedAt` 写进 sidecar，列表过滤掉，盘上快照与工作台布局**不删**。与 ZCode 的 `{taskId}.deleted.json` 同构；不可逆操作要一次显式确认，而我们现在没有归档区，真删就是唯一且无回路的动作。
 5. **相对时间是纯 Dart + 双字典键。** `lib/model/relative_time.dart` 的 `formatRelativeTime(at, now, tr)`，阈值照上游四档。放 model 而不是 ui：它要能被单测，且 `lib/ui` 不许直接 `dart:io`/自己造时间格式。
 6. **侧栏结构**（代理档；企划档不动，那里扩展区已经是企划库）：
+   - 节头本身带一把 `⋮`：视图选择（按工作区分组 / 平铺）+ 全部展开 / 全部收起。上游把后两枚画成表头图标（`WorkspaceSidebar.tsx:1072-1095`），这里收进菜单，因为 280px 一列里先让位的从来是 chrome 的座位；「收起全部」一次写入整个折叠集合，不是一组一次通知。
    - 一节标题「工作区」，其下每组：**组头行** = 折叠 chevron + `Folder`/`FolderOpen` 图标 + 叶子名（`p.basename`）+ 行尾 `DswIconButton` 两枚：`+`（在该工作区新开会话）与 `⋮`（菜单：显示文件树 / 移除此工作区）；当前工作区那组默认展开并在名旁给一枚 `stateDot` 表示"就是这里"。
    - **会话行**沿用 `rowSession * step` 座位，标题 `Expanded` + ellipsis（行里自由文本必须有 flex 上界），右侧 `formatRelativeTime`，置顶的在标题前挂一枚小图标（不是换色，见 ADR-0017 S2）。
-   - 右键走 `primitives/menu.dart` 的 `DswContextMenu`（ADR-0036 B6：`lib/ui` 里 `PopupMenuButton`/`showMenu` 必须保持 0）：重命名 / 置顶或取消置顶 / 删除 / 复制会话 id / 复制工作区路径 / 在访达中显示（macOS 专属，非 mac 上该项不出现，与 `project_folder_ops` 的 `isSupported` 同一个判据）。
+   - 右键走 `primitives/menu.dart` 的 `DswContextMenu`（ADR-0036 B6：`lib/ui` 里 `PopupMenuButton`/`showMenu` 必须保持 0）：重命名 / 置顶或取消置顶 / 删除 / 复制会话 id / 复制工作区路径 / 在访达中显示。reveal 挂在会话行而不是只挂组头，是照上游来的（`useTaskListItemContextActions.ts:168-175` 同时给两处）：用户问的通常是「这次对话的文件去哪了」，那是会话的问题，不是文件夹表头的问题。非 mac 上该项不出现，与 `project_folder_ops` 的 `isSupported` 同一个判据。
    - 列表仍必须是惰性的（`SliverList`），折叠的组不建行。
 7. **「代码」侧补两件**（右侧工作台，用户确认的口径）：
    - 组菜单「显示文件树」= `setWorkspace(path)` 后在右栏开/聚焦 `explorer` tab；不可达路径先反馈再要 picker（macOS 的 security-scoped 授权不能凭空恢复）。
