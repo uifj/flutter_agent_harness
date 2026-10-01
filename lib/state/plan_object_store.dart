@@ -437,6 +437,73 @@ class PlanObjectStore extends ChangeNotifier {
 
   // ---- viewer writes ------------------------------------------------------
 
+  /// Creates a set or collection. Set and Collection skip the template step
+  /// upstream (`ObjectTypeExtensions.kt:107-130` — no `ShouldSelectTemplate`
+  /// flag for either key), so this lands the object directly with a starter
+  /// data view: one grid viewer, the name column first, then the type's
+  /// recommended relations (`ObjectSetViewModel.kt:660-698`'s
+  /// `SetDataViewProperties` seeding, reduced to what our viewer reads).
+  Future<PlanCollection> createCollection({
+    required PlanCollectionKind kind,
+    required String name,
+    String? sourceTypeKey,
+    String? iconEmoji,
+    List<PlanRelation> seedRelations = const [],
+  }) async {
+    var highest = 0;
+    for (final other in _collections) {
+      final match = RegExp(r'^(set|col)-w(\d+)$').firstMatch(other.id);
+      if (match != null) {
+        final value = int.parse(match.group(2)!);
+        if (value > highest) highest = value;
+      }
+    }
+    final prefix = kind == PlanCollectionKind.collection ? 'col' : 'set';
+    final id = '$prefix-w${highest + 1}';
+    final columns = [
+      const PlanViewerRelation(key: PlanRelationKeys.name),
+      for (final relation in seedRelations)
+        if (relation.key != PlanRelationKeys.name)
+          PlanViewerRelation(key: relation.key),
+    ];
+    final collection = PlanCollection(
+      id: id,
+      name: name,
+      kind: kind,
+      sourceTypeKey: sourceTypeKey,
+      iconEmoji: iconEmoji,
+      dataView: PlanDataView(
+        viewers: [
+          PlanViewer(
+            id: 'v-$id-1',
+            name: 'Grid',
+            kind: PlanViewerKind.grid,
+            relations: columns,
+          ),
+        ],
+        activeViewerId: 'v-$id-1',
+      ),
+    );
+    _collections = [..._collections, collection];
+    await _commit();
+    return collection;
+  }
+
+  /// A set built from one object type — the `CreateSet` arm of the three-state
+  /// menu (`feature-object-type/ui/UiState.kt:106-109`), which upstream laid
+  /// out but never wired; this is the completion the parity ledger registers.
+  Future<PlanCollection> createSetOfType(PlanObjectType type) =>
+      createCollection(
+        kind: PlanCollectionKind.set,
+        name: type.name,
+        sourceTypeKey: type.uniqueKey,
+        iconEmoji: type.iconEmoji,
+        seedRelations: [
+          for (final key in type.recommendedRelationKeys)
+            if (relationByKey(key) != null) relationByKey(key)!,
+        ],
+      );
+
   /// The one path that changes a collection's data view. Every viewer edit
   /// goes through it, so a new `PlanDataView` field has one place to be added.
   Future<void> _patchView(
