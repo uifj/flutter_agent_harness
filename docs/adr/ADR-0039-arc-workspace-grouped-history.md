@@ -42,6 +42,9 @@
    - 一节标题「工作区」，其下每组：**组头行** = 折叠 chevron + `Folder`/`FolderOpen` 图标 + 叶子名（`p.basename`）+ 行尾 `DswIconButton` 两枚：`+`（在该工作区新开会话）与 `⋮`（菜单：显示文件树 / 移除此工作区）；当前工作区那组默认展开并在名旁给一枚 `stateDot` 表示"就是这里"。
    - **会话行**沿用 `rowSession * step` 座位，标题 `Expanded` + ellipsis（行里自由文本必须有 flex 上界），右侧 `formatRelativeTime`，置顶的在标题前挂一枚小图标（不是换色，见 ADR-0017 S2）。
    - 右键走 `primitives/menu.dart` 的 `DswContextMenu`（ADR-0036 B6：`lib/ui` 里 `PopupMenuButton`/`showMenu` 必须保持 0）：重命名 / 置顶或取消置顶 / 删除 / 复制会话 id / 复制工作区路径 / 在访达中显示。reveal 挂在会话行而不是只挂组头，是照上游来的（`useTaskListItemContextActions.ts:168-175` 同时给两处）：用户问的通常是「这次对话的文件去哪了」，那是会话的问题，不是文件夹表头的问题。非 mac 上该项不出现，与 `project_folder_ops` 的 `isSupported` 同一个判据。
+  **（2026-10-02 更正：最后这半句不成立，从未有过 `isSupported` 门。**`lib/host/reveal.dart`** 从第一天起就是三平台各答一次**
+  （`open`／`explorer`／`xdg-open`），所以这一格在 Windows 与 Linux 上同样出现，只是叫法不该是 Finder——
+  那枚错名由 ADR-0041 收成中立的「在文件管理器中显示」。)**
    - 列表仍必须是惰性的（`SliverList`），折叠的组不建行。
 7. **「代码」侧补两件**（右侧工作台，用户确认的口径）：
    - 组菜单「显示文件树」= `setWorkspace(path)` 后在右栏开/聚焦 `explorer` tab；不可达路径先反馈再要 picker（macOS 的 security-scoped 授权不能凭空恢复）。
@@ -54,4 +57,4 @@
 - 新增一份盘上文档（`sessions.json`）要进 `backup_service` 的清单，否则换机就丢了归属、置顶与墓碑。
 - 侧栏的放大文本与窄列守卫要重挂：组头是一枚新座位，`grep -rln amplified_text_probe.dart test` 里 `sidebar_test` 那棵必须覆盖"多组 + 折叠 + 展开"三态。
 - 明确不做（另立，不要顺手加）：跨项目搜索（上游侧栏那把是死键，真身在 command center，我们要做就得先立自己的搜索面）、归档区与"标记未读"、live workflow 计数徽标（我们没有 per-workspace 活动流，画出来就是假徽标）、组序拖拽（上游靠项目 tab 顺序，我们没有多工作区 tab，硬造一份顺序就是新真值）、sqlite 会话索引（当前量级用不上，ponytail）。
-- 待 macOS 真机走查：分组在亮/暗两档的观感、`在访达中显示`、切工作区后工作台是否跟着换对、以及"未归属"这一档的文案是否读得通。
+- 待 macOS 真机走查：分组在亮/暗两档的观感、`在文件管理器中显示`（这格旧名 `在访达中显示`，2026-10-02 由 ADR-0041 改中立）、切工作区后工作台是否跟着换对、以及"未归属"这一档的文案是否读得通。

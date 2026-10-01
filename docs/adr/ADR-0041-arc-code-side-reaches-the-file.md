@@ -68,17 +68,21 @@ ADR-0039 把「按工作区走到一次对话」做完了：历史分组、组�
   从来没有调用点（本 ADR 之前它是一枚死动词），git 行那格是它的第一个入口。
   展开祖先不等于高亮——`sidebar_state.dart:27-29` 明确没有把上游那套 transient highlight 搬过来，
   所以菜单里的说法是"展开"，不是"选中"。
-- `revealInFinder` → `revealInFiles` 改掉一枚键、两处侧栏文案、一处测试字符串，并把侧栏那两遍逐字相同的
-  "露出＋失败就说"收成一行调用。这是一次合并而不是新增，所以不存在第二份真值。
+- `revealInFinder` → `revealInFiles` 改掉一枚键、两处侧栏文案、两处测试字符串，并把侧栏那两遍逐字相同的
+  "露出＋失败就说"收成一行调用（`sidebar.dart` 净变化 −8 行）。这是一次合并而不是新增，所以不存在第二份真值。
 - 折行开关动了 `CodeEditor(wordWrap:)` 这一枚参数，不动 `DswType`／`DswShape` 任何一档，因此与放大文本那把尺子无关；
   `editor_tab_test.dart` 守的是"开关两档可分辨并且默认不折"。
-- 守卫落点（都先红再绿）：
-  - `test/workbench_ui_test.dart` — 树行菜单点开之后有那格露出，且它调的是 `revealInFileManager(绝对路径)`。
-  - `test/git_tab_test.dart` — 用 `FakeGit.stubRepo` 那棵（真仓库会挂 30s 进程超时），变更行两格 reveal 各自到位；
-    工作区外的路径不画"在文件树里展开"。
-  - `test/editor_tab_test.dart` — 折行两档。
-  - `test/workspace_history_test.dart` — 改名的那格文案。
-  - `test/l10n_parity_test.dart` — 键两侧同时出现。
+- 守卫落点（**只有一棵反向验过**，其余是新写的行为断言——这条差别值得写明，别把五棵都说成验过）：
+  - `test/workbench_ui_test.dart` — 树行菜单点开之后那格"在文件管理器中显示"确实在树里。
+    **只测存在，不测调用**：那一格起的是操作系统的进程，测试能观察到的不是它要保证的那件事。
+  - `test/git_tab_test.dart` 两棵，都过 `FakeGit.stubRepo`（真仓库会挂 30s 进程超时）：
+    ① 点"在文件树里展开"之后，`explorer` tab 真被开出来**并且**工作区根进了 expanded 集
+    （两枚断言各管一个动词，缺一个就是一棵没开着的树或一次没展开的打开）；
+    ② explorer 被关掉时那格不出现——**这一棵反向验过**（把门从 `hasTree` 退回 `openable != null` 即红）。
+    工作区外路径不给那格走的是同一道 `tryResolve` 门，未单独测。
+  - `test/editor_tab_test.dart` — 一枚新测（默认不折 → 折 → 回到不折），外加 markdown 预览态下那枚开关不在场的一条断言。
+  - `test/workspace_history_test.dart` — 改名后的文案两处。
+  - `test/l10n_parity_test.dart` — 三枚键两侧同时出现。
 
 ## 明确不做
 
