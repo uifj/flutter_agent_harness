@@ -31,6 +31,8 @@ import '../../primitives/confirm_dialog.dart';
 import '../../primitives/feedback.dart';
 import '../../primitives/menu.dart';
 import '../../primitives/tappable.dart';
+import '../library/plan_object_info_screen.dart';
+import '../library/plan_templates_screen.dart';
 import 'plan_board_viewer.dart';
 import 'plan_calendar_viewer.dart';
 import 'plan_cell_value.dart';
@@ -124,6 +126,17 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
               collection: collection,
               count: stage.records.length,
               canRename: canManage,
+              canOpenTemplates:
+                  canManage &&
+                  collection.sourceTypeKey != null &&
+                  _store.types
+                          .where(
+                            (type) =>
+                                type.uniqueKey == collection.sourceTypeKey,
+                          )
+                          .firstOrNull
+                          ?.allowsTemplates ==
+                      true,
               onRename: () async {
                 final name = await _askName(
                   context,
@@ -133,6 +146,7 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
                 if (name == null || name.isEmpty) return;
                 await _store.renameCollection(collection.id, name);
               },
+              onTemplates: () => _openTemplates(collection),
             ),
           PlanViewerBar(
             viewers: collection.dataView.viewers,
@@ -416,6 +430,11 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
     final archived = record.relation('isArchived') == true;
     return [
       DswMenuEntry(
+        label: context.tr('planObjectInfoTitle'),
+        icon: LucideIcons.info,
+        onTap: () => _openObjectInfo(record),
+      ),
+      DswMenuEntry(
         label: context.tr(favorite ? 'planUnfavorite' : 'planFavorite'),
         icon: favorite ? LucideIcons.star : LucideIcons.circle,
         onTap: () => _store.setFavorite(record.id, favorite: !favorite),
@@ -481,6 +500,57 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
         final delta = action == PlanViewerMenuAction.moveLeft ? -1 : 1;
         await _store.moveViewer(collection.id, index, index + delta);
     }
+  }
+
+  /// The object-info screen (module 5): the record's relations in the
+  /// featured/local/hidden segments, in the dialog surface.
+  Future<void> _openObjectInfo(PlanObject record) async {
+    await showShadDialog<void>(
+      context: context,
+      builder: (context) => ShadDialog(
+        radius: BorderRadius.circular(DswShape.float),
+        title: Text(
+          record.name.isEmpty ? context.tr('planUntitled') : record.name,
+          style: DswType.l20,
+        ),
+        actions: [
+          ShadButton.outline(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(context.tr('close')),
+          ),
+        ],
+        child: SizedBox(
+          width: 480,
+          height: 420,
+          child: PlanObjectInfoScreen(store: _store, recordId: record.id),
+        ),
+      ),
+    );
+  }
+
+  /// The type-templates screen (module 6) for this collection's source type,
+  /// in the dialog surface.
+  Future<void> _openTemplates(PlanCollection collection) async {
+    final typeKey = collection.sourceTypeKey;
+    if (typeKey == null) return;
+    await showShadDialog<void>(
+      context: context,
+      builder: (context) => ShadDialog(
+        radius: BorderRadius.circular(DswShape.float),
+        title: Text(context.tr('planTemplatesTitleShort'), style: DswType.l20),
+        actions: [
+          ShadButton.outline(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(context.tr('close')),
+          ),
+        ],
+        child: SizedBox(
+          width: 420,
+          height: 380,
+          child: PlanTemplatesScreen(store: _store, typeKey: typeKey),
+        ),
+      ),
+    );
   }
 
   /// Opening a record is the inspector: every field the viewer shows, editable
@@ -599,12 +669,16 @@ class _CollectionHeader extends StatelessWidget {
     required this.count,
     required this.canRename,
     required this.onRename,
+    required this.canOpenTemplates,
+    required this.onTemplates,
   });
 
   final PlanCollection collection;
   final int count;
   final bool canRename;
   final VoidCallback onRename;
+  final bool canOpenTemplates;
+  final VoidCallback onTemplates;
 
   @override
   Widget build(BuildContext context) {
@@ -652,6 +726,31 @@ class _CollectionHeader extends StatelessWidget {
             '$count',
             style: DswType.xxxs11.copyWith(color: color.labelTertiary),
           ),
+          if (canOpenTemplates)
+            DswContextMenu(
+              items: (menuContext) => [
+                DswMenuEntry(
+                  label: menuContext.tr('planTemplatesTitleShort'),
+                  icon: LucideIcons.file,
+                  onTap: onTemplates,
+                ),
+              ],
+              child: Tooltip(
+                message: context.tr('planCollectionMenu'),
+                child: DswHoverTap(
+                  onTap: null,
+                  semanticLabel: context.tr('planCollectionMenu'),
+                  builder: (context, hovered, focused) => Padding(
+                    padding: const EdgeInsets.only(left: DswShape.sm),
+                    child: Icon(
+                      LucideIcons.ellipsis_vertical,
+                      size: DswShape.iconSm,
+                      color: color.labelTertiary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           const SizedBox(width: DswShape.sm),
         ],
       ),

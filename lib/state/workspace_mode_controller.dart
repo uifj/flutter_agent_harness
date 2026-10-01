@@ -33,21 +33,47 @@ enum WorkspaceMode {
 }
 
 /// What the plan workspace's center pane shows. `none` is the document view —
-/// the vault tree + editor; `collection` is one plan collection's data view,
-/// identified by [WorkspaceModeController.openCollectionId]. These live only
-/// inside [WorkspaceMode.plan]; selecting `agent` resets to
-/// [PlanExtensionView.none], the same reset semantics starkins's `_switchTab`
-/// applies to the other tab's pages.
+/// the vault tree + editor; the other values are the plan library's screens,
+/// reachable from the sidebar's extension area (2026-10-01): one plan
+/// collection's data view, All Content, the home widget strip, the bin's
+/// expanded list, and Gallery. These live only inside [WorkspaceMode.plan];
+/// selecting `agent` resets to [PlanExtensionView.none], the same reset
+/// semantics starkins's `_switchTab` applies to the other tab's pages.
 enum PlanExtensionView {
   none,
 
-  /// One plan collection shown as an Anytype-shaped data view (ADR-0037 P3).
-  collection;
+  /// One plan collection shown as an Anytype-shaped data view (ADR-0037 P3),
+  /// identified by [WorkspaceModeController.openCollectionId].
+  collection,
+
+  /// All Content — the five-tab object browser (module 2).
+  allContent,
+
+  /// The home widget strip (module 7).
+  widgets,
+
+  /// The bin, expanded the way upstream's Bin widget expands it.
+  bin,
+
+  /// Gallery installation (module 6).
+  gallery;
 
   String get name => switch (this) {
     none => 'none',
     collection => 'collection',
+    allContent => 'allContent',
+    widgets => 'widgets',
+    bin => 'bin',
+    gallery => 'gallery',
   };
+
+  /// The screens the sidebar's library group lists, in drawing order.
+  static const libraryScreens = [
+    PlanExtensionView.allContent,
+    PlanExtensionView.widgets,
+    PlanExtensionView.bin,
+    PlanExtensionView.gallery,
+  ];
 }
 
 /// Owns the current [WorkspaceMode] and the plan workspace's open
@@ -74,6 +100,22 @@ class WorkspaceModeController extends ChangeNotifier {
     _mode = mode;
     _extension = PlanExtensionView.none;
     if (changed || _extension != PlanExtensionView.none) notifyListeners();
+  }
+
+  /// Opens one of the parameterless library screens (and enters 企划 if not
+  /// there). Re-selecting the open screen closes it — the row is its own
+  /// toggle, like a collection row.
+  void toggleLibrary(PlanExtensionView view) {
+    assert(view != PlanExtensionView.none);
+    if (view == PlanExtensionView.collection) return;
+    if (_mode == WorkspaceMode.plan && _extension == view) {
+      _extension = PlanExtensionView.none;
+      notifyListeners();
+      return;
+    }
+    _mode = WorkspaceMode.plan;
+    _extension = view;
+    notifyListeners();
   }
 
   /// Opens one plan collection as a data view (and enters 企划 if not there).

@@ -45,6 +45,11 @@ import 'ui/conversation/conversation_root.dart';
 import 'ui/conversation/details_panel.dart';
 import 'ui/conversation/hero_workspace_picker.dart';
 import 'ui/plan/dataview/plan_data_view_screen.dart';
+import 'ui/plan/library/plan_all_content_screen.dart';
+import 'ui/plan/library/plan_bin_screen.dart';
+import 'ui/plan/library/plan_create_collection.dart';
+import 'ui/plan/library/plan_gallery_screen.dart';
+import 'ui/plan/widgets/plan_widgets_screen.dart';
 import 'ui/plan/plan_workspace.dart';
 import 'ui/settings/model_settings.dart';
 import 'ui/sidebar/sidebar.dart';
@@ -313,6 +318,23 @@ class _DshAppState extends ConsumerState<DshApp> {
                           openCollectionId: ref
                               .watch(workspaceModeProvider)
                               .openCollectionId,
+                          extensionView: ref
+                              .watch(workspaceModeProvider)
+                              .extensionView,
+                          onOpenLibrary: ref
+                              .watch(workspaceModeProvider)
+                              .toggleLibrary,
+                          onAddCollection: () =>
+                              showPlanCreateCollectionDialog(
+                                context,
+                                ref.watch(planObjectStoreProvider),
+                              ).then((id) {
+                                if (id != null) {
+                                  ref
+                                      .watch(workspaceModeProvider)
+                                      .openCollection(id);
+                                }
+                              }),
                           onOpenCollection: ref
                               .watch(workspaceModeProvider)
                               .openCollection,
@@ -388,6 +410,10 @@ class _DshAppState extends ConsumerState<DshApp> {
               planStore.collections.firstOrNull?.id ??
               '',
         ),
+        PlanExtensionView.allContent => PlanAllContentScreen(store: planStore),
+        PlanExtensionView.widgets => PlanWidgetsScreen(store: planStore),
+        PlanExtensionView.bin => PlanBinScreen(store: planStore),
+        PlanExtensionView.gallery => PlanGalleryScreen(store: planStore),
       };
     }
     return DetailsSelectionScope(

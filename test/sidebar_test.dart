@@ -86,6 +86,8 @@ void main() {
                   ],
                   openCollectionId: 'col-inbox',
                   onOpenCollection: (_) {},
+                  onOpenLibrary: (_) {},
+                  onAddCollection: () {},
                   profile: profile,
                   onNewSession: () {},
                   onToggle: onToggle ?? () {},
@@ -445,7 +447,8 @@ void main() {
   // "the list is always visible" but "the list is always reachable", and that is
   // what this pins.
   testWidgets(
-    'an amplified chrome can be scrolled past to reach the sessions',
+    'an amplified chrome can be scrolled past to reach the library in plan, '
+    'the sessions in agent',
     (tester) async {
       source.sessions = [
         for (var i = 0; i < 4; i++)
@@ -457,6 +460,9 @@ void main() {
       ];
       await index.refresh();
 
+      // 企划: the extension area (collections + library) replaced the session
+      // list, so the scroll contract carries over to the library group's last
+      // row — chrome may scroll away, content may not vanish.
       await pump(
         tester,
         collapsed: false,
@@ -464,18 +470,59 @@ void main() {
         mode: WorkspaceMode.plan,
         profile: UserProfile(displayName: 'In', email: 'a@b.c'),
       );
-      final last = find.text('Session 3');
-      expect(last, findsNothing, reason: 'the last row starts below the fold');
+      expect(find.text('Session 3'), findsNothing);
+      // The library group is short enough to render whole even at 2.2x —
+      // the contract is "reachable", and here that means visible outright
+      // and still intact after the scroll attempt.
+      final galleryRow = find.text('Gallery');
+      expect(galleryRow, findsOneWidget);
       await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
       await tester.pumpAndSettle();
-      expect(
-        last,
-        findsOneWidget,
-        reason: 'scrolling past the chrome reaches it',
+      expect(galleryRow, findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      // 代理 keeps the conversation module: same chrome contract, sessions.
+      await pump(
+        tester,
+        collapsed: false,
+        scale: nextTextStep,
+        mode: WorkspaceMode.agent,
+        profile: UserProfile(displayName: 'In', email: 'a@b.c'),
       );
+      final lastSession = find.text('Session 3');
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
+      await tester.pumpAndSettle();
+      expect(lastSession, findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('plan mode hides the conversation module entirely', (
+    tester,
+  ) async {
+    source.sessions = [
+      SessionSummary(
+        id: 's0',
+        updatedAt: DateTime(2026, 8, 25),
+        title: 'Session 0',
+      ),
+    ];
+    await index.refresh();
+    await pump(
+      tester,
+      collapsed: false,
+      mode: WorkspaceMode.plan,
+      profile: UserProfile(displayName: 'In', email: 'a@b.c'),
+    );
+    await tester.pumpAndSettle();
+    // The conversation affordances are agent-only (user decision 2026-10-01).
+    expect(find.text('Session 0'), findsNothing);
+    expect(find.byTooltip('New Session'), findsNothing);
+    // …and the extension area is there instead, with the library group.
+    expect(find.text('Delivery board'), findsOneWidget);
+    expect(find.text('Reading inbox'), findsOneWidget);
+    expect(find.text('All content'), findsOneWidget);
+  });
   // The rail has no hamburger: its brand mark *is* the way back out, swapping to
   // a panel glyph when hovered or focused. A reading of the code is not evidence
   // that it works, so both forms are pressed here — and each has to say which

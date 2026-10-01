@@ -18,6 +18,7 @@ import 'package:agent_harness/state/plan_object_store.dart';
 import 'package:agent_harness/theme/dsw_shad_bridge.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
 import 'package:agent_harness/ui/plan/library/plan_date_screen.dart';
+import 'package:agent_harness/ui/plan/library/plan_bin_screen.dart';
 import 'package:agent_harness/ui/plan/library/plan_gallery_screen.dart';
 
 void main() {
@@ -141,6 +142,59 @@ void main() {
             record.name,
       ];
       expect(names, contains('Reading list'));
+    });
+  });
+
+  group('the bin screen', () {
+    testWidgets('lists binned records and restores through its row menu', (
+      tester,
+    ) async {
+      await tester.runAsync(() => store.archiveRecords(['r-task-1']));
+      tester.view.physicalSize = const Size(1000, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: dswThemeData(Brightness.light),
+          builder: (context, child) => ShadTheme(
+            data: dswShadTheme(Theme.of(context).brightness),
+            child: AppLocaleScope(locale: AppLocaleId.en, child: child!),
+          ),
+          home: Scaffold(body: PlanBinScreen(store: store)),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // The binned record shows; the live views no longer carry it.
+      expect(find.text('Ship the viewer bar'), findsOne);
+      expect(
+        store.stageFor('set-tasks', viewerId: 'v-board').ids,
+        isNot(contains('r-task-1')),
+      );
+
+      // Restore is reachable here — the data view's stage cannot show the
+      // row, this screen is where the bin answers. Tap the row (its context
+      // menu) and restore it.
+      await tester.tap(find.text('Ship the viewer bar'));
+      await tester.pump(const Duration(milliseconds: 200));
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 32));
+      }
+      await tester.tap(find.text('Restore'));
+      for (var i = 0; i < 100; i++) {
+        if (store.binIds.isEmpty) break;
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)),
+        );
+        await tester.pump();
+      }
+      // The seed's own archived record stays binned; ours is out.
+      expect(store.binIds, isNot(contains('r-task-1')));
+      expect(
+        store.stageFor('set-tasks', viewerId: 'v-board').ids,
+        contains('r-task-1'),
+      );
     });
   });
 }

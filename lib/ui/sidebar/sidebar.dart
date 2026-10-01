@@ -56,6 +56,9 @@ class Sidebar extends StatefulWidget {
     this.collections = const [],
     this.openCollectionId,
     this.onOpenCollection,
+    this.onAddCollection,
+    this.onOpenLibrary,
+    this.extensionView,
     required this.onNewSession,
     required this.onToggle,
     required this.onOpenSession,
@@ -93,6 +96,17 @@ class Sidebar extends StatefulWidget {
   final List<({String id, String name})> collections;
   final String? openCollectionId;
   final void Function(String collectionId)? onOpenCollection;
+
+  /// The plan pane currently showing (a collection's data view or one of the
+  /// library screens), so the rows can carry the open state.
+  final PlanExtensionView? extensionView;
+
+  /// Opens the new-set/collection dialog (the extension group's "+").
+  final VoidCallback? onAddCollection;
+
+  /// Opens one of the parameterless library screens (All Content, widgets,
+  /// bin, Gallery).
+  final void Function(PlanExtensionView view)? onOpenLibrary;
 
   final VoidCallback onNewSession;
   final VoidCallback onToggle;
@@ -218,14 +232,30 @@ class _SidebarState extends State<Sidebar> {
                               children: _chrome(color, wide: true),
                             ),
                           ),
-                          ..._sessionSlivers(color),
+                          // 企划 has no conversation module: the extension
+                          // area (collections + library) takes the sessions'
+                          // scroll body, and New Session disappears with
+                          // them (user decision 2026-10-01).
+                          if (widget.mode == WorkspaceMode.plan)
+                            ..._librarySlivers(color)
+                          else
+                            ..._sessionSlivers(color),
                         ],
                       ),
                     ),
                   )
                 else ...[
                   ..._chrome(color, wide: false),
-                  Expanded(child: _sessionList(color)),
+                  Expanded(
+                    child: widget.mode == WorkspaceMode.plan
+                        ? SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: _libraryBody(color, wide: false),
+                            ),
+                          )
+                        : _sessionList(color),
+                  ),
                 ],
                 _footer(color, wide: wide),
               ],
@@ -244,14 +274,9 @@ class _SidebarState extends State<Sidebar> {
     if (widget.onSelectMode != null) ...[
       SizedBox(height: wide ? DswShape.md : DswShape.xs),
       _modeSwitch(color, wide: wide),
-      // The plan workspace's extension panels (ADR-0007 D4) — starkins's
-      // `_ExtensionGroup` shape: visible only in 企划, each row its own toggle.
-      if (widget.mode == WorkspaceMode.plan) ...[
-        const SizedBox(height: DswShape.sm),
-        _extensionGroup(color, wide: wide),
-      ],
     ],
-    _newSessionButton(color, wide: wide),
+    // The conversation module's affordance: agent-mode only.
+    if (widget.mode != WorkspaceMode.plan) _newSessionButton(color, wide: wide),
   ];
 
   /// The top-level workspace switch (ADR-0007), starkins's `_TaskChannelTabs`
@@ -316,10 +341,29 @@ class _SidebarState extends State<Sidebar> {
       children: [
         if (wide)
           Padding(
-            padding: const EdgeInsets.only(left: 8, bottom: 4),
-            child: Text(
-              context.tr('planCollections'),
-              style: DswType.xxxs11.copyWith(color: color.labelTertiary),
+            padding: const EdgeInsets.only(left: 8, right: 4, bottom: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    context.tr('planCollections'),
+                    style: DswType.xxxs11.copyWith(color: color.labelTertiary),
+                  ),
+                ),
+                if (widget.onAddCollection != null)
+                  Tooltip(
+                    message: context.tr('planNewCollection'),
+                    child: DswHoverTap(
+                      onTap: widget.onAddCollection,
+                      semanticLabel: context.tr('planNewCollection'),
+                      builder: (context, hovered, focused) => Icon(
+                        LucideIcons.plus,
+                        size: DswShape.iconCaption,
+                        color: color.labelTertiary,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         for (final (index, collection) in collections.indexed)
@@ -371,6 +415,100 @@ class _SidebarState extends State<Sidebar> {
           ),
       ],
     );
+  }
+
+  /// The extension area's scroll body in 企划: the collections group (which
+  /// carries its own "+") followed by the library group — the screens that
+  /// are not one collection. Replaces the session list, which belongs to the
+  /// 代理 conversation module.
+  List<Widget> _librarySlivers(DswAlias color) => [
+    SliverToBoxAdapter(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: _libraryBody(color, wide: true),
+      ),
+    ),
+  ];
+
+  List<Widget> _libraryBody(DswAlias color, {required bool wide}) {
+    final onOpen = widget.onOpenLibrary;
+    final openView = widget.extensionView;
+    final step = MediaQuery.textScalerOf(context).scale(1);
+    final groups = [
+      _extensionGroup(color, wide: wide),
+      if (onOpen != null) ...[
+        const SizedBox(height: DswShape.sm),
+        if (wide)
+          Padding(
+            padding: const EdgeInsets.only(left: 8, bottom: 4),
+            child: Text(
+              context.tr('planLibrary'),
+              style: DswType.xxxs11.copyWith(color: color.labelTertiary),
+            ),
+          ),
+        for (final view in PlanExtensionView.libraryScreens)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: _Pressable(
+              onTap: () => onOpen(view),
+              borderRadius: BorderRadius.circular(DswShape.control),
+              child: Container(
+                height: wide ? 32 * step : 36,
+                padding: EdgeInsets.symmetric(horizontal: wide ? 8 : 0),
+                decoration: BoxDecoration(
+                  color: openView == view ? color.interactiveBgHover : null,
+                  borderRadius: BorderRadius.circular(DswShape.control),
+                ),
+                child: Row(
+                  mainAxisAlignment: wide
+                      ? MainAxisAlignment.start
+                      : MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      switch (view) {
+                        PlanExtensionView.allContent => LucideIcons.list,
+                        PlanExtensionView.widgets =>
+                          LucideIcons.layout_dashboard,
+                        PlanExtensionView.bin => LucideIcons.trash,
+                        _ => LucideIcons.puzzle,
+                      },
+                      size: wide ? 15 : 18,
+                      color: openView == view
+                          ? color.labelPrimary
+                          : color.labelSecondary,
+                    ),
+                    if (wide) ...[
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          switch (view) {
+                            PlanExtensionView.allContent => context.tr(
+                              'planAllContentTitle',
+                            ),
+                            PlanExtensionView.widgets => context.tr(
+                              'planWidgetStrip',
+                            ),
+                            PlanExtensionView.bin => context.tr('planBinTitle'),
+                            _ => context.tr('planGalleryTitle'),
+                          },
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: DswType.s14.copyWith(
+                            color: openView == view
+                                ? color.labelPrimary
+                                : color.labelSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    ];
+    return groups;
   }
 
   /// 60px expanded, 36px on the rail. Expanded, the brand doubles as a New
