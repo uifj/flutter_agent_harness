@@ -1,11 +1,16 @@
 // Document blocks (ADR-0037 §3). The tree mirrors Anytype's
 // `Block.Content` sealed hierarchy (`core-models/.../Block.kt:78-426`) down to
 // the code values, and — this is the part that matters — records WHICH of
-// those the client can actually reach. Upstream declares 14 text styles but
-// `QUOTE` has no insert path; it names 24 embed processors but renders none of
-// them inline; it stores `JUSTIFY` but maps it back to start. Copying the
+// those the client can actually reach. Upstream declares 14 text styles and
+// lets the user insert 11 of them: the slash Style section plus Media.Code,
+// where "Title" lands on H1 and "Highlighted" lands on QUOTE
+// (`SlashExtensions.kt:22-33` → `EVM:7096-7103` → `MapperExtension.kt:417-438`;
+// re-verified 2026-10-01, correcting the earlier audit's ⛔ on QUOTE).
+// `TITLE`, `H4` and `DESCRIPTION` have no insert path — TITLE renders only as
+// core-produced embedded titles. It names 24 embed processors but renders none
+// of them inline; it stores `JUSTIFY` but maps it back to start. Copying the
 // vocabulary and silently "improving" the reachability would produce a
-// document model that disagrees with the inventory it came from.
+// document model that disagrees with the client it came from.
 
 import 'plan_widget.dart';
 
@@ -30,14 +35,16 @@ enum PlanTextStyle {
 
   final String code;
 
-  /// Reachable from the slash menu's Style section. `QUOTE` and `DESCRIPTION`
-  /// are deliberately absent: upstream has no insert path for either
-  /// (`SlashExtensions.kt:61-72`, and `DESCRIPTION` is a system row).
+  /// Reachable from the slash menu — the Style section (`Title` is H1,
+  /// `Highlighted` is QUOTE) plus `CODE_SNIPPET` from the Media section.
+  /// `TITLE`, `H4` and `DESCRIPTION` are deliberately absent: upstream has no
+  /// insert path for any of them (`SlashExtensions.kt:61-72`, `:91-97`).
   static const insertable = <PlanTextStyle>[
     paragraph,
-    title,
+    h1,
     h2,
     h3,
+    quote,
     callout,
     checkbox,
     bullet,
@@ -50,10 +57,15 @@ enum PlanTextStyle {
 
   bool get isList => this == bullet || this == numbered;
 
-  /// Alignment is not offered for list, checkbox, toggle or callout rows
-  /// (`SlashExtensions.kt:116-131`).
+  /// Alignment is not offered for list, checkbox or toggle rows
+  /// (`SlashExtensions.kt:116-131`); every other style gets the menu,
+  /// callout included.
   bool get supportsAlignment =>
-      !isList && this != checkbox && this != toggle && this != callout;
+      !isList && this != checkbox && this != toggle;
+
+  /// `HIGHLIGHT` (quote) only gets left/right — no centre
+  /// (`SlashExtensions.kt:122-125`).
+  bool get supportsCenterAlignment => supportsAlignment && this != quote;
 
   static PlanTextStyle fromCode(String code) =>
       values.firstWhere((value) => value.code == code, orElse: () => paragraph);
@@ -709,10 +721,10 @@ enum PlanSlashItem {
 
   static PlanTextStyle textStyleFor(PlanSlashItem item) => switch (item) {
     styleText => PlanTextStyle.paragraph,
-    styleTitle => PlanTextStyle.title,
+    styleTitle => PlanTextStyle.h1,
     styleHeading => PlanTextStyle.h2,
     styleSubheading => PlanTextStyle.h3,
-    styleHighlighted => PlanTextStyle.callout,
+    styleHighlighted => PlanTextStyle.quote,
     styleCallout => PlanTextStyle.callout,
     styleCheckbox => PlanTextStyle.checkbox,
     styleBulleted => PlanTextStyle.bullet,

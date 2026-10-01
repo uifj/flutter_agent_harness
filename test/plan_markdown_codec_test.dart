@@ -2,10 +2,12 @@
 // 而块树照抄的是 Anytype **能到达** 的那部分。
 //
 // ADR-0037 D3 有两半：round-trip 稳定（编辑一次块再存盘，文件不能长出自造语法），
-// 以及可达性诚实（`QUOTE` 存在但插不进来、24 种 embed 存在但一种都不内嵌渲染、
-// `JUSTIFY` 存在但被映射回起点）。这一棵树同时钉住两半：往返用固定文档断言，
-// 可达性用枚举断言。若有人为了让测试通过而给不可达档位加插入路径，
-// 第二条 group 会当场指出他与清单 §3/§17 不一致。
+// 以及可达性诚实（14 种样式里用户能插 11 种——"Title" 是 H1、"Highlighted" 是
+// QUOTE（SlashExtensions.kt:22-33 → MapperExtension.kt:417-438，2026-10-01 回档
+// 更正了早批审计对 QUOTE 的 ⛔ 误记）、TITLE/H4/DESCRIPTION 无插入路径、
+// 24 种 embed 存在但一种都不内嵌渲染、`JUSTIFY` 存在但被映射回起点）。
+// 这一棵树同时钉住两半：往返用固定文档断言，可达性用枚举断言。
+// 若有人为了让测试通过而给不可达档位加插入路径，第二条 group 会当场指出他与上游不一致。
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -166,11 +168,18 @@ void main() {
 
   group('reachability is the upstream answer, not an improvement', () {
     test(
-      'fourteen styles exist, ten are insertable, quote and description are not',
+      'fourteen styles exist, eleven are insertable via the slash menu, '
+      'title/h4/description are not',
       () {
         expect(PlanTextStyle.values.length, 14);
-        expect(PlanTextStyle.insertable.length, 10);
-        expect(PlanTextStyle.insertable, isNot(contains(PlanTextStyle.quote)));
+        expect(PlanTextStyle.insertable.length, 11);
+        expect(PlanTextStyle.insertable, contains(PlanTextStyle.quote));
+        expect(PlanTextStyle.insertable, contains(PlanTextStyle.h1));
+        expect(
+          PlanTextStyle.insertable,
+          isNot(contains(PlanTextStyle.title)),
+        );
+        expect(PlanTextStyle.insertable, isNot(contains(PlanTextStyle.h4)));
         expect(
           PlanTextStyle.insertable,
           isNot(contains(PlanTextStyle.description)),
@@ -178,6 +187,11 @@ void main() {
         expect(PlanTextStyle.h4.isHeading, isTrue);
         expect(PlanTextStyle.bullet.supportsAlignment, isFalse);
         expect(PlanTextStyle.paragraph.supportsAlignment, isTrue);
+        // HIGHLIGHT only gets left/right — no centre (SlashExtensions.kt:122).
+        expect(PlanTextStyle.quote.supportsAlignment, isTrue);
+        expect(PlanTextStyle.quote.supportsCenterAlignment, isFalse);
+        expect(PlanTextStyle.callout.supportsAlignment, isTrue);
+        expect(PlanTextStyle.callout.supportsCenterAlignment, isTrue);
       },
     );
 
@@ -241,11 +255,17 @@ void main() {
         expect(PlanSlashItem.otherSection.length, 4);
         expect(
           PlanSlashItem.textStyleFor(PlanSlashItem.styleTitle),
-          PlanTextStyle.title,
+          PlanTextStyle.h1,
         );
         expect(
           PlanSlashItem.textStyleFor(PlanSlashItem.styleHeading),
           PlanTextStyle.h2,
+        );
+        // The slash item named "Highlighted" is how users reach QUOTE
+        // (SlashExtensions.kt:27 → MapperExtension.kt:422).
+        expect(
+          PlanSlashItem.textStyleFor(PlanSlashItem.styleHighlighted),
+          PlanTextStyle.quote,
         );
       },
     );
