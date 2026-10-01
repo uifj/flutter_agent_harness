@@ -11,7 +11,7 @@ ADR-0039 / ADR-0041 / ADR-0042 三批改动的**真机签收单**。只列这台
 | # | 步骤 | 应当看到 | 已由测试证过 |
 | --- | --- | --- | --- |
 | 1.1 | 打开两个不同文件夹各起 2–3 次会话，回到侧栏 | 一个文件夹一个组头，当前工作区那组排第一；组头是 `文件夹字形 + 名字`，会话行缩进一级 | `workspace_history_test`「one folder per header」「the folder the user is in leads」 |
-| 1.2 | 亮/暗两档各看一次组头与行 | 组头底色与行底色不同档；选中行是整条圆角高亮，hover 只是加深一档，两者可分辨 | `sidebar_test`「the active row is marked by shape and semantics, not only wash」（读的是行自己的 `Semantics.selected`，两态取不同令牌这条没有机器证明——纯观感） |
+| 1.2 | 亮/暗两档各看一次组头与行 | 组头底色与行底色不同档；选中行是整条圆角高亮，hover 只是加深一档，两者可分辨 | `workspace_history_test`「selected and hovered are two different washes on a row」——读的是**画出来的** `BoxDecoration.color`（亮档；反向验过：把选中令牌换成 hover 令牌即红，量到 `0.10` 对 `0.06`）。**只剩暗档那一圈是眼睛的活** |
 | 1.3 | 点组头折叠，再点展开；然后 `⋮` → 全部收起 / 全部展开 | 折叠只留表头不建行；整列仍可滚动，页脚钉在底部；**放大字号时列表不会被挤到 0 高** | `a folded group keeps its header and builds no rows`、`collapse all…`、侧栏放大文本两档 |
 | 1.4 | 右键任意一行 | 六项：置顶/取消置顶、重命名、复制会话 id、复制工作区路径、在文件管理器中显示、删除 | `a conversation right-click can pin, rename and delete` |
 | 1.5 | 置顶一条 → 重启应用 | 它仍在组内最前；相对时间从 `刚刚` 依次变 `59分`/`23天` | `a pinned conversation sits above a newer one`、`relative_time_test` 四档边界 |
