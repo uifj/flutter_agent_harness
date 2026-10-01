@@ -100,12 +100,25 @@
    而"结构避开了"这件事从此有了一条断言，不再只是巧合。
    顺带修掉一处 harness 的病：文件级 collector 从不清空，于是新守卫读到了上一棵测试的手势——**红在错误的理由上比不红更坏**，
    这条已进 workflow.md §4。
-5. **节头那第二枚图标不是拖拽把手，是"全部收起/展开"——现在照它做了。** 再看截图 2 时我先把它读成
-   `GripVertical`（组序拖拽，已明确不做），去源码里核对：`WorkspaceSidebar.tsx:1074-1095` 那枚是
-   `toggleAllTaskGroups`，图形按状态换（全展开→`Minimize2`，全收起→`Maximize2`），`canToggle` 为假时**禁用而不是隐藏**。
-   我们此前把这两个动作拆成 `⋮` 菜单里的两行，代码注释还写着"上游是两枚图标"——**那句是错的**，上游是一枚随状态翻转的。
-   现在节头有那一枚：图标与 tooltip 都由 `groupKeys.every(collapsed.contains)` 决定，没有组可折时 `onTap: null`
-   （禁用而非消失——看不见的控件就是缺控件），菜单里那两行随之删掉：**同一个动作留两扇门，就会有两扇门各自腐烂**。
+5. **节头该有一枚随状态翻转的"全部收起/展开"钮——现在有了。（本条的**证据出处**在下面第 6 条里被纠正过一次。）**
+   我们此前把这两个动作拆成 `⋮` 菜单里的两行，代码注释还写着"上游是两枚图标"——**那句是错的**：
+   `WorkspaceSidebar.tsx:1071-1095` 是一枚 `toggleAllTaskGroups`，图形按状态换（全展开→`Minimize2`，全收起→`Maximize2`），
+   `canToggle` 为假时**禁用而不是隐藏**。现在节头有那一枚：图标与 tooltip 都由 `groupKeys.every(collapsed.contains)` 决定，
+   没有组可折时 `onTap: null`（禁用而非消失——看不见的控件就是缺控件），菜单里那两行随之删掉：
+   **同一个动作留两扇门，就会有两扇门各自腐烂**。
    守卫 `the head glyph folds every group, then reads as unfold` 钉的是"这枚钮说的是列表现在的样子"，
    反向验过：把 `allFolded` 钉成常量即红（`Expected: no matching candidates  Actual: found 1`）。
+6. **上一条最初的理由是错的：截图里那枚"六个点"确实就是拖拽把手。** 把截图 2 的节头右簇裁出来放大到 700px 逐像素看，
+   它是 **2 列 × 3 行的点阵**，与 `GripVertical` 同形；再核源码：截图那一行是**项目区**（`workspaceSidebar.projectsSection` = 「项目」）
+   的 `WorkspacePurposeSection.tsx:56-94`——`CollapsibleTrigger` 的标题 + chevron，右簇 `opacity-0` 到悬停才亮，
+   里面第一枚是 `data-purpose-section-drag-handle` 的 **`GripVertical` 排序把手**（`:82-92`），第二枚才是该区的 `action`（`+` = 添加项目）。
+   也就是说：**`Minimize2/Maximize2` 不在截图这一行里**，它住在**任务列表的头**（`WorkspaceSidebar.tsx:1032-1095`，
+   与「分组／项目」那把 Tabs 同一行），而那一行在这两张截图之外。
+   结论分两半：**要做的那件事不变**（我们的这一节就是上游的任务列表，全折/全放本来就该长在它的节头），
+   **但依据要换成源码行号而不是"截图里看到了"**——一张被裁过的截图不能用来指认某枚图标属于哪一行，
+   这正是本 ADR 第 3 次为"先看图就下结论"付学费。
+   顺带两条从这次核对里掉出来的事实：① 项目区节头那枚 chevron 折的是**整节**（连组头一起没了），
+   我们的节头钮折的是**所有组**（组头仍在）——**不另加"整节折叠"**：本侧栏只有这一节，再加一枚 `collapsedSections`
+   就是给同一个"我现在看不到历史"造第二份真值，且它与 `historyOrganize` 平铺档会互相吞状态；
+   ② 上游节头右簇与组行动作一样是**悬停才亮**，与我们"控件常驻"的刻意分歧同批（见本追记第 3 条），不单独记。
 
