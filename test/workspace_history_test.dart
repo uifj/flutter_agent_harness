@@ -291,6 +291,37 @@ void main() {
     },
   );
 
+  // The group header's `+` is how a folder that is not the current one gets a
+  // conversation of its own (upstream `onStartDraftInWorkspace`,
+  // `WorkspaceSidebarItem.tsx:344`). The harness wired it and no assertion ever
+  // pressed it — the inverse of ADR-0041's "tested verb with no door": here the
+  // door exists and nothing walks through it, so a wrong folder handed over
+  // would ship unnoticed.
+  testWidgets(
+    "a folder group's + starts a conversation in that folder, 未归属 has none",
+    (tester) async {
+      source.sessions = [
+        session('a', workspaceRoot: '/work/alpha'),
+        session('b', workspaceRoot: '/work/beta'),
+        session('c'),
+      ];
+      await pump(tester);
+
+      // Three group rows, two `+`: the unassigned bucket names no folder, so
+      // starting a conversation in it would be a promise the app cannot keep.
+      expect(find.text('Unassigned'), findsOneWidget);
+      expect(find.byTooltip('New session'), findsNWidgets(2));
+
+      // The last `+` is beta's (alpha's group leads, the unassigned row
+      // contributes none), and the only thing that matters is which folder the
+      // row hands over.
+      await tester.tap(find.byTooltip('New session').last);
+      await tester.pumpAndSettle();
+
+      expect(created, ['/work/beta']);
+    },
+  );
+
   /// The wash a row wears. Hover is painted by its `AnimatedContainer`, selection
   /// by the inner `Container`, and both are read as drawn rather than as widget
   /// arguments: `theme_token_test` already proves the two tokens differ, so what
