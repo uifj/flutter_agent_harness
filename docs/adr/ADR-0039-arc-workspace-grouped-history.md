@@ -121,4 +121,18 @@
    我们的节头钮折的是**所有组**（组头仍在）——**不另加"整节折叠"**：本侧栏只有这一节，再加一枚 `collapsedSections`
    就是给同一个"我现在看不到历史"造第二份真值，且它与 `historyOrganize` 平铺档会互相吞状态；
    ② 上游节头右簇与组行动作一样是**悬停才亮**，与我们"控件常驻"的刻意分歧同批（见本追记第 3 条），不单独记。
+7. **平铺档原来是一扇单程门——已修。** 给节头补那枚钮时顺手按"这枚钮在平铺档该是什么样"想下去，才发现节头**整行**
+   当时被 `historyOrganize == project` 门控（旧 `sidebar.dart:749`），而 `HistoryOrganize` 在全仓库**只有节头那把 `⋮` 里的两行会写**
+   （`grep -rn "historyOrganize\|HistoryOrganize\." lib` 去掉模型与 `main.dart` 的读点，写入点只有 `sidebar.dart` 那两行）——
+   也就是说用户一旦选了「平铺列表」，**界面上再没有任何地方能选回来**，只能改 `workbench/*.json`。
+   守卫 `flat mode draws the old list with no headers at all` 当时钉的正是 `find.text('Workspaces') findsNothing`：
+   **它把一个缺陷钉成了决定**（这条要记，因为"测试红了"从来不是"改动错了"的证据，得先问那条断言守的是不是本来就该改的东西）。
+   修法两半：① 节头在**两档都画**（它是这一节的头，不是分组那一档的头），平铺档丢的只是**组头**；
+   ② 节头那枚折钮在平铺档**不画**——平铺不是"现在没有组"而是"永远不会有组"，那枚钮在那里永远答不了任何问题
+   （上游同一判据：`WorkspaceSidebar.tsx:854-857` 的 `visible` 只在会分组的档里为真）；
+   而"分组档、暂时还没有会话"那一格**照旧画出来、置灰**：会话会在不换档的情况下出现，看不见的控件就是缺控件。
+   守卫两棵：`the flat view keeps its head — that menu is the only way back — and sheds the fold glyph`
+   （平铺档点节头 `⋮` 能选回「按工作区分组」）与 `an empty grouped view carries a dead glyph, not a missing one`
+   （按下去不写任何折叠集合）。**两半都反向验过**：把 `organize != flat` 那半删掉，前一棵当场红在
+   `Found 1 widget with text "Workspaces"` 之后的那枚 `Collapse all` 上。
 
