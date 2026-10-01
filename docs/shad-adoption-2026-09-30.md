@@ -54,6 +54,23 @@
 
 **计数基线**（守卫的先红数字，2026-09-30 实测）：`PopupMenuButton`/`showMenu` 标识符在 `lib/ui` 共 **13 处**（composer 3、hero 1、settings 2、tab bar 2、file_tree 1、free_window 1、git 3）；裸 `TextField(` 在 `lib/ui` 共 **5 处**。
 
+## 1B. 第二张设置页截图（`b4c94cbd`，2026-10-01：设置 · 模型 · 展开的 provider 卡）
+
+常规/外观两节在 B7/B8 已经换过皮，这一张是**没换的那几节**。逐件对着 pub-cache 0.56.3 的源码判：
+
+| # | 面（截图证据） | 现状 | 判定 | 换成 / 理由 |
+| --- | --- | --- | --- | --- |
+| S1 | 聚焦字段的皮（API 密钥，截图里**两层同心框**） | 桥 `inputTheme.decoration` 只写了 border/focusedBorder/errorBorder | shad（桥说一次） | 库里还留着 `decorationTheme()` 的 `secondaryFocusedBorder = ShadBorder.all(width: 2, color: ring, offset: 4)`（`themes/default_theme_variant.dart:362`，`ShadDecorator` 先 merge `theme.decoration`，`decorator.dart:120`），于是我们的 1px 品牌发丝外面又套一圈。桥把 secondary 两边写成 none，与 `dswBareInput` 同口径。**顺带纠正 B7 写下的错前提**："库默认是空 `ShadDecoration`，什么都不画"只对 `widget.decoration` 那一侧成立。 |
+| S2 | 五枚手写图标钮（reveal / recents 的 forget / 右上角 close / server 的 remove / 模型快选 trigger） | `Tooltip + DswHoverTap + Container` | shad | `DswIconButton`（身体已是 `ShadIconButton`）。`icon_button_test` 的计数按**类名**里有没有 `Icon`+`Button` 认，这五枚因此一直隐身——守卫同批改认法。 |
+| S3 | 步进器的 −／+ | 同上，但带发丝边框 | shad | `DswIconButton.outlined` → 库自己的 `ShadIconButton.outline`（`icon_button.dart:161`）。发丝是这一枚的形状语义（贴在数字两侧的按钮），所以进原语，不留在调用点。 |
+| S4 | provider 行的 编辑／关闭 胶囊 | 手写 `DswHoverTap + AnimatedContainer(radius float + Border.all)` | shad | `CapsuleButton(size: sm)`——它的身体本就是 `ShadButton`（ADR-0002 stage 5），同一页同一件事不该有两种写法。 |
+| S5 | 左栏搜索框 | 手写 `Container` 边框 + Row + Icon + 裸 `ShadInput(decoration: dswBareInput)` | shad | 一枚 `ShadInput(leading: Icon)`：框交给桥，图标交给库的槽位（`input.dart:112`）。旧注释自己写着"行的发丝就是框"，而字段本来就能有框——两处答案合成一处。 |
+| S6 | provider 行卡 / MCP server 卡 / 展开的 editor 面板 | 三枚 `Container + BoxDecoration` | shad | `ShadCard`。行卡与 server 卡正是桥 `cardTheme` 那一档；editor 是**填充无边**的内层，按 ADR-0029 在调用点自报 `backgroundColor` 与 `border: ShadBorder.none`。 |
+| S7 | 设置行的分隔发丝（`_SettingCellRow`／`_ActionRow`）与快捷菜单的 `Divider` | `Border(bottom: …)`／Material `Divider` | shad | `ShadSeparator`。 |
+| S8 | 「自定义」的 `<details>` | 手写 `DswHoverTap + AnimatedRotation` + 面板自己的 `_customizedOpen` 布尔 | shad | `ShadAccordion.single` + 一枚 `ShadAccordionItem`：展开动画、chevron、键盘与语义归库，面板里那份 open 状态随之删掉（两份真值的那一份）。 |
+| S9 | 左栏导航行 `_NavCell` | 手写 `DswHoverTap + AnimatedContainer`（左 3px accent、`toggled` 语义、非对称 padding） | 封装（保留必带理由） | shad 无垂直导航列表（决策 2）；`ShadButton` 的 `height/padding` 模型装不下"leading accent 边 + 40 座位随步子"，硬塞要往 decoration 里传两条边。它是 `primitives/segmented.dart` 的姊妹：身体是点击件，皮是宿主的。 |
+| S10 | 状态徽点 `_CredentialDot`、stepper 的读数格 | 非控件（8px 圆点、一格文本） | 保留 | 不是控件就没有"用不用 shad 的按钮"这一问题；点与读数各只有一个读者。 |
+
 ## 2. 批次与守卫（每批先红后绿）
 
 - **B6 菜单归一**：13 处归零。守卫 `test/shad_menu_adoption_test.dart`：① 源码计数（`PopupMenuButton`/`showMenu` 标识符在 `lib/ui` = 0，照 `tap_affordance_test` 的按文件计数先例，新增即红并指名文件）；② 真开一把 `ShadSelect` 读它渲染的皮等于桥给的档（`menu_chrome_test` 的**认法改缝、断言留**：从 Material `popupMenuTheme` 改读 ShadTheme 的 select 皮，照 ADR-0034 改 `chat_view_test` 认法的先例说明）；③ 放大文本两档（1.8x/2.2x）复量打开着的菜单。**先红**：计数守卫在当前树 = 13。
@@ -61,9 +78,15 @@
 
 - **B8 封装与身体（已落 @ 1b8ee9e/a89d670 + 分段控件那一次）**：`DswIconButton` 身体 = `ShadIconButton`（`icon_button_test` 四性仍绿 + 一条断言读身体类型）；`ShadCard` 收设置分区卡（`cardTheme` 进桥，`shad_radius_test` 扩一条"卡片皮只在桥说一次"）；分段控件（行 1）按决策 2 抽成 `primitives/segmented.dart`，格子身体是 `ShadButton.ghost`，守卫 `test/segmented_test.dart`（身体是库的 / 键盘走到并按得动 / 让位后仍自报姓名），三条逐条反向验过。**先红**：身体类型断言与 cardTheme 断言在当前树红。
 
+- **B9 设置页其余表面（§1B，S1–S8，已落 @ e2253b3）**：桥补 secondary 边框（S1）、五枚手写图标钮 + 步进器上 `DswIconButton`（S2/S3）、行胶囊上 `CapsuleButton`（S4）、搜索框合成一枚带 leading 的 `ShadInput`（S5）、三张卡上 `ShadCard`（S6）、分隔发丝上 `ShadSeparator`（S7）、`<details>` 上 `ShadAccordion`（S8）。守卫 `test/settings_shad_adoption_test.dart`：`lib/ui/settings/**` 里 `DswHoverTap(` 的图标钮写法、`Divider(`、`Border.all(` 三把计数归零 + 正向对照（扫不到东西不算通过），外加一条真开一次字段读它渲染出的边框层数（S1 只有画出来才看得见）。**先红**：守卫三条都反向验过——删掉桥里那行 `secondaryFocusedBorder: ShadBorder.none`，渲染断言当场红并报 `frame 1.0 + ring 2.0`；主题断言要求 secondary 三边**必须写明**（留 null 就是把答案交回库）；在页面里种回一枚 `Divider(` 即红并指名 `Offenders: {Material Divider: 1}`。**落地后**：`model_settings.dart` 里 Material `Border.all(`/`Divider(`/裸 `TextField(` 全为 0，`DswIconButton` 6 处、`ShadCard` 3 处、`ShadSeparator` 3 处、`ShadAccordion` 1 处；页面净 −452/+172 行。**另两处按 S9/S10 保留**：左栏导航行与两枚 `DswSelect` 的 trigger（库的槽位，本来就该宿主画）。
+
 ### B7 落地的三条事实（2026-09-30，字段与开关先落；代码 `d3181fb`，守卫 `b44c73f`）
 
 ① **shad 的 placeholder 画在字段之上而不是字段之内**，会换行的提示在一行高的盒子里被腰斩（实测 1.8x 下 `86.0 vs 43.0`）——律是「该让位的是提示，不是用户要打的字」，收成一枚 `dswInputHint`；② **字段必须装进行自己声明的座位**，`ShadInput` 的 BoxyColumn 会直接喊 `overflowed by 8.0`，而 Material 的 collapsed decorator 是默默裁掉的——也就是说这条以前一直在错，只是没人报；③ `ShadBadge` 的宽度要跟标签走（`Align(widthFactor: 1)`），否则在无界行里按 99861px 撑爆终端 banner。
+
+### B9 落地的两条事实（2026-10-01，第二张设置页截图之后）
+
+① **shad 的聚焦环不是 `BoxDecoration`**，而是 `ShadDecorator` 在 `decorator.dart:194` 挂的一枚 `CustomPaint(foregroundPainter: ShadOutwardBorderPainter)`——所以"读画出来的皮"这种守卫**只扫 `DecoratedBox` 会看不见第二条框**（第一版就是这么绿的：删掉桥里那行它照样报"一条描边"）。认法要同时收 `DecoratedBox` 的 border 与 `ShadOutwardBorderPainter` 的 border，断言才是截图上那两层同心框。② **一枚主题项没写明的边，就是库在替这个应用回答**：桥当时写了 border/focusedBorder/errorBorder 三边，`secondary*` 留空，`ShadDecorator` 先 merge 变体自己的 `decorationTheme()`（`decorator.dart:120`），于是五枚字段各画一条 1px 品牌发丝 + 一圈 2px 外扩环。B7 当时写下的"库默认是空 `ShadDecoration`，什么都不画"是错的前提——空的是 `widget.decoration` 那一侧。
 
 ### B8 落地的三条事实（2026-10-01，分段控件重做时对着栈追出来的）
 
