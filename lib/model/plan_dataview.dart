@@ -13,6 +13,8 @@
 // answer as data — rather than dropping the two enum values — is what makes
 // the reproduction faithful: the kind exists, the client says no, out loud.
 
+import 'plan_struct.dart';
+
 /// The six viewer kinds. Names follow the upstream `formattedName`.
 enum PlanViewerKind {
   grid('Grid', true),
@@ -618,6 +620,21 @@ class PlanDataView {
     return null;
   }
 
+  /// One place that rebuilds a data view. Seven call sites in the store used to
+  /// spell all four fields out by hand — a fifth field would have been a
+  /// silent drop in six of them.
+  PlanDataView copyWith({
+    List<PlanViewer>? viewers,
+    String? activeViewerId,
+    Map<String, List<String>>? objectOrders,
+    Map<String, List<String>>? groupOrders,
+  }) => PlanDataView(
+    viewers: viewers ?? this.viewers,
+    activeViewerId: activeViewerId ?? this.activeViewerId,
+    objectOrders: objectOrders ?? this.objectOrders,
+    groupOrders: groupOrders ?? this.groupOrders,
+  );
+
   Map<String, Object?> toJson() => {
     'viewers': [for (final v in viewers) v.toJson()],
     if (activeViewerId != null) 'activeViewerId': activeViewerId,
@@ -680,4 +697,108 @@ enum PlanViewerEditAction {
   sorts,
   duplicate,
   delete,
+}
+
+/// A set or a collection: the surface that owns a [PlanDataView].
+///
+/// `Set` and `TypeSet` resolve their records through filters over a source
+/// type; `Collection` keeps an explicit membership list — which is exactly the
+/// difference upstream draws between `DataView.Set` and `DataView.Collection`
+/// (`sets/state/ObjectState.kt:17-77`, identical members, different identity).
+class PlanCollection {
+  const PlanCollection({
+    required this.id,
+    required this.name,
+    required this.kind,
+    this.sourceTypeKey,
+    this.members = const [],
+    this.dataView = const PlanDataView(),
+    this.restrictions = const {},
+    this.iconEmoji,
+    this.description,
+  });
+
+  final String id;
+  final String name;
+  final PlanCollectionKind kind;
+
+  /// The type a set queries; null for a collection.
+  final String? sourceTypeKey;
+
+  /// Explicit membership, in the order it was added.
+  final List<String> members;
+  final PlanDataView dataView;
+  final Set<PlanDataViewRestriction> restrictions;
+  final String? iconEmoji;
+  final String? description;
+
+  PlanViewer? get activeViewer => dataView.activeViewer;
+
+  /// Which records this collection is about to show: a collection answers with
+  /// its own list, a set with every record of its source type.
+  List<String> candidateRecordIds(Iterable<PlanObject> all) => switch (kind) {
+    PlanCollectionKind.collection => members,
+    _ => [
+      for (final object in all)
+        if (sourceTypeKey == null || object.typeKey == sourceTypeKey) object.id,
+    ],
+  };
+
+  PlanCollection copyWith({
+    String? name,
+    List<String>? members,
+    PlanDataView? dataView,
+    Set<PlanDataViewRestriction>? restrictions,
+    String? iconEmoji,
+    String? description,
+  }) => PlanCollection(
+    id: id,
+    name: name ?? this.name,
+    kind: kind,
+    sourceTypeKey: sourceTypeKey,
+    members: members ?? this.members,
+    dataView: dataView ?? this.dataView,
+    restrictions: restrictions ?? this.restrictions,
+    iconEmoji: iconEmoji ?? this.iconEmoji,
+    description: description ?? this.description,
+  );
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'name': name,
+    'kind': kind.name,
+    if (sourceTypeKey != null) 'sourceTypeKey': sourceTypeKey,
+    'members': members,
+    'dataView': dataView.toJson(),
+    'restrictions': [for (final r in restrictions) r.name],
+    if (iconEmoji != null) 'iconEmoji': iconEmoji,
+    if (description != null) 'description': description,
+  };
+
+  static PlanCollection fromJson(Map<String, Object?> json) => PlanCollection(
+    id: json['id'] as String? ?? '',
+    name: json['name'] as String? ?? '',
+    kind: PlanCollectionKind.values.firstWhere(
+      (value) => value.name == json['kind'],
+      orElse: () => PlanCollectionKind.collection,
+    ),
+    sourceTypeKey: json['sourceTypeKey'] as String?,
+    members: [
+      for (final id in (json['members'] as List<Object?>? ?? const []))
+        if (id is String) id,
+    ],
+    dataView: PlanDataView.fromJson(
+      (json['dataView'] as Map<String, Object?>?) ?? const {},
+    ),
+    restrictions: {
+      for (final name in (json['restrictions'] as List<Object?>? ?? const []))
+        if (name is String)
+          PlanDataViewRestriction.values.firstWhere(
+            (value) => value.name == name,
+            orElse: () => PlanDataViewRestriction.views,
+          ),
+    },
+    iconEmoji: json['iconEmoji'] as String?,
+    description: json['description'] as String?,
+  );
 }

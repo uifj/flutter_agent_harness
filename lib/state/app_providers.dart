@@ -34,6 +34,7 @@ import '../host/profile_repository.dart';
 import '../host/terminal_manager.dart';
 import 'layout_controller.dart';
 import 'model_directory.dart';
+import 'plan_object_store.dart';
 import 'plan_task_store.dart';
 import 'prefs_store.dart';
 import 'session_index.dart';
@@ -194,6 +195,18 @@ WorkspaceModeController workspaceMode(Ref ref) {
 @Riverpod(keepAlive: true)
 PlanTaskStore planTaskStore(Ref ref) =>
     throw UnimplementedError('override planTaskStore in main or tests');
+
+/// The plan workspace's object store (ADR-0037 P2): records, types, relations,
+/// viewers, templates and widgets for one plan space. Same bootstrap rule as
+/// [planTaskStore] — `main` opens it before the first frame and overrides this,
+/// and the default throws because a store needs a real directory.
+///
+/// The mock data lives in ONE place: the seed `main` passes to `open`. Nothing
+/// below reads a flag for "is this mock", which is what keeps swapping in a
+/// real source a one-line change instead of a branch per widget.
+@Riverpod(keepAlive: true)
+PlanObjectStore planObjectStore(Ref ref) =>
+    throw UnimplementedError('override planObjectStore in main or tests');
 
 // ---- Profile (ADR-0006) ---------------------------------------------------
 //

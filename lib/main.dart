@@ -30,6 +30,8 @@ import 'model/app_settings.dart' as cfg;
 import 'state/app_providers.dart';
 import 'state/details_selection.dart';
 import 'state/hotkey_service.dart';
+import 'model/plan_mock_content.dart';
+import 'state/plan_object_store.dart';
 import 'state/plan_task_store.dart';
 import 'state/prefs_store.dart';
 import 'state/settings_store.dart';
@@ -62,6 +64,9 @@ Future<void> main() async {
   // The plan side's tasks (ADR-0007): same bootstrap rule — opened before the
   // first frame, never from a provider body.
   final planTasks = await PlanTaskStore.open(support);
+  // The plan workspace's object store (ADR-0037): the same bootstrap rule, and
+  // the only place the mock seed is named.
+  final planSpace = await PlanObjectStore.open(support, seed: planMockSeed());
   // The workspace access a previous launch recorded has to be claimed BEFORE
   // anything reads under the root — the file tree's first listing, the
   // session restore, the tools. A failure here is not an error: the hero
@@ -80,6 +85,7 @@ Future<void> main() async {
       settingsStoreProvider.overrideWithValue(settings),
       prefsStoreProvider.overrideWithValue(prefsStore),
       planTaskStoreProvider.overrideWithValue(planTasks),
+      planObjectStoreProvider.overrideWithValue(planSpace),
     ],
   );
   runApp(

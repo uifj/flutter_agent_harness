@@ -890,6 +890,74 @@ final class PlanTaskStoreProvider
 
 String _$planTaskStoreHash() => r'e5bf21593487422478a4d3379bd960134c61f420';
 
+/// The plan workspace's object store (ADR-0037 P2): records, types, relations,
+/// viewers, templates and widgets for one plan space. Same bootstrap rule as
+/// [planTaskStore] — `main` opens it before the first frame and overrides this,
+/// and the default throws because a store needs a real directory.
+///
+/// The mock data lives in ONE place: the seed `main` passes to `open`. Nothing
+/// below reads a flag for "is this mock", which is what keeps swapping in a
+/// real source a one-line change instead of a branch per widget.
+
+@ProviderFor(planObjectStore)
+final planObjectStoreProvider = PlanObjectStoreProvider._();
+
+/// The plan workspace's object store (ADR-0037 P2): records, types, relations,
+/// viewers, templates and widgets for one plan space. Same bootstrap rule as
+/// [planTaskStore] — `main` opens it before the first frame and overrides this,
+/// and the default throws because a store needs a real directory.
+///
+/// The mock data lives in ONE place: the seed `main` passes to `open`. Nothing
+/// below reads a flag for "is this mock", which is what keeps swapping in a
+/// real source a one-line change instead of a branch per widget.
+
+final class PlanObjectStoreProvider
+    extends
+        $FunctionalProvider<PlanObjectStore, PlanObjectStore, PlanObjectStore>
+    with $Provider<PlanObjectStore> {
+  /// The plan workspace's object store (ADR-0037 P2): records, types, relations,
+  /// viewers, templates and widgets for one plan space. Same bootstrap rule as
+  /// [planTaskStore] — `main` opens it before the first frame and overrides this,
+  /// and the default throws because a store needs a real directory.
+  ///
+  /// The mock data lives in ONE place: the seed `main` passes to `open`. Nothing
+  /// below reads a flag for "is this mock", which is what keeps swapping in a
+  /// real source a one-line change instead of a branch per widget.
+  PlanObjectStoreProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'planObjectStoreProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$planObjectStoreHash();
+
+  @$internal
+  @override
+  $ProviderElement<PlanObjectStore> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  PlanObjectStore create(Ref ref) {
+    return planObjectStore(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(PlanObjectStore value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<PlanObjectStore>(value),
+    );
+  }
+}
+
+String _$planObjectStoreHash() => r'8631c5c9ad1648d8805b567deaf81a0c415a4ba4';
+
 /// The identity source. The mock is the live path today; `main` overrides this
 /// with a Supabase-backed repository when that lands (the seam is documented in
 /// `host/profile_repository.dart`) — the only thing the rest of the app sees is
