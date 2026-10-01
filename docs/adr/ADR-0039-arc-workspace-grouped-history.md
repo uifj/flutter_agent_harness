@@ -72,3 +72,22 @@
 - 侧栏的放大文本与窄列守卫要重挂：组头是一枚新座位，`grep -rln amplified_text_probe.dart test` 里 `sidebar_test` 那棵必须覆盖"多组 + 折叠 + 展开"三态。
 - 明确不做（另立，不要顺手加）：跨项目搜索（上游侧栏那把是死键，真身在 command center，我们要做就得先立自己的搜索面）、归档区与"标记未读"、live workflow 计数徽标（我们没有 per-workspace 活动流，画出来就是假徽标）、组序拖拽（上游靠项目 tab 顺序，我们没有多工作区 tab，硬造一份顺序就是新真值）、sqlite 会话索引（当前量级用不上，ponytail）。
 - 待 macOS 真机走查：分组在亮/暗两档的观感、`在文件管理器中显示`（这格旧名 `在访达中显示`，2026-10-02 由 ADR-0041 改中立）、切工作区后工作台是否跟着换对、以及"未归属"这一档的文案是否读得通。**逐屏步骤与"哪些已由测试证过"列在 `docs/walkthrough-workspace-history-2026-10-02.md`，走查用那一页，不要用这一句。**
+
+## 追记（2026-10-02，`workspace_history_test` 新两棵守卫之后）：组头那排动作的完整清点
+
+第二次逐枚对着 `WorkspaceSidebarItem.tsx` 走查（这次是数**消费者**，不是数图标），三条结论：
+
+1. **组头 `+` 是有活对象的，而且它此前没有守卫。** 上游 `onStartDraftInWorkspace` 在 `:300` 与 `:344` 两处被按（一是展开行、一是 `+` 按钮），
+   本应用只复刻后者（`sidebar.dart` 的 `onNewSessionInWorkspace` → `main.dart:372` 的 `adoptRecent` + `newSession`）。
+   问题是：这条回调在测试 harness 里被 `created.add` 接住，却**没有任何断言按过一次**——那是 ADR-0041"有两条单测、生产零调用点"的镜像形态：
+   门在那儿，没人走过去验过它开对房间。今天补上（`a folder group's + starts a conversation in that folder, 未归属 has none`），
+   并**反向验过两半**：把交出去的路径写死成另一个组 → 红在 `Expected: ['/work/beta'] Actual: ['/work/alpha']`；
+   去掉 `group.isUnassigned` 那道门 → 红在 `Found 3 widgets … is too few/many`。也就是说"未归属不给 +"与"交的是本组路径"两件事从此都有牙。
+2. **上游的"展开=打开这个工作区"刻意不复刻。** 它把 `Collapsible.onOpenChange` 的展开分支直接送进草稿导航（源码注释：
+   "workspace 行表达『打开这个 workspace』，不是恢复它上次选中的 session"），于是**收起还能，展开必切**。
+   本应用把折叠做成纯折叠（`onTap: onToggle`），换工作区只有两扇门：组头 `+`（新建并落在那个工作区）与 `⋮` 的"显示文件树"
+   （`adoptRecent` + `openFolder`）。理由是同一族的律：一枚把手只做一件事——把"折叠"与"切换"绑在一起，
+   用户收起再展开就会在自己没要求的情况下换掉 agent 可读的文件夹（那是权限面的动作，不该是折叠的副作用）。
+3. **按组分页（`hasMore` / `onShowMoreTasks`）不复刻**：上游那份 `taskListHasMore` 来自数据层的分页，
+   本应用的分组列表是一条惰性 `SliverList`（组头也是它的行），滚动即分页，加一枚"显示更多"只会多一个必须相等的真值。
+
