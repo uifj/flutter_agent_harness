@@ -935,7 +935,15 @@ class _SettingsPanelState extends State<SettingsPanel> {
           children: [
             ShadAccordionItem<String>(
               value: 'customized',
-              title: Text(context.tr('customized')),
+              // Named, because the library's own heading style is its
+              // `textTheme.list` -- a second type ramp nobody mapped (ADR-0027).
+              title: Text(
+                context.tr('customized'),
+                style: DswType.xxsStrong12.copyWith(
+                  color: color.labelSecondary,
+                ),
+              ),
+              padding: const EdgeInsets.only(top: 12, bottom: 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
