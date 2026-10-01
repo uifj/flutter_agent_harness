@@ -44,9 +44,13 @@
    - 一节标题「工作区」，其下每组：**组头行** = 折叠 chevron + `Folder`/`FolderOpen` 图标 + 叶子名（`p.basename`）+ 行尾 `DswIconButton` 两枚：`+`（在该工作区新开会话）与 `⋮`（菜单：显示文件树 / 移除此工作区）；当前工作区那组默认展开并在名旁给一枚 `stateDot` 表示"就是这里"。
    - **会话行**沿用 `rowSession * step` 座位，标题 `Expanded` + ellipsis（行里自由文本必须有 flex 上界），右侧 `formatRelativeTime`，置顶的在标题前挂一枚小图标（不是换色，见 ADR-0017 S2）。
    - 右键走 `primitives/menu.dart` 的 `DswContextMenu`（ADR-0036 B6：`lib/ui` 里 `PopupMenuButton`/`showMenu` 必须保持 0）：重命名 / 置顶或取消置顶 / 删除 / 复制会话 id / 复制工作区路径 / 在访达中显示。reveal 挂在会话行而不是只挂组头，是照上游来的（`useTaskListItemContextActions.ts:168-175` 同时给两处）：用户问的通常是「这次对话的文件去哪了」，那是会话的问题，不是文件夹表头的问题。非 mac 上该项不出现，与 `project_folder_ops` 的 `isSupported` 同一个判据。
-  **（2026-10-02 更正：最后这半句不成立，从未有过 `isSupported` 门。**`lib/host/reveal.dart`** 从第一天起就是三平台各答一次**
+  **（2026-10-02 更正：`非 mac 上该项不出现` 那半句不成立，从未有过 `isSupported` 门。**`lib/host/reveal.dart`** 从第一天起就是三平台各答一次**
   （`open`／`explorer`／`xdg-open`），所以这一格在 Windows 与 Linux 上同样出现，只是叫法不该是 Finder——
   那枚错名由 ADR-0041 收成中立的「在文件管理器中显示」。)**
+   同一枚条件长在**路径**上：一行没有 `workspaceRoot`（未归属档）时，「复制工作区路径」与 reveal **两格整对不出现**，
+   组头那一档则连 `⋮` 与 `+` 都没有——不是灰着，是不画（它没有答案可给）。守卫两向都钉：
+   `a row with no folder offers no path to reveal` 与 `a folder group's + starts a conversation in that folder, 未归属 has none`。
+   走查时按这个数：**有路径的行六项，没路径的行四项**。
    - 列表仍必须是惰性的（`SliverList`），折叠的组不建行。
 7. **「代码」侧补两件**（右侧工作台，用户确认的口径）：
    - 组菜单「显示文件树」= `setWorkspace(path)` 后在右栏开/聚焦 `explorer` tab；不可达路径先反馈再要 picker（macOS 的 security-scoped 授权不能凭空恢复）。
