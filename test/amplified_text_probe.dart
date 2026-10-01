@@ -69,9 +69,19 @@ List<String> spillDefects(WidgetTester tester) {
   final found = <String>[];
   for (final ro in tester.allRenderObjects.whereType<RenderFlex>()) {
     if (ro.direction != Axis.horizontal) continue;
+    // An overlay entry that is mounted but not shown is still in
+    // `allRenderObjects`, and nothing in its subtree has ever been laid out:
+    // `size` and `constraints` both assert there. shad keeps a closed popover or
+    // select popup mounted this way (`OverlayPortal`), so without this line a
+    // host that merely contains a menu measures nothing and throws instead.
+    if (!ro.hasSize) continue;
     final max = ro.constraints.maxWidth;
     if (max >= double.infinity) continue;
-    final children = ro.getChildrenAsList().whereType<RenderBox>().toList();
+    final children = ro
+        .getChildrenAsList()
+        .whereType<RenderBox>()
+        .where((b) => b.hasSize)
+        .toList();
     final sum = children.fold<double>(0, (a, b) => a + b.size.width);
     if (sum <= max + 0.5) continue;
     // The row alone is not actionable: which child would not yield is the

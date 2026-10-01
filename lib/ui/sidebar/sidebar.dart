@@ -27,6 +27,7 @@ import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
+import '../primitives/segmented.dart';
 import '../primitives/tappable.dart';
 import '../settings/widgets/settings_quick_menu.dart';
 import '../layout/columns.dart';
@@ -256,9 +257,6 @@ class _SidebarState extends State<Sidebar> {
   Widget _modeSwitch(DswAlias color, {required bool wide}) {
     final onSelect = widget.onSelectMode!;
     final mode = widget.mode ?? WorkspaceMode.agent;
-    // One line of chrome, so both seats ride the text step: a nailed 32/28 held
-    // 40.0 worth of s14 label at the system's 1.8x step and cut "Plan"/"Agent".
-    final step = MediaQuery.textScalerOf(context).scale(1);
     if (!wide) {
       final other = mode == WorkspaceMode.agent
           ? WorkspaceMode.plan
@@ -278,84 +276,21 @@ class _SidebarState extends State<Sidebar> {
         ),
       );
     }
-    return Container(
-      height: 32 * step,
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: color.bgLayer3,
-        borderRadius: BorderRadius.circular(DswShape.card),
-      ),
-      child: Row(
-        children: [
-          for (final (candidate, icon, label) in [
-            (WorkspaceMode.plan, LucideIcons.book_open, context.tr('planMode')),
-            (
-              WorkspaceMode.agent,
-              LucideIcons.message_square,
-              context.tr('agentMode'),
-            ),
-          ])
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, cell) {
-                  // The composer chips' rule, applied to the switch: a cell that
-                  // cannot fit its label sheds the label before the row gives up
-                  // on the control. 71px is 'Agent' at s14 - the wider of the two
-                  // names in English (the 企划 pair is shorter) - and the glyph
-                  // plus its gap cost 20. At the system's 1.8x step the label
-                  // wanted 127.2 in a 126.0 cell and spilled, which is what this
-                  // line replaces; the glyph alone still says which mode is which.
-                  final showLabel = cell.maxWidth >= 20 + 71 * step;
-                  return _Pressable(
-                    onTap: () => onSelect(candidate),
-                    hoverColor: color.sidebarNavItemActive,
-                    borderRadius: BorderRadius.circular(DswShape.control),
-                    semanticLabel: showLabel ? null : label,
-                    child: Container(
-                      height: 28 * step,
-                      decoration: BoxDecoration(
-                        color: mode == candidate
-                            ? color.sidebarNavItemActive
-                            : null,
-                        borderRadius: BorderRadius.circular(DswShape.control),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            icon,
-                            size: DswShape.iconSm,
-                            color: mode == candidate
-                                ? color.labelPrimary
-                                : color.labelSecondary,
-                          ),
-                          if (showLabel) ...[
-                            const SizedBox(width: 6),
-                            // Flexible, not a bare Text: a Row hands a non-flex
-                            // child the whole row width to size itself in, so the
-                            // ellipsis would never have triggered.
-                            Flexible(
-                              child: Text(
-                                label,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: DswType.s14.copyWith(
-                                  color: mode == candidate
-                                      ? color.labelPrimary
-                                      : color.labelSecondary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-        ],
-      ),
+    return DswSegmented<WorkspaceMode>(
+      selected: mode,
+      onSelect: onSelect,
+      segments: [
+        DswSegment(
+          value: WorkspaceMode.plan,
+          icon: LucideIcons.book_open,
+          label: context.tr('planMode'),
+        ),
+        DswSegment(
+          value: WorkspaceMode.agent,
+          icon: LucideIcons.message_square,
+          label: context.tr('agentMode'),
+        ),
+      ],
     );
   }
 

@@ -384,8 +384,14 @@ void main() {
       email: 'uifj@example.com',
       subscription: 'Pro',
     );
+    // The cell that shed its word has to keep naming itself. Recognised by the
+    // semantics node rather than a primitive's parameter: since ADR-0036 the
+    // switch's body is shad's button, which has no `semanticLabel` of its own, so
+    // the name rides on the `Semantics` wrapper the primitive adds for exactly
+    // this case. The assertion - a labelled cell exists only once the label is
+    // gone - is unchanged.
     final namedCell = find.byWidgetPredicate(
-      (widget) => widget is DswHoverTap && widget.semanticLabel == 'Plan',
+      (widget) => widget is Semantics && widget.properties.label == 'Plan',
     );
 
     for (final collapsed in const [false, true]) {
