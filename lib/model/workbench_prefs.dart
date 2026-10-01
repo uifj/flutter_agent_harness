@@ -28,12 +28,22 @@ const terminalFontSizeMax = 32;
 /// port agrees with the design it is porting.
 const terminalFontSizeDefault = 13;
 
+/// How the agent's history list is arranged (ADR-0039 D3).
+///
+/// `project` is the reference implementation's own default
+/// (`sidebarTaskPreferences.ts:12`). `flat` stays available on purpose: a user
+/// who works in one folder gains nothing from a grouping layer, and hiding the
+/// choice would make the new default feel imposed.
+enum HistoryOrganize { project, flat }
+
 class WorkbenchPrefs {
   const WorkbenchPrefs({
     this.bottomPanelAutoTerminal = true,
     this.terminalFontFamily = '',
     this.terminalFontSize = terminalFontSizeDefault,
     this.tabsEnabled = const {},
+    this.historyOrganize = HistoryOrganize.project,
+    this.collapsedWorkspaces = const {},
   });
 
   WorkbenchPrefs.fromJson(Map<String, dynamic> json)
@@ -42,7 +52,12 @@ class WorkbenchPrefs {
       terminalFontSize = clampTerminalFontSize(
         json['terminalFontSize'] as num? ?? terminalFontSizeDefault,
       ),
-      tabsEnabled = _readTabsEnabled(json['tabsEnabled']);
+      tabsEnabled = _readTabsEnabled(json['tabsEnabled']),
+      historyOrganize = HistoryOrganize.values.firstWhere(
+        (option) => option.name == json['historyOrganize'],
+        orElse: () => HistoryOrganize.project,
+      ),
+      collapsedWorkspaces = _readCollapsed(json['collapsedWorkspaces']);
 
   /// Whether expanding the bottom panel for the FIRST time in a session tries
   /// to open a fresh terminal tab there.
@@ -58,6 +73,29 @@ class WorkbenchPrefs {
   /// explicit `false` disables.
   final Map<String, bool> tabsEnabled;
 
+  /// The history list's arrangement.
+  final HistoryOrganize historyOrganize;
+
+  /// The folders folded up in the history, keyed by `workspaceKey` — not by
+  /// display name and not by raw path, so `/var/...` and `/private/var/...`
+  /// stay one folder with one fold state.
+  final Set<String> collapsedWorkspaces;
+
+  bool workspaceCollapsed(String key) => collapsedWorkspaces.contains(key);
+
+  WorkbenchPrefs withHistoryOrganize(HistoryOrganize organize) =>
+      copyWith(historyOrganize: organize);
+
+  WorkbenchPrefs withWorkspaceCollapsed(String key, bool collapsed) {
+    final next = Set.of(collapsedWorkspaces);
+    if (collapsed) {
+      next.add(key);
+    } else {
+      next.remove(key);
+    }
+    return copyWith(collapsedWorkspaces: Set.unmodifiable(next));
+  }
+
   /// Whether [type] may be opened — absent or true is yes.
   bool tabEnabled(String type) => tabsEnabled[type] != false;
 
@@ -70,24 +108,28 @@ class WorkbenchPrefs {
     } else {
       next[type] = false;
     }
-    return WorkbenchPrefs(
-      bottomPanelAutoTerminal: bottomPanelAutoTerminal,
-      terminalFontFamily: terminalFontFamily,
-      terminalFontSize: terminalFontSize,
-      tabsEnabled: Map.unmodifiable(next),
-    );
+    // Through copyWith, not a fresh constructor call: an earlier version listed
+    // every field by hand, and any field added afterwards would have been reset
+    // by toggling a tab — a collapsed folder springing open for an unrelated
+    // edit.
+    return copyWith(tabsEnabled: Map.unmodifiable(next));
   }
 
   WorkbenchPrefs copyWith({
     bool? bottomPanelAutoTerminal,
     String? terminalFontFamily,
     int? terminalFontSize,
+    Map<String, bool>? tabsEnabled,
+    HistoryOrganize? historyOrganize,
+    Set<String>? collapsedWorkspaces,
   }) => WorkbenchPrefs(
     bottomPanelAutoTerminal:
         bottomPanelAutoTerminal ?? this.bottomPanelAutoTerminal,
     terminalFontFamily: terminalFontFamily ?? this.terminalFontFamily,
     terminalFontSize: terminalFontSize ?? this.terminalFontSize,
-    tabsEnabled: tabsEnabled,
+    tabsEnabled: tabsEnabled ?? this.tabsEnabled,
+    historyOrganize: historyOrganize ?? this.historyOrganize,
+    collapsedWorkspaces: collapsedWorkspaces ?? this.collapsedWorkspaces,
   );
 
   Map<String, dynamic> toJson() => {
@@ -95,6 +137,9 @@ class WorkbenchPrefs {
     'terminalFontFamily': terminalFontFamily,
     'terminalFontSize': terminalFontSize,
     if (tabsEnabled.isNotEmpty) 'tabsEnabled': tabsEnabled,
+    'historyOrganize': historyOrganize.name,
+    if (collapsedWorkspaces.isNotEmpty)
+      'collapsedWorkspaces': [...collapsedWorkspaces],
   };
 
   static Map<String, bool> _readTabsEnabled(Object? raw) {
@@ -112,17 +157,30 @@ class WorkbenchPrefs {
       other.bottomPanelAutoTerminal == bottomPanelAutoTerminal &&
       other.terminalFontFamily == terminalFontFamily &&
       other.terminalFontSize == terminalFontSize &&
-      _mapEq(other.tabsEnabled, tabsEnabled);
+      other.historyOrganize == historyOrganize &&
+      _mapEq(other.tabsEnabled, tabsEnabled) &&
+      other.collapsedWorkspaces.length == collapsedWorkspaces.length &&
+      other.collapsedWorkspaces.containsAll(collapsedWorkspaces);
 
   @override
   int get hashCode => Object.hash(
     bottomPanelAutoTerminal,
     terminalFontFamily,
     terminalFontSize,
+    historyOrganize,
     Object.hashAllUnordered(
       tabsEnabled.entries.map((e) => Object.hash(e.key, e.value)),
     ),
+    Object.hashAllUnordered(collapsedWorkspaces),
   );
+
+  static Set<String> _readCollapsed(Object? raw) {
+    if (raw is! List) return const {};
+    return Set.unmodifiable({
+      for (final entry in raw)
+        if (entry is String && entry.isNotEmpty) entry,
+    });
+  }
 
   static bool _mapEq(Map<String, bool> a, Map<String, bool> b) {
     if (a.length != b.length) return false;

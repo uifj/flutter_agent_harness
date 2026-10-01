@@ -63,6 +63,45 @@ void main() {
       });
       expect(fromJsonLow.terminalFontSize, terminalFontSizeMin);
     });
+
+    test(
+      'the grouping choices round-trip, and an unknown option falls back',
+      () {
+        const prefs = WorkbenchPrefs(
+          historyOrganize: HistoryOrganize.flat,
+          collapsedWorkspaces: {'/one', '/two'},
+        );
+        final decoded = WorkbenchPrefs.fromJson(
+          jsonDecode(jsonEncode(prefs.toJson())) as Map<String, dynamic>,
+        );
+        expect(decoded, prefs);
+
+        final fromFuture = WorkbenchPrefs.fromJson(const {
+          'historyOrganize': 'kanban',
+          'collapsedWorkspaces': ['/one', 3, ''],
+        });
+        expect(fromFuture.historyOrganize, HistoryOrganize.project);
+        expect(fromFuture.collapsedWorkspaces, {'/one'});
+      },
+    );
+
+    test('toggling a tab cannot spring a collapsed folder open', () {
+      const prefs = WorkbenchPrefs(
+        collapsedWorkspaces: {'/one'},
+        historyOrganize: HistoryOrganize.project,
+      );
+
+      final next = prefs.withTabEnabled('git', false);
+
+      expect(next.workspaceCollapsed('/one'), isTrue);
+      expect(next.historyOrganize, HistoryOrganize.project);
+      expect(
+        prefs.tabEnabled('git'),
+        isTrue,
+        reason: 'the source is untouched',
+      );
+      expect(next.tabEnabled('git'), isFalse);
+    });
   });
 
   group('PrefsStore', () {
