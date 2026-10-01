@@ -67,6 +67,7 @@ void main() {
     String? currentWorkspace,
     List<String> knownWorkspaces = const [],
     bool flat = false,
+    List<HistoryOrganize>? organizes,
   }) async {
     // The index fills itself from a scan, so every mount here starts from a
     // fresh one — the same order the app reaches the list in.
@@ -101,6 +102,9 @@ void main() {
                     onRemoveWorkspace: removed.add,
                     onOpenWorkspaceTree: trees.add,
                     onAddWorkspace: () {},
+                    onHistoryOrganizeChanged: organizes == null
+                        ? null
+                        : organizes.add,
                   ),
                 ),
               ),
@@ -288,6 +292,24 @@ void main() {
     expect(find.text('alpha'), findsNothing);
     expect(find.text('session a'), findsOneWidget);
     expect(find.text('session c'), findsOneWidget);
+  });
+
+  testWidgets('the section menu is the only place the arrangement changes', (
+    tester,
+  ) async {
+    source.sessions = [session('a', workspaceRoot: '/work/alpha')];
+    final chosen = <HistoryOrganize>[];
+
+    await pump(tester, organizes: chosen);
+
+    await tester.tap(find.byTooltip('History view'));
+    await tester.pumpAndSettle();
+    expect(find.text('Group by workspace'), findsOneWidget);
+    expect(find.text('Flat list'), findsOneWidget);
+
+    await tester.tap(find.text('Flat list'));
+    await tester.pumpAndSettle();
+    expect(chosen, [HistoryOrganize.flat]);
   });
 
   testWidgets('a session with no folder lands in the unassigned bucket', (
