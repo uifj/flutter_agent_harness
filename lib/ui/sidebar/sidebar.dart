@@ -86,6 +86,7 @@ class Sidebar extends StatefulWidget {
     this.onRemoveWorkspace,
     this.onOpenWorkspaceTree,
     this.onAddWorkspace,
+    this.onSetCollapsedWorkspaces,
   });
 
   /// The resolved rail state, decided by the frame's concession solve.
@@ -120,6 +121,11 @@ class Sidebar extends StatefulWidget {
   /// the hero's, because a second path to granting access is a second answer to
   /// "which folder may the agent read".
   final VoidCallback? onAddWorkspace;
+
+  /// Replaces the whole fold set at once (expand all / collapse all). One write
+  /// per gesture, so a collapse-all cannot leave the list half-folded if a
+  /// notification lands in the middle.
+  final ValueChanged<Set<String>>? onSetCollapsedWorkspaces;
 
   /// The signed-in user, or null while the profile source is loading or when
   /// there is none — the footer avatar then shows an anonymous placeholder.
@@ -746,6 +752,13 @@ class _SidebarState extends State<Sidebar> {
             organize: widget.historyOrganize,
             onOrganizeChanged: widget.onHistoryOrganizeChanged,
             onAddWorkspace: widget.onAddWorkspace,
+            groupKeys: [
+              for (final line in lines)
+                if (line.group != null) line.group!.key,
+            ],
+            onCollapseAll: widget.onSetCollapsedWorkspaces == null
+                ? null
+                : (keys) => widget.onSetCollapsedWorkspaces!(keys),
           ),
         ),
       SliverList.builder(
@@ -857,13 +870,27 @@ class _SidebarState extends State<Sidebar> {
       icon: LucideIcons.copy,
       onTap: () => Clipboard.setData(ClipboardData(text: session.id)),
     ),
-    if (session.workspaceRoot != null)
+    if (session.workspaceRoot != null) ...[
       DswMenuEntry(
         label: context.tr('copyWorkspacePath'),
         icon: LucideIcons.copy,
         onTap: () =>
             Clipboard.setData(ClipboardData(text: session.workspaceRoot!)),
       ),
+      // Upstream puts reveal on the task row as well as the project row
+      // (`useTaskListItemContextActions.ts:168-175`): the question being asked
+      // is usually "where did this conversation's files go", which is about the
+      // conversation, not about a folder header.
+      DswMenuEntry(
+        label: context.tr('revealInFinder'),
+        icon: LucideIcons.external_link,
+        onTap: () async {
+          if (await revealInFileManager(session.workspaceRoot!)) return;
+          if (!mounted) return;
+          showFeedback(context, context.tr('revealFailed'), destructive: true);
+        },
+      ),
+    ],
     DswMenuEntry(
       label: context.tr('deleteSession'),
       icon: LucideIcons.trash,
@@ -1381,16 +1408,26 @@ class _HistorySectionRow extends StatelessWidget {
     required this.organize,
     required this.onOrganizeChanged,
     required this.onAddWorkspace,
+    required this.groupKeys,
+    required this.onCollapseAll,
   });
 
   final HistoryOrganize organize;
   final ValueChanged<HistoryOrganize>? onOrganizeChanged;
   final VoidCallback? onAddWorkspace;
 
+  /// Every folder currently drawn as a group — what "collapse all" means.
+  final List<String> groupKeys;
+
+  /// One writer for the whole fold set, so collapsing everything is one write
+  /// rather than one notification per folder.
+  final ValueChanged<Set<String>>? onCollapseAll;
+
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
     final step = MediaQuery.textScalerOf(context).scale(1);
+    final canFold = onCollapseAll != null && groupKeys.isNotEmpty;
     return SizedBox(
       height: DswShape.rowSession * step,
       child: Row(
@@ -1410,34 +1447,56 @@ class _HistorySectionRow extends StatelessWidget {
               ),
             ),
           ),
-          if (onOrganizeChanged != null)
+          // The menu belongs to the section, not to the organize choice: a
+          // caller that only wired the fold actions still gets the menu, and
+          // each block inside it appears only with its own action.
+          if (onOrganizeChanged != null || canFold)
             DswMenu(
               label: context.tr('historyView'),
               items: (context) => [
-                DswMenuEntry(
-                  label: context.tr('groupByWorkspace'),
-                  icon: LucideIcons.folder_tree,
-                  trailing: organize == HistoryOrganize.project
-                      ? Icon(
-                          LucideIcons.check,
-                          size: DswShape.iconTiny,
-                          color: color.labelPrimary,
-                        )
-                      : null,
-                  onTap: () => onOrganizeChanged!(HistoryOrganize.project),
-                ),
-                DswMenuEntry(
-                  label: context.tr('flatList'),
-                  icon: LucideIcons.list,
-                  trailing: organize == HistoryOrganize.flat
-                      ? Icon(
-                          LucideIcons.check,
-                          size: DswShape.iconTiny,
-                          color: color.labelPrimary,
-                        )
-                      : null,
-                  onTap: () => onOrganizeChanged!(HistoryOrganize.flat),
-                ),
+                if (onOrganizeChanged != null) ...[
+                  DswMenuEntry(
+                    label: context.tr('groupByWorkspace'),
+                    icon: LucideIcons.folder_tree,
+                    trailing: organize == HistoryOrganize.project
+                        ? Icon(
+                            LucideIcons.check,
+                            size: DswShape.iconTiny,
+                            color: color.labelPrimary,
+                          )
+                        : null,
+                    onTap: () => onOrganizeChanged!(HistoryOrganize.project),
+                  ),
+                  DswMenuEntry(
+                    label: context.tr('flatList'),
+                    icon: LucideIcons.list,
+                    trailing: organize == HistoryOrganize.flat
+                        ? Icon(
+                            LucideIcons.check,
+                            size: DswShape.iconTiny,
+                            color: color.labelPrimary,
+                          )
+                        : null,
+                    onTap: () => onOrganizeChanged!(HistoryOrganize.flat),
+                  ),
+                ],
+                if (canFold) ...[
+                  const DswMenuEntry.divider(),
+                  // Upstream ships these as two header glyphs
+                  // (`WorkspaceSidebar.tsx:1072-1095`); in a menu they cost no
+                  // seat in a 280px column, which is the constraint that made
+                  // the reference's own chrome shed labels first.
+                  DswMenuEntry(
+                    label: context.tr('expandAll'),
+                    icon: LucideIcons.chevron_down,
+                    onTap: () => onCollapseAll!(const {}),
+                  ),
+                  DswMenuEntry(
+                    label: context.tr('collapseAll'),
+                    icon: LucideIcons.chevron_right,
+                    onTap: () => onCollapseAll!(groupKeys.toSet()),
+                  ),
+                ],
               ],
               trigger: (context) => Icon(
                 LucideIcons.ellipsis,

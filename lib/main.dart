@@ -390,6 +390,9 @@ class _DshAppState extends ConsumerState<DshApp> {
                             ),
                           ),
                           onAddWorkspace: scope.pickFromHero,
+                          onSetCollapsedWorkspaces: (keys) => ref
+                              .read(prefsStoreProvider)
+                              .save(prefs.copyWith(collapsedWorkspaces: keys)),
                         ),
                       ),
                       center: _centerPane(doc),

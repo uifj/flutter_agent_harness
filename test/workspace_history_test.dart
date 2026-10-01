@@ -68,6 +68,7 @@ void main() {
     List<String> knownWorkspaces = const [],
     bool flat = false,
     List<HistoryOrganize>? organizes,
+    List<Set<String>>? foldSets,
   }) async {
     // The index fills itself from a scan, so every mount here starts from a
     // fresh one — the same order the app reaches the list in.
@@ -104,7 +105,10 @@ void main() {
                     onAddWorkspace: () {},
                     onHistoryOrganizeChanged: organizes == null
                         ? null
-                        : organizes.add,
+                        : (value) => organizes.add(value),
+                    onSetCollapsedWorkspaces: foldSets == null
+                        ? null
+                        : (keys) => foldSets.add(keys),
                   ),
                 ),
               ),
@@ -272,10 +276,25 @@ void main() {
     expect(find.text('Rename'), findsOneWidget);
     expect(find.text('Delete'), findsOneWidget);
     expect(find.text('Copy session id'), findsOneWidget);
+    expect(find.text('Reveal in Finder'), findsOneWidget);
 
     await tester.tap(find.text('Pin to top'));
     await tester.pumpAndSettle();
     expect(registry.pinnedAt('a'), isNotNull);
+  });
+
+  testWidgets('a row with no folder offers no path to reveal', (tester) async {
+    source.sessions = [session('nobody')];
+
+    await pump(tester);
+    await tester.tap(find.text('Unassigned'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('session nobody'), buttons: kSecondaryButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Copy session id'), findsOneWidget);
+    expect(find.text('Copy workspace path'), findsNothing);
+    expect(find.text('Reveal in Finder'), findsNothing);
   });
 
   testWidgets('flat mode draws the old list with no headers at all', (
@@ -310,6 +329,30 @@ void main() {
     await tester.tap(find.text('Flat list'));
     await tester.pumpAndSettle();
     expect(chosen, [HistoryOrganize.flat]);
+  });
+
+  testWidgets('collapse all folds every group, expand all unfolds them', (
+    tester,
+  ) async {
+    source.sessions = [
+      session('a', workspaceRoot: '/work/alpha'),
+      session('c', workspaceRoot: '/work/beta', minutesAgo: 5),
+    ];
+    final sets = <Set<String>>[];
+
+    await pump(tester, foldSets: sets);
+
+    await tester.tap(find.byTooltip('History view'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Collapse all'));
+    await tester.pumpAndSettle();
+    expect(sets.single, {'/work/alpha', '/work/beta'});
+
+    await tester.tap(find.byTooltip('History view'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Expand all'));
+    await tester.pumpAndSettle();
+    expect(sets.last, isEmpty);
   });
 
   testWidgets('a session with no folder lands in the unassigned bucket', (
