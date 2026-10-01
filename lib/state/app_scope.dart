@@ -30,6 +30,7 @@ import 'layout_controller.dart';
 import 'model_directory.dart';
 import 'prefs_store.dart';
 import 'session_index.dart';
+import 'session_registry.dart';
 import 'settings_store.dart';
 import 'side_chat_controller.dart';
 import 'streaming_tail.dart';
@@ -44,6 +45,7 @@ class AppScope {
   }) : _support = support {
     _sessionRoot = Directory('${support.path}/sessions')
       ..createSync(recursive: true);
+    _sessionRegistry = SessionRegistry.open(_sessionRoot);
     _approvals = ApprovalRuleStore.open(support);
     _checkpoints = CheckpointStore.open(support);
     _runtime = _build(settings.value);
@@ -60,7 +62,7 @@ class AppScope {
     // The side chat rides the same runtime the transcript does, from the
     // first frame: its tab can be open before any conversation starts.
     _sideChat.adoptSource(_runtime.side);
-    _sessions = SessionIndex(_runtime);
+    _sessions = SessionIndex(_runtime, registry: _sessionRegistry);
     _workbench = WorkbenchController(
       store: WorkbenchStore.open(support),
       workspaceRoot: settings.value.workspaceRoot,
@@ -84,6 +86,10 @@ class AppScope {
         _conversationToken = id;
         _checkpoints.conversation = id;
         _sessions.setActive(id);
+        // The conversation has an id and a folder at the same moment, which is
+        // the only time either is knowable: after this the user may switch
+        // workspaces, and a run that started here does not move (ADR-0039).
+        _sessionRegistry.noteWorkspace(id, settings.value.workspaceRoot);
         _sessions.refresh();
         _workbench.bindSession(id);
       },
@@ -171,6 +177,7 @@ class AppScope {
     fetcher: const HttpModelsEndpointFetcher(),
   );
   late final ConversationController _conversation;
+  late final SessionRegistry _sessionRegistry;
   late final SessionIndex _sessions;
   late final WorkbenchController _workbench;
 
@@ -218,6 +225,7 @@ class AppScope {
     _conversation.dispose();
     _sideChat.dispose();
     _sessions.dispose();
+    _sessionRegistry.dispose();
     // One call, not flush-then-dispose: the last layout change may still be
     // inside its debounce window, and the write has to finish before the queue is
     // cleared. `dispose` cannot await, so the ordering lives in `shutdown`.
