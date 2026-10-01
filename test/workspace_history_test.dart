@@ -355,6 +355,17 @@ void main() {
     expect(sets.last, isEmpty);
   });
 
+  testWidgets('an empty history still says so under the section head', (
+    tester,
+  ) async {
+    source.sessions = [];
+
+    await pump(tester);
+
+    expect(find.text('Workspaces'), findsOneWidget);
+    expect(find.text('No sessions yet'), findsOneWidget);
+  });
+
   testWidgets('a session with no folder lands in the unassigned bucket', (
     tester,
   ) async {

@@ -761,6 +761,21 @@ class _SidebarState extends State<Sidebar> {
                 : (keys) => widget.onSetCollapsedWorkspaces!(keys),
           ),
         ),
+      if (lines.isEmpty)
+        SliverToBoxAdapter(
+          // Grouping must not eat the empty state: a first run has no folder
+          // and no conversation, and a column showing only the word
+          // 「工作区」 reads as broken rather than as empty.
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Text(
+              widget.sessions.isLoading
+                  ? context.tr('loading')
+                  : context.tr('noSessionsYet'),
+              style: DswType.xxs12.copyWith(color: color.labelTertiary),
+            ),
+          ),
+        ),
       SliverList.builder(
         itemCount: lines.length,
         itemBuilder: (context, index) {
