@@ -697,8 +697,24 @@ void main() {
 
         workbench.workspaceRoot = root.path;
         workbench.openFolder(root.path);
-        await pump(tester, null, const WorkbenchPrefs(), step);
+        // The git letter is now part of a tree row, so this walk has to build
+        // one: the inert default answers "not a repository" and the badge would
+        // never enter the tree being measured - a guard passing for nothing.
+        final git = FakeGit()..stubRepo(root: root.path);
+        git.responses[fakeStatusKey] =
+            ' M deeply/yet-another-nested-file-name.dart\x00';
+        final status = GitStatusStore(runner: git.runner);
+        await status.read(root.path);
+        await pump(tester, null, const WorkbenchPrefs(), step, status);
         await pumpUntil(tester, find.text('deeply'));
+        expect(textDefects(tester), isEmpty, reason: 'the directory dot');
+        await tester.tap(find.text('deeply'));
+        await pumpUntil(tester, find.text('yet-another-nested-file-name.dart'));
+        expect(
+          find.text('M'),
+          findsOneWidget,
+          reason: 'the letter this stage is here to measure',
+        );
         expect(textDefects(tester), isEmpty, reason: 'the file tree');
 
         workbench.openFile(
