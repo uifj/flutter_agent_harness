@@ -1,9 +1,9 @@
 // Local backup and restore.
 //
-// Exports the app's persistent data (settings, prefs, plan tasks, workbench
-// layouts, session history, and skills) to a zip archive, and restores from
-// one. The backup is a single .zip file the user picks a location for; the
-// restore overwrites the current data with the archive's contents.
+// Exports the app's persistent data (settings, prefs, workbench layouts,
+// session history and its sidecar, skills, checkpoints) to a zip archive, and
+// restores from one. The backup is a single .zip file the user picks a location
+// for; the restore overwrites the current data with the archive's contents.
 //
 // The service is stateless — each call is a self-contained operation. The
 // caller (settings UI) owns the file picker and error handling.
@@ -13,6 +13,19 @@ import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+
+/// Where the archive entry [name] is allowed to land, or null when it would
+/// leave [supportPath] (ADR-0042).
+///
+/// A backup is a file the user picked, not bytes this app wrote: an entry named
+/// `../../.ssh/authorized_keys` used to be joined onto the support directory and
+/// written — the classic zip-slip. Normalising first and asking "is this still
+/// inside" is the whole defence; the answer is a path so the caller never has to
+/// repeat the arithmetic.
+String? resolveBackupEntry(String supportPath, String name) {
+  final target = p.normalize(p.join(supportPath, name));
+  return p.isWithin(supportPath, target) ? target : null;
+}
 
 /// The app's local backup/restore service.
 class BackupService {
@@ -98,17 +111,31 @@ class BackupService {
 
     final zipData = await sourceFile.readAsBytes();
     final archive = ZipDecoder().decodeBytes(zipData);
-    var count = 0;
 
-    for (final file in archive) {
-      if (file.isFile) {
-        final outPath = p.join(support.path, file.name);
-        final outFile = File(outPath);
-        // Ensure parent directory exists.
-        await outFile.parent.create(recursive: true);
-        await outFile.writeAsBytes(file.content as List<int>);
-        count++;
+    // Every entry name is settled before a single byte is written. Skipping the
+    // bad ones would leave half the data replaced and half not — a state nobody
+    // can see, let alone undo (ADR-0042).
+    final targets = {
+      for (final entry in archive.where((entry) => entry.isFile))
+        entry.name: resolveBackupEntry(support.path, entry.name),
+    };
+    for (final target in targets.entries) {
+      if (target.value == null) {
+        throw FileSystemException(
+          'Backup carries a path outside its own folder',
+          target.key,
+        );
       }
+    }
+
+    var count = 0;
+    for (final file in archive) {
+      if (!file.isFile) continue;
+      final outFile = File(targets[file.name]!);
+      // Ensure parent directory exists.
+      await outFile.parent.create(recursive: true);
+      await outFile.writeAsBytes(file.content as List<int>);
+      count++;
     }
 
     return count;
