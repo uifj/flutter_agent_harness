@@ -42,19 +42,21 @@
 | 视图模型 6 档（GRID/LIST/GALLERY/BOARD/CALENDAR/GRAPH） | ✅ | ✅ 已复刻 | P1 | `lib/model/plan_dataview.dart:19-56` | — | — |
 | 列配置 ViewerRelation（isVisible/width/dateFormat/timeFormat/includeTime） | ✅ | ✅ 已复刻 | P1 | `plan_dataview.dart:128-189` | — | — |
 | 视图可配项全字段（cardSize/hideIcon/coverFit/coverRelationKey/groupRelationKey/groupBackgroundColors/defaultTemplate/defaultObjectType） | ✅ | ✅ 已复刻（模型） | P1 | `plan_dataview.dart:456-586` | — | — |
-| Table（GRID）渲染：表头/行共用横向滚动器、11 种单元格 | ✅ | 🔨 P3 | P3 | `lib/ui/plan/dataview/plan_viewers.dart` | `planObjectStore.stageFor` | ShadCheckbox；单元格经 `plan_cell_value.dart` |
-| List 三行型 Default/Profile/Task(done)（AC1-1） | ✅ | 🔨 P3 | P3 | `plan_viewers.dart`（PlanListViewer） | 同上 | DswHoverTap（勾选） |
-| Gallery 两卡型 Default/Cover + largeCards（AC1-2） | ✅ | 🔨 P3 | P3 | `plan_viewers.dart`（PlanGalleryViewer，cardSize 三档） | 同上 | ShadCard 形状走 DswShape |
-| Calendar / Graph 占位（⛔照上游 Viewer.Unsupported） | ⛔ | 🔨 P3（占位） | P3 | `plan_viewers.dart`（PlanUnsupportedViewer） | — | ShadCard |
-| 排序 UI：ASC/DESC + 空值首/尾；CUSTOM 仅内部（AC1-4） | ✅ | 🔨 P3 | P3 | `plan_viewer_sheets.dart` | store.`_writeViewer` | ShadSelect |
-| 筛选 UI：AND/OR/NO + 按格式条件子集 + 15 日期快捷（AC1-5） | ✅ | 🔨 P3 | P3 | `plan_viewer_sheets.dart`；求值 `lib/model/plan_filter_engine.dart` | 同上 | ShadSelect + ShadPopover |
+| Table（GRID）渲染：表头/行共用横向滚动器、单元格按格式分发 | ✅ | ✅ 已复刻 | P3 | `lib/ui/plan/dataview/plan_viewers.dart` | `planObjectStore.stageFor` | ShadCheckbox；单元格经 `plan_cell_value.dart` |
+| List 三行型 Default/Profile/Task(done)（AC1-1） | ✅ | ✅ 已复刻 | P3 | `plan_viewers.dart`（PlanListViewer） | 同上 | DswHoverTap（勾选） |
+| Gallery 两卡型 Default/Cover + largeCards（AC1-2） | ✅ | ✅ 已复刻 | P3 | `plan_viewers.dart`（PlanGalleryViewer，cardSize 三档） | 同上 | ShadCard 形状走 DswShape |
+| Calendar / Graph 占位（⛔照上游 Viewer.Unsupported） | ⛔ | ✅ 已复刻（占位） | P3 | `plan_viewers.dart`（PlanUnsupportedViewer） | — | ShadCard |
+| 排序 UI：ASC/DESC + 空值首/尾；CUSTOM 仅内部（AC1-4） | ✅ | ✅ 已复刻 | P3 | `plan_viewer_sheets.dart` | store.`_writeViewer` | ShadSelect |
+| 筛选 UI：AND/OR/NO + 按格式条件子集 + 15 日期快捷（AC1-5） | ✅ | ✅ 已复刻 | P3 | `plan_viewer_sheets.dart`；求值 `lib/model/plan_filter_engine.dart` | 同上 | ShadSelect + ShadPopover |
 | 高级/嵌套筛选 | ⛔ | ⛔ 占位（模型保留形状，UI 只显示占位名） | P3 | `plan_dataview.dart:390-452` | — | — |
-| 视图管理 9 动作 + 页签增删/拖拽/激活（AC1-6） | ✅ | 🔨 P3 | P3 | `plan_viewer_bar.dart` + sheets | store（viewer CRUD，最后一个不可删） | DswMenu（封装） |
-| 布局抽屉 5+2 组（AC1-7） | ✅ | 🔨 P3（Board 组随 P4） | P3/P4 | `plan_viewer_sheets.dart` | store.`_patchView` | ShadSwitch / ShadSelect |
-| objectOrders 拖拽写回（AC1-8） | ✅ | 🔨 P3/P4 | P3/P4 | viewer 拖拽回调 | store.`setManualOrder` ✅P2 | — |
-| groupOrders 列序/隐藏/着色写回 | ✅(桌面) | 🔁 扩展（上游移动端只读） | P4 | `plan_board_viewer.dart` | store.`setGroupOrder` ✅P2 | — |
-| Board/Kanban：分组列=选项、跨列拖拽、每列分页（AC1-9） | 🚧 | 🔨 P4（默认态开放，对齐出厂 kanban=true） | P4 | `plan_board_viewer.dart` 复用 `packages/board_panel` | store 订阅 + 列级可见窗口（与上游每列订阅的等价性在此登记） | BoardPanel 自绘卡 |
-| 新建视图 = 复制当前视图；activeViewerId 为会话态 | ✅ | 🔨 P3 | P3 | `plan_viewer_bar.dart` | store.`duplicateViewer`；activeViewerId 不落盘 | — |
+| 视图管理 9 动作 + 页签增删/拖拽/激活（AC1-6） | ✅ | ✅ 已复刻 | P3 | `plan_viewer_bar.dart` + sheets | store（viewer CRUD，最后一个不可删） | DswMenu（封装） |
+| 布局抽屉 5+2 组（AC1-7） | ✅ | ✅ 已复刻 | P3/P4 | `plan_viewer_sheets.dart` | store.`_patchView` | ShadSwitch / ShadSelect |
+| objectOrders 拖拽写回（AC1-8） | ✅ | ✅ 已复刻 | P3/P4 | viewer 拖拽回调 | store.`setManualOrder` ✅P2 | — |
+| groupOrders 列序/隐藏/着色写回 | ✅(桌面) | ✅ 已复刻（🔁 扩展：上游移动端只读） | P4 | `plan_board_viewer.dart` | store.`setGroupOrder` ✅P2 | — |
+| Board/Kanban：分组列=选项、跨列拖拽、每列分页（AC1-9） | 🚧 | ✅ 已复刻（默认态开放） | P4 | `plan_board_viewer.dart` 复用 `packages/board_panel`；分页窗口 = 包的 cardPageSize(50) 触底增长，store 持全量列（等价性登记） | store.stageFor 分组 | BoardPanel 自绘卡 |
+| 新建视图 = 复制当前视图；activeViewerId 为会话态 | ✅ | ✅ 已复刻 | P3 | `plan_viewer_bar.dart` | store.`duplicateViewer`；activeViewerId 不落盘 | — |
+| 勾选类分组读成两列（空值并入未勾选） | ✅ | ✅ 已复刻 | P4 | `plan_filter_engine.dart`（groupPlanRecordIds 归一） | — | — |
+| 彩色列（groupBackgroundColors，上游 Boolean） | ✅ | ✅ 已复刻（表头带着色；整列体着色待包提供按组底色，登记） | P4 | `plan_board_viewer.dart` headerBuilder | — | — |
 
 ## 2. 模块 2：Set / Collection / TypeSet / All Content
 
@@ -62,7 +64,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | 三种身份同构（成员同、限制不同） | ✅ | ✅ 已复刻 | P1 | `lib/model/plan_dataview.dart:675-804` | — | — |
 | 创建跳过选模板（null 模板=空白） | ✅ | ✅ 已复刻（语义） | P1/P2 | `lib/state/plan_object_store.dart` createRecord | store | — |
-| 从类型生成 Set（CreateSet/OpenSet/Hidden 三态） | ✅ | 🔁 扩展（替上游补完未接线入口） | P6 | `lib/ui/plan/library/` | store.createCollection | ShadDialog |
+| 从类型生成 Set（CreateSet/OpenSet/Hidden 三态） | ✅ | 🔨 P6（🔁 扩展：替上游补完未接线入口） | P6 | `lib/ui/plan/library/` | store.createCollection | ShadDialog |
 | All Content 5 tab（PAGES/LISTS/MEDIA/BOOKMARKS/FILES） | ✅ | 🔨 P6 | P6 | `lib/ui/plan/library/all_content*.dart` | store.recordsOfType 查询 | ShadTabs |
 | All Content 两种菜单模式 AllContent/Unlinked + 状态恢复 | ✅ | 🔨 P6 | P6 | 同上 | 恢复=纯函数+store 偏好 | ShadSelect |
 | 时间分组 Today/Yesterday/Previous7Days/… | ✅ | 🔨 P6 | P6 | 同上 | 纯函数 | — |
