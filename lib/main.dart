@@ -46,6 +46,7 @@ import 'ui/conversation/conversation_root.dart';
 import 'ui/conversation/details_panel.dart';
 import 'ui/conversation/hero_workspace_picker.dart';
 import 'ui/plan/plan_extensions_view.dart';
+import 'ui/plan/dataview/plan_data_view_screen.dart';
 import 'ui/plan/plan_workspace.dart';
 import 'ui/settings/model_settings.dart';
 import 'ui/sidebar/sidebar.dart';
@@ -356,10 +357,23 @@ class _DshAppState extends ConsumerState<DshApp> {
     final scope = ref.watch(appScopeProvider);
     final modes = ref.watch(workspaceModeProvider);
     if (modes.mode == WorkspaceMode.plan) {
+      final planStore = ref.watch(planObjectStoreProvider);
       return switch (modes.extensionView) {
         PlanExtensionView.none => PlanWorkspace(
           workspaceRoot: doc.workspaceRoot,
           onPickWorkspace: scope.pickFromHero,
+          collections: [
+            for (final collection in planStore.collections)
+              (id: collection.id, name: collection.name),
+          ],
+          onOpenCollection: modes.openCollection,
+        ),
+        PlanExtensionView.collection => PlanDataViewScreen(
+          store: planStore,
+          collectionId:
+              modes.openCollectionId ??
+              planStore.collections.firstOrNull?.id ??
+              '',
         ),
         PlanExtensionView.board ||
         PlanExtensionView.calendar ||

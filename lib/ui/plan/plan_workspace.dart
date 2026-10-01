@@ -37,6 +37,7 @@ import '../conversation/assistant_markdown.dart';
 import '../primitives/capsule_button.dart';
 import '../primitives/feedback.dart';
 import '../primitives/confirm_dialog.dart';
+import '../primitives/menu.dart';
 import '../primitives/tappable.dart';
 
 /// The plan workspace center pane. [workspaceRoot] is the current agent
@@ -44,7 +45,18 @@ import '../primitives/tappable.dart';
 /// is the callback for the footer's workspace switcher (may be null when
 /// the parent handles switching through a different path).
 class PlanWorkspace extends StatefulWidget {
-  const PlanWorkspace({super.key, this.workspaceRoot, this.onPickWorkspace});
+  const PlanWorkspace({
+    super.key,
+    this.workspaceRoot,
+    this.onPickWorkspace,
+    this.collections = const [],
+    this.onOpenCollection,
+  });
+
+  /// The plan collections the vault can be swapped for (ADR-0037 P3). Passed
+  /// in rather than read from a provider: riverpod stays in the assembly root.
+  final List<({String id, String name})> collections;
+  final void Function(String id)? onOpenCollection;
 
   final String? workspaceRoot;
   final VoidCallback? onPickWorkspace;
@@ -328,6 +340,25 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
           onTap: _onCreateFolder,
           color: color,
         ),
+        if (widget.collections.isNotEmpty) ...[
+          const SizedBox(width: 2),
+          DswMenu(
+            label: context.tr('planOpenCollection'),
+            trigger: (context) => Icon(
+              LucideIcons.layout_grid,
+              size: DswShape.iconTiny,
+              color: color.labelTertiary,
+            ),
+            items: (context) => [
+              for (final collection in widget.collections)
+                DswMenuEntry(
+                  label: collection.name,
+                  icon: LucideIcons.circle,
+                  onTap: () => widget.onOpenCollection?.call(collection.id),
+                ),
+            ],
+          ),
+        ],
       ],
     ),
   );

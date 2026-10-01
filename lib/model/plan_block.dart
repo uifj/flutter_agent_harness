@@ -60,8 +60,7 @@ enum PlanTextStyle {
   /// Alignment is not offered for list, checkbox or toggle rows
   /// (`SlashExtensions.kt:116-131`); every other style gets the menu,
   /// callout included.
-  bool get supportsAlignment =>
-      !isList && this != checkbox && this != toggle;
+  bool get supportsAlignment => !isList && this != checkbox && this != toggle;
 
   /// `HIGHLIGHT` (quote) only gets left/right — no centre
   /// (`SlashExtensions.kt:122-125`).

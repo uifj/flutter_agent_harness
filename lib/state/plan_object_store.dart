@@ -276,9 +276,14 @@ class PlanObjectStore extends ChangeNotifier {
     }
 
     final relations = relationsByKey;
+    // Binned records answer to the Bin widget, not to any view — upstream
+    // bolts a deleted-filter onto every subscription
+    // (`AllContentSearchParams.filtersForSubscribe`); the stage boundary is
+    // this pipeline's single place for the same answer.
     final candidates = collection
         .candidateRecordIds(_objects.values)
         .where(_objects.containsKey)
+        .where((id) => !_bin.contains(id))
         .toList();
     final ids = selectPlanRecordIds(
       candidateIds: candidates,
@@ -510,6 +515,39 @@ class PlanObjectStore extends ChangeNotifier {
       defaultTemplateId: defaultTemplateId ?? viewer.defaultTemplateId,
     ),
   );
+
+  /// A space can be read-only: upstream carries these three bits on the
+  /// collection, and every affordance in the data view gates on them rather
+  /// than deciding locally.
+  Future<void> setCollectionRestrictions(
+    String collectionId,
+    Set<PlanDataViewRestriction> restrictions,
+  ) async {
+    _collections = [
+      for (final other in _collections)
+        if (other.id == collectionId)
+          other.copyWith(restrictions: restrictions)
+        else
+          other,
+    ];
+    await _commit();
+  }
+
+  Future<void> renameCollection(String collectionId, String name) async {
+    _collections = [
+      for (final other in _collections)
+        if (other.id == collectionId) other.copyWith(name: name) else other,
+    ];
+    await _commit();
+  }
+
+  /// A whole viewer written back at once — the layout sheet edits several
+  /// fields in one interaction and each keystroke should not land separately.
+  Future<void> setViewerLayoutFull(
+    String collectionId,
+    String viewerId,
+    PlanViewer viewer,
+  ) => _writeViewer(collectionId, viewerId, (_) => viewer);
 
   Future<void> renameViewer(
     String collectionId,
@@ -1058,8 +1096,11 @@ class PlanObjectStore extends ChangeNotifier {
 
   Future<void> _commit() async {
     revision++;
-    await _save();
+    // Notify before the write lands: listeners render the in-memory answer,
+    // and a disk round-trip (or a FakeAsync zone where it never completes)
+    // must not stand between a mutation and its readers.
     notifyListeners();
+    await _save();
   }
 
   Future<void> _save() async {

@@ -167,33 +167,27 @@ void main() {
   });
 
   group('reachability is the upstream answer, not an improvement', () {
-    test(
-      'fourteen styles exist, eleven are insertable via the slash menu, '
-      'title/h4/description are not',
-      () {
-        expect(PlanTextStyle.values.length, 14);
-        expect(PlanTextStyle.insertable.length, 11);
-        expect(PlanTextStyle.insertable, contains(PlanTextStyle.quote));
-        expect(PlanTextStyle.insertable, contains(PlanTextStyle.h1));
-        expect(
-          PlanTextStyle.insertable,
-          isNot(contains(PlanTextStyle.title)),
-        );
-        expect(PlanTextStyle.insertable, isNot(contains(PlanTextStyle.h4)));
-        expect(
-          PlanTextStyle.insertable,
-          isNot(contains(PlanTextStyle.description)),
-        );
-        expect(PlanTextStyle.h4.isHeading, isTrue);
-        expect(PlanTextStyle.bullet.supportsAlignment, isFalse);
-        expect(PlanTextStyle.paragraph.supportsAlignment, isTrue);
-        // HIGHLIGHT only gets left/right — no centre (SlashExtensions.kt:122).
-        expect(PlanTextStyle.quote.supportsAlignment, isTrue);
-        expect(PlanTextStyle.quote.supportsCenterAlignment, isFalse);
-        expect(PlanTextStyle.callout.supportsAlignment, isTrue);
-        expect(PlanTextStyle.callout.supportsCenterAlignment, isTrue);
-      },
-    );
+    test('fourteen styles exist, eleven are insertable via the slash menu, '
+        'title/h4/description are not', () {
+      expect(PlanTextStyle.values.length, 14);
+      expect(PlanTextStyle.insertable.length, 11);
+      expect(PlanTextStyle.insertable, contains(PlanTextStyle.quote));
+      expect(PlanTextStyle.insertable, contains(PlanTextStyle.h1));
+      expect(PlanTextStyle.insertable, isNot(contains(PlanTextStyle.title)));
+      expect(PlanTextStyle.insertable, isNot(contains(PlanTextStyle.h4)));
+      expect(
+        PlanTextStyle.insertable,
+        isNot(contains(PlanTextStyle.description)),
+      );
+      expect(PlanTextStyle.h4.isHeading, isTrue);
+      expect(PlanTextStyle.bullet.supportsAlignment, isFalse);
+      expect(PlanTextStyle.paragraph.supportsAlignment, isTrue);
+      // HIGHLIGHT only gets left/right — no centre (SlashExtensions.kt:122).
+      expect(PlanTextStyle.quote.supportsAlignment, isTrue);
+      expect(PlanTextStyle.quote.supportsCenterAlignment, isFalse);
+      expect(PlanTextStyle.callout.supportsAlignment, isTrue);
+      expect(PlanTextStyle.callout.supportsCenterAlignment, isTrue);
+    });
 
     test('eleven marks exist and the toolbar exposes eight', () {
       expect(PlanMarkType.values.length, 11);

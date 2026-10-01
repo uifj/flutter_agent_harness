@@ -407,3 +407,78 @@ class _DswSelectState<T> extends State<DswSelect<T>> {
     return dswEnsureShadTheme(context, select);
   }
 }
+
+/// The fourth shape: a popover that holds a form instead of a list of rows.
+///
+/// `DswMenu` answers "pick one of these", this answers "edit this in place" —
+/// sort rows, filter rows, layout options, a relation value. It exists so a
+/// sheet never re-implements the popover skin (padding, the `bgLayer2` fill,
+/// the hairline and the seat the rows sit on), which is the same reason
+/// ADR-0028 moved a menu's skin into the theme.
+class DswSheetPopover extends StatefulWidget {
+  const DswSheetPopover({
+    super.key,
+    required this.label,
+    required this.trigger,
+    required this.content,
+    this.minWidth = 280,
+    this.maxHeight,
+  });
+
+  /// Also the semantic name of the trigger, so an icon-only trigger names
+  /// itself (the rule `app_frame_test` enforces).
+  final String label;
+  final WidgetBuilder trigger;
+  final Widget Function(BuildContext context, VoidCallback close) content;
+  final double minWidth;
+  final double? maxHeight;
+
+  @override
+  State<DswSheetPopover> createState() => _DswSheetPopoverState();
+}
+
+class _DswSheetPopoverState extends State<DswSheetPopover> {
+  final controller = ShadPopoverController();
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.dsw;
+    final sheet = Tooltip(
+      message: widget.label,
+      child: ShadPopover(
+        controller: controller,
+        padding: EdgeInsets.zero,
+        popover: (context) => ConstrainedBox(
+          constraints: BoxConstraints(
+            minWidth: widget.minWidth,
+            maxWidth: widget.minWidth * 2,
+            maxHeight:
+                widget.maxHeight ??
+                DswShape.rowMenu *
+                    12 *
+                    MediaQuery.textScalerOf(context).scale(1),
+          ),
+          child: ColoredBox(
+            color: color.bgLayer2,
+            child: Padding(
+              padding: const EdgeInsets.all(DswShape.sm),
+              child: widget.content(context, controller.hide),
+            ),
+          ),
+        ),
+        child: DswHoverTap(
+          onTap: controller.toggle,
+          semanticLabel: widget.label,
+          builder: (context, active, focused) => widget.trigger(context),
+        ),
+      ),
+    );
+    return dswEnsureShadTheme(context, sheet);
+  }
+}

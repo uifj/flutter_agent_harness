@@ -55,7 +55,8 @@ class PlanExtensionsView extends StatelessWidget {
               PlanExtensionView.board => _BoardView(store: store),
               PlanExtensionView.calendar => _CalendarView(store: store),
               PlanExtensionView.table => _TableView(store: store),
-              PlanExtensionView.none => const SizedBox.shrink(),
+              PlanExtensionView.none ||
+              PlanExtensionView.collection => const SizedBox.shrink(),
             },
           ),
         ],

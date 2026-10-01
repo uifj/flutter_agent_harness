@@ -34,13 +34,19 @@ enum PlanExtensionView {
   none,
   board,
   calendar,
-  table;
+  table,
+
+  /// One plan collection shown as an Anytype-shaped data view (ADR-0037 P3).
+  /// Which collection is up is [WorkspaceModeController.openCollectionId],
+  /// because a collection is data, not a fourth hard-coded panel.
+  collection;
 
   String get name => switch (this) {
     none => 'none',
     board => 'board',
     calendar => 'calendar',
     table => 'table',
+    collection => 'collection',
   };
 }
 
@@ -54,6 +60,10 @@ class WorkspaceModeController extends ChangeNotifier {
 
   /// The plan workspace's active view. Meaningful only in [WorkspaceMode.plan].
   PlanExtensionView get extensionView => _extension;
+
+  /// The collection the [PlanExtensionView.collection] panel is showing.
+  String? get openCollectionId => _openCollectionId;
+  String? _openCollectionId;
 
   /// Switches the top-level workspace. Leaving 企划 closes its extension panel
   /// (starkins resets the other tab's pages on switch); entering 企划 always
@@ -77,6 +87,23 @@ class WorkspaceModeController extends ChangeNotifier {
       _mode = WorkspaceMode.plan;
       _extension = view;
     }
+    notifyListeners();
+  }
+
+  /// Opens one plan collection as a data view. Re-selecting the collection that
+  /// is already up closes the panel — the same toggle the other rows carry.
+  void openCollection(String collectionId) {
+    if (_mode == WorkspaceMode.plan &&
+        _extension == PlanExtensionView.collection &&
+        _openCollectionId == collectionId) {
+      _extension = PlanExtensionView.none;
+      _openCollectionId = null;
+      notifyListeners();
+      return;
+    }
+    _mode = WorkspaceMode.plan;
+    _extension = PlanExtensionView.collection;
+    _openCollectionId = collectionId;
     notifyListeners();
   }
 }
