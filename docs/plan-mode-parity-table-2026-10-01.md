@@ -143,6 +143,7 @@
 | 操作 CRUD + 下拉动作（applies 门）（AC7-4） | ✅ | ✅ 已复刻（applies 门：仅 Bin 给 Empty Bin；remove/changeLayout/favorite 写回 store；换布局循环五档 = 第二屏选择器等价） | P1/P7 | `plan_widgets_screen.dart` | store.`removeWidget/changeWidgetLayout` | DswContextMenu |
 | 两屏选择器：源三段 → 布局按源 1–4 项（AC7-5） | ✅ | 🔨（桌面增量：换布局循环 + 新建走 createCollection；完整两屏 🔨） | P7+ | — | store | ShadDialog |
 | Android Glance 桌面组件（AC7-6） | 🚧 | ❌ N/A（上游 manifest 全 disabled）；"组件读快照"设计保留 = store 内存快照 | — | — | store | — |
+| 侧栏集合列表 + PlanExtensionView 泛化 | ✅ | ✅ 部分已落（集合列表 + openCollection 已接线 P3；封闭枚举 board/calendar/table 旧值保留为 ADR-0007 遗产，彻底泛化待下一笔） | P3/P7 | `sidebar.dart` + `workspace_mode_controller.dart` | — | — |
 
 ## 8. 守卫与门禁映射（每阶段）
 
