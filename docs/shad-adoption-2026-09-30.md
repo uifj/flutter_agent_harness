@@ -15,7 +15,7 @@
 
 | # | 面（截图证据） | 现状 | 判定 | 换成 / 理由 | 批次 |
 | --- | --- | --- | --- | --- | --- |
-| 1 | 企划/代理分段控件（`5dfe47f3` 侧栏） | `sidebar.dart:256` 手画 Container+Row | **保留**（试过，回退） | shad 无 ToggleGroup，所以按决策 2 抽了 `primitives/segmented.dart`（轨道 + 两枚 `ShadButton.ghost`）并把宽栏接上去：**放大文本守卫当场红**，`amplified_text_probe` 在 shad 的 decorator 造出的 render box 上撞到 `hasSize` 断言（`render_box.dart:2251`），去掉自算座位高度也一样，说明是库那层 `CustomPaint`/`MouseArea` 链与探针的走法冲突，不是座位数学。四条点击性质 `DswHoverTap` 已给足，标签让位律与两档守卫都已在 sidebar 上量过并有断言；而全应用只有这一枚分段控件——一枚没有第二个读者的原语正是 ADR-0025 拦的那种。要真做，先立 ADR 说清探针怎么穿过 shad 的 decorator | — |
+| 1 | 企划/代理分段控件（`5dfe47f3` 侧栏） | `sidebar.dart:256` 手画 Container+Row | **采纳**（封装件，决策 2 第三档） | shad 无 ToggleGroup，所以抽 `primitives/segmented.dart`：轨道与座位是宿主的，**每一枚格子的身体是 `ShadButton.ghost`**，宽栏接上去（净变化 `sidebar.dart −84/+21`）。第一次尝试记的回退理由是错的，这次以命令输出为准重做：真正的原因是**封装件自己的** `Row(mainAxisSize.max + Flexible)`——shad 的按钮把 child 包在只写高度的 `ConstrainedBox` 里，递过去的是 `w: 0..Infinity`，框架那条 `children have non-zero flex but incoming width constraints are unbounded` 就是这么来的；改成 `MainAxisSize.min` 即过，与探针无关。探针另补了一条**独立成立**的加固：`OverlayPortal` 让合着的浮层仍在 `allRenderObjects` 里但从没 layout 过，`spillDefects` 不先跳 `hasSize` 就会在宿主只是**含有**一把菜单时抛异常。守卫 `test/segmented_test.dart` 三条逐条反向验过：套回手写 `DswHoverTap` → 第 1 条红（并双触发键盘动作）；`height` 去掉步子 → 第 3 条红；`canRequestFocus: false` → 第 2 条红。sidebar 那条放大文本走查原样保留，只把**认法**从 `DswHoverTap.semanticLabel` 换成 primitive 自己加的 `Semantics` 节点（断言一字未动：有名字当且仅当标签让位）。 | B8 |
 | 2 | 新会话（`5dfe47f3`） | `sidebar.dart:507` `_Pressable`+Container | **保留**（判定改） | 指针／键盘／语义／焦点四条 ADR-0021 已满足（`DswHoverTap` 本就是放行的一支），换 `ShadButton` 得不到任何新性质；而它的两档形态（宽栏 hug 标签 ／ rail 36 见方）与刻意不做动画的理由（`AnimatedContainer` 在有限宽与无界宽之间无法插值，注释已写）都要往 shad 的固定座位里硬塞 | — |
 | 3 | 会话行（`5dfe47f3`/`86e0bd57` 选中态） | `sidebar.dart:809` | 封装（沿用） | shad 无 list 组件；`DswHoverTap` 行，selected/hover 皮已在令牌（ADR-0017 S2） | — |
 | 4 | 图标钮族：logo 折叠、页脚齿轮/详情、外壳右上两钮、详情栏关闭 | `sidebar.dart:447,624,681`；`app_frame.dart:529,536,550`；`details_panel.dart:215` | shad（经原语） | `DswIconButton` 的**身体**改 `ShadIconButton`（ADR-0036 决策 3；wrapper 仍管 tooltip=语义名、半径按盒、色阶、动效） | B8 |
@@ -59,11 +59,15 @@
 - **B6 菜单归一**：13 处归零。守卫 `test/shad_menu_adoption_test.dart`：① 源码计数（`PopupMenuButton`/`showMenu` 标识符在 `lib/ui` = 0，照 `tap_affordance_test` 的按文件计数先例，新增即红并指名文件）；② 真开一把 `ShadSelect` 读它渲染的皮等于桥给的档（`menu_chrome_test` 的**认法改缝、断言留**：从 Material `popupMenuTheme` 改读 ShadTheme 的 select 皮，照 ADR-0034 改 `chat_view_test` 认法的先例说明）；③ 放大文本两档（1.8x/2.2x）复量打开着的菜单。**先红**：计数守卫在当前树 = 13。
 - **B7 字段/开关/按钮/徽标（已落 @ d3181fb/b44c73f + 发送钮那一次）**：裸 `TextField(` 归零（5 处全换，无登记例外）；开关行渲染 `ShadSwitch`；发送钮/新会话/药丸换 `ShadButton`/`ShadBadge`。守卫：计数 + 行为（开关可点可键盘、字段可输入、三态边守卫与设置页放大守卫仍绿）。**已落**：5 处 `TextField(` 与自画 `_Switch` 类与 `pill` 三处断言全部归零（守卫 `test/shad_widget_adoption_test.dart`，先红 5 字段 / 1 开关 / pill 一条，且带正向对照，扫不到东西不算通过）；`_Switch` 的 `onChanged` 此前从未接线（只有行在动作），现在是 `ShadSwitch` 本体。**已落**：发送圆钮（行 15，`ShadButton.ghost`，同时消掉 `enabled` + `Opacity(0.4)` 这对双真值并补上焦点环）。**判定改并写明理由**：新会话（行 2）与投递药丸（行 16）留原语——前者四条性质已在且两档形态是 bespoke，后者要的描边 `ShadBadge` 根本没有入口。这两条是落地前对着 pub-cache 参数表核出来的，不是偏好。
 
-- **B8 封装与身体**：`DswIconButton` 身体 = `ShadIconButton`（`icon_button_test` 四性仍绿 + 一条断言读身体类型）；新 `segmented` 件（sidebar 两档可点/可键盘/语义 toggled）；`ShadCard` 收工具卡与设置分区卡（`cardTheme` 进桥，`shad_radius_test` 扩一条"卡片皮只在桥说一次"）。**先红**：身体类型断言与 cardTheme 断言在当前树红。
+- **B8 封装与身体（已落 @ 1b8ee9e/a89d670 + 分段控件那一次）**：`DswIconButton` 身体 = `ShadIconButton`（`icon_button_test` 四性仍绿 + 一条断言读身体类型）；`ShadCard` 收设置分区卡（`cardTheme` 进桥，`shad_radius_test` 扩一条"卡片皮只在桥说一次"）；分段控件（行 1）按决策 2 抽成 `primitives/segmented.dart`，格子身体是 `ShadButton.ghost`，守卫 `test/segmented_test.dart`（身体是库的 / 键盘走到并按得动 / 让位后仍自报姓名），三条逐条反向验过。**先红**：身体类型断言与 cardTheme 断言在当前树红。
 
 ### B7 落地的三条事实（2026-09-30，字段与开关先落；代码 `d3181fb`，守卫 `b44c73f`）
 
 ① **shad 的 placeholder 画在字段之上而不是字段之内**，会换行的提示在一行高的盒子里被腰斩（实测 1.8x 下 `86.0 vs 43.0`）——律是「该让位的是提示，不是用户要打的字」，收成一枚 `dswInputHint`；② **字段必须装进行自己声明的座位**，`ShadInput` 的 BoxyColumn 会直接喊 `overflowed by 8.0`，而 Material 的 collapsed decorator 是默默裁掉的——也就是说这条以前一直在错，只是没人报；③ `ShadBadge` 的宽度要跟标签走（`Align(widthFactor: 1)`），否则在无界行里按 99861px 撑爆终端 banner。
+
+### B8 落地的三条事实（2026-10-01，分段控件重做时对着栈追出来的）
+
+① **shad 的按钮把 child 包在只写高度的 `ConstrainedBox` 里**，宽度是 `0..Infinity`：于是 child 用 `Row` 时必须 `mainAxisSize: MainAxisSize.min`，一个带 `Flexible` 的默认（max）Row 在那里是框架直接拒绝的形状（`children have non-zero flex but incoming width constraints are unbounded`）。第一次尝试把这条症状误记成"探针与库的 decorator 冲突"，其实是封装件自己写错了——**先读栈里的 `constraints` 再归因**。② `OverlayPortal` 让**合着的**浮层仍挂在 `allRenderObjects` 里，但从没被 layout 过，`size`/`constraints` 两个 getter 都断言；`amplified_text_probe.spillDefects` 因此先跳 `!hasSize`，否则宿主只要**含有**一把关闭的菜单就抛异常而不是量东西。③ 让位阈值里只有文字项乘步子：`Icon(size:)` 不随 `textScaler` 长大，所以律是 `20 + 71 * step` 而不是 `(20 + 71) * step`——后者会在 1.8x 提前把还能写的标签丢掉。
 
 ### B6 落地的四条事实（2026-09-30，13 处归零后补记；代码 `d2401a2`，守卫 `5ee3bd4`）
 
