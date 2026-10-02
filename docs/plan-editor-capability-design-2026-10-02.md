@@ -134,3 +134,40 @@ lib/state/plan_block_document.dart
 4. **P10-c 是条件项**：若 P10-a/b 的块级字段在真机上 IME/性能无恙，单字段整文档可以不立项——
    它是为"跨块选区样式连续性 + 拖拽三段落点"服务的，按需启动。
 5. 交付说明按 `build.md` §0 标"待 macOS 验证"；Windows/Linux 的 IME 行为不在本机证明范围。
+
+## 6. 剩余缺口清单（2026-10-02 对照 anytype 编辑器的全量盘点）
+
+> 判镜：`docs/anytype-feature-inventory-2026-10-01.md` §3（块编辑器）+ 实现对照表模块 3。
+> 状态：**⏸ 缺口-等前置**（卡在 P6 对象身份面，编辑器内核无义务）/ **↔ 缺口-登记不装**（有意取舍）/
+> **◉ 缺口-真机**（机器证不了，见 `docs/walkthrough-plan-editor-2026-10-02.md`）。
+> 本清单是"还缺什么"的唯一汇总处；做完一项就地改状态，别另开新表。
+
+### 6.1 卡在 P6 对象身份面（⏸）
+
+| 缺口 | 上游证据 | 现状 | 解锁条件 |
+| --- | --- | --- | --- |
+| @提及面板（AC3-11：提及对象，Date/ObjectType/Profile/Task/Deleted 变体） | `ControlPanelState.kt:205-223` | mention mark 能渲染不能插入；slash 的 Objects/Properties 两段同为诚实空态 | P6 对象选择器 |
+| emoji / object 两种渲染态 mark 的插入 | `Markup.kt:32-161` | 同上，只出现在读面 | P6 |
+| 对象图标/封面选择器（AC3-13/14） | 391 枚矢量图标、8 渐变 + 12 纯色（`SelectCoverViewModel.kt:44-60`） | 类型只有精选 emoji 集（规模差异 🔁 已登记）；笔记面无封面 | P6 |
+| 限制位 UI 全量（AC3-22） | `ObjectRestriction` 11 档 | 数据视图 3 档已落（P3）；按记录禁用删除/拖拽等 UI 位未落 | P6 对象信息面扩展 |
+| 编辑器 8 模式的其余档（AC3-16：Locked/Select/Styling/Table 独立模式） | `Editor.kt:19-94` | Edit/Read + 搜索自动转只读已落 | 各档随对应能力面（锁=对象菜单、SAM=拖拽已映射 🔁） |
+| 块菜单其余动作（AC3-17 余项：MoveTo/Rename/Download…） | `ActionItemType.kt:3-55` 装配 20 项 | duplicate/delete/moveRoot/剪贴板已落 | 随媒体与对象屏（P6/P7） |
+
+### 6.2 编辑器自身余项（↔ 登记不装，有意取舍）
+
+| 缺口 | 取舍理由 |
+| --- | --- |
+| 跨块选区 + 样式连续性（E17） | 需要 P10-c 单字段整文档；是否立项看签收单第五节决策门（真机 IME 走查裁决） |
+| 嵌套块拖拽（E14 范围外） | 本批根级块已落；嵌套拖拽等使用痛点，文档操作 `moveAsChild` 已在 |
+| HTML 粘贴（AC3-19 余项） | 上游接外部 HTML；我们诚实只接文本/Markdown，HTML→块解析是独立工程 |
+| 折叠选区的"待输入样式"（ComposerPreferences 概念） | P10-b 候选未落：折叠选区的 mark 操作目前是无操作（有测试钉着这个语义） |
+| 表格单元格的富文本 | 单元格保持裸字段（无 mark），登记过的边界 |
+| 视频/音频内嵌播放（AC3-8 余项） | 🔁 偏差：无播放器依赖，文件卡+外部打开；要内嵌须另立 ADR 加依赖 |
+| 链接块外观面板（AC3-10 余项：iconSize/cardStyle/description 切换） | 两形态按 cardStyle 渲染已落，切换面板未建 |
+| 文件上传管线 / 图片全屏（AC3-8 余项） | 文件块四态渲染已落；上传/附件管线不存在，图片块无全屏查看 |
+
+### 6.3 只差真机眼睛（◉，签收单已列步骤）
+
+拖拽手感与落区指示（C1/C2）、中文组合期拆/合块（A4/B1–B3）、双主题 composing 下划线与
+mark 色阶（A1/A4）、Windows CJK 合成期回推（B5，appflowy 点名的坑，拦截层已全部让路待实测）、
+系统剪贴板往返实感（C4/C5）。
