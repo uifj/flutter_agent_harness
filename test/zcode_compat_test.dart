@@ -8,21 +8,33 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('endpoints (zcodeEndpoint.ts:262-270)', () {
     test('the five plan paths build verbatim under an origin', () {
-      expect(ZcodeEndpoints.apiBaseUrl('https://api.example.com'),
-          'https://api.example.com/api/v1');
-      expect(ZcodeEndpoints.planOpenAiBaseUrl('https://api.example.com'),
-          'https://api.example.com/api/v1/zcode-plan');
-      expect(ZcodeEndpoints.planAnthropicBaseUrl('https://api.example.com'),
-          'https://api.example.com/api/v1/zcode-plan/anthropic');
-      expect(ZcodeEndpoints.planBillingCurrentUrl('https://api.example.com'),
-          'https://api.example.com/api/v1/zcode-plan/billing/current');
-      expect(ZcodeEndpoints.planBillingBalanceUrl('https://api.example.com'),
-          'https://api.example.com/api/v1/zcode-plan/billing/balance');
+      expect(
+        ZcodeEndpoints.apiBaseUrl('https://api.example.com'),
+        'https://api.example.com/api/v1',
+      );
+      expect(
+        ZcodeEndpoints.planOpenAiBaseUrl('https://api.example.com'),
+        'https://api.example.com/api/v1/zcode-plan',
+      );
+      expect(
+        ZcodeEndpoints.planAnthropicBaseUrl('https://api.example.com'),
+        'https://api.example.com/api/v1/zcode-plan/anthropic',
+      );
+      expect(
+        ZcodeEndpoints.planBillingCurrentUrl('https://api.example.com'),
+        'https://api.example.com/api/v1/zcode-plan/billing/current',
+      );
+      expect(
+        ZcodeEndpoints.planBillingBalanceUrl('https://api.example.com'),
+        'https://api.example.com/api/v1/zcode-plan/billing/balance',
+      );
     });
 
     test('a trailing slash on the origin does not double', () {
-      expect(ZcodeEndpoints.apiBaseUrl('https://api.example.com/'),
-          'https://api.example.com/api/v1');
+      expect(
+        ZcodeEndpoints.apiBaseUrl('https://api.example.com/'),
+        'https://api.example.com/api/v1',
+      );
     });
 
     test('the manifest URL carries platform/device_mid/channel', () {
@@ -39,11 +51,14 @@ void main() {
       );
     });
 
-    test('release channel maps stable→1, preview→3 (manifestUpdateProvider.ts:37-41)', () {
-      expect(ZcodeEndpoints.releaseChannelApiValue('stable'), '1');
-      expect(ZcodeEndpoints.releaseChannelApiValue('preview'), '3');
-      expect(ZcodeEndpoints.releaseChannelApiValue('anything'), '1');
-    });
+    test(
+      'release channel maps stable→1, preview→3 (manifestUpdateProvider.ts:37-41)',
+      () {
+        expect(ZcodeEndpoints.releaseChannelApiValue('stable'), '1');
+        expect(ZcodeEndpoints.releaseChannelApiValue('preview'), '3');
+        expect(ZcodeEndpoints.releaseChannelApiValue('anything'), '1');
+      },
+    );
 
     test('the client configs URL carries app_version and platform', () {
       expect(
@@ -77,8 +92,13 @@ void main() {
 
     test('absent values drop their header, never send empty strings', () {
       expect(zcodeSourceHeaders(), isEmpty);
-      expect(zcodeSourceHeaders(platform: '', arch: 'arm64').containsKey('X-Platform'),
-          isFalse);
+      expect(
+        zcodeSourceHeaders(
+          platform: '',
+          arch: 'arm64',
+        ).containsKey('X-Platform'),
+        isFalse,
+      );
     });
   });
 
@@ -92,7 +112,10 @@ void main() {
         subscription: 'Pro',
       );
       final json = user.toJson();
-      expect(json.keys, containsAll(['id', 'username', 'displayName', 'avatarUrl']));
+      expect(
+        json.keys,
+        containsAll(['id', 'username', 'displayName', 'avatarUrl']),
+      );
       expect(ZcodeUserInfo.fromJson(json), user);
     });
 
@@ -101,7 +124,10 @@ void main() {
       expect(ZcodeOAuth.providerBigmodel, 'bigmodel');
       expect(ZcodeOAuth.keyActiveProvider, 'oauth:active_provider');
       expect(ZcodeOAuth.keyAccessToken('zai'), 'oauth:zai:access_token');
-      expect(ZcodeOAuth.keyRefreshToken('bigmodel'), 'oauth:bigmodel:refresh_token');
+      expect(
+        ZcodeOAuth.keyRefreshToken('bigmodel'),
+        'oauth:bigmodel:refresh_token',
+      );
       expect(ZcodeOAuth.keyUserInfo('zai'), 'oauth:zai:user_info');
     });
 
@@ -122,7 +148,10 @@ void main() {
       );
       final json = limit.toJson();
       // The wire names the backend will serve — verbatim upstream camelCase.
-      expect(json.keys, containsAll(['type', 'bucketId', 'periodStart', 'nextResetTime']));
+      expect(
+        json.keys,
+        containsAll(['type', 'bucketId', 'periodStart', 'nextResetTime']),
+      );
       final round = ZcodeUsageQuotaSnapshot.fromJson({
         'level': 'PRO',
         'limits': [json],
@@ -152,8 +181,7 @@ void main() {
       // v1-style or wrong variant are refused: only what the generator emits
       // round-trips through persistence.
       expect(isValidDeviceMid('5f2a8c1e-9b3d-4e7f-8a2b-1c9d4e7f2a8b'), isTrue);
-      expect(
-          isValidDeviceMid('5f2a8c1e-9b3d-1e7f-8a2b-1c9d4e7f2a8b'), isFalse);
+      expect(isValidDeviceMid('5f2a8c1e-9b3d-1e7f-8a2b-1c9d4e7f2a8b'), isFalse);
     });
   });
 }

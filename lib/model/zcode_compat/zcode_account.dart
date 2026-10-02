@@ -18,12 +18,12 @@ class ZcodeUserInfo {
   });
 
   factory ZcodeUserInfo.fromJson(Map<String, Object?> json) => ZcodeUserInfo(
-        id: json['id'] as String? ?? '',
-        username: json['username'] as String? ?? '',
-        displayName: json['displayName'] as String? ?? '',
-        avatarUrl: json['avatarUrl'] as String?,
-        subscription: json['subscription'] as String?,
-      );
+    id: json['id'] as String? ?? '',
+    username: json['username'] as String? ?? '',
+    displayName: json['displayName'] as String? ?? '',
+    avatarUrl: json['avatarUrl'] as String?,
+    subscription: json['subscription'] as String?,
+  );
 
   final String id;
   final String username;
@@ -32,12 +32,12 @@ class ZcodeUserInfo {
   final String? subscription;
 
   Map<String, Object?> toJson() => {
-        'id': id,
-        'username': username,
-        'displayName': displayName,
-        if (avatarUrl != null) 'avatarUrl': avatarUrl,
-        if (subscription != null) 'subscription': subscription,
-      };
+    'id': id,
+    'username': username,
+    'displayName': displayName,
+    if (avatarUrl != null) 'avatarUrl': avatarUrl,
+    if (subscription != null) 'subscription': subscription,
+  };
 
   @override
   bool operator ==(Object other) =>
@@ -49,7 +49,8 @@ class ZcodeUserInfo {
       other.subscription == subscription;
 
   @override
-  int get hashCode => Object.hash(id, username, displayName, avatarUrl, subscription);
+  int get hashCode =>
+      Object.hash(id, username, displayName, avatarUrl, subscription);
 }
 
 /// The two built-in OAuth providers (`oauth.ts:8-12`) and the storage key
@@ -60,7 +61,8 @@ abstract final class ZcodeOAuth {
   static const String providerBigmodel = 'bigmodel';
 
   static const String keyActiveProvider = 'oauth:active_provider';
-  static String keyAccessToken(String provider) => 'oauth:$provider:access_token';
+  static String keyAccessToken(String provider) =>
+      'oauth:$provider:access_token';
   static String keyRefreshToken(String provider) =>
       'oauth:$provider:refresh_token';
   static String keyUserInfo(String provider) => 'oauth:$provider:user_info';
@@ -84,9 +86,9 @@ class ZcodeUsageQuotaSnapshot {
   final List<ZcodeUsageQuotaLimit> limits;
 
   Map<String, Object?> toJson() => {
-        'level': level,
-        'limits': [for (final limit in limits) limit.toJson()],
-      };
+    'level': level,
+    'limits': [for (final limit in limits) limit.toJson()],
+  };
 }
 
 /// `UsageQuotaLimit` — every upstream field kept, nullables included: the
@@ -159,24 +161,24 @@ class ZcodeUsageQuotaLimit {
   final List<ZcodeUsageQuotaUsageDetail> usageDetails;
 
   Map<String, Object?> toJson() => {
-        'type': type,
-        if (bucketId != null) 'bucketId': bucketId,
-        if (userPlanId != null) 'userPlanId': userPlanId,
-        if (periodStart != null) 'periodStart': periodStart,
-        if (periodEnd != null) 'periodEnd': periodEnd,
-        if (period != null) 'period': period,
-        if (meter != null) 'meter': meter,
-        if (unitType != null) 'unitType': unitType,
-        if (planId != null) 'planId': planId,
-        if (unit != null) 'unit': unit,
-        if (number != null) 'number': number,
-        if (usage != null) 'usage': usage,
-        if (currentValue != null) 'currentValue': currentValue,
-        if (remaining != null) 'remaining': remaining,
-        if (percentage != null) 'percentage': percentage,
-        if (nextResetTime != null) 'nextResetTime': nextResetTime,
-        'usageDetails': [for (final detail in usageDetails) detail.toJson()],
-      };
+    'type': type,
+    if (bucketId != null) 'bucketId': bucketId,
+    if (userPlanId != null) 'userPlanId': userPlanId,
+    if (periodStart != null) 'periodStart': periodStart,
+    if (periodEnd != null) 'periodEnd': periodEnd,
+    if (period != null) 'period': period,
+    if (meter != null) 'meter': meter,
+    if (unitType != null) 'unitType': unitType,
+    if (planId != null) 'planId': planId,
+    if (unit != null) 'unit': unit,
+    if (number != null) 'number': number,
+    if (usage != null) 'usage': usage,
+    if (currentValue != null) 'currentValue': currentValue,
+    if (remaining != null) 'remaining': remaining,
+    if (percentage != null) 'percentage': percentage,
+    if (nextResetTime != null) 'nextResetTime': nextResetTime,
+    'usageDetails': [for (final detail in usageDetails) detail.toJson()],
+  };
 }
 
 class ZcodeUsageQuotaUsageDetail {
@@ -198,8 +200,8 @@ class ZcodeUsageQuotaUsageDetail {
   final double usage;
 
   Map<String, Object?> toJson() => {
-        'modelCode': modelCode,
-        if (displayName != null) 'displayName': displayName,
-        'usage': usage,
-      };
+    'modelCode': modelCode,
+    if (displayName != null) 'displayName': displayName,
+    'usage': usage,
+  };
 }

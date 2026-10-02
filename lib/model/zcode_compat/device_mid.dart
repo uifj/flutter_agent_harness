@@ -10,9 +10,8 @@ import 'dart:math';
 String generateDeviceMid({Random? random}) {
   final rng = random ?? Random.secure();
   String hex(int count) => [
-        for (var i = 0; i < count; i++)
-          rng.nextInt(16).toRadixString(16),
-      ].join();
+    for (var i = 0; i < count; i++) rng.nextInt(16).toRadixString(16),
+  ].join();
   final bytes = hex(32).split('')..[12] = '4';
   final variant = rng.nextInt(4);
   bytes[16] = const ['8', '9', 'a', 'b'][variant];
@@ -25,5 +24,6 @@ String generateDeviceMid({Random? random}) {
 /// loader accepts what the generator emits and anything else regenerates.
 bool isValidDeviceMid(String? value) =>
     value != null &&
-    RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$')
-        .hasMatch(value);
+    RegExp(
+      r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+    ).hasMatch(value);

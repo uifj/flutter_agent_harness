@@ -14,7 +14,8 @@ abstract final class ZcodeEndpoints {
       '/api/v1/zcode-plan/billing/current';
   static const String planBillingBalancePath =
       '/api/v1/zcode-plan/billing/balance';
-  static const String releaseManifestPath = '/api/v1/releases/electron/manifest';
+  static const String releaseManifestPath =
+      '/api/v1/releases/electron/manifest';
   static const String clientConfigsPath = '/api/v1/client/configs';
 
   static String apiBaseUrl(String origin) =>
@@ -82,7 +83,9 @@ Map<String, String> zcodeSourceHeaders({
         arch.isNotEmpty)
       'X-Platform': '$platform-$arch',
     if (releaseChannel != null && releaseChannel.isNotEmpty)
-      'X-Release-Channel': ZcodeEndpoints.releaseChannelApiValue(releaseChannel),
+      'X-Release-Channel': ZcodeEndpoints.releaseChannelApiValue(
+        releaseChannel,
+      ),
     if (deviceMid != null && deviceMid.isNotEmpty) 'X-Device-Mid': deviceMid,
   };
   return headers;

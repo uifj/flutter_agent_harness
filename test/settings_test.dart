@@ -13,6 +13,7 @@ import 'amplified_text_probe.dart';
 import 'package:agent_harness/model/app_settings.dart';
 import 'package:agent_harness/model/model_settings.dart';
 import 'package:agent_harness/model/workbench_prefs.dart';
+import 'package:agent_harness/state/secret_store.dart';
 import 'package:agent_harness/state/settings_store.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
 import 'package:agent_harness/theme/dsw_shad_bridge.dart';
@@ -126,17 +127,27 @@ void main() {
       expect(store.value, const AppSettings());
     });
 
-    test('a saved document survives a reopen', () async {
-      final store = await SettingsStore.open(root);
-      const next = AppSettings(
-        model: ModelSettings(apiKey: 'sk-live'),
-        workspaceRoot: '/tmp/work',
-      );
-      await store.save(next);
+    test(
+      'a saved document survives a reopen, the key via the secret store',
+      () async {
+        // ADR-0045 PB: the file never carries the API key — without a secret
+        // store the key is dropped on reopen (a host without a keychain), with
+        // one it comes back.
+        final secrets = InMemorySecretStore();
+        final store = await SettingsStore.open(root, secrets: secrets);
+        const next = AppSettings(
+          model: ModelSettings(apiKey: 'sk-live'),
+          workspaceRoot: '/tmp/work',
+        );
+        await store.save(next);
 
-      final reopened = await SettingsStore.open(root);
-      expect(reopened.value, next);
-    });
+        final reopened = await SettingsStore.open(root, secrets: secrets);
+        expect(reopened.value, next);
+        final keyless = await SettingsStore.open(root);
+        expect(keyless.value.model.apiKey, '');
+        expect(keyless.value.workspaceRoot, '/tmp/work');
+      },
+    );
 
     test('notifies once per accepted save, and not for a no-op', () async {
       final store = await SettingsStore.open(root);
@@ -180,6 +191,7 @@ void main() {
         // the harness supplies the same one rather than a lighter wrapper.
         home: Scaffold(
           body: SettingsPanel(
+            onReset: () async {},
             settings: settings,
             onSave: onSave,
             onClose: onClose ?? () {},

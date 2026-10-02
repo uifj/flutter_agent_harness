@@ -35,7 +35,15 @@ class PrefsStore extends ChangeNotifier {
     } on FileSystemException {
       // Unreadable; carry on with the defaults.
     } on FormatException {
-      // Not JSON; same.
+      // Not JSON: quarantine the bytes (the user's layout choices are
+      // recoverable from the copy) and start from the defaults.
+      try {
+        await file.rename(
+          '${file.path}.corrupt-${DateTime.now().millisecondsSinceEpoch}',
+        );
+      } on FileSystemException {
+        // The defaults take over regardless; the rename is best-effort.
+      }
     }
     return PrefsStore._(file, value);
   }
@@ -46,6 +54,27 @@ class PrefsStore extends ChangeNotifier {
   WorkbenchPrefs _value;
 
   WorkbenchPrefs get value => _value;
+
+  /// Resets preferences to the defaults; the current file is quarantined so
+  /// the user's layout choices stay recoverable (ADR-0045 PB, same answer as
+  /// `SettingsStore.resetToDefaults`).
+  Future<void> resetToDefaults() async {
+    if (_file.existsSync()) {
+      try {
+        await _file.rename(
+          '${_file.path}.corrupt-${DateTime.now().millisecondsSinceEpoch}',
+        );
+      } on FileSystemException {
+        // Same best-effort rule as open(): the defaults win either way.
+      }
+    }
+    _value = const WorkbenchPrefs();
+    final temp = File('${_file.path}.tmp');
+    await temp.parent.create(recursive: true);
+    await temp.writeAsString(jsonEncode(_value.toJson()), flush: true);
+    await temp.rename(_file.path);
+    notifyListeners();
+  }
 
   /// Persists [next] and notifies. Same sibling-and-rename discipline as
   /// `SettingsStore.save`.

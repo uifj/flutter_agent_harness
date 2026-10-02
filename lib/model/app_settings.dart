@@ -102,6 +102,15 @@ enum AppConversationWidth {
 }
 
 class AppSettings {
+  /// The on-disk schema version (ADR-0045 PB): a document without the field
+  /// is version 1 (plaintext-API-key era); the current writer stamps this
+  /// value so future migrations can be targeted instead of guessing.
+  static const int schemaVersion = 2;
+
+  /// The keychain key the API key persists under (`SecretStore`); settings.json
+  /// itself never carries the key again.
+  static const apiKeySecretKey = 'settings:model:api_key';
+
   const AppSettings({
     this.model = const ModelSettings(),
     this.workspaceRoot,
@@ -247,12 +256,39 @@ class AppSettings {
   /// Whether the runtime built from [previous] has to be torn down. The
   /// appearance prefs never rebuild it — none of them touch the model, the MCP
   /// set, or the skills directory.
+  /// The in-memory copy still carries the key for synchronous readers; this
+  /// is the document that goes to disk.
+  Map<String, dynamic> toJsonWithoutSecrets() {
+    final json = toJson();
+    final model = Map<String, Object?>.from(
+      json['model'] as Map<String, Object?>,
+    )..['apiKey'] = '';
+    return json..['model'] = model;
+  }
+
+  /// A copy with just the API key swapped — the secret store's answer rides
+  /// in through this at open time without touching any other field.
+  AppSettings copyWithModelApiKey(String key) => AppSettings(
+    model: model.copyWith(apiKey: key),
+    workspaceRoot: workspaceRoot,
+    workspaceBookmark: workspaceBookmark,
+    mcpServers: mcpServers,
+    skillsRoot: skillsRoot,
+    theme: theme,
+    locale: locale,
+    recentWorkspaces: recentWorkspaces,
+    fontSize: fontSize,
+    conversationWidth: conversationWidth,
+    expandToolCalls: expandToolCalls,
+  );
+
   bool requiresRuntimeRestart(AppSettings previous) =>
       model.requiresRestart(previous.model) ||
       !_listEq(mcpServers, previous.mcpServers) ||
       skillsRoot != previous.skillsRoot;
 
   Map<String, dynamic> toJson() => {
+    'schemaVersion': schemaVersion,
     'model': model.toJson(),
     if (workspaceRoot != null) 'workspaceRoot': workspaceRoot,
     if (workspaceBookmark != null) 'workspaceBookmark': workspaceBookmark,

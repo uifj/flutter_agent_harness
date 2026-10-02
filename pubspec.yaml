@@ -21,6 +21,9 @@ dependencies:
   # Editor link chips open the system browser (ADR-0044 P10-d); already in
   # the tree as pdfrx's transitive dependency, promoted so lib may import it.
   url_launcher: ^6.3.2
+  # OS keychain for the API key (ADR-0045 PB): macOS Keychain, Windows DPAPI,
+  # Linux libsecret. Tests inject the in-memory implementation.
+  flutter_secure_storage: ^9.2.2
   desktop_drop: ^0.8.4
   file_picker: ^10.3.7
   flutter:

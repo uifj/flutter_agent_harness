@@ -45,6 +45,7 @@ import '../../model/model_settings.dart';
 import '../../model/workbench_prefs.dart';
 import '../../state/approval_rule_store.dart';
 import '../../state/backup_service.dart';
+import '../primitives/confirm_dialog.dart';
 import '../../theme/dsw_shad_bridge.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
@@ -75,6 +76,7 @@ class SettingsPanel extends StatefulWidget {
     super.key,
     required this.settings,
     required this.onSave,
+    required this.onReset,
     required this.onClose,
     required this.onPickFolder,
     required this.supportPath,
@@ -89,6 +91,11 @@ class SettingsPanel extends StatefulWidget {
   /// Commits the edited document. Awaited, so the panel can report the outcome
   /// rather than closing on faith.
   final Future<void> Function(AppSettings next) onSave;
+
+  /// The Backup section's reset entry: quarantines both preference files and
+  /// clears the keychain key (ADR-0045 PB). Behind a confirm dialog here;
+  /// the store-level work lives in the stores.
+  final Future<void> Function() onReset;
 
   final VoidCallback onClose;
 
@@ -1299,11 +1306,35 @@ class _SettingsPanelState extends State<SettingsPanel> {
             label: context.tr('backupImport'),
             onTap: _restoreBackup,
           ),
+        ),
+        _ActionRow(
+          title: context.tr('settingsReset'),
+          description: context.tr('settingsResetDesc'),
+          button: CapsuleButton(
+            label: context.tr('settingsReset'),
+            danger: true,
+            onTap: _resetSettings,
+          ),
           last: true,
         ),
       ],
     ),
   ];
+
+  /// The reset entry (ADR-0045 PB): confirm first — this throws configuration
+  /// away — then let the stores quarantine their own files.
+  Future<void> _resetSettings() async {
+    final confirmed = await showConfirmDialog(
+      context,
+      title: context.tr('settingsResetConfirmTitle'),
+      description: context.tr('settingsResetConfirmBody'),
+      confirmLabel: context.tr('settingsReset'),
+    );
+    if (!confirmed || !mounted) return;
+    await widget.onReset();
+    if (!mounted) return;
+    showFeedback(context, context.tr('settingsResetDone'));
+  }
 
   Future<void> _createBackup() async {
     final path = await FilePicker.platform.saveFile(

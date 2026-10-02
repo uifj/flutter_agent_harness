@@ -551,6 +551,13 @@ const enStrings = <String, String>{
       'Export all your data to a file, or restore from a previous backup.',
   'backupCreate': 'Create backup',
   'backupCreateDesc': 'Export settings, sessions, and tasks to a zip file.',
+  'settingsReset': 'Reset',
+  'settingsResetDesc':
+      'Quarantine settings and preferences and start from defaults. The API key is removed from the keychain. Sessions and plan data are kept.',
+  'settingsResetConfirmTitle': 'Reset settings and preferences?',
+  'settingsResetConfirmBody':
+      'Your current settings file is kept as a .corrupt- copy next to the new one, so this is recoverable by hand. Sessions and plan data are untouched.',
+  'settingsResetDone': 'Settings and preferences were reset',
   'backupExport': 'Export',
   'backupRestore': 'Restore from backup',
   'backupRestoreDesc':
@@ -1283,6 +1290,11 @@ const zhStrings = <String, String>{
   'settingsBackupIntro': '将所有数据导出到文件，或从备份文件恢复。',
   'backupCreate': '创建备份',
   'backupCreateDesc': '将设置、会话和任务导出为 zip 文件。',
+  'settingsReset': '重置',
+  'settingsResetDesc': '隔离设置与偏好文件并恢复默认。API key 将从钥匙串移除。会话与企划数据保留。',
+  'settingsResetConfirmTitle': '重置设置与偏好？',
+  'settingsResetConfirmBody': '当前设置文件会以 .corrupt- 副本留在旁边，手动即可找回。会话与企划数据不受影响。',
+  'settingsResetDone': '设置与偏好已重置',
   'backupExport': '导出',
   'backupRestore': '从备份恢复',
   'backupRestoreDesc': '从备份文件导入数据，将覆盖当前数据。',

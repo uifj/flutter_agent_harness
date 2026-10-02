@@ -33,6 +33,7 @@ import 'state/hotkey_service.dart';
 import 'model/plan_mock_content.dart';
 import 'state/plan_object_store.dart';
 import 'state/prefs_store.dart';
+import 'state/secret_store.dart';
 import 'state/settings_store.dart';
 import 'state/tray_service.dart';
 import 'state/window_title_service.dart';
@@ -63,7 +64,10 @@ Future<void> main() async {
   // not user files. Inside the macOS sandbox container this is writable without
   // any further entitlement.
   final support = await getApplicationSupportDirectory();
-  final settings = await SettingsStore.open(support);
+  final settings = await SettingsStore.open(
+    support,
+    secrets: SecureSecretStore(),
+  );
   final prefsStore = await PrefsStore.open(support);
   // The plan workspace's object store (ADR-0037): the same bootstrap rule, and
   // the only place the mock seed is named.
@@ -515,6 +519,10 @@ class _DshAppState extends ConsumerState<DshApp> {
     return SettingsPanel(
       settings: doc,
       onSave: scope.save,
+      onReset: () async {
+        await ref.read(settingsStoreProvider).resetToDefaults();
+        await ref.read(prefsStoreProvider).resetToDefaults();
+      },
       onClose: () => setState(() => _settingsOpen = false),
       onPickFolder: scope.pickFolder,
       // The field hints on the settings page name directories the user can open,
