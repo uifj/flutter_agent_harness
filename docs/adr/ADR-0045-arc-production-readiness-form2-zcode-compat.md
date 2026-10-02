@@ -1,0 +1,60 @@
+# ADR-0045: 生产化总纲——形态②（自建后端）与 ZCode 兼容前端参数，P0 分批授权
+
+- 分类: ARC
+- 优先级: P1
+- 状态: ACCEPTED（2026-10-02，用户拍板："全部推进；服务端采用和 ZCode 一样的自建后端服务，前端相关参数先全部保留和 ZCode 相同的"；配套盘点 `docs/production-readiness-gap-2026-10-02.md`）
+
+## 背景
+
+生产化盘点（§0 定位题）的三种商用形态中，用户选定**形态②：账号 + 消费订阅**——客户端免费、
+计费在消费侧（Coding Plan 模式），后端自建。决策的直接后果：**前端参数层现在就要与 ZCode 的
+线上客户端逐字对齐**（端点路径、请求头、协议字段名、provider 身份），使未来自建后端可以按
+ZCode 已验证的契约实现，客户端不用二次迁移。
+
+## 决策
+
+### 1. ZCode 兼容参数层（`lib/model/zcode_compat/`，纯 Dart）
+
+逐字保留以下参数（证据：归档当日 head 的 grep，见下）：
+
+| 参数 | ZCode 事实 | 落点 |
+| --- | --- | --- |
+| API 基座 | `{origin}/api/v1`、`/api/v1/zcode-plan`、`/api/v1/zcode-plan/anthropic`、`/api/v1/zcode-plan/billing/current`、`/api/v1/zcode-plan/billing/balance` | `zcodeEndpoint.ts:262-270` → `zcode_endpoints.dart` |
+| 请求头 | `X-Platform: {platform}-{arch}`、`X-Release-Channel`、`X-Device-Mid`；channel 映射 `stable→"1"`、`preview→"3"` | `zcode-source-headers.ts:51-57`、`manifestUpdateProvider.ts:37-41` |
+| 更新/强更 | `/api/v1/releases/electron/manifest?platform&device_mid&channel`、`/api/v1/client/configs?app_version&platform`（forceUpdate.minimalVersion，离线 fail-open） | `manifestUpdateProvider.ts:40-93`、`forceUpdateGuard.ts:150-182` |
+| OAuth | provider id `zai`（chat.z.ai）/`bigmodel`（bigmodel.cn）；`UserInfo{id,username,displayName,avatarUrl?}`；存储键 `oauth:active_provider`、`oauth:{provider}:access_token/refresh_token/user_info` | `oauth.ts:8-12,82-91,153-203` |
+| 额度协议 | `UsageQuotaSnapshot{level,limits[]}` / `UsageQuotaLimit{type,bucketId?,periodStart/End?,meter?,usage?,remaining?,percentage?,nextResetTime?,usageDetails[]}`（字段名逐个保留，含可空位）/ `UsageQuotaUsageDetail{modelCode,displayName?,usage}` / 合成类型 `MCP_USAGE_LIMIT` | `usage-quota.ts:9-49` |
+| 设备身份 | `deviceMid` UUID 持久化，计费/遥测头共用 | `deviceMid.ts:21-28` → `<support>/device_state.json` |
+| 消费记账 | 本地 usage 表 30 天硬修剪（`usage.ts:17-18`）；指标=input/output/reasoning/cacheRead/cacheCreation tokens、TTFT、错误率 | `usage-stats.ts:170-251` 的本地子集 |
+
+**不搬**：ARMS 遥测全家、插件商店、手机远控、CUA（沿用盘点 §5）；ZCode 的 localStorage 键名
+（我们走自己的 store 文件，只保留 oauth 语义键在安全存储里的命名）。
+
+**刻意偏离一处（登记）**：密钥存储不用 ZCode 的 AES-GCM `credentials.json`（那是 Electron
+无 keychain 时的自研方案），Flutter 侧直接用 OS keychain（`flutter_secure_storage`）——
+macOS Keychain / Windows DPAPI / Linux libsecret。参数兼容指的是协议层，不是存储机制。
+
+### 2. P0 分批授权（每批三门禁 + 一次提交）
+
+| 批 | 内容 | 落点 |
+| --- | --- | --- |
+| PA | zcode_compat 模型层 + 测试（纯 Dart，零依赖） | `lib/model/zcode_compat/` |
+| PB | **密钥安全存储**（DEP：flutter_secure_storage）+ `settings.json` 损坏隔离（quarantine `.corrupt-<ts>`）+ `AppSettings` 版本化迁移表 + 明文 apiKey 一次性迁移 + 设置/偏好**重置入口** | `lib/state/` + 设置 Backup 节 |
+| PC | **崩溃本地归档**（`<support>/logs/crash/`，5 文件/100MB，Flutter + Platform 双通道）+ **使用台账**（JSONL 月文件 + 30 天修剪 + 设置页"使用统计"节，runtime seam 接 genkit usage）+ 快捷键**注册表**（一处定义三方共用：托盘/热键/设置只读表，录制 UI 下一批）+ "打开日志"入口 | `lib/state/` + `lib/ui/settings/` |
+| PD | 版本事实：`version: 0.1.0`、README/CHANGELOG 正式化、本 ADR 与登记表回填 | 根 |
+
+### 3. 下一批（不在本 ADR 内实现，登记形状）
+
+多 provider 列表化（`AppSettings.model` 单对象 → 列表 + 迁移）、代理/CA 设置（须真接
+HttpClient 才许出现，反 ADR-0022 死字段律）、通知开关、快捷键录制 UI、OAuth 客户端与
+升级购买 UI（等自建后端端点联调）、自动更新全量（前置：签名公证，另立 CFG ADR）。
+
+## 后果
+
+- `lib/model/zcode_compat/` 全部纯 Dart + 手写 `toJson/fromJson`，字段名与 ZCode 逐字一致
+  （含驼峰与可空位），由测试对着归档值钉住——后端可按 ZCode 契约实现。
+- 新依赖 `flutter_secure_storage`（^9.x）：三桌面 OS keychain；测试经接口注入 fake，不碰插件。
+- `settings.json` 的 `apiKey` 字段在 PB 迁移后**不再写入**（读取兼容旧文件一次）；
+  备份里的明文风险随迁移消失。
+- 形态②的服务端件（OAuth、计费、额度、强更配置）全部【后端自建】，本 ADR 只锁前端参数；
+  联调前客户端一律以本地/空态降级呈现（无账号也能用 BYOK——ZCode 同款立场）。
