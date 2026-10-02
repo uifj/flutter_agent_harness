@@ -65,6 +65,20 @@ provider 按钮 + API key 表单 + 唯一 skip 路径；**OAuth 走服务端发�
   手动登出重开门。
 - 依赖：`http`（genkit 传递依赖升格直接依赖）。
 
+### PF（2026-10-03 追加授权）：多 provider 列表化 + 头像菜单 auth rows
+
+**PF 已落**：`ModelSettings` 获得稳定 `id`；`AppSettings` 获得 `savedProviders`
+（已配置连接的地址簿，每条 id + 密钥在 keychain 自己的槽位）与 `activeProviderId`，
+**schemaVersion 3**——迁移从已配置的活动连接播种书（p1），新文档透传。
+SettingsStore 编排每条目的 keychain 槽位（保存 diff 条目、激活换槽、删除清槽；
+同一条目更新就位、不同连接铸新 id——第二个 provider 静默覆盖第一个的等价缺陷由
+它自己的测试抓出）；`toJsonWithoutSecrets` 剥离书内密钥、open 从槽位恢复——
+盘上文档任何位置都不含钥。Models 节新增书 UI：保存已测连接、条目列表（凭据点）、
+激活、删除。`AppSettings.==` 纳入书比较——静默吞掉保存的陈旧等价早退由同批测试抓出。
+头像菜单 auth rows：`AuthSnapshot` 桥接会话通知；快捷菜单显示 Sign in（manualLogin
+理由重开门，gate 现在尊重已有 API key 的手动登录）或 Sign out；`userProfile` 投影
+登录身份（ZcodeUserInfo 增加 poll 载荷的 email）。
+
 ### 3. 下一批（不在本 ADR 内实现，登记形状）
 
 多 provider 列表化（`AppSettings.model` 单对象 → 列表 + 迁移）、代理/CA 设置（须真接
