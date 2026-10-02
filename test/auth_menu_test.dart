@@ -109,13 +109,6 @@ void main() {
     await tester.pump();
   }
 
-  void closeMenu() {
-    if (entryRemoved) return;
-    entry?.remove();
-    entryRemoved = true;
-    entry = null;
-  }
-
   void safeRemove() {
     if (entryRemoved) return;
     entryRemoved = true;
