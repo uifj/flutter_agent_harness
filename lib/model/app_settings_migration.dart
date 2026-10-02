@@ -34,6 +34,10 @@ abstract final class AppSettingsMigration {
       legacyApiKey = result.legacyApiKey;
       version = 2;
     }
+    if (version < 3 && version < _latest) {
+      working = _v2ToV3(working);
+      version = 3;
+    }
     return AppSettingsMigrationResult(
       json: working,
       legacyApiKey: legacyApiKey,
@@ -56,5 +60,27 @@ abstract final class AppSettingsMigration {
     }
     working['schemaVersion'] = 2;
     return AppSettingsMigrationResult(json: working, legacyApiKey: legacyKey);
+  }
+
+  /// v2 → v3: the active connection, when configured, seeds the saved-provider
+  /// book with one entry (id `p1`) and points [AppSettings.activeProviderId]
+  /// at it — the book starts populated rather than empty. The KEY stays under
+  /// the active keychain slot; the store copies it into the entry's own slot
+  /// on the next save.
+  static Map<String, dynamic> _v2ToV3(Map<String, dynamic> json) {
+    final working = Map<String, dynamic>.of(json);
+    final model = working['model'];
+    var configured = false;
+    if (model is Map<String, dynamic>) {
+      configured = ((model['apiKey'] as String?) ?? '').isNotEmpty;
+    }
+    if (configured) {
+      working['savedProviders'] = [
+        {...(model as Map<String, dynamic>), 'id': 'p1'},
+      ];
+      working['activeProviderId'] = 'p1';
+    }
+    working['schemaVersion'] = 3;
+    return working;
   }
 }

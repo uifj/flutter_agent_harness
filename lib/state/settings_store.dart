@@ -15,10 +15,12 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 
 import '../model/app_settings.dart';
 import '../model/app_settings_migration.dart';
+import '../model/model_settings.dart';
 import 'secret_store.dart';
 
 /// Holds the current [AppSettings] and writes every change through.
@@ -72,6 +74,20 @@ class SettingsStore extends ChangeNotifier {
       if (key != null && key.isNotEmpty) {
         value = value.copyWithModelApiKey(key);
       }
+      // The book's keys ride their own slots (ADR-0045 PF-2).
+      final restored = <ModelSettings>[];
+      for (final provider in value.savedProviders) {
+        final id = provider.id;
+        var entry = provider;
+        if (id != null) {
+          final bookKey = await secrets.read(AppSettings.providerSecretKey(id));
+          if (bookKey != null && bookKey.isNotEmpty) {
+            entry = entry.copyWith(apiKey: bookKey);
+          }
+        }
+        restored.add(entry);
+      }
+      value = value.copyWith(savedProviders: restored);
     }
     return SettingsStore._(file, value, secrets);
   }
@@ -112,6 +128,32 @@ class SettingsStore extends ChangeNotifier {
         await secrets.write(AppSettings.apiKeySecretKey, nextKey);
       }
     }
+    // The saved-provider book: any entry whose key changed gets its own
+    // keychain slot (ADR-0045 PF-2). Keys ride the entry's stable id.
+    if (secrets != null) {
+      final previousById = {
+        for (final provider in _value.savedProviders)
+          if (provider.id != null) provider.id!: provider,
+      };
+      for (final provider in next.savedProviders) {
+        final id = provider.id;
+        if (id == null) continue;
+        final previous = previousById[id];
+        final previousKey = previous?.apiKey ?? '';
+        if (provider.apiKey == previousKey) continue;
+        final slot = AppSettings.providerSecretKey(id);
+        if (provider.apiKey.isEmpty) {
+          await secrets.delete(slot);
+        } else {
+          await secrets.write(slot, provider.apiKey);
+        }
+      }
+      for (final provider in previousById.values) {
+        if (!next.savedProviders.any((entry) => entry.id == provider.id)) {
+          await secrets.delete(AppSettings.providerSecretKey(provider.id!));
+        }
+      }
+    }
     _value = next;
     final temp = File('${_file.path}.tmp');
     await temp.parent.create(recursive: true);
@@ -144,5 +186,78 @@ class SettingsStore extends ChangeNotifier {
     );
     await temp.rename(_file.path);
     notifyListeners();
+  }
+
+  // ---- saved-provider book (ADR-0045 PF-2) ---------------------------------
+
+  /// Saves the ACTIVE connection into the book (minting an id when the
+  /// connection came from no entry), reusing the existing entry's id when the
+  /// active connection IS a book entry. The key lands in the entry's own
+  /// keychain slot; the active slot keeps working.
+  Future<void> saveCurrentProviderToBook() async {
+    final current = _value;
+    // Reuse the referenced entry's id only when the connection IS that entry
+    // (an update-in-place); an edited or brand-new connection mints a new id,
+    // or saving a second provider would silently overwrite the first.
+    final referenced = current.savedProviders
+        .where((entry) => entry.id == current.activeProviderId)
+        .firstOrNull;
+    final sameAsReferenced =
+        referenced != null &&
+        referenced.copyWith(id: null) == current.model.copyWith(id: null);
+    final id = sameAsReferenced
+        ? referenced.id!
+        : 'p${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}';
+    final model = current.model.copyWith(id: id);
+    final secrets = _secrets;
+    if (secrets != null && model.apiKey.isNotEmpty) {
+      await secrets.write(AppSettings.providerSecretKey(id), model.apiKey);
+    }
+    final book = [...current.savedProviders]
+      ..removeWhere((entry) => entry.id == id);
+    book.add(model);
+    await save(current.copyWith(savedProviders: book, activeProviderId: id));
+  }
+
+  /// Activates a saved entry: its connection becomes [AppSettings.model] and
+  /// its key moves to the active keychain slot. The entry stays in the book,
+  /// so a later re-activation needs no re-entry.
+  Future<void> activateSavedProvider(String id) async {
+    final entry = _value.savedProviders
+        .where((provider) => provider.id == id)
+        .firstOrNull;
+    if (entry == null) return;
+    final secrets = _secrets;
+    var key = _value.model.apiKey;
+    if (secrets != null) {
+      final stored = await secrets.read(AppSettings.providerSecretKey(id));
+      if (stored != null && stored.isNotEmpty) {
+        key = stored;
+        await secrets.write(AppSettings.apiKeySecretKey, stored);
+      }
+    }
+    final activated = entry.copyWith(apiKey: key);
+    await save(_value.copyWith(model: activated, activeProviderId: id));
+  }
+
+  /// Removes a saved entry and its keychain slot. Never removes the ACTIVE
+  /// connection — callers delete from the book only.
+  Future<void> deleteSavedProvider(String id) async {
+    final secrets = _secrets;
+    if (secrets != null) {
+      await secrets.delete(AppSettings.providerSecretKey(id));
+    }
+    final book = [
+      for (final provider in _value.savedProviders)
+        if (provider.id != id) provider,
+    ];
+    await save(
+      _value.copyWith(
+        savedProviders: book,
+        activeProviderId: _value.activeProviderId == id
+            ? null
+            : _value.activeProviderId,
+      ),
+    );
   }
 }

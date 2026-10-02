@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:agent_harness/model/app_settings.dart';
+import 'package:agent_harness/model/model_settings.dart';
 import 'package:agent_harness/model/app_settings_migration.dart';
 import 'package:agent_harness/state/prefs_store.dart';
 import 'package:agent_harness/state/secret_store.dart';
@@ -84,7 +85,7 @@ void main() {
       final onDisk =
           jsonDecode(settingsFile().readAsStringSync()) as Map<String, dynamic>;
       expect((onDisk['model'] as Map<String, dynamic>)['apiKey'], '');
-      expect(onDisk['schemaVersion'], 2);
+      expect(onDisk['schemaVersion'], 3);
     },
   );
 
@@ -137,13 +138,91 @@ void main() {
     );
   });
 
+  group('saved-provider book (PF-2)', () {
+    test(
+      'saveCurrentProviderToBook mints an id and copies the key to its slot',
+      () async {
+        final store = await SettingsStore.open(root, secrets: secrets);
+        await store.save(store.value.copyWithModelApiKey('sk-book'));
+        await store.saveCurrentProviderToBook();
+        expect(store.value.savedProviders, hasLength(1));
+        final entry = store.value.savedProviders.single;
+        expect(entry.id, isNotNull);
+        expect(store.value.activeProviderId, entry.id);
+        expect(
+          await secrets.read(AppSettings.providerSecretKey(entry.id!)),
+          'sk-book',
+        );
+        // The active slot still answers.
+        expect(store.value.model.apiKey, 'sk-book');
+      },
+    );
+
+    test('activate swaps the connection and the active key', () async {
+      final store = await SettingsStore.open(root, secrets: secrets);
+      await store.save(store.value.copyWithModelApiKey('sk-first'));
+      await store.saveCurrentProviderToBook();
+      final firstId = store.value.activeProviderId!;
+
+      // A second connection replaces the active one and is saved too.
+      await store.save(
+        store.value.copyWith(
+          model: const ModelSettings(
+            provider: LlmProvider.anthropic,
+            apiKey: 'sk-second',
+            baseUrl: '',
+            model: 'claude-sonnet-4-5',
+          ),
+        ),
+      );
+      await store.saveCurrentProviderToBook();
+      expect(store.value.savedProviders, hasLength(2));
+
+      // Back to the first: the anthropic key leaves the active slot, the
+      // first entry's key arrives from its own slot.
+      await store.activateSavedProvider(firstId);
+      expect(store.value.model.provider, LlmProvider.openai);
+      expect(store.value.model.apiKey, 'sk-first');
+      expect(await secrets.read(AppSettings.apiKeySecretKey), 'sk-first');
+    });
+
+    test('delete removes the entry and its key slot', () async {
+      final store = await SettingsStore.open(root, secrets: secrets);
+      await store.save(store.value.copyWithModelApiKey('sk-del'));
+      await store.saveCurrentProviderToBook();
+      final id = store.value.activeProviderId!;
+      await store.deleteSavedProvider(id);
+      expect(store.value.savedProviders, isEmpty);
+      expect(await secrets.read(AppSettings.providerSecretKey(id)), isNull);
+    });
+
+    test(
+      'the book survives a reopen: keys from slots, file stays clean',
+      () async {
+        final store = await SettingsStore.open(root, secrets: secrets);
+        await store.save(store.value.copyWithModelApiKey('sk-rt'));
+        await store.saveCurrentProviderToBook();
+        // The on-disk document carries no keys anywhere.
+        final onDisk =
+            jsonDecode(settingsFile().readAsStringSync())
+                as Map<String, dynamic>;
+        final diskBook = onDisk['savedProviders'] as List;
+        expect((diskBook.single as Map)['apiKey'], '');
+        // Reopen restores the book entry's key from its slot.
+        final reopened = await SettingsStore.open(root, secrets: secrets);
+        expect(reopened.value.savedProviders, hasLength(1));
+        expect(reopened.value.savedProviders.single.apiKey, 'sk-rt');
+      },
+    );
+  });
+
   group('AppSettingsMigration', () {
     test('v1→v2 extracts the key and stamps the version', () {
       final result = AppSettingsMigration.apply({
         'model': {'apiKey': 'sk-x'},
       });
       expect(result.legacyApiKey, 'sk-x');
-      expect(result.json['schemaVersion'], 2);
+      expect(result.json['schemaVersion'], 3);
       expect((result.json['model'] as Map)['apiKey'], '');
     });
 
@@ -155,7 +234,35 @@ void main() {
       final result = AppSettingsMigration.apply(document);
       expect(result.legacyApiKey, isNull);
       expect(identical(result.json, document), isFalse);
-      expect(result.json['schemaVersion'], 2);
+      expect(result.json['schemaVersion'], 3);
+    });
+
+    test('v2→v3 seeds the book from a configured active connection', () {
+      final result = AppSettingsMigration.apply({
+        'schemaVersion': 2,
+        'model': {
+          'provider': 'openai',
+          'apiKey': 'sk-live',
+          'baseUrl': 'https://api.deepseek.com/v1',
+          'model': 'deepseek-chat',
+        },
+      });
+      expect(result.json['schemaVersion'], 3);
+      final book = result.json['savedProviders'] as List;
+      expect(book, hasLength(1));
+      expect((book.single as Map)['id'], 'p1');
+      expect(result.json['activeProviderId'], 'p1');
+      // The key stays under the active slot; no secret moved into the doc.
+      expect((book.single as Map)['apiKey'], 'sk-live');
+    });
+
+    test('v2→v3 leaves an unconfigured document with an empty book', () {
+      final result = AppSettingsMigration.apply({
+        'schemaVersion': 2,
+        'model': {'apiKey': ''},
+      });
+      expect(result.json['schemaVersion'], 3);
+      expect(result.json['savedProviders'], isNull);
     });
 
     test('a newer document is not downgraded', () {

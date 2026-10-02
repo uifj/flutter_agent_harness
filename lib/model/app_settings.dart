@@ -105,11 +105,15 @@ class AppSettings {
   /// The on-disk schema version (ADR-0045 PB): a document without the field
   /// is version 1 (plaintext-API-key era); the current writer stamps this
   /// value so future migrations can be targeted instead of guessing.
-  static const int schemaVersion = 2;
+  static const int schemaVersion = 3;
 
-  /// The keychain key the API key persists under (`SecretStore`); settings.json
-  /// itself never carries the key again.
+  /// The keychain key the ACTIVE provider's API key persists under
+  /// (`SecretStore`); settings.json itself never carries the key again.
   static const apiKeySecretKey = 'settings:model:api_key';
+
+  /// The keychain key prefix for a SAVED provider entry's key — the full key
+  /// is `settings:provider:<id>:api_key` (ADR-0045 PF-2).
+  static String providerSecretKey(String id) => 'settings:provider:$id:api_key';
 
   const AppSettings({
     this.model = const ModelSettings(),
@@ -123,6 +127,8 @@ class AppSettings {
     this.fontSize = AppFontSize.medium,
     this.conversationWidth = AppConversationWidth.normal,
     this.expandToolCalls = true,
+    this.savedProviders = const [],
+    this.activeProviderId,
   });
 
   AppSettings.fromJson(Map<String, dynamic> json)
@@ -146,7 +152,12 @@ class AppSettings {
       conversationWidth = AppConversationWidth.fromName(
         json['conversationWidth'] as String?,
       ),
-      expandToolCalls = json['expandToolCalls'] as bool? ?? true;
+      expandToolCalls = json['expandToolCalls'] as bool? ?? true,
+      savedProviders = [
+        for (final entry in (json['savedProviders'] as List? ?? const []))
+          if (entry is Map<String, dynamic>) ModelSettings.fromJson(entry),
+      ],
+      activeProviderId = json['activeProviderId'] as String?;
 
   final ModelSettings model;
 
@@ -184,6 +195,18 @@ class AppSettings {
   /// Whether a newly-shown tool block starts expanded (starkins default on).
   final bool expandToolCalls;
 
+  /// The saved provider connections (ADR-0045 PF-2): an address book of
+  /// configured `ModelSettings` entries, each with a stable [ModelSettings.id]
+  /// and its API key in the secret store under
+  /// [AppSettings.providerSecretKey]. `model` stays the ACTIVE connection —
+  /// activating an entry copies it into `model`, so the runtime and every
+  /// existing reader are untouched.
+  final List<ModelSettings> savedProviders;
+
+  /// Which saved entry the active connection was last activated from, when it
+  /// came from the book at all.
+  final String? activeProviderId;
+
   static List<String> _pushRecent(List<String> recent, String path) => [
     path,
     for (final other in recent)
@@ -202,6 +225,8 @@ class AppSettings {
     AppFontSize? fontSize,
     AppConversationWidth? conversationWidth,
     bool? expandToolCalls,
+    List<ModelSettings>? savedProviders,
+    String? activeProviderId,
   }) => AppSettings(
     model: model ?? this.model,
     workspaceRoot: workspaceRoot ?? this.workspaceRoot,
@@ -214,6 +239,8 @@ class AppSettings {
     fontSize: fontSize ?? this.fontSize,
     conversationWidth: conversationWidth ?? this.conversationWidth,
     expandToolCalls: expandToolCalls ?? this.expandToolCalls,
+    savedProviders: savedProviders ?? this.savedProviders,
+    activeProviderId: activeProviderId ?? this.activeProviderId,
   );
 
   /// Explicit: an empty path field means "take the permission back". The
@@ -263,7 +290,18 @@ class AppSettings {
     final model = Map<String, Object?>.from(
       json['model'] as Map<String, Object?>,
     )..['apiKey'] = '';
-    return json..['model'] = model;
+    json['model'] = model;
+    // The book's keys are stripped the same way: every key lives in the
+    // secret store, under [apiKeySecretKey] or [providerSecretKey].
+    if (json['savedProviders'] is List) {
+      json['savedProviders'] = [
+        for (final entry
+            in (json['savedProviders'] as List)
+                .whereType<Map<String, Object?>>())
+          {...entry, 'apiKey': ''},
+      ];
+    }
+    return json;
   }
 
   /// A copy with just the API key swapped — the secret store's answer rides
@@ -280,6 +318,8 @@ class AppSettings {
     fontSize: fontSize,
     conversationWidth: conversationWidth,
     expandToolCalls: expandToolCalls,
+    savedProviders: savedProviders,
+    activeProviderId: activeProviderId,
   );
 
   bool requiresRuntimeRestart(AppSettings previous) =>
@@ -304,6 +344,11 @@ class AppSettings {
     if (conversationWidth != AppConversationWidth.normal)
       'conversationWidth': conversationWidth.name,
     if (!expandToolCalls) 'expandToolCalls': false,
+    if (savedProviders.isNotEmpty)
+      'savedProviders': [
+        for (final provider in savedProviders) provider.toJson(),
+      ],
+    if (activeProviderId != null) 'activeProviderId': activeProviderId,
   };
 
   @override
@@ -319,7 +364,9 @@ class AppSettings {
       _listEq(other.recentWorkspaces, recentWorkspaces) &&
       other.fontSize == fontSize &&
       other.conversationWidth == conversationWidth &&
-      other.expandToolCalls == expandToolCalls;
+      other.expandToolCalls == expandToolCalls &&
+      _listEq(other.savedProviders, savedProviders) &&
+      other.activeProviderId == activeProviderId;
 
   @override
   int get hashCode => Object.hash(

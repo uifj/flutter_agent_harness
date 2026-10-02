@@ -51,6 +51,7 @@ import '../../state/backup_service.dart';
 import '../../model/shortcut_registry.dart' as shortcuts;
 import '../../state/usage_ledger.dart';
 import '../primitives/confirm_dialog.dart';
+import '../primitives/icon_button.dart';
 import '../../theme/dsw_shad_bridge.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
@@ -61,7 +62,6 @@ import '../primitives/tappable.dart';
 import '../primitives/feedback.dart';
 import '../primitives/menu.dart';
 import '../primitives/capsule_button.dart';
-import '../primitives/icon_button.dart';
 import 'widgets/settings_card.dart';
 
 /// Which section the rail is pointing at.
@@ -85,6 +85,9 @@ class SettingsPanel extends StatefulWidget {
     required this.onSave,
     required this.onReset,
     required this.usageSummary,
+    required this.onSaveCurrentToBook,
+    required this.onActivateSavedProvider,
+    required this.onDeleteSavedProvider,
     this.onOpenCrashLog,
     this.crashFiles,
     required this.onClose,
@@ -110,6 +113,12 @@ class SettingsPanel extends StatefulWidget {
   /// The local usage summary (ADR-0045 PC): read by the caller, rendered
   /// read-only here.
   final UsageSummary usageSummary;
+
+  /// The saved-provider book (ADR-0045 PF-2): the store owns the secret-slot
+  /// choreography; the section only calls.
+  final Future<void> Function() onSaveCurrentToBook;
+  final Future<void> Function(String id) onActivateSavedProvider;
+  final Future<void> Function(String id) onDeleteSavedProvider;
 
   /// Opens the crash-log directory in the file manager; null hides the row.
   final VoidCallback? onOpenCrashLog;
@@ -859,7 +868,85 @@ class _SettingsPanelState extends State<SettingsPanel> {
       _providerRowCard(color, provider),
       if (provider != LlmProvider.values.last) const SizedBox(height: 8),
     ],
+    const SizedBox(height: 8),
+    ..._savedConnectionsCard(color),
   ];
+
+  /// The saved-provider book (ADR-0045 PF-2): the active connection can be
+  /// saved into the book, and every entry can be activated (its connection
+  /// becomes the active one) or deleted. Keys never render — each row shows
+  /// whether one is on file.
+  List<Widget> _savedConnectionsCard(DswAlias color) {
+    final book = widget.settings.savedProviders;
+    return [
+      SettingsCard(
+        dividers: true,
+        children: [
+          _ActionRow(
+            title: context.tr('providersSaveCurrent'),
+            description: context.tr('providersSaveCurrentDesc'),
+            button: CapsuleButton(
+              label: context.tr('providersSaveCurrent'),
+              onTap: widget.onSaveCurrentToBook,
+            ),
+          ),
+          if (book.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+              child: Text(
+                context.tr('providersBookEmpty'),
+                style: DswType.xs13.copyWith(color: color.labelTertiary),
+              ),
+            )
+          else
+            for (final (index, entry) in book.indexed) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                child: Row(
+                  children: [
+                    _CredentialDot(configured: entry.isConfigured),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${_providerName(context, entry.provider)} · ${entry.model}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: DswType.s14.copyWith(
+                          color: color.labelPrimary,
+                          fontWeight:
+                              entry.id == widget.settings.activeProviderId
+                              ? FontWeight.w600
+                              : null,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    CapsuleButton(
+                      label: context.tr('providersActivate'),
+                      onTap: () => widget.onActivateSavedProvider(entry.id!),
+                    ),
+                    const SizedBox(width: 6),
+                    DswIconButton(
+                      icon: LucideIcons.trash,
+                      tooltip: context.tr('providersDelete'),
+                      onTap: () => widget.onDeleteSavedProvider(entry.id!),
+                    ),
+                  ],
+                ),
+              ),
+              if (index != book.length - 1)
+                dswEnsureShadTheme(
+                  context,
+                  ShadSeparator.horizontal(thickness: 1, color: color.borderL2),
+                ),
+            ],
+        ],
+      ),
+    ];
+  }
 
   /// `.rowCard`: outlined on the panel fill so the filled editor card it
   /// expands into reads as the nested object. dsh's `padding: 12px 14px`

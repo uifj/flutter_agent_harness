@@ -640,6 +640,12 @@ class _DshAppState extends ConsumerState<DshApp> {
         await ref.read(prefsStoreProvider).resetToDefaults();
       },
       usageSummary: ref.watch(usageSummaryProvider),
+      onSaveCurrentToBook: () =>
+          ref.read(settingsStoreProvider).saveCurrentProviderToBook(),
+      onActivateSavedProvider: (id) =>
+          ref.read(settingsStoreProvider).activateSavedProvider(id),
+      onDeleteSavedProvider: (id) =>
+          ref.read(settingsStoreProvider).deleteSavedProvider(id),
       crashFiles: ref.watch(crashArchiveNonEmptyProvider),
       onOpenCrashLog: () {
         revealInFileManager(

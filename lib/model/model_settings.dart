@@ -47,6 +47,7 @@ String defaultModelFor(LlmProvider provider) => switch (provider) {
 
 class ModelSettings {
   const ModelSettings({
+    this.id,
     this.provider = LlmProvider.openai,
     this.apiKey = '',
     this.baseUrl = defaultBaseUrl,
@@ -54,10 +55,15 @@ class ModelSettings {
   });
 
   ModelSettings.fromJson(Map<String, dynamic> json)
-    : provider = LlmProvider.fromName(json['provider'] as String?),
+    : id = json['id'] as String?,
+      provider = LlmProvider.fromName(json['provider'] as String?),
       apiKey = json['apiKey'] as String? ?? '',
       baseUrl = json['baseUrl'] as String? ?? defaultBaseUrl,
       model = json['model'] as String? ?? defaultModel;
+
+  /// The saved-provider book's stable identity (ADR-0045 PF-2). Null on the
+  /// active connection — the book mints one when a connection is saved.
+  final String? id;
 
   final LlmProvider provider;
 
@@ -84,11 +90,13 @@ class ModelSettings {
   );
 
   ModelSettings copyWith({
+    String? id,
     LlmProvider? provider,
     String? apiKey,
     String? baseUrl,
     String? model,
   }) => ModelSettings(
+    id: id ?? this.id,
     provider: provider ?? this.provider,
     apiKey: apiKey ?? this.apiKey,
     baseUrl: baseUrl ?? this.baseUrl,
@@ -96,6 +104,7 @@ class ModelSettings {
   );
 
   Map<String, dynamic> toJson() => {
+    if (id != null) 'id': id,
     'provider': provider.name,
     'apiKey': apiKey,
     'baseUrl': baseUrl,
@@ -111,11 +120,12 @@ class ModelSettings {
   @override
   bool operator ==(Object other) =>
       other is ModelSettings &&
+      other.id == id &&
       other.provider == provider &&
       other.apiKey == apiKey &&
       other.baseUrl == baseUrl &&
       other.model == model;
 
   @override
-  int get hashCode => Object.hash(provider, apiKey, baseUrl, model);
+  int get hashCode => Object.hash(id, provider, apiKey, baseUrl, model);
 }
