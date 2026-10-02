@@ -71,3 +71,64 @@
 - 代码：`lib/main.dart:106`、`lib/main.dart:124`、`lib/state/plan_object_store.dart:95-106`、`:1211-1213`、`lib/ui/plan/plan_workspace.dart:11`、`:82`、`:111`、`:219`、`:247`、`lib/model/app_settings.dart:162`、`lib/state/app_scope.dart:428`、`lib/model/session_groups.dart`（`workspaceKey`）
 - 关联 ADR：**ADR-0037**（对象库与"记录是 `PlanStruct` 的视图"，本 ADR 只改它的家在哪）、**ADR-0045**（形态②总纲；PB 批次的版本化迁移形状在此复用）、**ADR-0039**（`workspaceKey` 与 sidecar 按工作区分键的先例）、**ADR-0012/0014**（应用状态落 support、不写用户仓库）、**ADR-0022**（读侧宽容、写侧收敛）、**ADR-0043**（往用户仓库写非内容文件的代价会直接出现在"只看变更"里）
 - 研究：`docs/user-research/outline-2026-10-02.md` §10（锚点①②③定案、④待验）、`docs/user-research/deep-dive-2026-10-02.md` §2（"共享工作区"成立与裂缝）、`docs/user-research/bench-2026-10-02.md` §7
+
+## 附录 A：`plan_space.json` 的实况模型（2026-10-02 从代码抽出，不是设计稿）
+
+**顶层**（写 `lib/state/plan_object_store.dart:1210-1230`，读 `:136-169`）：
+
+```jsonc
+{
+  "revision": 42,           // 单调，每次 mutation +1（_commit :1201-1208）；通知在写盘之前
+  "objects": [ {...}, ... ],// 按 id 排序后落盘
+  "collections": [ ... ],
+  "types": [ ... ],
+  "relations": [ ... ],
+  "templates": [ ... ],
+  "widgets": [ ... ],
+  "bin": [ "r-task-3", ... ]// 排序后的 id 数组：没有 deletedAt、没有原位置
+}
+```
+
+**没有 `schemaVersion`，也没有任何工作区字段**——所以本 ADR 决策 3 要补版本戳；读侧靠 `json[key] is! List -> 兜底`（`:141-152`）宽容解析，`revision` 缺失取 0。
+
+**一条记录**（`PlanObject.toJson() => {'id': id, ...struct}`，`lib/model/plan_struct.dart:193`）：
+
+```jsonc
+{
+  "id": "r-task-1",
+  "name": "Ship the viewer bar",
+  "type": "ot-task",
+  "status": "doing",
+  "effort": 3,
+  "dueDate": "2026-10-02",
+  "tags": ["urgent", "internal"],
+  "done": false,
+  "editedAt": "2026-10-01T09:00:00.000"
+}
+```
+
+三条要点：① **记录是扁平 struct**，任何 relation key 都可能出现在顶层，字段集不固定（ADR-0037 D1 的实现形状）；② `toJson` 只写 `id` + `struct`，所以 `PlanObject` 上的派生字段（origin / restrictions 两组枚举）**不落盘**；③ id 形状 `'$prefix${++_idCounter}-${microsecondsSinceEpoch}'`（`:188-189`）——**计数器是每空间各自的**，合并两份空间时前缀序列会重叠（迁移时要处理）。
+
+**其余六类的落盘键**（逐类从各自 `toJson` 抽）：
+
+| 类 | 键 |
+| --- | --- |
+| `PlanCollection` | `id, name, kind, sourceTypeKey, members, dataView, restrictions, iconEmoji, description` |
+| `PlanDataView`（嵌在集合内） | `viewers, activeViewerId, objectOrders, groupOrders` |
+| `PlanViewer` | `id, name, kind, relations, filters, sorts, cardSize, coverFit, coverRelationKey, groupRelationKey, groupBackgroundColors, hideIcon, defaultTemplateId, defaultObjectTypeId` |
+| `PlanFilter` / `PlanSort` / `PlanViewerRelation` | `relationKey, operator, condition, value, quickDate, offset, nested` / `relationKey, type, emptyPlacement` / `key, isVisible, width, dateFormat, timeFormat, includeTime` |
+| `PlanObjectType` | `id, uniqueKey, name, iconEmoji, colorIndex, layout, recommendedRelationKeys, defaultTemplateId, defaultType, isArchived, pinned, sourceObject` |
+| `PlanRelation`（+ `PlanRelationOption`） | `id, key, name, format, source, options, hidden, featured`（选项 `id, text, colorIndex`） |
+| `PlanTemplate` | `id, name, typeKey, bundled, isDefault, blocks`（块 JSON 内联） |
+| `PlanWidget` | `id, source, bundled, layout, limit, activeViewId, section` |
+| `PlanBlock`（只在 template 内） | `id, content, children`；`PlanMark` = `start, end, type, param` |
+
+键词汇表：`PlanRelationKeys` = `name/type/done/assignee/dueDate/status/priority/tags/url/email/phone/emoji`（`plan_struct.dart:20-32`）；`PlanMockKeys` = `status/tags/effort/dueDate/assignee/contact/doc/...`（`plan_mock_content.dart:25-34`）；类型 id = `ot-task`/`ot-page`/`ot-note`/`ot-document` 一族（`plan_object_type.dart:13-26`）。
+
+**这份模型对本 ADR 的四条后果**：
+
+1. **记录与 `.md` 文件之间没有任何键相连**（vault 树来自 `compute(indexWorkspace, root)` 的磁盘索引，`plan_workspace.dart:132-152`；三个 plan 模型/存储文件里 grep `.md`/`path` 零命中）。所以"发布一个企划"答不出页面从哪来——**这一条已由 ADR-0047 定案**：内容 = 文件，企划 = 清单，记录加一条 `sourcePath`。
+2. per-workspace 之后**边界仍不够**：`objectOrders` 是**每个 viewer 一份**，切视图就变，不能当站点目录（ADR-0047 决策 3）。
+3. **`bin` 太薄**：只有 id，没有 `deletedAt`/原位置；发布与删号都缺依据。ADR-0039 的会话墓碑已有该形状，同形状补。
+4. **缺版本戳**：settings 侧 ADR-0045 PB 已建立 `schemaVersion` + 迁移表，这里复用同一形状即可，别另造一套。
+
