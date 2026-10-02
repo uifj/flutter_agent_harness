@@ -1,6 +1,6 @@
 name: agent_harness
 description: "A Flutter desktop agent harness: chat UI, tool-call projection via Genkit, and a split-pane workbench."
-version: 0.0.1
+version: 0.1.0
 # An app, never published — declared so the board_panel path dependency is
 # legitimate (a publishable package may not carry one).
 publish_to: 'none'

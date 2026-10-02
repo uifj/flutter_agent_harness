@@ -1,39 +1,41 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# agent_harness
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
+A Flutter desktop AI agent workbench: two workspace modes over one shell.
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
+- **代理 (Agent)** — a conversation surface over a Google Genkit runtime with
+  tool-call projection, approval gates, input queueing and steering, file
+  checkpoints with rewind, MCP servers, and a split-pane workbench (file tree,
+  editor, terminal, git, diff, browser, sub-agents).
+- **企划 (Plan)** — a local markdown workbench that replicates Anytype's
+  data-view kernel: records as `Struct` views, Table/List/Gallery/Board/Calendar
+  viewers, an object library, and a block editor with live styled marks
+  (`packages/plan_editor`).
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+Three desktop targets (macOS / Windows / Linux). No mobile, no web. The agent
+runtime is in-process Google Genkit (Dart); provider keys are BYOK and live in
+the OS keychain, never in the settings file.
 
-## Features
+## Documentation
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+- [`AGENTS.md`](AGENTS.md) — the entry point for AI coding agents and the
+  rules/conventions index.
+- [`docs/README.md`](docs/README.md) — the documentation system (ADR classes,
+  priorities, state machine) and [`docs/debt-register.md`](docs/debt-register.md)
+  is the single status source for known issues.
+- [`docs/production-readiness-gap-2026-10-02.md`](docs/production-readiness-gap-2026-10-02.md)
+  — the commercial-readiness gap register (form ②: self-built backend with
+  ZCode-compatible client parameters, ADR-0045).
 
-## Getting started
+## Build & gates
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
-
-## Usage
-
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
-
-```dart
-const like = 'sample';
+```sh
+flutter pub get
+dart format --set-exit-if-changed lib test tool spike
+dart analyze --fatal-infos lib test tool spike
+flutter test
+flutter build macos --release   # needs macOS + Xcode + CocoaPods
 ```
 
-## Additional information
-
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+Versioning: `pubspec.yaml` is the single version truth; releases are tagged
+from `develop` after the three gates pass. Distribution (signing/notarization)
+is tracked in `docs/debt-register.md`.
