@@ -4,6 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   desktop_drop
+  flutter_secure_storage_linux
   hotkey_manager_linux
   pasteboard
   screen_retriever_linux
