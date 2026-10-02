@@ -34,6 +34,7 @@ class ConversationController extends ChangeNotifier {
     required TurnSource runtime,
     required StreamingTail tail,
     this.onSessionPersisted,
+    this.onTurnUsage,
     this.approvals,
   }) : _runtime = runtime,
        _tail = tail;
@@ -48,6 +49,11 @@ class ConversationController extends ChangeNotifier {
   /// Called with the session id once a turn has been persisted, so the session
   /// list can pick up a conversation that did not exist before.
   final void Function(String sessionId)? onSessionPersisted;
+
+  /// Called at the end of every finished turn with the usage block — the
+  /// local usage ledger's write seam (ADR-0045 PC). Never called for
+  /// cancelled turns.
+  final void Function(TurnUsage usage)? onTurnUsage;
 
   final List<ConversationNode> _nodes = [];
   final Map<String, String> _toolNodeIds = {};
@@ -483,6 +489,11 @@ class ConversationController extends ChangeNotifier {
       ):
         _freezeTail();
         _absorb(usage);
+        if (usage != null &&
+            (outcome == TurnOutcome.completed ||
+                outcome == TurnOutcome.failed)) {
+          onTurnUsage?.call(usage);
+        }
         _isBusy = false;
         if (outcome == TurnOutcome.failed) {
           _nodes.add(

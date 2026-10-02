@@ -130,6 +130,151 @@ final class SettingsStoreProvider
 
 String _$settingsStoreHash() => r'fd812616f78db7cb466aaddb8691cac6e5de47ff';
 
+/// The boot-time usage summary (ADR-0045 PC): read once in main after the
+/// ledger prune, rendered read-only by the settings page.
+
+@ProviderFor(usageSummary)
+final usageSummaryProvider = UsageSummaryProvider._();
+
+/// The boot-time usage summary (ADR-0045 PC): read once in main after the
+/// ledger prune, rendered read-only by the settings page.
+
+final class UsageSummaryProvider
+    extends $FunctionalProvider<UsageSummary, UsageSummary, UsageSummary>
+    with $Provider<UsageSummary> {
+  /// The boot-time usage summary (ADR-0045 PC): read once in main after the
+  /// ledger prune, rendered read-only by the settings page.
+  UsageSummaryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'usageSummaryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$usageSummaryHash();
+
+  @$internal
+  @override
+  $ProviderElement<UsageSummary> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  UsageSummary create(Ref ref) {
+    return usageSummary(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(UsageSummary value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<UsageSummary>(value),
+    );
+  }
+}
+
+String _$usageSummaryHash() => r'd0664d9d386192a66064d680d2d9cca66a456aec';
+
+/// Whether the crash archive holds at least one report at boot.
+
+@ProviderFor(crashArchiveNonEmpty)
+final crashArchiveNonEmptyProvider = CrashArchiveNonEmptyProvider._();
+
+/// Whether the crash archive holds at least one report at boot.
+
+final class CrashArchiveNonEmptyProvider
+    extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  /// Whether the crash archive holds at least one report at boot.
+  CrashArchiveNonEmptyProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'crashArchiveNonEmptyProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$crashArchiveNonEmptyHash();
+
+  @$internal
+  @override
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return crashArchiveNonEmpty(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$crashArchiveNonEmptyHash() =>
+    r'a02b64aa986baf7f94ed7a87515c1cba3b78005a';
+
+/// The support root path — already exists as supportDirectoryProvider's
+/// value; this alias is what main's reveal callback closes over.
+
+@ProviderFor(crashArchive)
+final crashArchiveProvider = CrashArchiveProvider._();
+
+/// The support root path — already exists as supportDirectoryProvider's
+/// value; this alias is what main's reveal callback closes over.
+
+final class CrashArchiveProvider
+    extends $FunctionalProvider<CrashArchive, CrashArchive, CrashArchive>
+    with $Provider<CrashArchive> {
+  /// The support root path — already exists as supportDirectoryProvider's
+  /// value; this alias is what main's reveal callback closes over.
+  CrashArchiveProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'crashArchiveProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$crashArchiveHash();
+
+  @$internal
+  @override
+  $ProviderElement<CrashArchive> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  CrashArchive create(Ref ref) {
+    return crashArchive(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CrashArchive value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CrashArchive>(value),
+    );
+  }
+}
+
+String _$crashArchiveHash() => r'd9ff42e0f189256a27cfab8f5f562b2af382f88c';
+
 /// The workbench preferences, opened alongside the settings for the same
 /// reason: the first frame's tab menus already need the switches.
 

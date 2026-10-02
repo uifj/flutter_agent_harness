@@ -14,6 +14,7 @@ import 'package:agent_harness/model/app_settings.dart';
 import 'package:agent_harness/model/model_settings.dart';
 import 'package:agent_harness/model/workbench_prefs.dart';
 import 'package:agent_harness/state/secret_store.dart';
+import 'package:agent_harness/state/usage_ledger.dart';
 import 'package:agent_harness/state/settings_store.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
 import 'package:agent_harness/theme/dsw_shad_bridge.dart';
@@ -192,6 +193,12 @@ void main() {
         home: Scaffold(
           body: SettingsPanel(
             onReset: () async {},
+            usageSummary: const UsageSummary(
+              turns: 0,
+              totalTokens: 0,
+              errorCount: 0,
+              perModelTokens: {},
+            ),
             settings: settings,
             onSave: onSave,
             onClose: onClose ?? () {},

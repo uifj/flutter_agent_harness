@@ -11,6 +11,7 @@ import 'dart:io' show HttpException;
 import 'package:agent_harness/genkit/models_endpoint.dart';
 import 'package:agent_harness/model/app_settings.dart';
 import 'package:agent_harness/model/model_settings.dart';
+import 'package:agent_harness/state/usage_ledger.dart' show UsageSummary;
 import 'package:agent_harness/theme/dsw_theme.dart';
 import 'package:agent_harness/theme/dsw_shad_bridge.dart';
 import 'package:agent_harness/ui/settings/model_settings.dart';
@@ -102,6 +103,12 @@ void main() {
         ),
         home: Scaffold(
           body: SettingsPanel(
+            usageSummary: const UsageSummary(
+              turns: 0,
+              totalTokens: 0,
+              errorCount: 0,
+              perModelTokens: {},
+            ),
             onReset: () async {},
             settings: const AppSettings(
               model: ModelSettings(apiKey: 'sk-live'),
@@ -220,7 +227,13 @@ void main() {
           ),
           home: Scaffold(
             body: SettingsPanel(
-            onReset: () async {},
+              usageSummary: const UsageSummary(
+                turns: 0,
+                totalTokens: 0,
+                errorCount: 0,
+                perModelTokens: {},
+              ),
+              onReset: () async {},
               settings: const AppSettings(),
               onSave: (_) async {},
               onClose: () {},

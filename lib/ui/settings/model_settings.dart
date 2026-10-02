@@ -19,6 +19,8 @@
 import 'dart:async' show TimeoutException;
 import 'dart:io' show Directory, HttpException, SocketException;
 
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter/services.dart';
@@ -36,6 +38,7 @@ import 'package:shadcn_ui/shadcn_ui.dart'
         ShadSwitch;
 
 import '../../genkit/models_endpoint.dart';
+
 import '../../l10n/locales.dart';
 import '../../model/app_settings.dart' hide ThemeMode;
 import '../../model/app_settings.dart' as settings;
@@ -45,6 +48,8 @@ import '../../model/model_settings.dart';
 import '../../model/workbench_prefs.dart';
 import '../../state/approval_rule_store.dart';
 import '../../state/backup_service.dart';
+import '../../model/shortcut_registry.dart' as shortcuts;
+import '../../state/usage_ledger.dart';
 import '../primitives/confirm_dialog.dart';
 import '../../theme/dsw_shad_bridge.dart';
 import '../../theme/dsw_alias.dart';
@@ -67,6 +72,8 @@ enum _Section {
   workspace,
   workbench,
   extensions,
+  shortcuts,
+  usage,
   approvals,
   backup,
 }
@@ -77,6 +84,9 @@ class SettingsPanel extends StatefulWidget {
     required this.settings,
     required this.onSave,
     required this.onReset,
+    required this.usageSummary,
+    this.onOpenCrashLog,
+    this.crashFiles,
     required this.onClose,
     required this.onPickFolder,
     required this.supportPath,
@@ -96,6 +106,16 @@ class SettingsPanel extends StatefulWidget {
   /// clears the keychain key (ADR-0045 PB). Behind a confirm dialog here;
   /// the store-level work lives in the stores.
   final Future<void> Function() onReset;
+
+  /// The local usage summary (ADR-0045 PC): read by the caller, rendered
+  /// read-only here.
+  final UsageSummary usageSummary;
+
+  /// Opens the crash-log directory in the file manager; null hides the row.
+  final VoidCallback? onOpenCrashLog;
+
+  /// Whether a crash-log directory exists at all.
+  final bool? crashFiles;
 
   final VoidCallback onClose;
 
@@ -546,6 +566,16 @@ class _SettingsPanelState extends State<SettingsPanel> {
         LucideIcons.puzzle,
       ),
       _NavItem(
+        _Section.shortcuts,
+        context.tr('settingsShortcuts'),
+        LucideIcons.keyboard,
+      ),
+      _NavItem(
+        _Section.usage,
+        context.tr('settingsUsage'),
+        LucideIcons.chart_column,
+      ),
+      _NavItem(
         _Section.backup,
         context.tr('settingsBackup'),
         LucideIcons.database_backup,
@@ -696,6 +726,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     _Section.workspace => _workspaceSection(color),
                     _Section.workbench => _workbenchSection(color),
                     _Section.extensions => _extensionsSection(color),
+                    _Section.shortcuts => _shortcutsSection(color),
+                    _Section.usage => _usageSection(color),
                     _Section.backup => _backupSection(color),
                     _Section.approvals => _approvalsSection(color),
                   },
@@ -1281,6 +1313,103 @@ class _SettingsPanelState extends State<SettingsPanel> {
   /// Backup & Restore: export all persistent data to a zip archive, or restore
   /// from one. The operations are fire-and-forget — the file picker handles the
   /// path, and the service does the work. A snackbar reports the outcome.
+  /// The shortcut registry as a read-only table (ADR-0045 PC): one place
+  /// defines the bindings, this surface only names them. Recording and
+  /// conflict handling are a later batch.
+  List<Widget> _shortcutsSection(DswAlias color) {
+    final isMac = defaultTargetPlatform == TargetPlatform.macOS;
+    return [
+      _heading(
+        color,
+        context.tr('settingsShortcuts'),
+        context.tr('settingsShortcutsIntro'),
+      ),
+      const SizedBox(height: 12),
+      SettingsCard(
+        dividers: true,
+        children: [
+          for (final command in shortcuts.ShortcutRegistry.commands)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      context.tr(command.labelKey),
+                      style: DswType.s14.copyWith(color: color.labelPrimary),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DswShape.sm,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color.bgLayer2,
+                      borderRadius: BorderRadius.circular(DswShape.inner),
+                    ),
+                    child: Text(
+                      shortcuts.ShortcutRegistry.acceleratorFor(
+                        command.defaultSpec,
+                        isMacOS: isMac,
+                      ),
+                      style: DswType.xs13.copyWith(
+                        color: color.labelSecondary,
+                        fontFamily: 'SF Mono',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    ];
+  }
+
+  /// The local usage ledger rendered as counts — the local subset of ZCode's
+  /// usage snapshot (`usage-stats.ts:170-251`), fed by `AppScope.usageLedger`
+  /// through the widget's new `onOpenCrashLog`/usage parameters. Read-only:
+  /// nothing here writes back to any store.
+  List<Widget> _usageSection(DswAlias color) {
+    final summary = widget.usageSummary;
+    return [
+      _heading(
+        color,
+        context.tr('settingsUsage'),
+        context.tr('settingsUsageIntro'),
+      ),
+      const SizedBox(height: 12),
+      SettingsCard(
+        dividers: true,
+        children: [
+          _UsageStatRow(
+            label: context.tr('usageTurns'),
+            value: '${summary.turns}',
+          ),
+          _UsageStatRow(
+            label: context.tr('usageTotalTokens'),
+            value: '${summary.totalTokens}',
+          ),
+          _UsageStatRow(
+            label: context.tr('usageErrorRate'),
+            value: '${(summary.errorRate * 100).toStringAsFixed(1)}%',
+          ),
+          if (widget.crashFiles != null)
+            _ActionRow(
+              title: context.tr('usageCrashLogTitle'),
+              description: context.tr('usageCrashLogDesc'),
+              button: CapsuleButton(
+                label: context.tr('usageCrashLogOpen'),
+                onTap: widget.onOpenCrashLog ?? () {},
+              ),
+              last: true,
+            ),
+        ],
+      ),
+    ];
+  }
+
   List<Widget> _backupSection(DswAlias color) => [
     _heading(
       color,
@@ -2377,6 +2506,38 @@ class _ActionRow extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           button,
+        ],
+      ),
+    );
+  }
+}
+
+/// One label/value row of the usage section — the twin of `_Field`-style
+/// rows elsewhere in this file, kept separate so the usage data shape never
+/// grows settings semantics.
+class _UsageStatRow extends StatelessWidget {
+  const _UsageStatRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.dsw;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: DswType.s14.copyWith(color: color.labelSecondary),
+            ),
+          ),
+          Text(
+            value,
+            style: DswType.sStrong14.copyWith(color: color.labelPrimary),
+          ),
         ],
       ),
     );

@@ -12,6 +12,8 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
 
+import '../model/shortcut_registry.dart';
+
 /// The app's global hotkey service. Registers a fixed set of hotkeys and
 /// exposes callbacks the shell wires to its actions.
 class HotkeyService {
@@ -52,45 +54,58 @@ class HotkeyService {
     final isMac = Platform.isMacOS;
     final mod = isMac ? HotKeyModifier.meta : HotKeyModifier.control;
 
-    // System-scope: works even when the app is backgrounded.
-    await _register(
-      HotKey(
-        key: LogicalKeyboardKey.keyH,
-        modifiers: [mod, HotKeyModifier.shift],
-        scope: HotKeyScope.system,
-      ),
-      onKeyDown: (_) => onToggleWindow(),
-    );
+    // The registry is the single definition (ADR-0045 PC); this service only
+    // parses bindings into key events and wires the handlers by id.
+    final handlers = <String, HotKeyHandler>{
+      'toggleWindow': (_) => onToggleWindow(),
+      'newSession': (_) => onNewSession(),
+      'openSettings': (_) => onOpenSettings(),
+      'toggleSidebar': (_) => onToggleSidebar(),
+    };
+    for (final command in ShortcutRegistry.commands) {
+      final handler = handlers[command.id];
+      if (handler == null) continue;
+      final hotKey = _parse(command, mod);
+      if (hotKey == null) continue;
+      await _register(
+        HotKey(
+          key: hotKey,
+          modifiers: _modifiersOf(command, mod),
+          scope: command.system ? HotKeyScope.system : HotKeyScope.inapp,
+        ),
+        onKeyDown: handler,
+      );
+    }
+  }
 
-    // In-app scope: only fires when the app has focus.
-    await _register(
-      HotKey(
-        key: LogicalKeyboardKey.keyN,
-        modifiers: [mod],
-        scope: HotKeyScope.inapp,
-      ),
-      onKeyDown: (_) => onNewSession(),
-    );
+  /// The registry spec's trailing token as a key event key. Unknown tokens
+  /// return null and the command is skipped — a registry entry that cannot be
+  /// parsed must not silently bind to the wrong key.
+  LogicalKeyboardKey? _parse(ShortcutCommand command, HotKeyModifier mod) =>
+      switch (command.binding.key) {
+        'H' => LogicalKeyboardKey.keyH,
+        'N' => LogicalKeyboardKey.keyN,
+        'Comma' => LogicalKeyboardKey.comma,
+        'B' => LogicalKeyboardKey.keyB,
+        _ => null,
+      };
 
-    await _register(
-      HotKey(
-        key: LogicalKeyboardKey.comma,
-        modifiers: [mod],
-        scope: HotKeyScope.inapp,
-      ),
-      onKeyDown: (_) => onOpenSettings(),
-    );
-
-    // ZCode's `CmdOrCtrl+B`: the panel's own door needs a keyboard door, or the
-    // rail's hover-swap is the only way to learn the column can come back.
-    await _register(
-      HotKey(
-        key: LogicalKeyboardKey.keyB,
-        modifiers: [mod],
-        scope: HotKeyScope.inapp,
-      ),
-      onKeyDown: (_) => onToggleSidebar(),
-    );
+  List<HotKeyModifier> _modifiersOf(
+    ShortcutCommand command,
+    HotKeyModifier mod,
+  ) {
+    final modifiers = <HotKeyModifier>[];
+    for (final modifier in command.binding.modifiers) {
+      switch (modifier) {
+        case 'CmdOrCtrl':
+          modifiers.add(mod);
+        case 'Shift':
+          modifiers.add(HotKeyModifier.shift);
+        case 'Alt':
+          modifiers.add(HotKeyModifier.alt);
+      }
+    }
+    return modifiers;
   }
 
   Future<void> _register(HotKey key, {required HotKeyHandler onKeyDown}) async {

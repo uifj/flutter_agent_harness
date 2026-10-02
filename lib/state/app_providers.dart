@@ -32,7 +32,9 @@ import 'conversation_controller.dart';
 import 'details_selection.dart';
 import '../host/profile_repository.dart';
 import '../host/terminal_manager.dart';
+import 'crash_archive.dart';
 import 'layout_controller.dart';
+import 'usage_ledger.dart';
 import 'model_directory.dart';
 import 'plan_object_store.dart';
 import 'prefs_store.dart';
@@ -64,6 +66,23 @@ Directory supportDirectory(Ref ref) =>
 @Riverpod(keepAlive: true)
 SettingsStore settingsStore(Ref ref) =>
     throw UnimplementedError('override settingsStore in main or tests');
+
+/// The boot-time usage summary (ADR-0045 PC): read once in main after the
+/// ledger prune, rendered read-only by the settings page.
+@Riverpod(keepAlive: true)
+UsageSummary usageSummary(Ref ref) =>
+    throw UnimplementedError('override usageSummary in main or tests');
+
+/// Whether the crash archive holds at least one report at boot.
+@Riverpod(keepAlive: true)
+bool crashArchiveNonEmpty(Ref ref) =>
+    throw UnimplementedError('override crashArchiveNonEmpty in main or tests');
+
+/// The support root path — already exists as supportDirectoryProvider's
+/// value; this alias is what main's reveal callback closes over.
+@Riverpod(keepAlive: true)
+CrashArchive crashArchive(Ref ref) =>
+    throw UnimplementedError('override crashArchive in main or tests');
 
 /// The workbench preferences, opened alongside the settings for the same
 /// reason: the first frame's tab menus already need the switches.

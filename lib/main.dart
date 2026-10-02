@@ -17,6 +17,8 @@
 
 import 'dart:io';
 
+import 'dart:ui' show PlatformDispatcher;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
@@ -25,6 +27,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'genkit/models_endpoint.dart';
 import 'host/project_folder_ops.dart';
+import 'host/reveal.dart';
 import 'l10n/locales.dart';
 import 'model/app_settings.dart' as cfg;
 import 'state/app_providers.dart';
@@ -33,7 +36,9 @@ import 'state/hotkey_service.dart';
 import 'model/plan_mock_content.dart';
 import 'state/plan_object_store.dart';
 import 'state/prefs_store.dart';
+import 'state/crash_archive.dart';
 import 'state/secret_store.dart';
+import 'state/usage_ledger.dart';
 import 'state/settings_store.dart';
 import 'state/tray_service.dart';
 import 'state/window_title_service.dart';
@@ -60,10 +65,37 @@ import 'ui/workbench/workbench_prefs_scope.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Local crash archive (ADR-0045 PC): the support root is known only after
+  // getApplicationSupportDirectory, so the handlers capture the archive once
+  // it exists; errors before that point keep the framework's default path.
+  // Assigned in main() once the archive exists — the handlers read the same
+  // instance the container overrides with.
+  CrashArchive? crashArchive;
+  FlutterError.onError = (details) {
+    crashArchive?.write(
+      'flutter',
+      '${details.exception}\n${details.stack ?? ''}',
+    );
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    crashArchive?.write('platform', '$error\n$stack');
+    return false;
+  };
   // Application Support, not Documents: snapshots and an API key are app state,
   // not user files. Inside the macOS sandbox container this is writable without
   // any further entitlement.
   final support = await getApplicationSupportDirectory();
+  final crash = CrashArchive(
+    directory: Directory('${support.path}/logs/crash'),
+  );
+  // Warm the checks the settings page reads synchronously (ADR-0045 PC).
+  crashArchive = crash;
+  crash.knownNonEmpty = (await crash.files()).isNotEmpty;
+  final usageLedger = UsageLedger(
+    directory: Directory('${support.path}/usage'),
+  );
+  await usageLedger.prune();
+  final bootUsageSummary = UsageLedger.summarize(await usageLedger.entries());
   final settings = await SettingsStore.open(
     support,
     secrets: SecureSecretStore(),
@@ -90,6 +122,9 @@ Future<void> main() async {
       settingsStoreProvider.overrideWithValue(settings),
       prefsStoreProvider.overrideWithValue(prefsStore),
       planObjectStoreProvider.overrideWithValue(planSpace),
+      usageSummaryProvider.overrideWithValue(bootUsageSummary),
+      crashArchiveNonEmptyProvider.overrideWithValue(crash.knownNonEmpty),
+      crashArchiveProvider.overrideWithValue(crash),
     ],
   );
   runApp(
@@ -516,6 +551,8 @@ class _DshAppState extends ConsumerState<DshApp> {
   /// closing anything).
   Widget _settingsPage(cfg.AppSettings doc) {
     final scope = ref.watch(appScopeProvider);
+    final supportPath = ref.watch(supportDirectoryProvider).path;
+
     return SettingsPanel(
       settings: doc,
       onSave: scope.save,
@@ -523,12 +560,19 @@ class _DshAppState extends ConsumerState<DshApp> {
         await ref.read(settingsStoreProvider).resetToDefaults();
         await ref.read(prefsStoreProvider).resetToDefaults();
       },
+      usageSummary: ref.watch(usageSummaryProvider),
+      crashFiles: ref.watch(crashArchiveNonEmptyProvider),
+      onOpenCrashLog: () {
+        revealInFileManager(
+          '${ref.watch(supportDirectoryProvider).path}/logs/crash',
+        );
+      },
       onClose: () => setState(() => _settingsOpen = false),
       onPickFolder: scope.pickFolder,
       // The field hints on the settings page name directories the user can open,
       // so they name the real one (ADR-0033). Read here, not in the panel:
       // riverpod stays out of the widget tree.
-      supportPath: ref.watch(supportDirectoryProvider).path,
+      supportPath: supportPath,
       workbenchPrefs: ref.watch(workbenchPrefsProvider),
       onPrefsChange: (next) => ref.read(prefsStoreProvider).save(next),
       // The endpoint interrogation behind "Test connection" and the model

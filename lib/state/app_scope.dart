@@ -25,6 +25,8 @@ import '../model/workspace_index.dart';
 import '../model/workbench_prefs.dart';
 import 'approval_rule_store.dart';
 import 'checkpoint_store.dart';
+import 'crash_archive.dart';
+import 'usage_ledger.dart';
 import 'conversation_controller.dart';
 import 'details_selection.dart';
 import 'git_status_store.dart';
@@ -50,6 +52,12 @@ class AppScope {
     _sessionRegistry = SessionRegistry.open(_sessionRoot);
     _approvals = ApprovalRuleStore.open(support);
     _checkpoints = CheckpointStore.open(support);
+    // Local usage ledger (ADR-0045 PC): one JSONL line per finished model
+    // turn, 30-day window. The crash archive rides the same support root.
+    _usageLedger = UsageLedger(directory: Directory('${support.path}/usage'));
+    crashArchive = CrashArchive(
+      directory: Directory('${support.path}/logs/crash'),
+    );
     _runtime = _build(settings.value);
     // The saved approvals belong to a folder, so the book has to be pointed at
     // the open one before any tool can run.
@@ -76,6 +84,18 @@ class AppScope {
       runtime: _runtime,
       tail: _tail,
       approvals: _approvals,
+      onTurnUsage: (usage) {
+        _usageLedger.record(
+          UsageEntry(
+            timestamp: DateTime.now().toUtc().millisecondsSinceEpoch,
+            model: usage.model ?? 'unknown',
+            inputTokens: usage.inputTokens ?? 0,
+            outputTokens: usage.outputTokens ?? 0,
+            reasoningTokens: usage.thoughtsTokens ?? 0,
+            error: false,
+          ),
+        );
+      },
       // A conversation gets its id from its first persisted turn, so this is when
       // a new session becomes listable — and when the sidebar can mark it. It is
       // also when the workbench layout built while composing that turn acquires
@@ -120,6 +140,13 @@ class AppScope {
   /// The recorded before-images of the agent's file writes, and the thing a
   /// rewind is asked of. Opened here for the same reason as [_approvals].
   late final CheckpointStore _checkpoints;
+  late final UsageLedger _usageLedger;
+
+  /// The local crash archive — the settings screen's log entry reads it.
+  late final CrashArchive crashArchive;
+
+  /// The local usage ledger — the settings section reads its summary.
+  UsageLedger get usageLedger => _usageLedger;
 
   /// The id recorded changes get tagged with until the conversation earns a
   /// real session id — see [CheckpointStore.adoptConversation].

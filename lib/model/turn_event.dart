@@ -133,6 +133,7 @@ class TurnUsage {
     this.thoughtsTokens,
     this.totalTokens,
     this.modelCalls,
+    this.model,
   });
 
   /// Turn entry to finish, in milliseconds.
@@ -146,6 +147,11 @@ class TurnUsage {
 
   /// Completion tokens across the turn's model calls, reasoning included.
   final int? outputTokens;
+
+  /// The model id the turn ran on, when the runtime knows it — the usage
+  /// ledger's per-model bucket (ADR-0045 PC). Null on paths that never touch
+  /// a model (failed sends, no-key turns).
+  final String? model;
 
   /// The reasoning portion of [outputTokens], when the provider splits it out.
   final int? thoughtsTokens;

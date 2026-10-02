@@ -609,6 +609,7 @@ class SideChatSource implements SideTurnSource {
 /// The application's whole interface to the agent.
 class AgentRuntime implements TurnSource {
   AgentRuntime._({
+    required String? activeModelId,
     required Genkit ai,
     required Agent<dynamic> agent,
     required WorkspaceTools tools,
@@ -622,7 +623,8 @@ class AgentRuntime implements TurnSource {
     required this.side,
     required this.settings,
     required this.sessionRoot,
-  }) : _ai = ai,
+  }) : _activeModelId = activeModelId,
+       _ai = ai,
        _agent = agent,
        _tools = tools,
        _planTools = planTools,
@@ -649,6 +651,7 @@ class AgentRuntime implements TurnSource {
     CheckpointSink? checkpoints,
   }) {
     final model = settings.model;
+    final activeModelId = model.isConfigured ? model.model : null;
     final stop = _StopFlag();
     final approval = ApprovalModeHolder();
 
@@ -820,6 +823,7 @@ class AgentRuntime implements TurnSource {
       host: host,
       stop: stop,
       usage: usage,
+      activeModelId: activeModelId,
       toolAudit: toolAudit,
       approval: approval,
       guides: guides,
@@ -836,6 +840,10 @@ class AgentRuntime implements TurnSource {
   final mcp.GenkitMcpHost? _host;
   final _StopFlag _stop;
   final _UsageLedger _usage;
+
+  /// The model id this runtime was built for — the usage ledger's per-model
+  /// bucket (ADR-0045 PC). Null when the runtime was built unconfigured.
+  final String? _activeModelId;
   final List<ToolAuditRecord> _toolAudit;
   final ApprovalModeHolder _approval;
   final _GuideHolder _guides;
@@ -1301,6 +1309,7 @@ class AgentRuntime implements TurnSource {
     thoughtsTokens: _usage.sawThoughts ? _usage.thoughtsTokens : null,
     totalTokens: _usage.sawTotal ? _usage.totalTokens : null,
     modelCalls: _usage.seen ? _usage.modelCalls : null,
+    model: _activeModelId,
   );
 
   static Map<String, dynamic> _asArguments(Object? raw) =>
