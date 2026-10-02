@@ -121,27 +121,31 @@ class PlanEditorController extends TextEditingController {
   /// different text = the field resets, selection collapsed at the end, the
   /// answer the plain TextEditingController gave the host before.
   void sync(AttributedText next) {
+    if (_sameContent(next, _attributed) && next.toPlainText() == text) return;
+    // The push almost always arrives inside the host's build
+    // (didUpdateWidget); touching the value or notifying listeners there
+    // marks the field dirty mid-build and the framework throws. One
+    // microtask lands the push after the frame. The `_syncing` guard wraps
+    // the microtask, so the pushed value never re-enters the shift engine.
     _syncing = true;
-    try {
-      final nextText = next.toPlainText();
-      if (nextText != text) {
-        _attributed = next;
-        super.value = TextEditingValue(
-          text: nextText,
-          selection: TextSelection.collapsed(offset: nextText.length),
-        );
-      } else if (!_sameContent(next, _attributed)) {
-        _attributed = next;
-        // The push usually arrives inside the host's build (didUpdateWidget);
-        // notifying now would mark listeners dirty mid-build. The field
-        // itself already rebuilt with the new spans, so one microtask lands
-        // the notification after the frame for the remaining listeners.
-        scheduleMicrotask(notifyListeners);
+    scheduleMicrotask(() {
+      try {
+        final nextText = next.toPlainText();
+        if (nextText != text) {
+          _attributed = next;
+          super.value = TextEditingValue(
+            text: nextText,
+            selection: TextSelection.collapsed(offset: nextText.length),
+          );
+          _syncedText = nextText;
+        } else {
+          _attributed = next;
+          notifyListeners();
+        }
+      } finally {
+        _syncing = false;
       }
-    } finally {
-      _syncing = false;
-      _syncedText = text;
-    }
+    });
   }
 
   @override

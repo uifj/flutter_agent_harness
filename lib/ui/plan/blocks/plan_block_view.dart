@@ -54,6 +54,8 @@ class PlanBlockView extends StatelessWidget {
     this.onToggleCollapse,
     this.onEditBookmark,
     this.onPickCalloutIcon,
+    this.controllerFor,
+    this.focusNodeFor,
   });
 
   final PlanBlockDocument document;
@@ -91,6 +93,12 @@ class PlanBlockView extends StatelessWidget {
   /// Opens the emoji picker for a callout block (edit face only).
   final void Function(String blockId)? onPickCalloutIcon;
 
+  /// The editor rents each text block its field controller and focus node
+  /// (ADR-0044 P10-b) — Enter/Backspace move the caret across blocks, which
+  /// needs one owner above the fields.
+  final PlanEditorController? Function(String id)? controllerFor;
+  final FocusNode? Function(String id)? focusNodeFor;
+
   @override
   Widget build(BuildContext context) {
     final blocks = document.blocks;
@@ -120,6 +128,8 @@ class PlanBlockView extends StatelessWidget {
             onToggleCollapse: onToggleCollapse,
             onEditBookmark: onEditBookmark,
             onPickCalloutIcon: onPickCalloutIcon,
+            controllerFor: controllerFor,
+            focusNodeFor: focusNodeFor,
           ),
         ],
         if (!readOnly) _AddBlockRow(onTap: () => onInsertSlash?.call(null)),
@@ -164,6 +174,8 @@ class PlanBlockRow extends StatelessWidget {
     this.onToggleCollapse,
     this.onEditBookmark,
     this.onPickCalloutIcon,
+    this.controllerFor,
+    this.focusNodeFor,
   });
 
   final PlanBlockDocument document;
@@ -187,6 +199,8 @@ class PlanBlockRow extends StatelessWidget {
   final void Function(String blockId)? onToggleCollapse;
   final void Function(String blockId)? onEditBookmark;
   final void Function(String blockId)? onPickCalloutIcon;
+  final PlanEditorController? Function(String id)? controllerFor;
+  final FocusNode? Function(String id)? focusNodeFor;
 
   @override
   Widget build(BuildContext context) {
@@ -214,6 +228,8 @@ class PlanBlockRow extends StatelessWidget {
             onToggleCollapse: onToggleCollapse,
             onEditBookmark: onEditBookmark,
             onPickCalloutIcon: onPickCalloutIcon,
+            controllerFor: controllerFor,
+            focusNodeFor: focusNodeFor,
           ),
         ),
         // Layout containers carry no view of their own (the client flattens
@@ -237,6 +253,8 @@ class PlanBlockRow extends StatelessWidget {
               onToggleCollapse: onToggleCollapse,
               onEditBookmark: onEditBookmark,
               onPickCalloutIcon: onPickCalloutIcon,
+              controllerFor: controllerFor,
+              focusNodeFor: focusNodeFor,
             ),
         if (content is! PlanLayout &&
             content is! PlanTableBlock &&
@@ -258,6 +276,8 @@ class PlanBlockRow extends StatelessWidget {
               onToggleCollapse: onToggleCollapse,
               onEditBookmark: onEditBookmark,
               onPickCalloutIcon: onPickCalloutIcon,
+              controllerFor: controllerFor,
+              focusNodeFor: focusNodeFor,
             ),
       ],
     );
@@ -279,6 +299,8 @@ class _BlockBody extends StatelessWidget {
     this.onToggleCollapse,
     this.onEditBookmark,
     this.onPickCalloutIcon,
+    this.controllerFor,
+    this.focusNodeFor,
   });
 
   final PlanBlockDocument document;
@@ -298,6 +320,8 @@ class _BlockBody extends StatelessWidget {
   final void Function(String blockId)? onToggleCollapse;
   final void Function(String blockId)? onEditBookmark;
   final void Function(String blockId)? onPickCalloutIcon;
+  final PlanEditorController? Function(String id)? controllerFor;
+  final FocusNode? Function(String id)? focusNodeFor;
 
   @override
   Widget build(BuildContext context) {
@@ -316,6 +340,8 @@ class _BlockBody extends StatelessWidget {
           collapsed: collapsed,
           onToggleCollapse: onToggleCollapse,
           onPickCalloutIcon: onPickCalloutIcon,
+          controller: controllerFor?.call(block.id),
+          focusNode: focusNodeFor?.call(block.id),
         );
       case PlanLayout():
         // Flattened by the row above; nothing to draw here.
@@ -426,11 +452,15 @@ class _TextBlock extends StatelessWidget {
     this.collapsed = false,
     this.onToggleCollapse,
     this.onPickCalloutIcon,
+    this.controller,
+    this.focusNode,
   });
 
   final PlanBlockDocument document;
   final PlanBlock block;
   final PlanText content;
+  final PlanEditorController? controller;
+  final FocusNode? focusNode;
   final int? ordinal;
   final bool readOnly;
   final void Function(String blockId)? onFocusedBlock;
@@ -509,6 +539,8 @@ class _TextBlock extends StatelessWidget {
       blockId: block.id,
       content: content,
       style: effectiveStyle,
+      controller: controller,
+      focusNode: focusNode,
       onFocusedBlock: onFocusedBlock,
       onSelectionChanged: onSelectionChanged,
     );
@@ -655,6 +687,8 @@ class _BlockTextField extends StatefulWidget {
     required this.blockId,
     required this.content,
     required this.style,
+    this.controller,
+    this.focusNode,
     this.onFocusedBlock,
     this.onSelectionChanged,
   });
@@ -663,6 +697,8 @@ class _BlockTextField extends StatefulWidget {
   final String blockId;
   final PlanText content;
   final PlanTextStyle style;
+  final PlanEditorController? controller;
+  final FocusNode? focusNode;
   final void Function(String blockId)? onFocusedBlock;
 
   /// The caret's non-empty selection, so the toolbar's mark buttons can act
@@ -675,19 +711,30 @@ class _BlockTextField extends StatefulWidget {
 }
 
 class _BlockTextFieldState extends State<_BlockTextField> {
-  // The plan_editor field controller (ADR-0044): it carries the block's
-  // marks and renders them while the caret is inside. Typing flows out
-  // through `editTextWithMarks` (the controller is the shift engine);
-  // document-driven changes flow back in through `sync`.
-  late final PlanEditorController _controller = PlanEditorController(
-    text: widget.content.text,
-    marks: _marksFor(widget.content),
-  )..styleResolver = _resolveEditorStyle;
+  // The field rents its controller from the editor (ADR-0044 P10-b) so
+  // Enter/Backspace can move the caret across blocks; the plan_editor
+  // controller carries the block's marks and renders them while the caret
+  // is inside. Typing flows out through `editTextWithMarks` (the controller
+  // is the shift engine); document-driven changes flow back through `sync`.
+  PlanEditorController get _controller => widget.controller ?? _local!;
+
+  /// Standalone answer for a PlanBlockView built without the editor's
+  /// registry (tests, previews): the field mints its own controller.
+  late final PlanEditorController? _local = widget.controller == null
+      ? planFieldController(widget.content)
+      : null;
 
   @override
   void initState() {
     super.initState();
     _controller.addListener(_reportSelection);
+    widget.focusNode?.addListener(_reportFocus);
+  }
+
+  void _reportFocus() {
+    if (widget.focusNode?.hasFocus ?? false) {
+      widget.onFocusedBlock?.call(widget.blockId);
+    }
   }
 
   void _reportSelection() {
@@ -708,13 +755,15 @@ class _BlockTextFieldState extends State<_BlockTextField> {
     // this field's own typing (undo, toolbar, another field) mirrors the
     // document back in. `sync` keeps the caret on a marks-only push and
     // no-ops when the content already agrees.
-    _controller.sync(_attributedOf(widget.content));
+    _controller.sync(attributedTextOf(widget.content));
   }
 
   @override
   void dispose() {
     _controller.removeListener(_reportSelection);
-    _controller.dispose();
+    widget.focusNode?.removeListener(_reportFocus);
+    _local?.dispose();
+    // A rented controller and focus node belong to the editor; it disposes them.
     super.dispose();
   }
 
@@ -734,6 +783,7 @@ class _BlockTextFieldState extends State<_BlockTextField> {
         context,
         ShadInput(
           controller: _controller,
+          focusNode: widget.focusNode,
           maxLines: null,
           textAlign: align,
           style: _textStyle(context, widget.style).copyWith(
@@ -756,7 +806,14 @@ class _BlockTextFieldState extends State<_BlockTextField> {
 
 // ---- PlanMark ⇄ EditorMark (the app side of ADR-0044's mapping) ----------
 
-AttributedText _attributedOf(PlanText content) {
+/// A field controller wired to the app's style answer — the editor mints
+/// one per text block (ADR-0044 P10-b); the standalone field fallback uses
+/// the same factory.
+PlanEditorController planFieldController(PlanText content) =>
+    PlanEditorController(text: content.text, marks: editorMarksOf(content))
+      ..styleResolver = resolveEditorStyle;
+
+AttributedText attributedTextOf(PlanText content) {
   final attributed = AttributedText(content.text);
   for (final mark in content.marks) {
     final editor = _editorMarkOf(mark);
@@ -770,7 +827,7 @@ AttributedText _attributedOf(PlanText content) {
   return attributed;
 }
 
-List<EditorMarkRange> _marksFor(PlanText content) => [
+List<EditorMarkRange> editorMarksOf(PlanText content) => [
   for (final mark in content.marks)
     if (_editorMarkOf(mark) case final EditorMark editor)
       if (mark.range.end > mark.range.start)
@@ -833,7 +890,7 @@ List<PlanMark> _planMarksOf(PlanEditorController controller) {
 
 /// The host's style answer for the field (ADR-0044: the package stays
 /// colour-blind). Mirrors the read view's `_markSpan` choices.
-TextStyle _resolveEditorStyle(BuildContext context, Set<Attribution> marks) {
+TextStyle resolveEditorStyle(BuildContext context, Set<Attribution> marks) {
   final dsw = context.dsw;
   var style = const TextStyle();
   final decorations = <TextDecoration>[];

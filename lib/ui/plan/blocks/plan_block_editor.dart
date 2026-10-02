@@ -10,7 +10,10 @@
 // selects; the Actions section is the per-block menu. The toolbar acts on the
 // focused block.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:shadcn_ui/shadcn_ui.dart'
     show ShadButton, ShadDialog, ShadInput, showShadDialog;
@@ -25,6 +28,8 @@ import '../../../theme/dsw_typography.dart';
 import '../../primitives/icon_button.dart';
 import '../../primitives/menu.dart';
 import '../../primitives/tappable.dart';
+import 'package:plan_editor/plan_editor.dart';
+
 import 'plan_block_view.dart';
 
 class PlanBlockEditor extends StatefulWidget {
@@ -110,11 +115,18 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
   int _matchIndex = -1;
   List<String> _matches = const [];
 
+  // The editing machinery the fields rent from the editor (ADR-0044 P10-b):
+  // one plan_editor controller and one focus node per text block, owned here
+  // so Enter/Backspace can move the caret ACROSS blocks. Table cells keep
+  // their own plain fields — they are not part of this registry.
+  final Map<String, PlanEditorController> _controllers = {};
+  final Map<String, FocusNode> _focusNodes = {};
+
   @override
   void initState() {
     super.initState();
     widget.document.addListener(_onDocumentChanged);
-    _rebuildKeys();
+    _syncEditState();
   }
 
   @override
@@ -123,7 +135,7 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
     if (widget.document != old.document) {
       old.document.removeListener(_onDocumentChanged);
       widget.document.addListener(_onDocumentChanged);
-      _rebuildKeys();
+      _syncEditState();
     }
   }
 
@@ -131,25 +143,243 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
   void dispose() {
     widget.document.removeListener(_onDocumentChanged);
     _searchController.dispose();
+    for (final controller in _controllers.values) {
+      controller.dispose();
+    }
+    for (final focusNode in _focusNodes.values) {
+      focusNode.dispose();
+    }
     super.dispose();
   }
 
   void _onDocumentChanged() {
+    // Every document change can have minted or removed blocks (slash
+    // inserts, split, merge): the rental registry follows here, outside the
+    // build, so the fields always rent a controller the editor knows.
+    _syncEditState();
     if (mounted) setState(() {});
   }
 
-  void _rebuildKeys() {
-    _rowKeys
-      ..clear()
-      ..addEntries([
-        for (final id in _flattenedIds())
-          MapEntry(id, GlobalKey(debugLabel: 'plan-row-$id')),
-      ]);
+  void _syncEditState() {
+    // Keys and rentals are kept per id: recreating them on every edit would
+    // tear the fields down mid-session (new elements never see the document
+    // push, and the IME would churn on every keystroke).
+    final ids = _flattenedIds();
+    _rowKeys.removeWhere((id, _) => !ids.contains(id));
+    for (final id in ids) {
+      _rowKeys.putIfAbsent(id, () => GlobalKey(debugLabel: 'plan-row-$id'));
+    }
+    final textIds = _visibleTextIds().toSet();
+    _controllers.removeWhere((id, controller) {
+      if (textIds.contains(id)) return false;
+      controller.dispose();
+      return true;
+    });
+    _focusNodes.removeWhere((id, focusNode) {
+      if (textIds.contains(id)) return false;
+      focusNode.dispose();
+      return true;
+    });
+    for (final id in textIds) {
+      _controllers.putIfAbsent(id, () {
+        final content = widget.document.block(id)?.content;
+        return content is PlanText
+            ? planFieldController(content)
+            : PlanEditorController();
+      });
+      _focusNodes.putIfAbsent(
+        id,
+        () => FocusNode(debugLabel: 'plan-field-$id'),
+      );
+    }
   }
 
   List<String> _flattenedIds() => [
     for (final block in widget.document.blocks) ...block.flattenedIds,
   ];
+
+  /// The text blocks that render a plan_editor field, in visible order —
+  /// table cells are plain fields of their own and collapsed toggles hide
+  /// their children.
+  List<String> _visibleTextIds() {
+    final ids = <String>[];
+    void walk(List<PlanBlock> blocks) {
+      for (final block in blocks) {
+        final content = block.content;
+        if (content is PlanTableBlock) continue;
+        final collapsed =
+            content is PlanText &&
+            content.style == PlanTextStyle.toggle &&
+            _collapsedToggles.contains(block.id);
+        if (content is PlanText) ids.add(block.id);
+        if (!collapsed) walk(block.children);
+      }
+    }
+
+    walk(widget.document.blocks);
+    return ids;
+  }
+
+  // ---- cross-block keyboard semantics (P10-b) ------------------------------
+
+  /// The key events reach this handler on their way UP from the focused
+  /// field, before the app-level text-editing shortcuts — so returning
+  /// [KeyEventResult.handled] takes the key from the field, and `.ignored`
+  /// lets the field do its default thing.
+  KeyEventResult _onBlockKey(FocusNode node, KeyEvent event) {
+    if (widget.readOnly || _searching) return KeyEventResult.ignored;
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final blockId = _activeBlockId;
+    if (blockId == null) return KeyEventResult.ignored;
+    final controller = _controllers[blockId];
+    if (controller == null) return KeyEventResult.ignored;
+    final value = controller.value;
+    final composing = value.composing.isValid && !value.composing.isCollapsed;
+    final key = event.logicalKey;
+    final command =
+        HardwareKeyboard.instance.isMetaPressed ||
+        HardwareKeyboard.instance.isControlPressed;
+
+    // The toolbar's mark set, on the keyboard (E18). K opens the link dialog.
+    if (command && !composing) {
+      if (key == LogicalKeyboardKey.keyB && _activeSelection != null) {
+        _applyMark(PlanMarkType.bold);
+        return KeyEventResult.handled;
+      }
+      if (key == LogicalKeyboardKey.keyI && _activeSelection != null) {
+        _applyMark(PlanMarkType.italic);
+        return KeyEventResult.handled;
+      }
+      if (key == LogicalKeyboardKey.keyU && _activeSelection != null) {
+        _applyMark(PlanMarkType.underline);
+        return KeyEventResult.handled;
+      }
+      if (key == LogicalKeyboardKey.keyK && _activeSelection != null) {
+        _applyLink();
+        return KeyEventResult.handled;
+      }
+      if (key == LogicalKeyboardKey.keyZ) {
+        HardwareKeyboard.instance.isShiftPressed
+            ? widget.document.redo()
+            : widget.document.undo();
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
+    }
+
+    // An IME composition owns the field; every block-level key defers.
+    if (composing) return KeyEventResult.ignored;
+
+    final collapsedCaret = value.selection.isCollapsed
+        ? value.selection.baseOffset
+        : -1;
+    final textLength = controller.text.length;
+
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter) {
+      if (!value.selection.isCollapsed) return KeyEventResult.ignored;
+      final newId = widget.document.splitTextBlock(blockId, collapsedCaret);
+      if (newId.isEmpty) return KeyEventResult.ignored;
+      _syncEditState();
+      setState(() {});
+      _focusBlock(newId, 0);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.backspace) {
+      if (!value.selection.isCollapsed || collapsedCaret != 0) {
+        return KeyEventResult.ignored;
+      }
+      final merged = widget.document.mergeIntoPrevious(blockId);
+      if (merged == null) return KeyEventResult.ignored;
+      _syncEditState();
+      setState(() {});
+      _focusBlock(merged.id, merged.offset);
+      return KeyEventResult.handled;
+    }
+
+    final ids = _visibleTextIds();
+    final index = ids.indexOf(blockId);
+    if (key == LogicalKeyboardKey.arrowLeft &&
+        collapsedCaret == 0 &&
+        index > 0) {
+      final previous = _controllers[ids[index - 1]];
+      if (previous != null) _focusBlock(ids[index - 1], previous.text.length);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowRight &&
+        collapsedCaret == textLength &&
+        index >= 0 &&
+        index < ids.length - 1) {
+      _focusBlock(ids[index + 1], 0);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowUp && collapsedCaret == 0 && index > 0) {
+      final previous = _controllers[ids[index - 1]];
+      if (previous != null) _focusBlock(ids[index - 1], previous.text.length);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowDown &&
+        collapsedCaret == textLength &&
+        index >= 0 &&
+        index < ids.length - 1) {
+      _focusBlock(ids[index + 1], 0);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  /// Moves the caret into [id] at [offset] once the field exists. Insert
+  /// paths run ahead of the build that mints the block's controller, and a
+  /// just-closed dialog's focus restoration can steal the focus back for a
+  /// few frames — so the attempt sets the caret and asks for focus on every
+  /// pass, retrying (bounded) until the field reports focus or the block is
+  /// gone. The document's deferred sync push lands between passes; the last
+  /// pass's caret wins.
+  void _focusBlock(String id, int offset) {
+    var attempts = 0;
+    void attempt() {
+      if (!mounted) return;
+      final controller = _controllers[id];
+      final focusNode = _focusNodes[id];
+      final stillThere = widget.document.block(id) != null;
+      if (controller == null || focusNode == null || !stillThere) {
+        if (stillThere && attempts < 10) {
+          attempts++;
+          WidgetsBinding.instance.addPostFrameCallback((_) => attempt());
+        }
+        return;
+      }
+      if (focusNode.context == null && attempts < 10) {
+        attempts++;
+        WidgetsBinding.instance.addPostFrameCallback((_) => attempt());
+        return;
+      }
+      controller.value = TextEditingValue(
+        text: controller.text,
+        selection: TextSelection.collapsed(
+          offset: offset.clamp(0, controller.text.length),
+        ),
+      );
+      focusNode.requestFocus();
+      if (!focusNode.hasFocus && attempts < 10) {
+        attempts++;
+        WidgetsBinding.instance.addPostFrameCallback((_) => attempt());
+        return;
+      }
+      final rowContext = _rowKeys[id]?.currentContext;
+      if (rowContext != null) {
+        Scrollable.ensureVisible(
+          rowContext,
+          duration: const Duration(milliseconds: 120),
+          alignment: 0.2,
+        );
+      }
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => attempt());
+  }
 
   // ---- search (the six events) --------------------------------------------
 
@@ -227,6 +457,7 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
         columns: size.columns,
       );
       setState(() => _activeBlockId = id);
+      _focusBlock(id, 0);
       return;
     }
     final item = PlanSlashItem.values
@@ -237,6 +468,7 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
     if (item == PlanSlashItem.table) {
       final id = widget.document.insertTable(rows: 3, columns: 3);
       setState(() => _activeBlockId = id);
+      _focusBlock(id, 0);
       return;
     }
     final id = widget.document.insertBelow(
@@ -244,6 +476,7 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
       _SlashSheetState.contentFor(item),
     );
     setState(() => _activeBlockId = id);
+    _focusBlock(id, 0);
     // An empty bookmark is a dead card: the URL dialog is part of the same
     // insertion, the way upstream walks `SetupBookmark` right after the block
     // exists (`Orchestrator.kt:525-546`).
@@ -367,29 +600,36 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
           onInsert: _openSlash,
         ),
         Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(DswShape.md),
-            child: PlanBlockView(
-              document: doc,
-              readOnly: widget.readOnly || _searching,
-              onInsertSlash: _openSlash,
-              onFocusedBlock: (id) => setState(() => _activeBlockId = id),
-              onSelectionChanged: (id, selection) {
-                if (_activeBlockId == id || selection != null) {
-                  setState(() {
-                    _activeBlockId = id;
-                    _activeSelection = selection;
-                  });
-                }
-              },
-              keyFor: (id) => _rowKeys[id],
-              searchQuery: _query,
-              collapsedToggles: _collapsedToggles,
-              onToggleCollapse: (id) => setState(() {
-                if (!_collapsedToggles.remove(id)) _collapsedToggles.add(id);
-              }),
-              onEditBookmark: _editBookmarkUrl,
-              onPickCalloutIcon: _pickCalloutIcon,
+          child: Focus(
+            canRequestFocus: false,
+            skipTraversal: true,
+            onKeyEvent: _onBlockKey,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(DswShape.md),
+              child: PlanBlockView(
+                document: doc,
+                readOnly: widget.readOnly || _searching,
+                controllerFor: (id) => _controllers[id],
+                focusNodeFor: (id) => _focusNodes[id],
+                onInsertSlash: _openSlash,
+                onFocusedBlock: (id) => setState(() => _activeBlockId = id),
+                onSelectionChanged: (id, selection) {
+                  if (_activeBlockId == id || selection != null) {
+                    setState(() {
+                      _activeBlockId = id;
+                      _activeSelection = selection;
+                    });
+                  }
+                },
+                keyFor: (id) => _rowKeys[id],
+                searchQuery: _query,
+                collapsedToggles: _collapsedToggles,
+                onToggleCollapse: (id) => setState(() {
+                  if (!_collapsedToggles.remove(id)) _collapsedToggles.add(id);
+                }),
+                onEditBookmark: _editBookmarkUrl,
+                onPickCalloutIcon: _pickCalloutIcon,
+              ),
             ),
           ),
         ),

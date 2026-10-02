@@ -202,7 +202,12 @@ void main() {
   });
 
   group('sync mirrors the document', () {
-    test('a marks-only push keeps the caret and composing where they were', () {
+    // sync defers its push by one microtask (it usually arrives mid-build);
+    // every test here flushes that microtask before asserting.
+    Future<void> flush() => Future<void>.delayed(Duration.zero);
+
+    test('a marks-only push keeps the caret and composing where they were',
+        () async {
       final controller = PlanEditorController(text: 'hello world');
       controller.value = const TextEditingValue(
         text: 'hello world',
@@ -213,24 +218,26 @@ void main() {
         AttributedText('hello world')
           ..addAttribution(EditorMark.bold, const SpanRange(0, 5)),
       );
+      await flush();
       expect(controller.selection,
           const TextSelection(baseOffset: 2, extentOffset: 5));
       expect(controller.value.composing, const TextRange.collapsed(3));
       expect(controller.hasMark(EditorMark.bold, controller.selection), isTrue);
     });
 
-    test('a full push resets the text and collapses at the end', () {
+    test('a full push resets the text and collapses at the end', () async {
       final controller = PlanEditorController(text: 'hello world');
       controller.value = const TextEditingValue(
         text: 'hello world',
         selection: TextSelection.collapsed(offset: 2),
       );
       controller.sync(AttributedText('rolled back'));
+      await flush();
       expect(controller.text, 'rolled back');
       expect(controller.selection, const TextSelection.collapsed(offset: 11));
     });
 
-    test('sync does not double-shift the spans', () {
+    test('sync does not double-shift the spans', () async {
       final controller = PlanEditorController(text: 'hello');
       controller.value = const TextEditingValue(
         text: 'helloX',
@@ -239,6 +246,7 @@ void main() {
       // The host mirrors the controller's own shifted answer back: text and
       // marks agree, so the push must be a no-op, not a second shift.
       controller.sync(controller.attributedText);
+      await flush();
       expect(controller.text, 'helloX');
       expect(controller.marks, isEmpty);
     });

@@ -423,6 +423,134 @@ class PlanBlockDocument extends ChangeNotifier {
     working.insert(target, moved);
   });
 
+  // ---- block-level keyboard semantics (ADR-0044 P10-b) ---------------------
+
+  /// Splits the text block at the caret: the tail after [offset] becomes a new
+  /// block right below. A heading demotes the tail to a paragraph (Enter from
+  /// a heading starts prose, not another heading); a checkbox hands the tail
+  /// a fresh unchecked box; list/toggle/callout styles carry; a mark spanning
+  /// the caret continues on both halves. Returns the new block's id.
+  String splitTextBlock(String blockId, int offset) {
+    var newId = '';
+    _mutate((working, mint) {
+      final found = _locate(working, blockId);
+      if (found == null) return;
+      final content = found.block.content;
+      if (content is! PlanText) return;
+      final at = offset.clamp(0, content.text.length);
+      final head = PlanText(
+        text: content.text.substring(0, at),
+        style: content.style,
+        marks: [for (final mark in content.marks) ?_clipped(mark, 0, at)],
+        color: content.color,
+        background: content.background,
+        align: content.align,
+        checked: content.checked,
+        iconEmoji: content.iconEmoji,
+        iconImageId: content.iconImageId,
+      );
+      final tailStyle = content.style.isHeading
+          ? PlanTextStyle.paragraph
+          : content.style;
+      final tail = PlanText(
+        text: content.text.substring(at),
+        style: tailStyle,
+        marks: [
+          for (final mark in content.marks)
+            if (_clipped(mark, at, content.text.length) case final clipped?)
+              PlanMark(
+                range: PlanMarkRange(
+                  clipped.range.start - at,
+                  clipped.range.end - at,
+                ),
+                type: clipped.type,
+                param: clipped.param,
+              ),
+        ],
+        color: content.color,
+        background: content.background,
+        align: PlanAlign.start,
+        checked: content.style == PlanTextStyle.checkbox ? false : null,
+        iconEmoji: content.style == PlanTextStyle.callout
+            ? content.iconEmoji
+            : null,
+      );
+      newId = mint.next();
+      found.siblings[found.index] = found.block.copyWith(content: head);
+      found.siblings.insert(
+        found.index + 1,
+        PlanBlock(id: newId, content: tail),
+      );
+    });
+    return newId;
+  }
+
+  /// Merges this block into the previous sibling (Backspace at offset 0):
+  /// the previous text block grows by this one's text, whose marks shift by
+  /// the merge point; this block disappears. Returns the previous block's id
+  /// and the caret offset it should land on, or null when there is nothing to
+  /// merge into (no previous sibling, or one that is not a text block).
+  ({String id, int offset})? mergeIntoPrevious(String blockId) {
+    ({String id, int offset})? result;
+    _mutate((working, mint) {
+      final found = _locate(working, blockId);
+      if (found == null || found.index == 0) return;
+      final content = found.block.content;
+      if (content is! PlanText) return;
+      final previous = found.siblings[found.index - 1];
+      final previousContent = previous.content;
+      if (previousContent is! PlanText) return;
+      final shift = previousContent.text.length;
+      if (content.text.isEmpty && content.marks.isEmpty) {
+        // An empty row dissolves into the previous one: the merge point is
+        // the end of the previous text.
+        found.siblings.removeAt(found.index);
+        result = (id: previous.id, offset: shift);
+        return;
+      }
+      found.siblings[found.index - 1] = previous.copyWith(
+        content: PlanText(
+          text: previousContent.text + content.text,
+          style: previousContent.style,
+          marks: [
+            ...previousContent.marks,
+            for (final mark in content.marks)
+              PlanMark(
+                range: PlanMarkRange(
+                  mark.range.start + shift,
+                  mark.range.end + shift,
+                ),
+                type: mark.type,
+                param: mark.param,
+              ),
+          ],
+          color: previousContent.color,
+          background: previousContent.background,
+          align: previousContent.align,
+          checked: previousContent.checked,
+          iconEmoji: previousContent.iconEmoji,
+          iconImageId: previousContent.iconImageId,
+        ),
+      );
+      found.siblings.removeAt(found.index);
+      result = (id: previous.id, offset: shift);
+    });
+    return result;
+  }
+
+  /// The part of [mark] inside [start, end), or null when the mark lies
+  /// entirely outside. Clipping, not shifting — the caller re-bases.
+  static PlanMark? _clipped(PlanMark mark, int start, int end) {
+    final clippedStart = mark.range.start.clamp(start, end);
+    final clippedEnd = mark.range.end.clamp(start, end);
+    if (clippedEnd <= clippedStart) return null;
+    return PlanMark(
+      range: PlanMarkRange(clippedStart, clippedEnd),
+      type: mark.type,
+      param: mark.param,
+    );
+  }
+
   /// Inserts cloned [subtrees] below [afterId] (or at the end) and returns the
   /// first new id. Every id is minted fresh — a paste is a new subtree, not a
   /// second reference to the copied one.

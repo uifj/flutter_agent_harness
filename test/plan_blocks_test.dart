@@ -13,6 +13,7 @@ import 'dart:io';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
@@ -230,6 +231,139 @@ void main() {
     expect(
       restored.marks.map((mark) => mark.type),
       containsAll([PlanMarkType.bold, PlanMarkType.underline]),
+    );
+  });
+
+  testWidgets('Enter splits the block and lands the caret in the tail', (
+    tester,
+  ) async {
+    await pump(tester);
+    final paragraph = find.byType(EditableText).at(1);
+    await tester.enterText(paragraph, 'hello world');
+    await tester.pump();
+    tester.widget<EditableText>(paragraph).controller.selection =
+        const TextSelection.collapsed(offset: 5);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    await tester.pump();
+
+    final doc = documentOf(tester);
+    final texts = [
+      for (final block in doc.blocks)
+        if (block.content is PlanText) (block.content as PlanText).text,
+    ];
+    expect(texts, containsAllInOrder(['hello', ' world']));
+    // The tail field owns the focus and the caret sits at its start. (The
+    // text finder IS the EditableText, so there is no `widgetWithText` here.)
+    final tailField = tester.widget<EditableText>(find.text(' world'));
+    expect(tailField.focusNode.hasFocus, isTrue);
+    expect(tailField.controller.selection.baseOffset, 0);
+  });
+
+  testWidgets('Backspace at the start merges into the previous block', (
+    tester,
+  ) async {
+    // No blank line between: a blank paragraph would swallow the merge.
+    File('${root.path}/readme.md').writeAsStringSync('first\nsecond\n');
+    await pump(tester);
+    // Focus the second paragraph and park the caret at its start.
+    final second = find.text('second');
+    await tester.tap(second);
+    await tester.pump();
+    final field = tester.widget<EditableText>(second);
+    field.controller.selection = const TextSelection.collapsed(offset: 0);
+    await tester.pump();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.backspace);
+    await tester.pump();
+    await tester.pump();
+    // The caret landed on the merge point inside the surviving block.
+    final mergedSelection = tester
+        .widget<EditableText>(find.text('firstsecond'))
+        .controller
+        .selection;
+    expect(mergedSelection.baseOffset, 5);
+  });
+
+  testWidgets('Backspace dissolves an empty block', (tester) async {
+    await pump(tester);
+    await tester.tap(find.text('Add block'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text('Divider line'));
+    await tester.pump();
+
+    // Insert two empty paragraphs in a row; Backspace dissolves the second
+    // into the first (a divider neighbour correctly refuses the merge, so
+    // the pair has to be consecutive text).
+    final beforePair = documentOf(tester).blocks.length;
+    await tester.tap(find.text('Add block'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text('Text'));
+    await tester.pump();
+    await tester.tap(find.text('Add block'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text('Text'));
+    await tester.pump();
+    expect(documentOf(tester).blocks.length, beforePair + 2);
+    // A real user clicks into the trailing empty field; the programmatic
+    // focus races the just-closed dialog's focus restoration, and the key
+    // event only reaches the editor when the primary focus is in the tree.
+    await tester.tap(find.byType(EditableText).last);
+    await tester.pump();
+    final emptyField = tester.widget<EditableText>(
+      find.byType(EditableText).last,
+    );
+    emptyField.controller.selection = const TextSelection.collapsed(offset: 0);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.backspace);
+    await tester.pump();
+    await tester.pump();
+    expect(documentOf(tester).blocks.length, beforePair + 1);
+  });
+
+  testWidgets('the command keys answer the toolbar marks and undo', (
+    tester,
+  ) async {
+    await pump(tester);
+    final paragraph = find.byType(EditableText).at(1);
+    await tester.enterText(paragraph, 'hello marks');
+    await tester.pump();
+    tester.widget<EditableText>(paragraph).controller.selection =
+        const TextSelection(baseOffset: 0, extentOffset: 5);
+    await tester.pump();
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.keyB);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.keyB);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+    await tester.pump();
+
+    final controller =
+        tester.widget<EditableText>(paragraph).controller
+            as PlanEditorController;
+    expect(
+      controller.hasMark(
+        EditorMark.bold,
+        const TextSelection(baseOffset: 0, extentOffset: 5),
+      ),
+      isTrue,
+    );
+
+    // Cmd+Z rolls the mark back through the document's own undo stack.
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.keyZ);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.keyZ);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+    await tester.pump();
+    expect(
+      (tester.widget<EditableText>(paragraph).controller
+              as PlanEditorController)
+          .hasMark(
+            EditorMark.bold,
+            const TextSelection(baseOffset: 0, extentOffset: 5),
+          ),
+      isFalse,
     );
   });
 

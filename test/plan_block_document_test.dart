@@ -292,6 +292,94 @@ void main() {
     });
   });
 
+  group('split and merge (P10-b keyboard semantics)', () {
+    test('splitting mid-text cuts marks that cross the caret', () {
+      final id = doc.insertBelow(null, PlanText(text: 'abcdef'));
+      doc.applyMark(id, PlanMarkType.bold, const PlanMarkRange(2, 4));
+      final newId = doc.splitTextBlock(id, 3);
+      final head = doc.block(id)!.content as PlanText;
+      final tail = doc.block(newId)!.content as PlanText;
+      expect(head.text, 'abc');
+      expect(tail.text, 'def');
+      // The bold run (2,4) crossed the caret: the head keeps (2,3), the tail
+      // carries (0,1).
+      expect(head.marks.single.range, const PlanMarkRange(2, 3));
+      expect(tail.marks.single.range, const PlanMarkRange(0, 1));
+      // The tail sits right below the head.
+      final ids = doc.blocks.map((block) => block.id).toList();
+      expect(ids.indexOf(newId), ids.indexOf(id) + 1);
+    });
+
+    test('a heading demotes its tail, a checkbox hands over unchecked', () {
+      final heading = doc.insertBelow(
+        null,
+        const PlanText(text: 'Big', style: PlanTextStyle.h1),
+      );
+      final tail = doc.splitTextBlock(heading, 1);
+      expect(
+        (doc.block(tail)!.content as PlanText).style,
+        PlanTextStyle.paragraph,
+      );
+      expect((doc.block(heading)!.content as PlanText).style, PlanTextStyle.h1);
+
+      final box = doc.insertBelow(
+        null,
+        const PlanText(
+          text: 'task',
+          style: PlanTextStyle.checkbox,
+          checked: true,
+        ),
+      );
+      final boxTail = doc.splitTextBlock(box, 2);
+      final tailContent = doc.block(boxTail)!.content as PlanText;
+      expect(tailContent.style, PlanTextStyle.checkbox);
+      expect(tailContent.checked, isFalse);
+      expect((doc.block(box)!.content as PlanText).checked, isTrue);
+    });
+
+    test('merging into the previous text block shifts the tail marks', () {
+      final first = doc.insertBelow(null, PlanText(text: 'ab'));
+      doc.applyMark(first, PlanMarkType.italic, const PlanMarkRange(0, 2));
+      final second = doc.insertBelow(null, PlanText(text: 'cdef'));
+      doc.applyMark(second, PlanMarkType.bold, const PlanMarkRange(1, 3));
+      final merged = doc.mergeIntoPrevious(second);
+      expect(merged, isNotNull);
+      expect(merged!.id, first);
+      expect(merged.offset, 2);
+      final content = doc.block(first)!.content as PlanText;
+      expect(content.text, 'abcdef');
+      expect(doc.block(second), isNull);
+      final italic = content.marks
+          .where((mark) => mark.type == PlanMarkType.italic)
+          .single;
+      final bold = content.marks
+          .where((mark) => mark.type == PlanMarkType.bold)
+          .single;
+      expect(italic.range, const PlanMarkRange(0, 2));
+      expect(bold.range, const PlanMarkRange(3, 5));
+    });
+
+    test('an empty block dissolves into the previous one', () {
+      final first = doc.insertBelow(null, PlanText(text: 'ab'));
+      final empty = doc.insertBelow(null, const PlanText(text: ''));
+      final merged = doc.mergeIntoPrevious(empty);
+      expect(merged!.offset, 2);
+      expect(doc.block(empty), isNull);
+      expect((doc.block(first)!.content as PlanText).text, 'ab');
+    });
+
+    test('a non-text previous sibling and the first block refuse to merge', () {
+      final first = doc.insertBelow(
+        null,
+        const PlanDivider(PlanDividerStyle.line),
+      );
+      final second = doc.insertBelow(null, PlanText(text: 'text'));
+      expect(doc.mergeIntoPrevious(second), isNull);
+      expect(doc.block(second), isNotNull);
+      expect(doc.mergeIntoPrevious(first), isNull);
+    });
+  });
+
   group('the internal clipboard', () {
     test('copy takes the block, take hands it back, clear empties', () {
       expect(PlanBlockClipboard.hasContent, isFalse);
