@@ -102,6 +102,8 @@ void main() {
         ),
         home: Scaffold(
           body: SettingsPanel(
+          onReset: () async {},
+            onReset: () async {},
             settings: const AppSettings(
               model: ModelSettings(apiKey: 'sk-live'),
             ),
@@ -219,6 +221,8 @@ void main() {
           ),
           home: Scaffold(
             body: SettingsPanel(
+          onReset: () async {},
+            onReset: () async {},
               settings: const AppSettings(),
               onSave: (_) async {},
               onClose: () {},
