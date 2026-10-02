@@ -22,6 +22,7 @@ import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadSonner, ShadTheme;
 import 'package:window_manager/window_manager.dart';
 
@@ -37,6 +38,7 @@ import 'model/plan_mock_content.dart';
 import 'state/plan_object_store.dart';
 import 'state/prefs_store.dart';
 import 'state/crash_archive.dart';
+import 'state/auth_session.dart';
 import 'state/secret_store.dart';
 import 'state/usage_ledger.dart';
 import 'state/settings_store.dart';
@@ -57,6 +59,7 @@ import 'ui/plan/library/plan_create_collection.dart';
 import 'ui/plan/library/plan_gallery_screen.dart';
 import 'ui/plan/widgets/plan_widgets_screen.dart';
 import 'ui/plan/plan_workspace.dart';
+import 'ui/auth/welcome_screen.dart';
 import 'ui/settings/model_settings.dart';
 import 'ui/sidebar/sidebar.dart';
 import 'ui/workbench/free_window_layer.dart';
@@ -116,6 +119,13 @@ Future<void> main() async {
   // a FutureProvider for its own settings document is a bug, not a loading
   // state — then overrides the providers with the opened instances. The tree
   // reads them through the scope; nothing below `main` may open a store.
+  // The auth session (ADR-0045 PE): the origin comes from the packaging env
+  // var the self-built backend ships with, defaulting to empty — empty
+  // disables the browser flow and leaves the API-key path.
+  final appOrigin = const bool.hasEnvironment('ZCODE_ENDPOINT_ORIGIN')
+      ? const String.fromEnvironment('ZCODE_ENDPOINT_ORIGIN')
+      : const String.fromEnvironment('ZCODE_ENDPOINT_ORIGIN', defaultValue: '');
+  final auth = AuthSession(secrets: SecureSecretStore(), origin: appOrigin);
   final container = ProviderContainer(
     overrides: [
       supportDirectoryProvider.overrideWithValue(support),
@@ -125,6 +135,8 @@ Future<void> main() async {
       usageSummaryProvider.overrideWithValue(bootUsageSummary),
       crashArchiveNonEmptyProvider.overrideWithValue(crash.knownNonEmpty),
       crashArchiveProvider.overrideWithValue(crash),
+      authSessionProvider.overrideWithValue(auth),
+      zcodeOriginProvider.overrideWithValue(appOrigin),
     ],
   );
   runApp(
@@ -144,6 +156,10 @@ class _DshAppState extends ConsumerState<DshApp> {
   /// is a view concern rather than a controller's.
   bool _settingsOpen = false;
 
+  /// Whether the auth-restore already ran (ADR-0045 PE): the gate renders
+  /// only after the cached session had its chance.
+  bool _authRestored = false;
+
   /// Global hotkey service. Initialized after the first frame so the window
   /// handle is available for system-scope registration.
   HotkeyService? _hotkeys;
@@ -161,6 +177,20 @@ class _DshAppState extends ConsumerState<DshApp> {
     // worse way to learn that than the panel that fixes it. dsh opens an
     // onboarding dialog on the same condition.
     _settingsOpen = !ref.read(settingsStoreProvider).value.model.isConfigured;
+    // The auth gate (ADR-0045 PE): restore runs before the first frame's
+    // gate decision, so a returning signed-in user never sees the welcome.
+    () async {
+      final session = ref.read(authSessionProvider);
+      await session.restore(
+        hasApiKey: ref
+            .read(settingsStoreProvider)
+            .value
+            .model
+            .apiKey
+            .isNotEmpty,
+      );
+      if (mounted) setState(() => _authRestored = true);
+    }();
     // Register hotkeys and tray after the frame so window_manager has a handle.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initHotkeys();
@@ -305,7 +335,9 @@ class _DshAppState extends ConsumerState<DshApp> {
             expandToolCalls: doc.expandToolCalls,
             // ADR-0006 S4: settings is a full-screen view that replaces the
             // body, not an overlay on top of it — a state swap, still no route.
-            child: _settingsOpen
+            child: _welcomeGate(doc)
+                ? _welcomeScreen()
+                : _settingsOpen
                 ? _settingsPage(doc)
                 // ADR-0007: the frame re-renders when the top-level
                 // workspace mode (企划/代理) changes — the controller is a
@@ -542,6 +574,36 @@ class _DshAppState extends ConsumerState<DshApp> {
       sideChat: ref.watch(sideChatProvider),
       terminals: ref.watch(terminalsProvider),
       status: ref.watch(appScopeProvider).gitStatus,
+    );
+  }
+
+  /// The welcome gate (ADR-0045 PE): open while a welcome reason stands, the
+  /// auth restore has run, and the user has an API key to fall back on or
+  /// not — ZCode's rule is "no usable provider", which here means no key and
+  /// no session.
+  bool _welcomeGate(cfg.AppSettings doc) {
+    if (!_authRestored) return false;
+    final session = ref.read(authSessionProvider);
+    if (!session.welcomeOpen) return false;
+    return doc.model.apiKey.isEmpty;
+  }
+
+  Widget _welcomeScreen() {
+    final session = ref.read(authSessionProvider);
+    final origin = ref.watch(zcodeOriginProvider);
+    return WelcomeScreen(
+      reason: session.welcomeReason ?? WelcomeReason.manualLogin,
+      origin: origin,
+      auth: session,
+      onComplete: (reason) => setState(() {}),
+      onApiKeyEnter: (key) {
+        final current = ref.read(settingsStoreProvider).value;
+        ref.read(settingsStoreProvider).save(current.copyWithModelApiKey(key));
+        setState(() {});
+      },
+      onOpenRegister: (url) {
+        launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      },
     );
   }
 

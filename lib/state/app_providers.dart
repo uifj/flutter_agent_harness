@@ -32,6 +32,7 @@ import 'conversation_controller.dart';
 import 'details_selection.dart';
 import '../host/profile_repository.dart';
 import '../host/terminal_manager.dart';
+import 'auth_session.dart';
 import 'crash_archive.dart';
 import 'layout_controller.dart';
 import 'usage_ledger.dart';
@@ -83,6 +84,17 @@ bool crashArchiveNonEmpty(Ref ref) =>
 @Riverpod(keepAlive: true)
 CrashArchive crashArchive(Ref ref) =>
     throw UnimplementedError('override crashArchive in main or tests');
+
+/// The auth session (ADR-0045 PE): login/registration gate state.
+@Riverpod(keepAlive: true)
+AuthSession authSession(Ref ref) =>
+    throw UnimplementedError('override authSession in main or tests');
+
+/// The self-built backend origin the auth flow dials; empty disables the
+/// browser flow.
+@Riverpod(keepAlive: true)
+String zcodeOrigin(Ref ref) =>
+    throw UnimplementedError('override zcodeOrigin in main or tests');
 
 /// The workbench preferences, opened alongside the settings for the same
 /// reason: the first frame's tab menus already need the switches.

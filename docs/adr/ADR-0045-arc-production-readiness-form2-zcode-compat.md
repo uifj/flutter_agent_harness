@@ -43,6 +43,28 @@ macOS Keychain / Windows DPAPI / Linux libsecret。参数兼容指的是协议�
 | PC | **崩溃本地归档**（`<support>/logs/crash/`，5 文件/100MB，Flutter + Platform 双通道）+ **使用台账**（JSONL 月文件 + 30 天修剪 + 设置页"使用统计"节，runtime seam 接 genkit usage）+ 快捷键**注册表**（一处定义三方共用：托盘/热键/设置只读表，录制 UI 下一批）+ "打开日志"入口 | `lib/state/` + `lib/ui/settings/` |
 | PD | 版本事实：`version: 0.1.0`、README/CHANGELOG 正式化、本 ADR 与登记表回填 | 根 |
 
+### PE（2026-10-02 追加授权）：认证 UI——登录页与注册入口
+
+**PE 已落**：照 ZCode 的登录经验实现（研究记录：WelcomeScreen 为全屏 gate，
+provider 按钮 + API key 表单 + 唯一 skip 路径；**OAuth 走服务端发起的轮询流**——
+`POST /api/v1/oauth/cli/init`（Bearer pollToken=客户端随机）→ 打开 authorize URL →
+轮询 `GET /api/v1/oauth/cli/poll/{flowId}` 至 pending/failed/ready，ready 载荷=
+`user + provider tokens + 共享 zcode JWT`，两 provider 令牌拼写各异都收；**无 PKCE、
+无应用内注册表单**——注册发生在 provider/后端网页）：
+
+- `lib/model/zcode_compat/auth_flow.dart`：init/poll DTO + `ZcodeAuthEndpoints`
+  （init/poll 路径、`{origin}/register` 注册页 URL、5 分钟流超时）。
+- `lib/state/auth_session.dart`：`AuthSession`——restore（缓存 profile + JWT 本地
+  exp 校验，过期=重新认证）、`startBrowserFlow`（init→打开浏览器→轮询，网络/5xx
+  容错、5 分钟硬超时、互斥身份域清理）、`logout`（active provider 全键清除 + 门重开）。
+- `lib/ui/auth/welcome_screen.dart`：登录页（provider 按钮 Global/CN 标签、等待态、
+  错误态重试、API key 表单 + skip、**「注册账号」链接打开自建后端 `/register` 网页**
+  ——这是对 ZCode 面的唯一扩展：他们的注册在 chat.z.ai/bigmodel.cn 网页上，
+  自建后端按同形提供）。
+- `main.dart` 门禁接线：无 API key 且未登录 → 首启 gate；restore 先于首帧 gate 判定；
+  手动登出重开门。
+- 依赖：`http`（genkit 传递依赖升格直接依赖）。
+
 ### 3. 下一批（不在本 ADR 内实现，登记形状）
 
 多 provider 列表化（`AppSettings.model` 单对象 → 列表 + 迁移）、代理/CA 设置（须真接

@@ -275,6 +275,101 @@ final class CrashArchiveProvider
 
 String _$crashArchiveHash() => r'd9ff42e0f189256a27cfab8f5f562b2af382f88c';
 
+/// The auth session (ADR-0045 PE): login/registration gate state.
+
+@ProviderFor(authSession)
+final authSessionProvider = AuthSessionProvider._();
+
+/// The auth session (ADR-0045 PE): login/registration gate state.
+
+final class AuthSessionProvider
+    extends $FunctionalProvider<AuthSession, AuthSession, AuthSession>
+    with $Provider<AuthSession> {
+  /// The auth session (ADR-0045 PE): login/registration gate state.
+  AuthSessionProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'authSessionProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$authSessionHash();
+
+  @$internal
+  @override
+  $ProviderElement<AuthSession> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  AuthSession create(Ref ref) {
+    return authSession(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AuthSession value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AuthSession>(value),
+    );
+  }
+}
+
+String _$authSessionHash() => r'd5b89c928fa1b12300145327fca52e8c36d8a292';
+
+/// The self-built backend origin the auth flow dials; empty disables the
+/// browser flow.
+
+@ProviderFor(zcodeOrigin)
+final zcodeOriginProvider = ZcodeOriginProvider._();
+
+/// The self-built backend origin the auth flow dials; empty disables the
+/// browser flow.
+
+final class ZcodeOriginProvider
+    extends $FunctionalProvider<String, String, String>
+    with $Provider<String> {
+  /// The self-built backend origin the auth flow dials; empty disables the
+  /// browser flow.
+  ZcodeOriginProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'zcodeOriginProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$zcodeOriginHash();
+
+  @$internal
+  @override
+  $ProviderElement<String> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  String create(Ref ref) {
+    return zcodeOrigin(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(String value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<String>(value),
+    );
+  }
+}
+
+String _$zcodeOriginHash() => r'668c6c8edb964c8572d5c00828673c6b2f78d910';
+
 /// The workbench preferences, opened alongside the settings for the same
 /// reason: the first frame's tab menus already need the switches.
 

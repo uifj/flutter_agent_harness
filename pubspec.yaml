@@ -24,6 +24,9 @@ dependencies:
   # OS keychain for the API key (ADR-0045 PB): macOS Keychain, Windows DPAPI,
   # Linux libsecret. Tests inject the in-memory implementation.
   flutter_secure_storage: ^9.2.2
+  # The auth polling transport (ADR-0045 PE); already in the tree via genkit,
+  # promoted so lib/state may import it.
+  http: ^1.2.0
   desktop_drop: ^0.8.4
   file_picker: ^10.3.7
   flutter:

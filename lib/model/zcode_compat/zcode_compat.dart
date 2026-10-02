@@ -6,4 +6,5 @@ library;
 
 export 'device_mid.dart' show generateDeviceMid, isValidDeviceMid;
 export 'zcode_account.dart';
+export 'auth_flow.dart';
 export 'zcode_endpoints.dart' show ZcodeEndpoints, zcodeSourceHeaders;
