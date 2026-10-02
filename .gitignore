@@ -30,6 +30,8 @@ migrate_working_dir/
 .dart_tool/
 .flutter-plugins-dependencies
 /build/
+# Package-local build caches (e.g. plan_editor's dart build test cache)
+build/
 /coverage/
 
 # Local tool state and generated source dumps
