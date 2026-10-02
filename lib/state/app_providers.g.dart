@@ -321,6 +321,58 @@ final class AuthSessionProvider
 
 String _$authSessionHash() => r'd5b89c928fa1b12300145327fca52e8c36d8a292';
 
+/// The session's user-facing snapshot, re-evaluated on every session notify —
+/// login, logout, gate open and gate close all change it, even when the user
+/// itself stays null across a transition.
+
+@ProviderFor(authSnapshot)
+final authSnapshotProvider = AuthSnapshotProvider._();
+
+/// The session's user-facing snapshot, re-evaluated on every session notify —
+/// login, logout, gate open and gate close all change it, even when the user
+/// itself stays null across a transition.
+
+final class AuthSnapshotProvider
+    extends $FunctionalProvider<AuthSnapshot, AuthSnapshot, AuthSnapshot>
+    with $Provider<AuthSnapshot> {
+  /// The session's user-facing snapshot, re-evaluated on every session notify —
+  /// login, logout, gate open and gate close all change it, even when the user
+  /// itself stays null across a transition.
+  AuthSnapshotProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'authSnapshotProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$authSnapshotHash();
+
+  @$internal
+  @override
+  $ProviderElement<AuthSnapshot> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  AuthSnapshot create(Ref ref) {
+    return authSnapshot(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AuthSnapshot value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AuthSnapshot>(value),
+    );
+  }
+}
+
+String _$authSnapshotHash() => r'89cdb630412bacb131914ca909ccd3db3873e946';
+
 /// The self-built backend origin the auth flow dials; empty disables the
 /// browser flow.
 
@@ -1202,13 +1254,17 @@ final class ProfileRepositoryProvider
 String _$profileRepositoryHash() => r'fcdda6eff68dc66e22df50c50607e025181b80ee';
 
 /// The current user's profile, or null while loading / when signed out — the
-/// avatar then falls back to an anonymous placeholder.
+/// avatar then falls back to an anonymous placeholder. A signed-in auth
+/// session projects directly (ADR-0045 PE); otherwise the profile source
+/// (today the mock) answers.
 
 @ProviderFor(userProfile)
 final userProfileProvider = UserProfileProvider._();
 
 /// The current user's profile, or null while loading / when signed out — the
-/// avatar then falls back to an anonymous placeholder.
+/// avatar then falls back to an anonymous placeholder. A signed-in auth
+/// session projects directly (ADR-0045 PE); otherwise the profile source
+/// (today the mock) answers.
 
 final class UserProfileProvider
     extends
@@ -1219,7 +1275,9 @@ final class UserProfileProvider
         >
     with $FutureModifier<UserProfile?>, $FutureProvider<UserProfile?> {
   /// The current user's profile, or null while loading / when signed out — the
-  /// avatar then falls back to an anonymous placeholder.
+  /// avatar then falls back to an anonymous placeholder. A signed-in auth
+  /// session projects directly (ADR-0045 PE); otherwise the profile source
+  /// (today the mock) answers.
   UserProfileProvider._()
     : super(
         from: null,
@@ -1246,4 +1304,4 @@ final class UserProfileProvider
   }
 }
 
-String _$userProfileHash() => r'ab7440c762ee3eb4089008c4f31a9ae7b8cbf82d';
+String _$userProfileHash() => r'7e4a2c06a8a95e8c9f77505c74fe4dcc4cf40f89';

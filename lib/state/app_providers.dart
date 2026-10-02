@@ -90,6 +90,23 @@ CrashArchive crashArchive(Ref ref) =>
 AuthSession authSession(Ref ref) =>
     throw UnimplementedError('override authSession in main or tests');
 
+/// The session's user-facing snapshot, re-evaluated on every session notify —
+/// login, logout, gate open and gate close all change it, even when the user
+/// itself stays null across a transition.
+@Riverpod(keepAlive: true)
+AuthSnapshot authSnapshot(Ref ref) {
+  final session = ref.watch(authSessionProvider);
+  void listener() => ref.invalidateSelf();
+  session.addListener(listener);
+  ref.onDispose(() => session.removeListener(listener));
+  return AuthSnapshot(
+    signedIn: session.isSignedIn,
+    welcomeOpen: session.welcomeOpen,
+    reason: session.welcomeReason,
+    user: session.user,
+  );
+}
+
 /// The self-built backend origin the auth flow dials; empty disables the
 /// browser flow.
 @Riverpod(keepAlive: true)
@@ -244,7 +261,22 @@ PlanObjectStore planObjectStore(Ref ref) =>
 ProfileRepository profileRepository(Ref ref) => const MockProfileRepository();
 
 /// The current user's profile, or null while loading / when signed out — the
-/// avatar then falls back to an anonymous placeholder.
+/// avatar then falls back to an anonymous placeholder. A signed-in auth
+/// session projects directly (ADR-0045 PE); otherwise the profile source
+/// (today the mock) answers.
 @Riverpod(keepAlive: true)
-Future<UserProfile?> userProfile(Ref ref) =>
-    ref.watch(profileRepositoryProvider).fetchProfile();
+Future<UserProfile?> userProfile(Ref ref) async {
+  final snapshot = ref.watch(authSnapshotProvider);
+  final authUser = snapshot.user;
+  if (snapshot.signedIn && authUser != null) {
+    return UserProfile(
+      displayName: authUser.displayName,
+      email: authUser.email ?? '',
+      avatarColorIndex: authUser.id.isEmpty
+          ? 0
+          : authUser.id.hashCode.abs() % 4,
+      subscription: authUser.subscription,
+    );
+  }
+  return ref.watch(profileRepositoryProvider).fetchProfile();
+}

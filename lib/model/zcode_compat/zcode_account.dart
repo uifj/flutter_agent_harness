@@ -13,6 +13,7 @@ class ZcodeUserInfo {
     required this.id,
     required this.username,
     required this.displayName,
+    this.email,
     this.avatarUrl,
     this.subscription,
   });
@@ -21,6 +22,7 @@ class ZcodeUserInfo {
     id: json['id'] as String? ?? '',
     username: json['username'] as String? ?? '',
     displayName: json['displayName'] as String? ?? '',
+    email: json['email'] as String?,
     avatarUrl: json['avatarUrl'] as String?,
     subscription: json['subscription'] as String?,
   );
@@ -28,6 +30,7 @@ class ZcodeUserInfo {
   final String id;
   final String username;
   final String displayName;
+  final String? email;
   final String? avatarUrl;
   final String? subscription;
 
@@ -35,6 +38,7 @@ class ZcodeUserInfo {
     'id': id,
     'username': username,
     'displayName': displayName,
+    if (email != null) 'email': email,
     if (avatarUrl != null) 'avatarUrl': avatarUrl,
     if (subscription != null) 'subscription': subscription,
   };
@@ -45,12 +49,13 @@ class ZcodeUserInfo {
       other.id == id &&
       other.username == username &&
       other.displayName == displayName &&
+      other.email == email &&
       other.avatarUrl == avatarUrl &&
       other.subscription == subscription;
 
   @override
   int get hashCode =>
-      Object.hash(id, username, displayName, avatarUrl, subscription);
+      Object.hash(id, username, displayName, email, avatarUrl, subscription);
 }
 
 /// The two built-in OAuth providers (`oauth.ts:8-12`) and the storage key

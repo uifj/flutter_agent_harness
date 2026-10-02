@@ -24,6 +24,7 @@
 // never traps the user inside it.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadSeparator;
 
@@ -46,6 +47,10 @@ OverlayEntry showSettingsQuickMenu({
   required settings.AppSettings initial,
   required ValueChanged<settings.AppSettings> onChanged,
   required VoidCallback onOpenSettings,
+  required bool signedIn,
+  required String? userDisplayName,
+  VoidCallback? onLogin,
+  VoidCallback? onLogout,
 }) {
   final overlay = Overlay.of(context, rootOverlay: true);
   late final OverlayEntry entry;
@@ -59,6 +64,20 @@ OverlayEntry showSettingsQuickMenu({
         onOpenSettings();
       },
       onDismiss: entry.remove,
+      signedIn: signedIn,
+      userDisplayName: userDisplayName,
+      onLogin: onLogin == null
+          ? null
+          : () {
+              entry.remove();
+              onLogin();
+            },
+      onLogout: onLogout == null
+          ? null
+          : () {
+              entry.remove();
+              onLogout();
+            },
     ),
   );
   overlay.insert(entry);
@@ -76,6 +95,10 @@ class _QuickMenuOverlay extends StatefulWidget {
     required this.onChanged,
     required this.onOpenSettings,
     required this.onDismiss,
+    required this.signedIn,
+    required this.userDisplayName,
+    this.onLogin,
+    this.onLogout,
   });
 
   final LayerLink link;
@@ -83,6 +106,13 @@ class _QuickMenuOverlay extends StatefulWidget {
   final ValueChanged<settings.AppSettings> onChanged;
   final VoidCallback onOpenSettings;
   final VoidCallback onDismiss;
+
+  /// Auth state (ADR-0045 PE): signed-in shows a display-name + logout row,
+  /// signed-out shows the login entry. Null callbacks hide their row.
+  final bool signedIn;
+  final String? userDisplayName;
+  final VoidCallback? onLogin;
+  final VoidCallback? onLogout;
 
   @override
   State<_QuickMenuOverlay> createState() => _QuickMenuOverlayState();
@@ -160,6 +190,10 @@ class _QuickMenuOverlayState extends State<_QuickMenuOverlay> {
                         initial: widget.initial,
                         onChanged: widget.onChanged,
                         onOpenSettings: widget.onOpenSettings,
+                        signedIn: widget.signedIn,
+                        userDisplayName: widget.userDisplayName,
+                        onLogin: widget.onLogin,
+                        onLogout: widget.onLogout,
                       ),
                     ),
                   ),
@@ -178,11 +212,19 @@ class _QuickMenu extends StatefulWidget {
     required this.initial,
     required this.onChanged,
     required this.onOpenSettings,
+    required this.signedIn,
+    required this.userDisplayName,
+    this.onLogin,
+    this.onLogout,
   });
 
   final settings.AppSettings initial;
   final ValueChanged<settings.AppSettings> onChanged;
   final VoidCallback onOpenSettings;
+  final bool signedIn;
+  final String? userDisplayName;
+  final VoidCallback? onLogin;
+  final VoidCallback? onLogout;
 
   @override
   State<_QuickMenu> createState() => _QuickMenuState();
@@ -250,7 +292,66 @@ class _QuickMenuState extends State<_QuickMenu> {
           ShadSeparator.horizontal(thickness: 1, color: color.borderL2),
         ),
         _OpenSettingsRow(onTap: widget.onOpenSettings),
+        if (widget.onLogin != null)
+          _AuthRow(
+            label: context.tr('welcomeTitle').isEmpty
+                ? 'Sign in'
+                : context.tr('authSignIn'),
+            icon: LucideIcons.log_in,
+            onTap: widget.onLogin!,
+          ),
+        if (widget.signedIn && widget.onLogout != null)
+          _AuthRow(
+            label: context.tr('authSignOut'),
+            icon: LucideIcons.log_out,
+            onTap: widget.onLogout!,
+          ),
       ],
+    );
+  }
+}
+
+/// The sign-in / sign-out row at the menu's tail — a tappable row like
+/// `_OpenSettingsRow`, with its own icon.
+class _AuthRow extends StatelessWidget {
+  const _AuthRow({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.dsw;
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: DswHoverTap(
+        onTap: onTap,
+        semanticLabel: label,
+        builder: (context, hovered, focused) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: hovered ? color.interactiveBgHover : null,
+            borderRadius: BorderRadius.circular(DswShape.control),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: DswShape.iconSm, color: color.labelSecondary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label,
+                  style: DswType.s14.copyWith(color: color.labelPrimary),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

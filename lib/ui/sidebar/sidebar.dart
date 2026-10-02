@@ -62,6 +62,10 @@ class Sidebar extends StatefulWidget {
     this.profile,
     this.settings,
     this.onSettingsChanged,
+    this.signedIn = false,
+    this.userDisplayName,
+    this.onLogin,
+    this.onLogout,
     this.mode,
     this.onSelectMode,
     this.collections = const [],
@@ -126,6 +130,12 @@ class Sidebar extends StatefulWidget {
   /// per gesture, so a collapse-all cannot leave the list half-folded if a
   /// notification lands in the middle.
   final ValueChanged<Set<String>>? onSetCollapsedWorkspaces;
+
+  /// Auth state (ADR-0045 PE) for the quick menu's sign-in/out entries.
+  final bool signedIn;
+  final String? userDisplayName;
+  final VoidCallback? onLogin;
+  final VoidCallback? onLogout;
 
   /// The signed-in user, or null while the profile source is loading or when
   /// there is none — the footer avatar then shows an anonymous placeholder.
@@ -1084,6 +1094,10 @@ class _SidebarState extends State<Sidebar> {
       initial: widget.settings!,
       onChanged: widget.onSettingsChanged!,
       onOpenSettings: _openSettingsSafe,
+      signedIn: widget.signedIn,
+      userDisplayName: widget.userDisplayName,
+      onLogin: widget.onLogin,
+      onLogout: widget.onLogout,
     );
   }
 

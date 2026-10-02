@@ -361,6 +361,16 @@ class _DshAppState extends ConsumerState<DshApp> {
                           // avatar renders a placeholder until the (mock, later Supabase)
                           // source resolves; riverpod stays out of the widget tree.
                           profile: ref.watch(userProfileProvider).value,
+                          signedIn: ref.watch(authSnapshotProvider).signedIn,
+                          userDisplayName: ref
+                              .watch(authSnapshotProvider)
+                              .user
+                              ?.displayName,
+                          onLogin: () => ref
+                              .read(authSessionProvider)
+                              .openWelcome(WelcomeReason.manualLogin),
+                          onLogout: () =>
+                              ref.read(authSessionProvider).logout(),
                           // The footer quick-menu edits these live (theme/locale/width
                           // never rebuild the runtime), so it needs the document and the
                           // save path — the same `scope.save` the settings panel uses.
@@ -583,8 +593,15 @@ class _DshAppState extends ConsumerState<DshApp> {
   /// no session.
   bool _welcomeGate(cfg.AppSettings doc) {
     if (!_authRestored) return false;
-    final session = ref.read(authSessionProvider);
-    if (!session.welcomeOpen) return false;
+    final auth = ref.watch(authSnapshotProvider);
+    if (!auth.welcomeOpen) return false;
+    // ZCode's rule: the manual-login and session-expired reasons open the
+    // gate regardless of an API key (the form carries its own skip); only
+    // the startup reason defers to a usable key.
+    if (auth.reason == WelcomeReason.manualLogin ||
+        auth.reason == WelcomeReason.sessionExpired) {
+      return true;
+    }
     return doc.model.apiKey.isEmpty;
   }
 

@@ -218,6 +218,7 @@ class AuthSession extends ChangeNotifier {
       id: session.userId,
       username: session.username,
       displayName: session.displayName,
+      email: session.email,
       avatarUrl: session.avatarUrl,
     );
     await _secrets.write(
@@ -295,4 +296,33 @@ class AuthSession extends ChangeNotifier {
     _client.close();
     super.dispose();
   }
+}
+
+/// An immutable view of the session's user-facing state — the provider bridge
+/// compares snapshots so a listener rebuilds on login, logout, gate open and
+/// gate close alike, even when the user itself is unchanged (null → null).
+@immutable
+class AuthSnapshot {
+  const AuthSnapshot({
+    required this.signedIn,
+    required this.welcomeOpen,
+    required this.reason,
+    required this.user,
+  });
+
+  final bool signedIn;
+  final bool welcomeOpen;
+  final WelcomeReason? reason;
+  final ZcodeUserInfo? user;
+
+  @override
+  bool operator ==(Object other) =>
+      other is AuthSnapshot &&
+      other.signedIn == signedIn &&
+      other.welcomeOpen == welcomeOpen &&
+      other.reason == reason &&
+      other.user == user;
+
+  @override
+  int get hashCode => Object.hash(signedIn, welcomeOpen, reason, user);
 }

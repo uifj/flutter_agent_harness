@@ -43,6 +43,8 @@ void main() {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (!context.mounted || entry != null) return;
                     entry = showSettingsQuickMenu(
+                      signedIn: false,
+                      userDisplayName: null,
                       context: context,
                       link: link,
                       initial: const settings.AppSettings(),
