@@ -417,10 +417,11 @@ void main() {
       expect(find.text('Customized'), findsOneWidget);
 
       // The moved card still carries the advanced fields behind its own
-      // disclosure.
+      // disclosure, plus the manual model list's add input (ADR-0045 PG):
+      // key, Base URL, model, and the list's add field.
       await tester.tap(find.text('Customized'));
       await tester.pump();
-      expect(settingsField(), findsNWidgets(3));
+      expect(settingsField(), findsNWidgets(4));
 
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();

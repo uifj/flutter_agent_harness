@@ -113,7 +113,41 @@ class ModelDirectory extends ChangeNotifier {
       // list belonged to the old endpoint and goes with it.
       _models = List.unmodifiable(_defaultsFor(current.provider));
     }
+    // Manually added ids survive every refresh (ADR-0045 PG): the document
+    // carries them, so adopt re-merges them over whatever the list holds.
+    _mergeManual(current.manualModels);
     notifyListeners();
+  }
+
+  /// Registers a manually added model id, persisted by the caller through
+  /// [ModelSettings.manualModels]. Already-present ids are a no-op.
+  void addManualModel(String id) {
+    if (_models.any((model) => model.id == id)) return;
+    _models = List.unmodifiable([
+      ..._models,
+      DirectoryModel(provider: _provider, id: id, fetched: false),
+    ]);
+    notifyListeners();
+  }
+
+  /// Removes a manually added model id. Built-in defaults and fetched
+  /// entries are not removable here — the directory re-merges them.
+  void removeManualModel(String id) {
+    _models = List.unmodifiable([
+      for (final model in _models)
+        if (model.id != id) model,
+    ]);
+    notifyListeners();
+  }
+
+  void _mergeManual(List<String> manualModels) {
+    final merged = [..._models];
+    for (final id in manualModels) {
+      if (!merged.any((model) => model.id == id)) {
+        merged.add(DirectoryModel(provider: _provider, id: id, fetched: false));
+      }
+    }
+    _models = List.unmodifiable(merged);
   }
 
   /// Refreshes the catalog from the endpoint. The static default survives

@@ -79,6 +79,17 @@ SettingsStore 编排每条目的 keychain 槽位（保存 diff 条目、激活�
 理由重开门，gate 现在尊重已有 API key 的手动登录）或 Sign out；`userProfile` 投影
 登录身份（ZcodeUserInfo 增加 poll 载荷的 email）。
 
+### PG（2026-10-03 追加授权）：mock 登录身份、帮助组、模型列表与暂缓项落库
+
+**PG 已落**：① 用户指令"登录先 mock 写死在代码里"——`MockProfileRepository` 返回
+固定游客身份（旅行者6324 / 游客订阅），签名投影照常；② 快捷菜单新增帮助组
+（产品文档/用户社群/问题上报/给产品提需求/发现新版本/关于——ZCode 头像菜单同五项，
+链接常量 `AppMeta` 占位域名待产品定夺；关于对话框显示版本，`AppMeta.version` 与
+pubspec 由测试互钉）；③ Models 节增「模型列表」手动增删（`ModelSettings.manualModels`
+持久化，`ModelDirectory` 合并手动 id，ZCode 模型列表同形的最小实现）；
+④ **暂缓项落库**：`docs/backend-contract-2026-10-03.md`（自建后端五组端点契约）+
+`docs/signing-distribution-2026-10-03.md`（签名/公证操作手册 + 会员/订阅设计稿）。
+
 ### 3. 下一批（不在本 ADR 内实现，登记形状）
 
 多 provider 列表化（`AppSettings.model` 单对象 → 列表 + 迁移）、代理/CA 设置（须真接

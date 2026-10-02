@@ -84,6 +84,12 @@ void main() {
 
   testWidgets('a chip activates from the keyboard (audit F1)', (tester) async {
     settings.AppSettings? saved;
+    // The help group (ADR-0045 PG) grew the menu past the default test
+    // surface; a tall surface keeps every row mounted and traversable — the
+    // scrolled-down composition is the amplified-text ruler's territory.
+    tester.view.physicalSize = const Size(900, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await pumpMenu(tester, onChanged: (next) => saved = next);
 
     // The menu's FocusScope autofocuses; the first focusable chip is the first
@@ -91,6 +97,15 @@ void main() {
     // pointer involved.
     await tester.sendKeyEvent(LogicalKeyboardKey.tab);
     await tester.pump();
+    final focused = FocusManager.instance.primaryFocus;
+    // ignore: avoid_print
+    print('FOCUSED: $focused');
+    // ignore: avoid_print
+    focused?.debugLabel = 'primary';
+    // ignore: avoid_print
+    print(
+      'CHILDREN: ${focused?.traversalDescendants.map((n) => '${n.debugLabel ?? n}').take(6).toList()}',
+    );
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pump();
 

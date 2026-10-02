@@ -22,6 +22,8 @@ import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadButton, ShadDialog;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadSonner, ShadTheme;
 import 'package:window_manager/window_manager.dart';
@@ -59,6 +61,9 @@ import 'ui/plan/library/plan_create_collection.dart';
 import 'ui/plan/library/plan_gallery_screen.dart';
 import 'ui/plan/widgets/plan_widgets_screen.dart';
 import 'ui/plan/plan_workspace.dart';
+import 'model/app_meta.dart';
+import 'theme/dsw_shape.dart';
+import 'theme/dsw_typography.dart';
 import 'ui/auth/welcome_screen.dart';
 import 'ui/settings/model_settings.dart';
 import 'ui/sidebar/sidebar.dart';
@@ -371,6 +376,11 @@ class _DshAppState extends ConsumerState<DshApp> {
                               .openWelcome(WelcomeReason.manualLogin),
                           onLogout: () =>
                               ref.read(authSessionProvider).logout(),
+                          onOpenLink: (url) => launchUrl(
+                            Uri.parse(url),
+                            mode: LaunchMode.externalApplication,
+                          ),
+                          onAbout: () => _showAboutDialog(),
                           // The footer quick-menu edits these live (theme/locale/width
                           // never rebuild the runtime), so it needs the document and the
                           // save path — the same `scope.save` the settings panel uses.
@@ -584,6 +594,51 @@ class _DshAppState extends ConsumerState<DshApp> {
       sideChat: ref.watch(sideChatProvider),
       terminals: ref.watch(terminalsProvider),
       status: ref.watch(appScopeProvider).gitStatus,
+    );
+  }
+
+  /// The About dialog (ADR-0045 PG): the product mark, name, version and the
+  /// help links — ZCode's `关于 ZCode` entry, our own shape.
+  void _showAboutDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => ShadDialog.alert(
+        radius: BorderRadius.circular(DswShape.float),
+        title: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Theme.of(dialogContext).colorScheme.primary,
+                borderRadius: BorderRadius.circular(DswShape.control),
+              ),
+              child: const Icon(
+                LucideIcons.bot,
+                size: DswShape.iconMd,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: DswShape.sm),
+            Expanded(
+              child: Text(
+                context.tr('helpAboutTitle'),
+                style: DswType.sStrong14,
+              ),
+            ),
+          ],
+        ),
+        description: Text(
+          context.tr('helpAboutBody').replaceAll('{version}', AppMeta.version),
+          style: DswType.xs13,
+        ),
+        actions: [
+          ShadButton.outline(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(context.tr('planCancel')),
+          ),
+        ],
+      ),
     );
   }
 

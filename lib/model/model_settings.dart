@@ -52,6 +52,7 @@ class ModelSettings {
     this.apiKey = '',
     this.baseUrl = defaultBaseUrl,
     this.model = defaultModel,
+    this.manualModels = const [],
   });
 
   ModelSettings.fromJson(Map<String, dynamic> json)
@@ -59,7 +60,11 @@ class ModelSettings {
       provider = LlmProvider.fromName(json['provider'] as String?),
       apiKey = json['apiKey'] as String? ?? '',
       baseUrl = json['baseUrl'] as String? ?? defaultBaseUrl,
-      model = json['model'] as String? ?? defaultModel;
+      model = json['model'] as String? ?? defaultModel,
+      manualModels = [
+        for (final entry in (json['manualModels'] as List? ?? const []))
+          if (entry is String) entry,
+      ];
 
   /// The saved-provider book's stable identity (ADR-0045 PF-2). Null on the
   /// active connection — the book mints one when a connection is saved.
@@ -76,6 +81,11 @@ class ModelSettings {
   final String baseUrl;
 
   final String model;
+
+  /// Manually added model ids (ADR-0045 PG): ZCode's 模型列表 lets the user
+  /// register ids the endpoint's catalog does not carry. Empty means "defaults
+  /// plus whatever /models returns"; the directory merges these in.
+  final List<String> manualModels;
 
   /// False on first launch, which is why the composer starts disabled.
   bool get isConfigured => apiKey.trim().isNotEmpty;
@@ -95,12 +105,14 @@ class ModelSettings {
     String? apiKey,
     String? baseUrl,
     String? model,
+    List<String>? manualModels,
   }) => ModelSettings(
     id: id ?? this.id,
     provider: provider ?? this.provider,
     apiKey: apiKey ?? this.apiKey,
     baseUrl: baseUrl ?? this.baseUrl,
     model: model ?? this.model,
+    manualModels: manualModels ?? this.manualModels,
   );
 
   Map<String, dynamic> toJson() => {
@@ -109,6 +121,7 @@ class ModelSettings {
     'apiKey': apiKey,
     'baseUrl': baseUrl,
     'model': model,
+    if (manualModels.isNotEmpty) 'manualModels': manualModels,
   };
 
   /// The runtime bakes all of these into a registered agent and a plugin's
@@ -124,8 +137,17 @@ class ModelSettings {
       other.provider == provider &&
       other.apiKey == apiKey &&
       other.baseUrl == baseUrl &&
-      other.model == model;
+      other.model == model &&
+      _listEq(other.manualModels, manualModels);
 
   @override
   int get hashCode => Object.hash(id, provider, apiKey, baseUrl, model);
+}
+
+bool _listEq(List<String> a, List<String> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
 }

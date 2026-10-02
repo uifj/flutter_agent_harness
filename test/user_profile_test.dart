@@ -47,8 +47,10 @@ void main() {
     test('resolves a fixed profile through the async contract', () async {
       final profile = await const MockProfileRepository().fetchProfile();
       expect(profile, isNotNull);
-      expect(profile!.initial, 'D');
-      expect(profile.email, isNotEmpty);
+      expect(profile!.initial, '旅');
+      // The guest identity carries no email — a real one arrives with the
+      // signed-in projection (ADR-0045 PE).
+      expect(profile.email, '');
     });
   });
 }

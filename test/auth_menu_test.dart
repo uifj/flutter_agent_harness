@@ -123,6 +123,9 @@ void main() {
     await pumpMenu(tester, signedIn: false, onLogin: () => loggedIn = true);
     expect(find.text('Sign in'), findsOne);
     expect(find.text('Sign out'), findsNothing);
+    // The help group grew the menu; the auth rows live near its bottom.
+    await tester.ensureVisible(find.text('Sign in'));
+    await tester.pump();
     await tester.tap(find.text('Sign in'));
     expect(loggedIn, isTrue);
     // The wrapper removed the entry as part of the hand-off.
@@ -135,6 +138,8 @@ void main() {
     await pumpMenu(tester, signedIn: true, onLogout: () => loggedOut = true);
     expect(find.text('Sign out'), findsOne);
     expect(find.text('Sign in'), findsNothing);
+    await tester.ensureVisible(find.text('Sign out'));
+    await tester.pump();
     await tester.tap(find.text('Sign out'));
     expect(loggedOut, isTrue);
     // The wrapper removed the entry as part of the hand-off.

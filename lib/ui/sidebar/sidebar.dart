@@ -66,6 +66,8 @@ class Sidebar extends StatefulWidget {
     this.userDisplayName,
     this.onLogin,
     this.onLogout,
+    this.onOpenLink,
+    this.onAbout,
     this.mode,
     this.onSelectMode,
     this.collections = const [],
@@ -136,6 +138,8 @@ class Sidebar extends StatefulWidget {
   final String? userDisplayName;
   final VoidCallback? onLogin;
   final VoidCallback? onLogout;
+  final void Function(String url)? onOpenLink;
+  final VoidCallback? onAbout;
 
   /// The signed-in user, or null while the profile source is loading or when
   /// there is none — the footer avatar then shows an anonymous placeholder.
@@ -1098,6 +1102,8 @@ class _SidebarState extends State<Sidebar> {
       userDisplayName: widget.userDisplayName,
       onLogin: widget.onLogin,
       onLogout: widget.onLogout,
+      onOpenLink: widget.onOpenLink,
+      onAbout: widget.onAbout,
     );
   }
 

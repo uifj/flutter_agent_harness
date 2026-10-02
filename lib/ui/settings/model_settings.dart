@@ -474,6 +474,11 @@ class _SettingsPanelState extends State<SettingsPanel> {
       model: _model.text.trim().isEmpty
           ? defaultModelFor(_provider)
           : _model.text.trim(),
+      // The manual model list is not a form field; it rides the document the
+      // panel was last given (ADR-0045 PG), and the book rides with it — a
+      // form-only rebuild would silently drop both (caught by the hardening
+      // test's panel-save guard).
+      manualModels: widget.settings.model.manualModels,
     );
     final workspace = _workspace.text.trim();
     final skills = _skills.text.trim();
@@ -488,10 +493,19 @@ class _SettingsPanelState extends State<SettingsPanel> {
       fontSize: _textSize,
       conversationWidth: _conversationWidth,
       expandToolCalls: _expandToolCalls,
+      savedProviders: widget.settings.savedProviders,
+      activeProviderId: widget.settings.activeProviderId,
     );
   }
 
   bool get _dirty => _edited != widget.settings;
+
+  /// Persists [next] through the panel's save path — the manual-model rows'
+  /// write. The mirror is the form controllers plus widget.settings, and the
+  /// save rebuilds the panel with the saved document.
+  Future<void> _saveWith(AppSettings next) async {
+    await widget.onSave(next);
+  }
 
   Future<void> _save() async {
     setState(() => _saving = true);
@@ -1097,6 +1111,36 @@ class _SettingsPanelState extends State<SettingsPanel> {
                             models: _endpointModels,
                             onPick: (id) => setState(() => _model.text = id),
                           ),
+                  ),
+                  const SizedBox(height: 12),
+                  // The manual model list (ADR-0045 PG): ZCode's 模型列表 —
+                  // ids the endpoint's catalog does not carry, registered by
+                  // hand and persisted with the connection.
+                  _ManualModelsField(
+                    models: _edited.model.manualModels,
+                    activeModel: _model.text.trim(),
+                    onAdd: (id) async {
+                      if (_edited.model.manualModels.contains(id)) return;
+                      await _saveWith(
+                        _edited.copyWith(
+                          model: _edited.model.copyWith(
+                            manualModels: [..._edited.model.manualModels, id],
+                          ),
+                        ),
+                      );
+                    },
+                    onRemove: (id) async {
+                      await _saveWith(
+                        _edited.copyWith(
+                          model: _edited.model.copyWith(
+                            manualModels: [
+                              for (final existing in _edited.model.manualModels)
+                                if (existing != id) existing,
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -2627,6 +2671,111 @@ class _UsageStatRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The manual model list (ADR-0045 PG): one input row to register an id and
+/// one row per registered id with a remove affordance — ZCode's 模型列表
+/// shape at its smallest honest size. The add input commits on submit; a
+/// duplicate id is a silent no-op (the list already shows it).
+class _ManualModelsField extends StatelessWidget {
+  const _ManualModelsField({
+    required this.models,
+    required this.activeModel,
+    required this.onAdd,
+    required this.onRemove,
+  });
+
+  final List<String> models;
+  final String activeModel;
+  final ValueChanged<String> onAdd;
+  final ValueChanged<String> onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.dsw;
+    final controller = TextEditingController();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                context.tr('modelsListLabel'),
+                style: DswType.xs13.copyWith(color: color.labelSecondary),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        for (final id in models)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DswShape.sm,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color.bgLayer2,
+                      borderRadius: BorderRadius.circular(DswShape.inner),
+                    ),
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            id,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: DswType.xs13.copyWith(
+                              color: color.labelPrimary,
+                            ),
+                          ),
+                        ),
+                        if (id == activeModel) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            context.tr('modelsActiveTag'),
+                            style: DswType.xs13.copyWith(
+                              color: color.labelTertiary,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                DswIconButton(
+                  icon: LucideIcons.x,
+                  tooltip: context.tr('modelsRemove'),
+                  onTap: () => onRemove(id),
+                ),
+              ],
+            ),
+          ),
+        dswEnsureShadTheme(
+          context,
+          ShadInput(
+            controller: controller,
+            placeholder: dswInputHint(
+              context.tr('modelsAddHint'),
+              style: DswType.xs13.copyWith(color: color.labelTertiary),
+            ),
+            style: DswType.xs13,
+            onSubmitted: (id) {
+              final trimmed = id.trim();
+              if (trimmed.isNotEmpty) onAdd(trimmed);
+              controller.clear();
+            },
+          ),
+        ),
+      ],
     );
   }
 }

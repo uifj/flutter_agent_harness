@@ -35,9 +35,9 @@ class MockProfileRepository extends ProfileRepository {
 
   @override
   Future<UserProfile?> fetchProfile() async => const UserProfile(
-    displayName: 'Demo User',
-    email: 'demo@example.com',
+    displayName: '旅行者6324',
+    email: '',
     avatarColorIndex: 2,
-    subscription: 'Pro',
+    subscription: '游客',
   );
 }
