@@ -1,0 +1,24 @@
+name: plan_editor
+description: >-
+  Attributed-text editing core for the plan workspace's block editor: a
+  TextEditingController that carries inline marks (bold, italic, link,
+  colors) and renders them live while the caret is in the field.
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+
+dependencies:
+  # The span engine (marker-pair bank, insert/remove shifting, toggle with
+  # replace-overlap). ADR-0044: adopted from super_editor's MIT engine.
+  attributed_text: ^0.4.5
+  collection: ^1.19.0
+
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

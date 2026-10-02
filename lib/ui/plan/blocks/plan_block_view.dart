@@ -19,6 +19,8 @@ import 'package:gpt_markdown/gpt_markdown.dart';
 
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadInput;
 
+import 'package:plan_editor/plan_editor.dart';
+
 import '../../../l10n/locales.dart';
 import '../../../model/plan_block.dart';
 
@@ -673,9 +675,14 @@ class _BlockTextField extends StatefulWidget {
 }
 
 class _BlockTextFieldState extends State<_BlockTextField> {
-  late final TextEditingController _controller = TextEditingController(
+  // The plan_editor field controller (ADR-0044): it carries the block's
+  // marks and renders them while the caret is inside. Typing flows out
+  // through `editTextWithMarks` (the controller is the shift engine);
+  // document-driven changes flow back in through `sync`.
+  late final PlanEditorController _controller = PlanEditorController(
     text: widget.content.text,
-  );
+    marks: _marksFor(widget.content),
+  )..styleResolver = _resolveEditorStyle;
 
   @override
   void initState() {
@@ -698,19 +705,10 @@ class _BlockTextFieldState extends State<_BlockTextField> {
   void didUpdateWidget(_BlockTextField old) {
     super.didUpdateWidget(old);
     // The document notifies on every edit; a rebuild that did not come from
-    // this field's own typing (undo, toolbar, another field) resyncs the text.
-    if (widget.content.text != _controller.text &&
-        widget.content.text != old.content.text) {
-      _controller.value = TextEditingValue(
-        text: widget.content.text,
-        selection: TextSelection.collapsed(
-          offset: widget.content.text.length.clamp(
-            0,
-            widget.content.text.length,
-          ),
-        ),
-      );
-    }
+    // this field's own typing (undo, toolbar, another field) mirrors the
+    // document back in. `sync` keeps the caret on a marks-only push and
+    // no-ops when the content already agrees.
+    _controller.sync(_attributedOf(widget.content));
   }
 
   @override
@@ -745,11 +743,148 @@ class _BlockTextFieldState extends State<_BlockTextField> {
           ),
           decoration: dswBareInput,
           padding: const EdgeInsets.symmetric(vertical: DswShape.xs),
-          onChanged: (text) => widget.document.editText(widget.blockId, text),
+          onChanged: (text) => widget.document.editTextWithMarks(
+            widget.blockId,
+            text,
+            _planMarksOf(_controller),
+          ),
         ),
       ),
     );
   }
+}
+
+// ---- PlanMark ⇄ EditorMark (the app side of ADR-0044's mapping) ----------
+
+AttributedText _attributedOf(PlanText content) {
+  final attributed = AttributedText(content.text);
+  for (final mark in content.marks) {
+    final editor = _editorMarkOf(mark);
+    if (editor == null || mark.range.end <= mark.range.start) continue;
+    attributed.addAttribution(
+      editor,
+      SpanRange(mark.range.start, mark.range.end - 1),
+      overwriteConflictingSpans: true,
+    );
+  }
+  return attributed;
+}
+
+List<EditorMarkRange> _marksFor(PlanText content) => [
+  for (final mark in content.marks)
+    if (_editorMarkOf(mark) case final EditorMark editor)
+      if (mark.range.end > mark.range.start)
+        EditorMarkRange(editor, mark.range.start, mark.range.end),
+];
+
+EditorMark? _editorMarkOf(PlanMark mark) => switch (mark.type) {
+  PlanMarkType.bold => EditorMark.bold,
+  PlanMarkType.italic => EditorMark.italic,
+  PlanMarkType.underline => EditorMark.underline,
+  PlanMarkType.strikethrough => EditorMark.strikethrough,
+  PlanMarkType.keyboard => EditorMark.keyboard,
+  PlanMarkType.link =>
+    mark.param == null || mark.param!.isEmpty
+        ? null
+        : EditorMark.link(mark.param!),
+  PlanMarkType.textColor =>
+    mark.param == null ? null : EditorMark.textColor(mark.param!),
+  PlanMarkType.backgroundColor =>
+    mark.param == null ? null : EditorMark.background(mark.param!),
+  // Mention/emoji/object are the renderer's marks; the field carries none.
+  _ => null,
+};
+
+List<PlanMark> _planMarksOf(PlanEditorController controller) {
+  final marks = <PlanMark>[];
+  for (final range in controller.marks) {
+    final mark = range.mark;
+    final PlanMarkType type;
+    if (mark == EditorMark.bold) {
+      type = PlanMarkType.bold;
+    } else if (mark == EditorMark.italic) {
+      type = PlanMarkType.italic;
+    } else if (mark == EditorMark.underline) {
+      type = PlanMarkType.underline;
+    } else if (mark == EditorMark.strikethrough) {
+      type = PlanMarkType.strikethrough;
+    } else if (mark == EditorMark.keyboard) {
+      type = PlanMarkType.keyboard;
+    } else if (mark.id == EditorMark.linkId) {
+      type = PlanMarkType.link;
+    } else if (mark.id == 'textColor') {
+      type = PlanMarkType.textColor;
+    } else if (mark.id == 'background') {
+      type = PlanMarkType.backgroundColor;
+    } else {
+      continue;
+    }
+    marks.add(
+      PlanMark(
+        range: PlanMarkRange(range.start, range.end),
+        type: type,
+        param: mark.param,
+      ),
+    );
+  }
+  marks.sort((a, b) => a.range.start.compareTo(b.range.start));
+  return marks;
+}
+
+/// The host's style answer for the field (ADR-0044: the package stays
+/// colour-blind). Mirrors the read view's `_markSpan` choices.
+TextStyle _resolveEditorStyle(BuildContext context, Set<Attribution> marks) {
+  final dsw = context.dsw;
+  var style = const TextStyle();
+  final decorations = <TextDecoration>[];
+  void addDecoration(TextDecoration line) {
+    if (!decorations.contains(line)) decorations.add(line);
+  }
+
+  for (final mark in marks) {
+    if (mark is! EditorMark) continue;
+    if (mark == EditorMark.bold) {
+      style = style.copyWith(fontWeight: FontWeight.w600);
+    }
+    if (mark == EditorMark.italic) {
+      style = style.copyWith(fontStyle: FontStyle.italic);
+    }
+    if (mark == EditorMark.underline) addDecoration(TextDecoration.underline);
+    if (mark == EditorMark.strikethrough) {
+      addDecoration(TextDecoration.lineThrough);
+    }
+    if (mark == EditorMark.keyboard) {
+      style = style.copyWith(
+        fontFamily: 'SF Mono',
+        fontFamilyFallback: const ['JetBrains Mono', 'Menlo', 'monospace'],
+      );
+    }
+    if (mark.id == EditorMark.linkId) {
+      style = style.copyWith(color: dsw.brandPrimary);
+      addDecoration(TextDecoration.underline);
+    }
+    if (mark.id == 'textColor') {
+      style = style.copyWith(
+        color: planLadderColor(
+          dsw,
+          PlanThemeColors.names.indexOf(mark.param ?? ''),
+        ),
+      );
+    }
+    if (mark.id == 'background') {
+      style = style.copyWith(
+        background: Paint()
+          ..color = planLadderColor(
+            dsw,
+            PlanThemeColors.names.indexOf(mark.param ?? ''),
+          ),
+      );
+    }
+  }
+  if (decorations.isNotEmpty) {
+    style = style.copyWith(decoration: TextDecoration.combine(decorations));
+  }
+  return style;
 }
 
 TextStyle _textStyle(BuildContext context, PlanTextStyle style) {

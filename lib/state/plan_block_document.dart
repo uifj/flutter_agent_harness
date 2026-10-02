@@ -226,6 +226,30 @@ class PlanBlockDocument extends ChangeNotifier {
   void setAlign(String blockId, PlanAlign align) =>
       _editText(blockId, (content) => _textContent(content, align: align));
 
+  /// Wholesale replacement of a text block's text AND marks — the field
+  /// controller owns the shift arithmetic while typing (ADR-0044 decision 3:
+  /// while typing the field is the only shift engine), so this mirrors its
+  /// answer without recomputing anything. Ranges must already be shifted.
+  void editTextWithMarks(String blockId, String text, List<PlanMark> marks) =>
+      _editText(blockId, (content) {
+        if (content.text == text && _sameMarks(content.marks, marks)) {
+          return content;
+        }
+        return _textContent(content, text: text, marks: marks);
+      });
+
+  static bool _sameMarks(List<PlanMark> a, List<PlanMark> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].range != b[i].range ||
+          a[i].type != b[i].type ||
+          a[i].param != b[i].param) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   /// Text colour and background take a `ThemeColor` name; null clears. These
   /// two build the content directly (not through [_textContent]) because
   /// "null" here means clear, not keep — and each leaves the other field alone.

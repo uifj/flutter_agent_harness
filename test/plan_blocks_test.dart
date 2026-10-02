@@ -27,6 +27,7 @@ import 'package:agent_harness/ui/plan/dataview/plan_viewers.dart'
     show PlanCheckbox;
 import 'package:agent_harness/ui/plan/plan_workspace.dart';
 import 'package:agent_harness/ui/primitives/tappable.dart';
+import 'package:plan_editor/plan_editor.dart';
 
 import 'amplified_text_probe.dart';
 
@@ -230,6 +231,47 @@ void main() {
       restored.marks.map((mark) => mark.type),
       containsAll([PlanMarkType.bold, PlanMarkType.underline]),
     );
+  });
+
+  testWidgets('the edit face draws its marks while the caret is inside', (
+    tester,
+  ) async {
+    await pump(tester);
+    final paragraph = find.byType(EditableText).at(1);
+    await tester.enterText(paragraph, 'hello marks');
+    await tester.pump();
+    tester.widget<EditableText>(paragraph).controller.selection =
+        const TextSelection(baseOffset: 0, extentOffset: 5);
+    await tester.pump();
+    await tester.tap(find.byTooltip('Bold'));
+    await tester.pump();
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 32));
+    }
+
+    // The field's controller carries the mark, and its span renders the
+    // resolver's bold weight over exactly the selected stretch — this is
+    // the WYSIWYG increment (ADR-0044 P10-a).
+    final controller =
+        tester.widget<EditableText>(paragraph).controller
+            as PlanEditorController;
+    expect(
+      controller.hasMark(
+        EditorMark.bold,
+        const TextSelection(baseOffset: 0, extentOffset: 5),
+      ),
+      isTrue,
+    );
+    final span = controller.buildTextSpan(
+      context: tester.element(paragraph),
+      style: const TextStyle(),
+      withComposing: false,
+    );
+    final boldRuns = span.children!
+        .whereType<TextSpan>()
+        .where((run) => run.style?.fontWeight == FontWeight.w600)
+        .toList();
+    expect(boldRuns.map((run) => run.text).join(), 'hello');
   });
 
   testWidgets('search answers its six events in read mode', (tester) async {

@@ -16,6 +16,8 @@ dependencies:
   # "vendored packages stay out of the repo" rule).
   board_panel:
     path: packages/board_panel
+  plan_editor:
+    path: packages/plan_editor
   desktop_drop: ^0.8.4
   file_picker: ^10.3.7
   flutter:
