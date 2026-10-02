@@ -423,6 +423,43 @@ class PlanBlockDocument extends ChangeNotifier {
     working.insert(target, moved);
   });
 
+  // ---- block drag (ADR-0044 P10-d, AC3-18) ---------------------------------
+
+  /// Moves a root-level block before/after [targetId] — the drag's
+  /// above/below zones. Both ids must be root-level siblings (the drag scope
+  /// for this batch is root rows); a self-drop is a no-op.
+  void moveBlock(
+    String blockId, {
+    required String targetId,
+    required bool below,
+  }) => _mutate((working, mint) {
+    if (blockId == targetId) return;
+    final from = working.indexWhere((entry) => entry.id == blockId);
+    if (from < 0) return;
+    if (working.indexWhere((entry) => entry.id == targetId) < 0) return;
+    final moved = working.removeAt(from);
+    final to = working.indexWhere((entry) => entry.id == targetId);
+    working.insert(below ? to + 1 : to, moved);
+  });
+
+  /// Makes a root-level block the last child of [parentId] — the drag's
+  /// inside zone. The target must be a root block that can nest (anything
+  /// but a table row, whose run structure the codec owns).
+  void moveAsChild(String blockId, {required String parentId}) =>
+      _mutate((working, mint) {
+        if (blockId == parentId) return;
+        final parentIndex = working.indexWhere((entry) => entry.id == parentId);
+        if (parentIndex < 0) return;
+        if (working[parentIndex].content is PlanTableBlock) return;
+        final from = working.indexWhere((entry) => entry.id == blockId);
+        if (from < 0) return;
+        final moved = working.removeAt(from);
+        final pi = working.indexWhere((entry) => entry.id == parentId);
+        working[pi] = working[pi].copyWith(
+          children: [...working[pi].children, moved],
+        );
+      });
+
   // ---- block-level keyboard semantics (ADR-0044 P10-b) ---------------------
 
   /// Splits the text block at the caret: the tail after [offset] becomes a new

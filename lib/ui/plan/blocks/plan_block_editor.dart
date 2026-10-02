@@ -30,6 +30,7 @@ import '../../primitives/menu.dart';
 import '../../primitives/tappable.dart';
 import 'package:plan_editor/plan_editor.dart';
 
+import 'plan_block_drag.dart' show planAutoScrollStep;
 import 'plan_block_view.dart';
 
 class PlanBlockEditor extends StatefulWidget {
@@ -38,11 +39,16 @@ class PlanBlockEditor extends StatefulWidget {
     required this.document,
     required this.onSave,
     this.readOnly = false,
+    this.onOpenLink,
   });
 
   final PlanBlockDocument document;
   final VoidCallback onSave;
   final bool readOnly;
+
+  /// The link chip hands the URL here; the host decides how it opens
+  /// (P10-d wires the system browser). Null = no chip.
+  final void Function(String url)? onOpenLink;
 
   @override
   State<PlanBlockEditor> createState() => _PlanBlockEditorState();
@@ -83,7 +89,38 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
         );
   }
 
-  /// The link mark needs a URL: one small dialog, then the mark.
+  /// The link URL under the selection (or the collapsed caret), if any —
+  /// prefill for re-editing, the chip's target.
+  String? _linkOverCaret() {
+    final blockId = _activeBlockId;
+    if (blockId == null) return null;
+    final content = widget.document.block(blockId)?.content;
+    if (content is! PlanText) return null;
+    final controller = _controllers[blockId];
+    final range =
+        _activeSelection ??
+        (controller == null || controller.value.selection.isCollapsed
+            ? null
+            : PlanMarkRange(
+                controller.value.selection.baseOffset,
+                controller.value.selection.extentOffset,
+              ));
+    if (range == null) return null;
+    for (final mark in content.marks) {
+      if (mark.type == PlanMarkType.link &&
+          mark.param != null &&
+          mark.param!.isNotEmpty &&
+          mark.range.start < range.end &&
+          range.start < mark.range.end) {
+        return mark.param;
+      }
+    }
+    return null;
+  }
+
+  /// The link mark needs a URL: one small dialog, then the mark. An existing
+  /// link prefills the field; an emptied field removes the link (clearMarks,
+  /// AC3-3's removal half).
   Future<void> _applyLink() async {
     final blockId = _activeBlockId;
     final selection = _activeSelection;
@@ -100,12 +137,18 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
           ),
         ],
         child: _LinkInput(
+          initial: _linkOverCaret(),
           onSubmitted: (value) => Navigator.of(dialogContext).pop(value),
         ),
       ),
     );
-    if (url == null || url.trim().isEmpty) return;
-    _applyMark(PlanMarkType.link, param: url.trim());
+    if (url == null || !mounted) return;
+    final trimmed = url.trim();
+    if (trimmed.isEmpty) {
+      widget.document.clearMarks(blockId, PlanMarkType.link, selection);
+      return;
+    }
+    _applyMark(PlanMarkType.link, param: trimmed);
   }
 
   bool _searching = false;
@@ -121,6 +164,12 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
   // their own plain fields — they are not part of this registry.
   final Map<String, PlanEditorController> _controllers = {};
   final Map<String, FocusNode> _focusNodes = {};
+
+  // Auto-scroll during a drag (AC3-18): the pointer position the grip
+  // reports, ticked at 60ms against the viewport's edges.
+  final GlobalKey _viewportKey = GlobalKey();
+  Offset? _dragPosition;
+  Timer? _dragTicker;
 
   @override
   void initState() {
@@ -142,6 +191,7 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
   @override
   void dispose() {
     widget.document.removeListener(_onDocumentChanged);
+    _dragTicker?.cancel();
     _searchController.dispose();
     for (final controller in _controllers.values) {
       controller.dispose();
@@ -432,6 +482,51 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
     return content is PlanText ? content.text : '';
   }
 
+  // ---- drag auto-scroll (AC3-18) ------------------------------------------
+
+  void _onDragMove(Offset globalPosition) {
+    _dragPosition = globalPosition;
+    _dragTicker ??= Timer.periodic(
+      const Duration(milliseconds: 60),
+      (_) => _tickAutoScroll(),
+    );
+  }
+
+  void _onDragEnd() {
+    _dragPosition = null;
+    _dragTicker?.cancel();
+    _dragTicker = null;
+  }
+
+  void _tickAutoScroll() {
+    final position = _dragPosition;
+    if (position == null) return;
+    final box = _viewportKey.currentContext?.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) return;
+    final local = box.globalToLocal(position);
+    double? scrollBy;
+    if (local.dy < 0) {
+      scrollBy = planAutoScrollStep(local.dy);
+    } else if (local.dy > box.size.height) {
+      scrollBy = -planAutoScrollStep(local.dy - box.size.height);
+    } else if (local.dy <= 350) {
+      scrollBy = planAutoScrollStep(local.dy);
+    } else if (box.size.height - local.dy <= 350) {
+      scrollBy = -planAutoScrollStep(box.size.height - local.dy);
+    }
+    if (scrollBy == null || scrollBy == 0) return;
+    final controller = _scrollController;
+    if (controller == null || !controller.hasClients) return;
+    controller.jumpTo(
+      (controller.offset + scrollBy).clamp(
+        controller.position.minScrollExtent,
+        controller.position.maxScrollExtent,
+      ),
+    );
+  }
+
+  ScrollController? _scrollController;
+
   // ---- insertion (the slash menu) -----------------------------------------
 
   Future<void> _openSlash(String? afterBlockId) async {
@@ -598,37 +693,47 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
             if (_activeBlockId != null) doc.setAlign(_activeBlockId!, align);
           },
           onInsert: _openSlash,
+          linkUrl: _linkOverCaret(),
+          onOpenLink: widget.onOpenLink,
         ),
         Expanded(
           child: Focus(
             canRequestFocus: false,
             skipTraversal: true,
             onKeyEvent: _onBlockKey,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(DswShape.md),
-              child: PlanBlockView(
-                document: doc,
-                readOnly: widget.readOnly || _searching,
-                controllerFor: (id) => _controllers[id],
-                focusNodeFor: (id) => _focusNodes[id],
-                onInsertSlash: _openSlash,
-                onFocusedBlock: (id) => setState(() => _activeBlockId = id),
-                onSelectionChanged: (id, selection) {
-                  if (_activeBlockId == id || selection != null) {
-                    setState(() {
-                      _activeBlockId = id;
-                      _activeSelection = selection;
-                    });
-                  }
-                },
-                keyFor: (id) => _rowKeys[id],
-                searchQuery: _query,
-                collapsedToggles: _collapsedToggles,
-                onToggleCollapse: (id) => setState(() {
-                  if (!_collapsedToggles.remove(id)) _collapsedToggles.add(id);
-                }),
-                onEditBookmark: _editBookmarkUrl,
-                onPickCalloutIcon: _pickCalloutIcon,
+            child: SizedBox.expand(
+              key: _viewportKey,
+              child: SingleChildScrollView(
+                controller: _scrollController ??= ScrollController(),
+                padding: const EdgeInsets.all(DswShape.md),
+                child: PlanBlockView(
+                  document: doc,
+                  readOnly: widget.readOnly || _searching,
+                  controllerFor: (id) => _controllers[id],
+                  focusNodeFor: (id) => _focusNodes[id],
+                  onInsertSlash: _openSlash,
+                  onFocusedBlock: (id) => setState(() => _activeBlockId = id),
+                  onSelectionChanged: (id, selection) {
+                    if (_activeBlockId == id || selection != null) {
+                      setState(() {
+                        _activeBlockId = id;
+                        _activeSelection = selection;
+                      });
+                    }
+                  },
+                  keyFor: (id) => _rowKeys[id],
+                  onDragMove: _onDragMove,
+                  onDragEnd: _onDragEnd,
+                  searchQuery: _query,
+                  collapsedToggles: _collapsedToggles,
+                  onToggleCollapse: (id) => setState(() {
+                    if (!_collapsedToggles.remove(id)) {
+                      _collapsedToggles.add(id);
+                    }
+                  }),
+                  onEditBookmark: _editBookmarkUrl,
+                  onPickCalloutIcon: _pickCalloutIcon,
+                ),
               ),
             ),
           ),
@@ -664,6 +769,8 @@ class _Toolbar extends StatelessWidget {
     required this.onBackground,
     required this.onAlign,
     required this.onInsert,
+    required this.linkUrl,
+    required this.onOpenLink,
   });
 
   final PlanBlockDocument document;
@@ -690,6 +797,8 @@ class _Toolbar extends StatelessWidget {
   final void Function(String?) onBackground;
   final void Function(PlanAlign) onAlign;
   final void Function(String? afterBlockId) onInsert;
+  final String? linkUrl;
+  final void Function(String url)? onOpenLink;
 
   @override
   Widget build(BuildContext context) {
@@ -807,6 +916,40 @@ class _Toolbar extends StatelessWidget {
                           : () => onApplyMark(type),
                     ),
           ],
+          if (!searching &&
+              activeBlockId != null &&
+              selection != null &&
+              onOpenLink != null &&
+              linkUrl != null)
+            DswHoverTap(
+              onTap: () => onOpenLink!(linkUrl!),
+              semanticLabel: context.tr('planLinkOpen'),
+              builder: (context, hovered, focused) => Container(
+                height: DswShape.controlMd,
+                padding: const EdgeInsets.symmetric(horizontal: DswShape.sm),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: hovered ? color.interactiveBgHover : color.bgLayer2,
+                  borderRadius: BorderRadius.circular(DswShape.inner),
+                  border: Border.all(color: color.borderL2),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      LucideIcons.external_link,
+                      size: DswShape.iconTiny,
+                      color: color.labelSecondary,
+                    ),
+                    const SizedBox(width: DswShape.xs),
+                    Text(
+                      context.tr('planLinkOpen'),
+                      style: DswType.xs13.copyWith(color: color.labelSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           if (!searching && activeBlockId != null) ...[
             SizedBox(
               width: 132,

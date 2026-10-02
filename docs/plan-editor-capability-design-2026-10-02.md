@@ -24,10 +24,10 @@
 | E9 | 表格块族（行级 UI + 列级菜单） | ↔ 既有 | ↔ | `plan_block_actions.dart` |
 | E10 | 文内搜索六事件 + 搜索转只读 | ↔ 既有 | ↔ | `plan_block_editor.dart` |
 | E11 | 块级键盘语义：Enter 拆块、Backspace 合并、方向键跨块、焦点漫游 | app（P10-b，包提供字段级 API） | 🔨 P10-b | — |
-| E12 | 编辑面链接可点 / 链接 URL 二次编辑 | app | 🔨 P10-b | — |
+| E12 | 链接再编辑/移除 + 打开链接（选区/光标压着链接时工具栏出「打开链接」chip，链接钮重开对话框预填、留空=移除，`clearMarks` 接活；url_launcher 由 pdfrx 传递依赖升格直接依赖） | app | ✅ P10-d | `plan_block_editor.dart` + `plan_workspace.dart` |
 | E13 | 单字段整文档 surface（"IME 只见一个块"的完整版，re-editor 形态） | 包+app | 🔨 P10-c（视 P10-a/b 真机实况） | — |
-| E14 | 三段落点拖拽 + 自动滚动（AC3-18 全量） | app | 🔨 P10-d | — |
-| E15 | 系统剪贴板 HTML 互操作（AC3-19 余项） | app | 🔨 P10-d | — |
+| E14 | 三段落点拖拽 + 自动滚动（AC3-18）：把手悬停出现，三区=上四分一前插/中段嵌为子块/下四分一后插，指示为 2px 品牌线或行底色；自动滚动 200/350px·60ms 双档阈值（纯函数 `planAutoScrollStep`，60ms ticker）；范围=根级块（嵌套拖拽登记不装） | app | ✅ P10-d（UX 待真机走查） | `plan_block_drag.dart` + `plan_block_document.dart`（moveBlock/moveAsChild） |
+| E15 | 系统剪贴板互操作（AC3-19）：Copy 同时写内部块存储 + 系统 Markdown 文本；Paste 内部剪贴板优先（信封无损），否则读系统文本走编解码入块（`pasteFromText` 可测缝，尾部空行不落块）。HTML 解析不复刻（上游接 HTML，我们诚实只接文本/Markdown） | app | ✅ P10-d | `plan_block_actions.dart` |
 | E16 | @提及 / emoji / object 三种渲染态 mark 的编辑面插入 | app（等对象身份面） | 🔨 P6+ | — |
 | E17 | WYSIWYG 全量（跨块选区、块内嵌套子块的样式连续性） | 包+app | 🔨 P10-c/d | — |
 | E18 | 自定义 token 快捷键（Cmd+B 等） | app | 🔨 P10-b | — |
@@ -110,7 +110,7 @@ lib/state/plan_block_document.dart
 | P10-a | 本表 + ADR-0044 + 包（E1/E2/E3）+ app 替换（E4） | 包内 `dart analyze`/`flutter test`；根仓 format/analyze/test 三门禁（零新增失败） | `docs(adr): land ADR-0044, the plan editor package` → `feat(plan): the plan editor package owns the styled edit field` |
 | P10-b | E11/E12/E18（键盘语义 + 焦点漫游 + 快捷键） | 包内 + 根仓三门禁 + 放大两档 | `feat(plan): blocks answer Enter, Backspace and arrows` |
 | P10-c | E13（单字段整文档，re-editor 机制①②③） | 同上 + IME 真机走查（中/英、Windows CJK） | `feat(plan): one field for the whole document` |
-| P10-d | E14/E15（拖拽三段落点 + 系统剪贴板） | 同上 | `feat(plan): three-zone drag and the system clipboard` |
+| P10-d | E12/E14/E15 ✅（拖拽范围=根级块，嵌套拖拽与 HTML 粘贴登记不装；拖拽 UX 与 IME 真机走查留待签收单） | 包内 18/18 + 根仓三门禁（套件 +1261 -2） | 已提交 |
 
 **守卫清单**：
 

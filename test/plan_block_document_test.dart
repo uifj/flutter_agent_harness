@@ -10,6 +10,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:agent_harness/model/plan_block.dart';
 import 'package:agent_harness/model/plan_markdown_codec.dart';
 import 'package:agent_harness/state/plan_block_document.dart';
+import 'package:agent_harness/ui/plan/blocks/plan_block_actions.dart'
+    show pasteFromText;
+import 'package:agent_harness/ui/plan/blocks/plan_block_drag.dart'
+    show planAutoScrollStep;
 
 const _source = '''
 # Delivery notes
@@ -377,6 +381,109 @@ void main() {
       expect(doc.mergeIntoPrevious(second), isNull);
       expect(doc.block(second), isNotNull);
       expect(doc.mergeIntoPrevious(first), isNull);
+    });
+  });
+
+  group('drag ops (P10-d, AC3-18)', () {
+    test('moveBlock reorders roots, above and below', () {
+      final a = doc.insertBelow(null, PlanText(text: 'a'));
+      final b = doc.insertBelow(null, PlanText(text: 'b'));
+      final c = doc.insertBelow(null, PlanText(text: 'c'));
+      List<String> rootTexts() => [
+        for (final block in doc.blocks)
+          if (block.content is PlanText) (block.content as PlanText).text,
+      ];
+      doc.moveBlock(a, targetId: c, below: true);
+      final afterFirst = rootTexts();
+      expect(afterFirst.indexOf('b'), lessThan(afterFirst.indexOf('c')));
+      expect(afterFirst.indexOf('c'), lessThan(afterFirst.indexOf('a')));
+      doc.moveBlock(c, targetId: b, below: false);
+      final afterSecond = rootTexts();
+      expect(afterSecond.indexOf('c'), lessThan(afterSecond.indexOf('b')));
+      expect(afterSecond.indexOf('b'), lessThan(afterSecond.indexOf('a')));
+      // ids survive the move.
+      expect(doc.block(b), isNotNull);
+    });
+
+    test('moveBlock refuses self and unknown targets', () {
+      final a = doc.insertBelow(null, PlanText(text: 'a'));
+      final order = doc.blocks.map((block) => block.id).toList();
+      doc.moveBlock(a, targetId: a, below: true);
+      doc.moveBlock(a, targetId: 'no-such-block', below: true);
+      expect(doc.blocks.map((block) => block.id).toList(), order);
+    });
+
+    test('moveAsChild nests under a text block', () {
+      final parent = doc.insertBelow(
+        null,
+        const PlanText(text: 'parent', style: PlanTextStyle.toggle),
+      );
+      final child = doc.insertBelow(null, PlanText(text: 'child'));
+      doc.moveAsChild(child, parentId: parent);
+      // No longer a root — but still in the tree, one level deep.
+      expect(doc.blocks.where((block) => block.id == child), isEmpty);
+      final parentBlock = doc.block(parent)!;
+      expect(parentBlock.children.single.id, child);
+      expect(doc.block(child), isNotNull);
+      // Undo brings the block back out? No — one snapshot covers one op;
+      // undo returns the whole tree.
+      doc.undo();
+      expect(doc.block(child), isNotNull);
+    });
+
+    test('moveAsChild refuses table targets and unknown ids', () {
+      final rowId = doc.blocks
+          .firstWhere((block) => block.content is PlanTableBlock)
+          .id;
+      final mover = doc.insertBelow(null, PlanText(text: 'mover'));
+      final before = doc.block(rowId)!.children.length;
+      doc.moveAsChild(mover, parentId: rowId);
+      expect(doc.block(mover), isNotNull);
+      expect(doc.block(rowId)!.children.length, before);
+      doc.moveAsChild(mover, parentId: 'no-such');
+      expect(doc.block(mover), isNotNull);
+    });
+  });
+
+  group('pasteFromText (E15 external paste)', () {
+    test('external markdown decodes into blocks below the anchor', () {
+      final anchor = doc.insertBelow(null, PlanText(text: 'anchor'));
+      pasteFromText(doc, anchor, '# Heading\n\n- bullet\n');
+      final texts = [
+        for (final block in doc.blocks)
+          if (block.content is PlanText) (block.content as PlanText).text,
+      ];
+      expect(texts, containsAllInOrder(['anchor', 'Heading', 'bullet']));
+      final heading = doc.blocks
+          .map((block) => block.content)
+          .whereType<PlanText>()
+          .firstWhere((content) => content.text == 'Heading');
+      expect(heading.style, PlanTextStyle.h1);
+    });
+
+    test('a trailing blank line does not become an empty block', () {
+      final anchor = doc.insertBelow(null, PlanText(text: 'anchor'));
+      final count = doc.blocks.length;
+      pasteFromText(doc, anchor, 'one\n');
+      expect(doc.blocks.length, count + 1);
+    });
+
+    test('plain text lands as paragraphs with fresh ids', () {
+      final anchor = doc.insertBelow(null, PlanText(text: 'anchor'));
+      pasteFromText(doc, anchor, 'just text');
+      final pasted = doc.blocks[doc.blocks.indexOf(doc.block(anchor)!) + 1];
+      expect((pasted.content as PlanText).text, 'just text');
+      expect(pasted.id, isNot(anchor));
+    });
+  });
+
+  group('the auto-scroll thresholds (AC3-18)', () {
+    test('two bands and still', () {
+      expect(planAutoScrollStep(-10), planAutoScrollStep(0) * 1);
+      expect(planAutoScrollStep(100), planAutoScrollStep(200));
+      expect(planAutoScrollStep(300), greaterThan(0));
+      expect(planAutoScrollStep(300), lessThan(planAutoScrollStep(100)));
+      expect(planAutoScrollStep(351), 0);
     });
   });
 

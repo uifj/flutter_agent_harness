@@ -6,9 +6,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:flutter/services.dart';
 
 import '../../../l10n/locales.dart';
 import '../../../model/plan_block.dart';
+import '../../../model/plan_markdown_codec.dart';
 import '../../../state/plan_block_document.dart';
 import '../../primitives/menu.dart';
 import '../../primitives/tappable.dart';
@@ -19,6 +21,44 @@ import '../../../theme/dsw_theme.dart';
 /// slash menu / markup toolbar — this menu is the structural answer. Copy /
 /// Paste are the internal block clipboard (AC3-19's first increment); the
 /// system-clipboard interop upstream layers on top does not exist here yet.
+/// The system clipboard carries the block as Markdown text (upstream layers
+/// a system clipboard beside the internal block store — `AnytypeClipboard.kt:17-41`),
+/// so a copy lands in another app and a paste can come from one. The internal
+/// clipboard still wins when it holds blocks: that keeps the lossless envelope
+/// round trip for what Markdown cannot carry.
+Future<void> pasteFromClipboards(
+  PlanBlockDocument document,
+  String afterId,
+) async {
+  if (PlanBlockClipboard.hasContent) {
+    document.pasteBlocks(afterId, PlanBlockClipboard.take());
+    return;
+  }
+  final data = await Clipboard.getData('text/plain');
+  final source = data?.text;
+  if (source == null || source.trim().isEmpty) return;
+  pasteFromText(document, afterId, source);
+}
+
+/// The testable seam under the clipboard read: external Markdown/ text
+/// decodes through the codec and lands as fresh-id blocks. The channel glue
+/// above is the only untested line (the test binding keeps no clipboard
+/// data to read back).
+void pasteFromText(PlanBlockDocument document, String afterId, String source) {
+  final blocks = decodePlanMarkdown(source);
+  if (blocks.isEmpty) return;
+  // A trailing blank line decodes as a paragraph block; pasting "a\n" would
+  // land two blocks. Trim the purely-empty tail so the paste carries what
+  // the user selected, not the newline that came with it.
+  while (blocks.isNotEmpty &&
+      blocks.last.content is PlanText &&
+      (blocks.last.content as PlanText).text.isEmpty) {
+    blocks.removeLast();
+  }
+  if (blocks.isEmpty) return;
+  document.pasteBlocks(afterId, blocks);
+}
+
 List<DswMenuEntry> planBlockActions(
   BuildContext context,
   PlanBlockDocument document,
@@ -27,14 +67,15 @@ List<DswMenuEntry> planBlockActions(
   DswMenuEntry(
     label: context.tr('planActionCopy'),
     icon: LucideIcons.copy,
-    onTap: () => PlanBlockClipboard.copy(block),
+    onTap: () {
+      PlanBlockClipboard.copy(block);
+      Clipboard.setData(ClipboardData(text: encodePlanMarkdown([block])));
+    },
   ),
   DswMenuEntry(
     label: context.tr('planActionPaste'),
     icon: LucideIcons.clipboard_paste,
-    onTap: PlanBlockClipboard.hasContent
-        ? () => document.pasteBlocks(block.id, PlanBlockClipboard.take())
-        : null,
+    onTap: () => pasteFromClipboards(document, block.id),
   ),
   DswMenuEntry(
     label: context.tr('planActionDuplicate'),

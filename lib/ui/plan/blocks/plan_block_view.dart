@@ -35,6 +35,7 @@ import '../../primitives/tappable.dart';
 import '../dataview/plan_cell_value.dart' show planLadderColor;
 import '../dataview/plan_viewers.dart' show PlanCheckbox;
 import 'plan_block_actions.dart';
+import 'plan_block_drag.dart';
 
 /// The indentation step for one nesting level — the visual answer to
 /// `SupportNesting` upstream, one shape for every list style.
@@ -56,6 +57,8 @@ class PlanBlockView extends StatelessWidget {
     this.onPickCalloutIcon,
     this.controllerFor,
     this.focusNodeFor,
+    this.onDragMove,
+    this.onDragEnd,
   });
 
   final PlanBlockDocument document;
@@ -99,6 +102,11 @@ class PlanBlockView extends StatelessWidget {
   final PlanEditorController? Function(String id)? controllerFor;
   final FocusNode? Function(String id)? focusNodeFor;
 
+  /// Drag auto-scroll hooks (AC3-18): pointer position during a drag, then
+  /// the end. The editor owns the viewport and the 60ms ticker.
+  final void Function(Offset globalPosition)? onDragMove;
+  final VoidCallback? onDragEnd;
+
   @override
   Widget build(BuildContext context) {
     final blocks = document.blocks;
@@ -112,24 +120,34 @@ class PlanBlockView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (final (index, block) in blocks.indexed) ...[
-          PlanBlockRow(
-            key: keyFor?.call(block.id),
+          PlanDragRow(
             document: document,
-            block: block,
-            indent: 0,
-            ordinal: planNumberedOrdinal(blocks, index),
-            readOnly: readOnly,
-            onInsertSlash: onInsertSlash,
-            onFocusedBlock: onFocusedBlock,
-            onSelectionChanged: onSelectionChanged,
-            headings: headings,
-            searchQuery: searchQuery,
-            collapsedToggles: collapsedToggles,
-            onToggleCollapse: onToggleCollapse,
-            onEditBookmark: onEditBookmark,
-            onPickCalloutIcon: onPickCalloutIcon,
-            controllerFor: controllerFor,
-            focusNodeFor: focusNodeFor,
+            targetId: block.id,
+            canNest:
+                block.content is! PlanTableBlock &&
+                block.content is! PlanLayout,
+            child: PlanBlockRow(
+              key: keyFor?.call(block.id),
+              document: document,
+              block: block,
+              indent: 0,
+              ordinal: planNumberedOrdinal(blocks, index),
+              readOnly: readOnly,
+              onInsertSlash: onInsertSlash,
+              onFocusedBlock: onFocusedBlock,
+              onSelectionChanged: onSelectionChanged,
+              headings: headings,
+              searchQuery: searchQuery,
+              collapsedToggles: collapsedToggles,
+              onToggleCollapse: onToggleCollapse,
+              onEditBookmark: onEditBookmark,
+              onPickCalloutIcon: onPickCalloutIcon,
+              controllerFor: controllerFor,
+              focusNodeFor: focusNodeFor,
+              canDrag: !readOnly,
+              onDragMove: onDragMove,
+              onDragEnd: onDragEnd,
+            ),
           ),
         ],
         if (!readOnly) _AddBlockRow(onTap: () => onInsertSlash?.call(null)),
@@ -176,6 +194,9 @@ class PlanBlockRow extends StatelessWidget {
     this.onPickCalloutIcon,
     this.controllerFor,
     this.focusNodeFor,
+    this.canDrag = false,
+    this.onDragMove,
+    this.onDragEnd,
   });
 
   final PlanBlockDocument document;
@@ -201,6 +222,9 @@ class PlanBlockRow extends StatelessWidget {
   final void Function(String blockId)? onPickCalloutIcon;
   final PlanEditorController? Function(String id)? controllerFor;
   final FocusNode? Function(String id)? focusNodeFor;
+  final bool canDrag;
+  final void Function(Offset globalPosition)? onDragMove;
+  final VoidCallback? onDragEnd;
 
   @override
   Widget build(BuildContext context) {
@@ -230,6 +254,9 @@ class PlanBlockRow extends StatelessWidget {
             onPickCalloutIcon: onPickCalloutIcon,
             controllerFor: controllerFor,
             focusNodeFor: focusNodeFor,
+            canDrag: canDrag,
+            onDragMove: onDragMove,
+            onDragEnd: onDragEnd,
           ),
         ),
         // Layout containers carry no view of their own (the client flattens
@@ -301,6 +328,9 @@ class _BlockBody extends StatelessWidget {
     this.onPickCalloutIcon,
     this.controllerFor,
     this.focusNodeFor,
+    this.canDrag = false,
+    this.onDragMove,
+    this.onDragEnd,
   });
 
   final PlanBlockDocument document;
@@ -322,6 +352,9 @@ class _BlockBody extends StatelessWidget {
   final void Function(String blockId)? onPickCalloutIcon;
   final PlanEditorController? Function(String id)? controllerFor;
   final FocusNode? Function(String id)? focusNodeFor;
+  final bool canDrag;
+  final void Function(Offset globalPosition)? onDragMove;
+  final VoidCallback? onDragEnd;
 
   @override
   Widget build(BuildContext context) {
@@ -342,6 +375,9 @@ class _BlockBody extends StatelessWidget {
           onPickCalloutIcon: onPickCalloutIcon,
           controller: controllerFor?.call(block.id),
           focusNode: focusNodeFor?.call(block.id),
+          canDrag: canDrag,
+          onDragMove: onDragMove,
+          onDragEnd: onDragEnd,
         );
       case PlanLayout():
         // Flattened by the row above; nothing to draw here.
@@ -454,6 +490,9 @@ class _TextBlock extends StatelessWidget {
     this.onPickCalloutIcon,
     this.controller,
     this.focusNode,
+    this.canDrag = false,
+    this.onDragMove,
+    this.onDragEnd,
   });
 
   final PlanBlockDocument document;
@@ -461,6 +500,9 @@ class _TextBlock extends StatelessWidget {
   final PlanText content;
   final PlanEditorController? controller;
   final FocusNode? focusNode;
+  final bool canDrag;
+  final void Function(Offset globalPosition)? onDragMove;
+  final VoidCallback? onDragEnd;
   final int? ordinal;
   final bool readOnly;
   final void Function(String blockId)? onFocusedBlock;
@@ -598,6 +640,7 @@ class _TextBlock extends StatelessWidget {
       document: document,
       block: block,
       readOnly: readOnly,
+      canDrag: canDrag,
       child: field,
     );
   }
@@ -610,12 +653,14 @@ class _BlockChrome extends StatefulWidget {
     required this.document,
     required this.block,
     required this.readOnly,
+    required this.canDrag,
     required this.child,
   });
 
   final PlanBlockDocument document;
   final PlanBlock block;
   final bool readOnly;
+  final bool canDrag;
   final Widget child;
 
   @override
@@ -636,7 +681,12 @@ class _BlockChromeState extends State<_BlockChrome> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(child: widget.child),
-          if (_hovered)
+          if (_hovered) ...[
+            if (widget.canDrag && widget.block.content is PlanText)
+              PlanDragGrip(
+                blockId: widget.block.id,
+                text: (widget.block.content as PlanText).text,
+              ),
             DswContextMenu(
               items: (menuContext) =>
                   planBlockActions(menuContext, widget.document, widget.block),
@@ -653,6 +703,7 @@ class _BlockChromeState extends State<_BlockChrome> {
                 ),
               ),
             ),
+          ],
         ],
       ),
     );

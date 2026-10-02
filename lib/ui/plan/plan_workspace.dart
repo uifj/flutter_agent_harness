@@ -31,6 +31,7 @@ import 'package:shadcn_ui/shadcn_ui.dart'
     show ShadButton, ShadDialog, ShadInput, showShadDialog;
 import 'package:path/path.dart' as p;
 import 'package:re_editor/re_editor.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../l10n/locales.dart';
 import '../../model/workspace_index.dart';
@@ -641,7 +642,35 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
                 child: _DocumentBridge(
                   document: _document!,
                   onDirty: _onBufferEdited,
-                  child: PlanBlockEditor(document: _document!, onSave: _save),
+                  child: PlanBlockEditor(
+                    document: _document!,
+                    onSave: _save,
+                    onOpenLink: (url) async {
+                      final parsed = Uri.tryParse(url);
+                      if (parsed == null || !parsed.isAbsolute) {
+                        showFeedback(
+                          context,
+                          context.tr('planLinkFailed'),
+                          destructive: true,
+                        );
+                        return;
+                      }
+                      try {
+                        await launchUrl(
+                          parsed,
+                          mode: LaunchMode.externalApplication,
+                        );
+                      } catch (_) {
+                        if (mounted) {
+                          showFeedback(
+                            context,
+                            context.tr('planLinkFailed'),
+                            destructive: true,
+                          );
+                        }
+                      }
+                    },
+                  ),
                 ),
               ),
               _PlanNoteMode.source => CallbackShortcuts(

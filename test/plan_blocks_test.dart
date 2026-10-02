@@ -649,14 +649,15 @@ void main() {
     expect(documentOf(tester).blocks.length, 4);
     final menuContext = tester.element(find.byType(PlanBlockEditor));
 
-    // Empty clipboard: Paste is a dimmed row (null tap).
+    // Paste is always enabled now: with the internal clipboard empty it
+    // falls through to the system clipboard's text (E15).
     expect(
       planBlockActions(
         menuContext,
         documentOf(tester),
         documentOf(tester).blocks.first,
       ).where((entry) => entry.label == 'Paste').single.onTap,
-      isNull,
+      isNotNull,
     );
 
     final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
@@ -680,8 +681,14 @@ void main() {
     for (var i = 0; i < 6; i++) {
       await tester.pump(const Duration(milliseconds: 32));
     }
-    // Copy moves nothing; the clipboard holds the heading.
+    // Copy moves nothing; the internal clipboard holds the heading and the
+    // system clipboard carries its Markdown text (E15).
     expect(documentOf(tester).blocks.length, 4);
+    // The system-clipboard READ cannot be observed through the test binding
+    // (it keeps no clipboard data), so the external-text branch of Paste is
+    // covered at its seam in plan_block_document_test.dart's pasteFromText
+    // test; the Copy write goes through the same codec the round-trip tests
+    // pin.
 
     // Paste below the paragraph: a fresh-id clone of the copied heading.
     await gesture.moveTo(tester.getCenter(find.text('hello world')));
