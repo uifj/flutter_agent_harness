@@ -159,6 +159,7 @@ const enStrings = <String, String>{
   // The hero and the composer
   'askAnything': 'Ask anything',
   'askAnythingHint': 'Ask anything, or describe a task',
+  'queueDraftHint': 'Keep typing — this queues behind the current turn',
   'heroSubtitle': 'Ask anything, or open a workspace to begin',
 
   // Workspace status bar (below composer)
@@ -975,6 +976,7 @@ const zhStrings = <String, String>{
   // The hero and the composer
   'askAnything': '随便问点什么',
   'askAnythingHint': '输入问题，或描述一个任务',
+  'queueDraftHint': '继续输入，会排在当前这轮之后',
   'heroSubtitle': '随时提问，或打开工作区开始探索',
 
   // Workspace status bar (below composer)

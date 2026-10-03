@@ -56,6 +56,7 @@ class _ComposerHost extends StatefulWidget {
     required this.onMode,
     required this.onNewSession,
     required this.onSubmit,
+    this.onStop,
     this.hero = false,
     this.busy = false,
     this.blocked = false,
@@ -73,6 +74,7 @@ class _ComposerHost extends StatefulWidget {
   final VoidCallback onNewSession;
   final void Function(String text, List<AttachedImage> images, InputDelivery)
   onSubmit;
+  final VoidCallback? onStop;
   final bool hero;
   final bool busy;
   final bool blocked;
@@ -127,7 +129,7 @@ class _ComposerHostState extends State<_ComposerHost> {
         onPickWorkspace: widget.workspaceRoot == null ? null : () {},
         onLookupFiles: widget.onLookupFiles,
         onSubmit: widget.onSubmit,
-        onStop: () {},
+        onStop: widget.onStop ?? () {},
       ),
     ),
   );
@@ -164,6 +166,7 @@ void main() {
     double step = 1.0,
     void Function(String text, List<AttachedImage> images, InputDelivery)?
     onSubmit,
+    VoidCallback? onStop,
   }) => tester.pumpWidget(
     MaterialApp(
       // The app's own composition (ADR-0017 S3 then ADR-0020): the step above
@@ -183,6 +186,7 @@ void main() {
           onMode: (next) => mode = next,
           onNewSession: () => newSession++,
           onSubmit: onSubmit ?? (text, images, delivery) {},
+          onStop: onStop,
           hero: hero,
           busy: busy,
           blocked: blocked,
@@ -500,20 +504,127 @@ void main() {
   });
 
   group('the primary action', () {
-    testWidgets('a blocked composer does not send from its circle', (
+    // ADR-0050. The circle follows the DRAFT; the old rule followed the
+    // transcript, so typing a follow-up turned the primary action into "stop the
+    // run". The test that used to sit here pinned that, and it passed on a stale
+    // frame: it never pumped after `enterText`, so the button it tapped was
+    // still the one built before the draft existed. A guard that only ever
+    // measures the previous frame is worse than none, because it reads as
+    // coverage.
+    testWidgets('an empty box stops the run; a draft sends from the circle', (
       tester,
     ) async {
       var sent = 0;
-      await pump(tester, blocked: true, onSubmit: (_, _, _) => sent++);
+      var stops = 0;
+      await pump(
+        tester,
+        busy: true,
+        blocked: true,
+        onSubmit: (_, _, _) => sent++,
+        onStop: () => stops++,
+      );
 
-      await tester.enterText(find.byType(EditableText), 'hello');
+      await tester.tap(find.byIcon(LucideIcons.square));
+      await tester.pump();
+      expect(stops, 1);
+      expect(sent, 0);
+
+      await tester.enterText(find.byType(EditableText), 'a follow-up');
+      await tester.pump();
+      // The draft wins: the stop square is gone and the circle is the send
+      // again, which is what the user is looking at.
+      expect(find.byIcon(LucideIcons.square), findsNothing);
+      expect(find.byIcon(LucideIcons.arrow_up), findsOneWidget);
       await tester.tap(find.byIcon(LucideIcons.arrow_up));
       await tester.pump();
+      expect(stops, 1, reason: 'a draft must not cost the run its stop here');
+      expect(sent, 1);
+    });
 
-      // The circle belongs to the running turn (it stops it) while the
-      // transcript is busy; nothing is lost either way (ADR-0013).
+    testWidgets('Enter while an input method composes does not send', (
+      tester,
+    ) async {
+      var sent = 0;
+      await pump(tester, onSubmit: (_, _, _) => sent++);
+      final controller = tester
+          .widget<EditableText>(find.byType(EditableText))
+          .controller;
+      // The state a pinyin candidate list leaves behind: text in the field, and
+      // a composing span the user has not committed yet. Enter here picks the
+      // word.
+      controller.value = const TextEditingValue(
+        text: 'zhong wen',
+        selection: TextSelection.collapsed(offset: 9),
+        composing: TextRange(start: 0, end: 9),
+      );
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      expect(sent, 0, reason: 'Enter was a candidate pick, not a send');
+      expect(fieldText(tester), 'zhong wen');
+
+      // The same keystroke after the word lands does send.
+      controller.value = const TextEditingValue(
+        text: 'zhong wen',
+        selection: TextSelection.collapsed(offset: 9),
+      );
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      expect(sent, 1);
+    });
+
+    testWidgets('Shift+Enter stays a newline', (tester) async {
+      var sent = 0;
+      await pump(tester, onSubmit: (_, _, _) => sent++);
+      await tester.enterText(find.byType(EditableText), 'two lines');
+      await tester.pump();
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.pump();
       expect(sent, 0);
-      expect(fieldText(tester), 'hello');
+      expect(fieldText(tester), 'two lines');
+    });
+
+    testWidgets('while a turn runs Enter queues and Cmd+Enter steers', (
+      tester,
+    ) async {
+      final deliveries = <InputDelivery>[];
+      await pump(
+        tester,
+        busy: true,
+        blocked: true,
+        onSubmit: (_, _, delivery) => deliveries.add(delivery),
+      );
+
+      await tester.enterText(find.byType(EditableText), 'first');
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+
+      await tester.enterText(find.byType(EditableText), 'second');
+      await tester.pump();
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+      await tester.pump();
+
+      // The reversed delivery the reference ships: the plain key is the safe
+      // destination, the modifier is the interruption — so choosing between them
+      // never needs a hand off the keyboard.
+      expect(deliveries, [InputDelivery.queue, InputDelivery.guide]);
+    });
+
+    testWidgets('the hint says what sending would do now', (tester) async {
+      await pump(tester);
+      expect(find.text('Ask anything, or describe a task'), findsOneWidget);
+
+      await pump(tester, busy: true, blocked: true);
+      expect(
+        find.text('Keep typing — this queues behind the current turn'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('a blocked composer offers the two deliveries', (tester) async {

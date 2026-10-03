@@ -330,10 +330,19 @@ class ComposerState extends State<Composer> {
     setState(() => _wasEmpty = empty);
   }
 
-  /// Enter submits, Shift+Enter breaks the line.
+  /// Enter leaves the draft, Shift+Enter breaks the line — and Enter *while an
+  /// input method is composing* belongs to the input method.
   ///
-  /// Returning `handled` is what suppresses the newline: a key event the focus
-  /// chain claims is never forwarded to the text input connection.
+  /// The last clause is the one that decides whether a Chinese user can type
+  /// here at all: in a pinyin candidate list Enter picks the word, and this
+  /// handler used to read it as "send", handing the model the half of the
+  /// sentence that had already landed. The reference gates the same keystroke
+  /// twice (`LexicalChatInput.tsx:548-550`, `:140`); Flutter's equivalent fact is
+  /// a non-collapsed `composing` range (ADR-0050).
+  ///
+  /// While a turn runs, Enter queues the draft and Cmd/Ctrl+Enter steers it —
+  /// the reversed delivery the reference ships (`followupModeSettings.ts:18-24`),
+  /// so choosing where a draft goes never costs a hand off the keyboard.
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
@@ -368,10 +377,20 @@ class ComposerState extends State<Composer> {
       }
       return KeyEventResult.ignored;
     }
-    if (HardwareKeyboard.instance.isShiftPressed) return KeyEventResult.ignored;
-    _submit();
+    if (_isComposing || HardwareKeyboard.instance.isShiftPressed) {
+      return KeyEventResult.ignored;
+    }
+    final steer =
+        widget.busy &&
+        (HardwareKeyboard.instance.isMetaPressed ||
+            HardwareKeyboard.instance.isControlPressed);
+    _submit(delivery: steer ? InputDelivery.guide : InputDelivery.queue);
     return KeyEventResult.handled;
   }
+
+  /// Whether an input method holds the caret right now — a candidate list open,
+  /// a stroke not yet committed to the text.
+  bool get _isComposing => !_controller.value.composing.isCollapsed;
 
   void _submit({InputDelivery delivery = InputDelivery.queue}) {
     var text = _controller.text.trim();
@@ -394,12 +413,21 @@ class ComposerState extends State<Composer> {
   }
 
   void _onPrimary() {
-    if (widget.busy) {
+    if (_showsStop) {
       widget.onStop();
       return;
     }
     _submit();
   }
+
+  /// The button follows the draft, not the transcript (ADR-0050). A user who has
+  /// typed something is saying "send this" — and while a turn holds the
+  /// transcript, sending means queueing, which is exactly what ADR-0013 built.
+  /// The old rule made `busy` win, so writing a follow-up turned the primary
+  /// action into "stop the run" and the draft you were looking at had a button
+  /// that did not speak of it. Stop keeps two other doors: this button on an
+  /// empty box, and Escape.
+  bool get _showsStop => widget.busy && !_hasPayload;
 
   // ---------------------------------------------------------------------------
   // Image attachment
@@ -781,7 +809,14 @@ class ComposerState extends State<Composer> {
         decoration: dswBareInput,
         // figma .InputText 34:10434: pl 16 / pr 12 / pt 4.
         padding: const EdgeInsets.only(left: 16, right: 12, top: 4),
-        placeholder: dswInputHint(context.tr('askAnythingHint')),
+        // The hint says what a send would do *now*: while a turn holds the
+        // transcript, typing here queues (ADR-0050) — and the idle sentence,
+        // "ask anything", would be describing a different state.
+        placeholder: dswInputHint(
+          widget.busy
+              ? context.tr('queueDraftHint')
+              : context.tr('askAnythingHint'),
+        ),
         placeholderStyle: DswType.base16.copyWith(color: color.labelCaption),
       ),
     ),
@@ -892,17 +927,27 @@ class ComposerState extends State<Composer> {
   );
 
   /// The 34px send / stop circle. Both states share the button, so the toggle is
-  /// a glyph swap rather than a layout change.
+  /// a glyph swap rather than a layout change — and which glyph it is follows
+  /// [_showsStop]: a draft wins over the stop sign, because a draft is what the
+  /// user is looking at.
   Widget _primary(DswAlias color) {
-    final enabled = widget.busy || (!widget.blocked && _hasPayload);
+    final stop = _showsStop;
+    final enabled = stop || _hasPayload;
     return Tooltip(
-      message: widget.busy ? context.tr('stop') : context.tr('send'),
+      message: stop
+          ? context.tr('stop')
+          : widget.busy
+          // While a turn runs this button queues — the same destination Enter
+          // has, said in the tooltip so the two do not look like different
+          // doors.
+          ? context.tr('deliveryQueue')
+          : context.tr('send'),
       child: _PrimaryButton(
         color: color,
         enabled: enabled,
         onTap: enabled ? _onPrimary : null,
         child: Icon(
-          widget.busy ? LucideIcons.square : LucideIcons.arrow_up,
+          stop ? LucideIcons.square : LucideIcons.arrow_up,
           size: DswShape.iconMd,
           // Static white in both themes: the glyph sits on the blue fill.
           color: Colors.white,
