@@ -90,6 +90,13 @@ pubspec 由测试互钉）；③ Models 节增「模型列表」手动增删（`
 ④ **暂缓项落库**：`docs/backend-contract-2026-10-03.md`（自建后端五组端点契约）+
 `docs/signing-distribution-2026-10-03.md`（签名/公证操作手册 + 会员/订阅设计稿）。
 
+### PH（2026-10-03 追加授权）：通知开关 + 注意力唤起
+
+**PH 已落**：`AppSettings.notificationsOn`（默认开，仅关档落盘）+ General 节开关行 +
+`lib/state/attention_service.dart`——busy→idle 边沿时若窗口隐藏（托盘路径）则
+show+focus。真实消费者使其脱离 ADR-0022 的只写字段名单；窗口句柄经
+`appWindow` provider 可空注入（测试无 binding 时不碰全局单例）。
+
 ### 3. 下一批（不在本 ADR 内实现，登记形状）
 
 多 provider 列表化（`AppSettings.model` 单对象 → 列表 + 迁移）、代理/CA 设置（须真接

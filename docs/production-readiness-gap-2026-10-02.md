@@ -53,11 +53,11 @@ Anytype 的助记词有 Keychain 屏。单机商用第一件事就是把密钥�
 
 | ZCode 节 | 我们缺什么 | 建议 | 成本 |
 | --- | --- | --- | --- |
-| general（语言/终端/代理/通知/任务归档/数据目录/重开引导） | **HTTP 代理与 CA 证书**（国内商用刚需，ZCode `settingsPageHelpers.tsx:450-552`）；**通知开关+声音**；**任务自动归档档位**；**数据目录迁移**（`settingService.ts:339-358` 的整目录拷贝） | 代理与通知先做；数据目录迁移挂 P2 | 中 |
+| general（语言/终端/代理/通知/任务归档/数据目录/重开引导） | **通知开关已落**（ADR-0045 PH：注意力唤起）；**HTTP 代理与 CA 证书**（国内商用刚需，ZCode `settingsPageHelpers.tsx:450-552`）仍缺；**任务自动归档档位**；**数据目录迁移**（`settingService.ts:339-358` 的整目录拷贝） | 代理/CA 等网络层真接；数据目录迁移挂 P2 | 中 |
 | appearance（主题/字号/代码预览） | 主题三档与字号三档**已有**（ADR-0017 S3）；缺**代码预览独立主题/字号**（我们有 Source 模式用 re_editor，字体已是活设置） | 低优先 | 低 |
 | shortcuts | **3 个热键硬编码**（`hotkey_service.dart:48-94`），无注册表/录制/冲突检测 | ZCode 注册表 24 命令 + 录制 + 物理等价冲突判定 + **抢占**（`conflicts.ts:63-94,196-245`）值得整套搬设计；落点一处定义供托盘/设置/热键三方共用 | 中（纯本地） |
 | model | 模型目录/测试连接/能力位**已有**（ADR-0010）；缺 **OAuth 型 provider**（见 §3）、缺**多 provider 并存**（当前单 provider 单 key——`AppSettings.model` 是一个对象） | 多 provider 列表化是商用 BYOK 的基本盘；ZCode 的 `ModelProviderSection.tsx`（1161 行）形态可参照 | 中-高 |
-| usage | **完全没有使用统计** | ZCode 双 tab：本地 App Usage（SQLite 聚合 tokens/TTFT/错误率，30 天硬修剪 `usage.ts:17-18`）+ 服务端 Coding Plan 额度。我们若走形态①：本地 usage 落 JSONL/表 + 设置页只读面板；usage 记账在旧路线图 B4 从未落地 | 中 |
+| usage | **本地使用统计已落**（ADR-0045 PC：JSONL 30 天修剪 + 设置面板）；缺 Coding Plan tab（等自建后端联调） | ZCode 双 tab：本地 App Usage（SQLite 聚合 tokens/TTFT/错误率，30 天硬修剪 `usage.ts:17-18`）+ 服务端 Coding Plan 额度 | 中 |
 | migration | 无 | ZCode 两件：**Claude Code 会话导入**（`MigrationSection.tsx:28-227`）与**17 家外部 agent 的设置同步**（`settings-sync.ts:1-19`）。后者是获客利器（用户从竞品搬过来零成本）；前者看我们的会话格式是否值得做导入器 | 中-高 |
 | memory/hooks/subagents/browser/automations/mcp | mcp 已有（stdio+http 两型）；**hooks 未做**（B5，安全面扩大，SEC ADR 前置）；子 agent profile 目录未做（B3）；automations 未做（B6） | 沿旧路线图 B3/B5/B6 顺序，不因商用改变优先级 | 高（各一档） |
 
