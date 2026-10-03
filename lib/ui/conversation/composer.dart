@@ -44,6 +44,16 @@ import '../appearance_scope.dart';
 import '../../theme/dsw_typography.dart';
 import 'conversation_root.dart';
 
+/// A draft put down when its conversation was: the text, and the attachments
+/// that were riding it. In memory for this run only — a draft that outlived the
+/// app would need a store, a slot in the backup zip, and a reason to survive a
+/// restart that "I was typing this" does not give.
+typedef _Draft = ({
+  String text,
+  List<AttachedImage> images,
+  List<_AttachedDocument> docs,
+});
+
 class Composer extends StatefulWidget {
   const Composer({
     super.key,
@@ -61,7 +71,18 @@ class Composer extends StatefulWidget {
     this.workspaceRoot,
     this.onPickWorkspace,
     this.onOpenSettings,
+    this.draftScope,
   });
+
+  /// Which conversation the draft being typed belongs to — the session id, or
+  /// null while the first send has not named it yet.
+  ///
+  /// The card is one widget that survives a session switch (the controller is
+  /// reused, and the GlobalKey re-parents rather than rebuilds), so without a
+  /// scope a half-typed message and its picked files simply walked into whatever
+  /// conversation the user clicked next and sent there. Changing this parks the
+  /// draft under the old scope and loads the new one's (ADR-0051).
+  final String? draftScope;
 
   /// The centred empty-state variant: no bottom pad, and a two-line floor.
   final bool hero;
@@ -153,6 +174,10 @@ class ComposerState extends State<Composer> {
   /// Stale-response guard for the branch query.
   int _branchGeneration = 0;
 
+  final Map<String, _Draft> _parked = {};
+
+  String get _scope => widget.draftScope ?? '__new__';
+
   @override
   void didUpdateWidget(covariant Composer oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -160,6 +185,29 @@ class ComposerState extends State<Composer> {
       _gitBranch = null;
       _queryBranch();
     }
+    final previous = oldWidget.draftScope ?? '__new__';
+    if (previous == _scope) return;
+    // Swap, do not merge: the draft on screen is the outgoing conversation's,
+    // and the incoming one's is whatever was left here last time.
+    _parked[previous] = (
+      text: _controller.text,
+      images: List.of(_images),
+      docs: List.of(_documents),
+    );
+    final restored = _parked[_scope];
+    _controller.text = restored?.text ?? '';
+    _images
+      ..clear()
+      ..addAll(restored?.images ?? const []);
+    _documents
+      ..clear()
+      ..addAll(restored?.docs ?? const []);
+    // The menus' dismissal is per-draft: a token dismissed in one conversation
+    // says nothing about this one.
+    _dismissedToken = null;
+    _dismissedMentionToken = null;
+    _wasEmpty = _controller.text.trim().isEmpty;
+    setState(() {});
   }
 
   /// Queries the current branch for [workspaceRoot]. A single `git rev-parse`

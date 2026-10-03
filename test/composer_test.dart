@@ -67,6 +67,7 @@ class _ComposerHost extends StatefulWidget {
     this.onLookupFiles,
     this.width,
     this.workspaceRoot,
+    this.draftScope,
   });
 
   final ApprovalMode mode;
@@ -91,6 +92,9 @@ class _ComposerHost extends StatefulWidget {
   /// Set to exercise the status bar under the card, which only renders with a
   /// picked workspace.
   final String? workspaceRoot;
+
+  /// Which conversation the card is typing into — flip it to switch sessions.
+  final String? draftScope;
 
   @override
   State<_ComposerHost> createState() => _ComposerHostState();
@@ -126,6 +130,7 @@ class _ComposerHostState extends State<_ComposerHost> {
         modelDirectory: widget.modelDirectory,
         onModelSelected: widget.onModelSelected,
         workspaceRoot: widget.workspaceRoot,
+        draftScope: widget.draftScope,
         onPickWorkspace: widget.workspaceRoot == null ? null : () {},
         onLookupFiles: widget.onLookupFiles,
         onSubmit: widget.onSubmit,
@@ -167,6 +172,7 @@ void main() {
     void Function(String text, List<AttachedImage> images, InputDelivery)?
     onSubmit,
     VoidCallback? onStop,
+    String? draftScope,
   }) => tester.pumpWidget(
     MaterialApp(
       // The app's own composition (ADR-0017 S3 then ADR-0020): the step above
@@ -187,6 +193,7 @@ void main() {
           onNewSession: () => newSession++,
           onSubmit: onSubmit ?? (text, images, delivery) {},
           onStop: onStop,
+          draftScope: draftScope,
           hero: hero,
           busy: busy,
           blocked: blocked,
@@ -614,6 +621,30 @@ void main() {
       // destination, the modifier is the interruption — so choosing between them
       // never needs a hand off the keyboard.
       expect(deliveries, [InputDelivery.queue, InputDelivery.guide]);
+    });
+
+    // ADR-0051. The card survives a session switch (the controller is reused),
+    // so a draft had no owner: half a message and its picked files walked into
+    // whichever conversation the user clicked next, and a send there delivered
+    // them to the wrong transcript.
+    testWidgets('a draft belongs to the conversation it was typed in', (
+      tester,
+    ) async {
+      await pump(tester, draftScope: 'session-a');
+      await tester.enterText(find.byType(EditableText), 'for A');
+      await tester.pump();
+
+      await pump(tester, draftScope: 'session-b');
+      await tester.pump();
+      expect(
+        fieldText(tester),
+        isEmpty,
+        reason: 'B must not open with A\'s text',
+      );
+
+      await pump(tester, draftScope: 'session-a');
+      await tester.pump();
+      expect(fieldText(tester), 'for A');
     });
 
     testWidgets('the hint says what sending would do now', (tester) async {

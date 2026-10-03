@@ -440,6 +440,9 @@ class _ConversationRootState extends State<ConversationRoot> {
               hero: hero,
               busy: widget.conversation.isBusy,
               blocked: widget.conversation.isInputBlocked,
+              // The draft belongs to the conversation being typed into, not to
+              // the card (ADR-0051).
+              draftScope: widget.conversation.sessionId,
               approvalMode: widget.conversation.approvalMode,
               onApprovalMode: (mode) => widget.conversation.approvalMode = mode,
               onNewSession: widget.conversation.startNewSession,
