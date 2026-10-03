@@ -4,7 +4,7 @@
 // a control row below, capped at the content width plus 32px — the one element in
 // the column allowed to be wider than the transcript.
 //
-// The control row is dsh's toolbar: the `+` context menu and the mode chip sit
+// The control row is dsh's toolbar: the attach (paperclip) and mode chips sit
 // on the left of the primary action. The attach chip offers a file pick and a
 // clipboard paste (via `pasteboard`); the picked images ride the send as
 // data-URI media. The mode chip is the PermissionSelect — ask / plan / auto —
@@ -696,6 +696,11 @@ class ComposerState extends State<Composer> {
                 const SizedBox(height: 6),
               ],
               _card(color),
+              // The workspace status bar: sits below the card, shows the
+              // workspace name and (when available) the git branch. Clicking
+              // it opens the same picker the hero uses.
+              if (widget.workspaceRoot != null && !widget.hero)
+                _workspaceStatusBar(color),
             ],
           ),
         ),
@@ -809,18 +814,7 @@ class ComposerState extends State<Composer> {
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // The workspace chip is the card's first row, not a strip beneath
-            // it: `contextHeader` reaches the composer from the shell
-            // (`WorkspaceShellLayout.tsx:1168-1187` → `ConversationComposer.tsx:2235`)
-            // and sits inside the same surface, above the textarea. Which folder
-            // a task runs in is part of the question being asked, not a status
-            // line about the window.
-            if (widget.workspaceRoot != null) ...[
-              const SizedBox(height: 6),
-              _workspaceChip(color),
-            ],
             const SizedBox(height: 10),
             _draft(color),
             if (_images.isNotEmpty) ...[
@@ -869,7 +863,7 @@ class ComposerState extends State<Composer> {
         placeholder: dswInputHint(
           widget.busy
               ? context.tr('queueDraftHint')
-              : context.tr('askWithContextHint'),
+              : context.tr('askAnythingHint'),
         ),
         placeholderStyle: DswType.base16.copyWith(color: color.labelCaption),
       ),
@@ -980,7 +974,7 @@ class ComposerState extends State<Composer> {
     ),
   );
 
-  /// The 34px send / stop square. Both states share the button, so the toggle is
+  /// The 34px send / stop circle. Both states share the button, so the toggle is
   /// a glyph swap rather than a layout change — and which glyph it is follows
   /// [_showsStop]: a draft wins over the stop sign, because a draft is what the
   /// user is looking at.
@@ -1049,21 +1043,21 @@ class ComposerState extends State<Composer> {
     );
   }
 
-  /// The card's workspace chip: the folder the next task runs in, with the git
-  /// branch beside it when the folder is a repo. Clicking it opens the same
-  /// picker the hero uses.
+  /// The workspace status bar: a single line below the composer card showing
+  /// the workspace name and (when the folder is a git repo) the current branch.
+  /// Clicking it opens the workspace picker — the same entry point as the hero.
   ///
-  /// A pill (`rounded-full`, `hover:bg-surface-hover`) with a trailing chevron,
-  /// per `ChatEmptyState.tsx:258-262` — the chevron is what says this is a
-  /// chooser and not a label. "本地" stays: the reference distinguishes local
-  /// from remote workspaces, and this app only has the one kind.
-  Widget _workspaceChip(DswAlias color) {
+  /// Format: `flutter_agent_harness  本地  develop` (Qoder style).
+  /// "本地" is the local-repo indicator; it is always shown because the bar
+  /// only appears when a workspace is picked, and a picked workspace is by
+  /// definition local.
+  Widget _workspaceStatusBar(DswAlias color) {
     final root = widget.workspaceRoot!;
     // The folder name, not the full path — the bar is a hint, not a file browser.
     final name = root.split(Platform.pathSeparator).last;
     final branch = _gitBranch;
     return Padding(
-      padding: const EdgeInsets.only(left: 10),
+      padding: const EdgeInsets.only(top: 6),
       child: DswHoverTap(
         onTap: widget.onPickWorkspace,
         semanticLabel: context.tr('workspaceStatusBar'),
@@ -1072,13 +1066,12 @@ class ComposerState extends State<Composer> {
           padding: const EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
             color: hovered ? color.interactiveBgHover : null,
-            borderRadius: BorderRadius.circular(DswShape.pill),
+            borderRadius: BorderRadius.circular(DswShape.inner),
           ),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                LucideIcons.folder,
+                LucideIcons.folder_open,
                 size: DswShape.iconSm,
                 color: color.labelTertiary,
               ),
@@ -1121,12 +1114,6 @@ class ComposerState extends State<Composer> {
                   ),
                 ),
               ],
-              const SizedBox(width: 4),
-              Icon(
-                LucideIcons.chevron_down,
-                size: DswShape.iconTiny,
-                color: color.labelTertiary,
-              ),
             ],
           ),
         ),
@@ -1350,12 +1337,8 @@ class _ImageChip extends StatelessWidget {
   }
 }
 
-/// The `+`: what the reference calls 添加上下文
-/// (`ChatPromptActionMenu.tsx:252-259`, first control of the toolbar's leading
-/// cluster at `ChatPromptEditor.tsx:392`). A popup rather than a direct pick:
-/// images, documents and the clipboard paste are three doors, and the only way
-/// to offer them from one glyph is a menu. Its items are the ones this app can
-/// actually do — the reference also lists `/goal` and plugin groups there.
+/// The paperclip. A popup rather than a direct pick: the clipboard paste is the
+/// other half of the affordance, and the only way to offer both is a menu.
 class _AttachButton extends StatelessWidget {
   const _AttachButton({
     required this.onPick,
@@ -1371,7 +1354,7 @@ class _AttachButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = context.dsw;
     return DswMenu(
-      label: context.tr('addContext'),
+      label: context.tr('attach'),
       minWidth: 220,
       items: (context) => [
         DswMenuEntry(
@@ -1395,7 +1378,7 @@ class _AttachButton extends StatelessWidget {
         height: 24,
         child: Center(
           child: Icon(
-            LucideIcons.plus,
+            LucideIcons.paperclip,
             size: DswShape.iconSm,
             color: color.labelTertiary,
           ),
@@ -1764,17 +1747,14 @@ class _PrimaryButtonState extends State<_PrimaryButton> {
       padding: EdgeInsets.zero,
       backgroundColor: widget.color.buttonInfoFill,
       hoverBackgroundColor: widget.color.buttonInfoHover,
-      // A rounded square, not a circle: the reference's send is
-      // `size="icon-md" rounded-lg bg-brand` (`ConversationComposer.tsx:2079-2084`),
-      // and ADR-0024 already settled that this app's button family has no circle
-      // in it. The radius is said here because shad's one knob answers the
-      // control tier for stroked surfaces (ADR-0029); the frame stays off so the
-      // fill is the only thing on the surface, while the focus ring stays — the
-      // app's primary action used to have no keyboard answer at all.
+      // The corner is said here because shad's one radius knob answers for the
+      // control tier and a send circle is not that (ADR-0029); the frame is
+      // turned off so the fill is the only thing on the surface, while the
+      // focus ring stays — the app's primary action used to have no keyboard
+      // answer at all.
       decoration: const ShadDecoration(
-        border: ShadBorder(
-          radius: BorderRadius.all(Radius.circular(DswShape.control)),
-        ),
+        shape: BoxShape.circle,
+        border: ShadBorder.none,
         focusedBorder: ShadBorder.none,
         secondaryBorder: ShadBorder.none,
       ),
