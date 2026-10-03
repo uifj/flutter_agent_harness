@@ -274,4 +274,72 @@ void main() {
       expect(result.json['schemaVersion'], 99);
     });
   });
+  // ADR-0049: the keychain is an outside service, and outside services say no.
+  // Two of its answers used to be fatal — a refused write was followed
+  // unconditionally by the cleaned rewrite (which would have deleted the only
+  // copy of the key), and the read-back at open sat outside every catch.
+  group('a keychain that refuses', () {
+    test('keeps the legacy key in the document and still opens', () async {
+      settingsFile().writeAsStringSync(
+        jsonEncode({
+          'model': {'apiKey': 'sk-refused', 'provider': 'openai'},
+        }),
+      );
+      final store = await SettingsStore.open(
+        root,
+        secrets: _RefusingSecretStore(),
+      );
+      expect(store.value.model.apiKey, 'sk-refused');
+      final onDisk =
+          jsonDecode(settingsFile().readAsStringSync()) as Map<String, dynamic>;
+      expect(
+        (onDisk['model'] as Map)['apiKey'],
+        'sk-refused',
+        reason:
+            'nothing moved into the keychain, so nothing may be cleaned '
+            'out of the file — the copy the app has is the copy it keeps',
+      );
+    });
+
+    test('opens a current document whose read-back throws', () async {
+      final good = InMemorySecretStore();
+      final first = await SettingsStore.open(root, secrets: good);
+      await first.save(first.value.copyWithModelApiKey('sk-in-keychain'));
+      // The same document against a store that now refuses everything: the
+      // key is unreachable, not gone, and the rest of the settings still load.
+      final second = await SettingsStore.open(
+        root,
+        secrets: _RefusingSecretStore(),
+      );
+      expect(second.value.model.apiKey, '');
+      expect(second.value.workspaceRoot, first.value.workspaceRoot);
+    });
+  });
+
+  test('the macOS seam names the keychain an unsigned build can reach', () {
+    final source = File('lib/state/secret_store.dart').readAsStringSync();
+    expect(
+      source,
+      contains('useDataProtectionKeyChain: false'),
+      reason:
+          'the data-protection keychain derives its access group from the '
+          'code-signing identity, and this project signs ad-hoc with no '
+          'DEVELOPMENT_TEAM (build.md §4) — the plugin default made every call '
+          'fail -34018 and took the app down at startup.',
+    );
+  });
+}
+
+/// A [SecretStore] that refuses every call the way a declined keychain prompt
+/// does — with a platform error, not a null.
+class _RefusingSecretStore implements SecretStore {
+  @override
+  Future<String?> read(String key) async => throw StateError('-34018');
+
+  @override
+  Future<void> write(String key, String value) async =>
+      throw StateError('-34018');
+
+  @override
+  Future<void> delete(String key) async => throw StateError('-34018');
 }

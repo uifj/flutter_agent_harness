@@ -20,7 +20,16 @@ abstract class SecretStore {
 class SecureSecretStore implements SecretStore {
   SecureSecretStore();
 
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  // The classic file keychain, not the data-protection one. `kSecUseData-
+  // ProtectionKeychain` derives the app's access group from its code-signing
+  // identity, and this project signs ad-hoc with no DEVELOPMENT_TEAM
+  // (`build.md` §4), so every call through it fails -34018 ("A required
+  // entitlement isn't present") — which took the whole app down at startup.
+  // The classic keychain needs no identity; when signing lands this is the line
+  // to revisit, not the callers.
+  final FlutterSecureStorage _storage = const FlutterSecureStorage(
+    mOptions: MacOsOptions(useDataProtectionKeyChain: false),
+  );
 
   @override
   Future<String?> read(String key) => _storage.read(key: key);

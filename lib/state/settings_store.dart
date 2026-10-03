@@ -52,16 +52,30 @@ class SettingsStore extends ChangeNotifier {
           final migrated = AppSettingsMigration.apply(decoded);
           value = AppSettings.fromJson(migrated.json);
           final legacyKey = migrated.legacyApiKey;
+          var movedIntoKeychain = true;
           if (secrets != null && legacyKey != null && legacyKey.isNotEmpty) {
-            await secrets.write(AppSettings.apiKeySecretKey, legacyKey);
+            movedIntoKeychain = await _keychainAllows(
+              () => secrets.write(AppSettings.apiKeySecretKey, legacyKey),
+            );
+            if (!movedIntoKeychain) {
+              // Nothing moved, so the key stays exactly where the migration
+              // found it. Cleaning the document here would delete the only copy.
+              value = value.copyWithModelApiKey(legacyKey);
+            }
           }
           // The on-disk document is re-written without the secret and with
           // the current schema version, whether or not a key moved — the
-          // version stamp is what makes future migrations targeted.
-          final cleaned = File('${file.path}.tmp');
-          await cleaned.parent.create(recursive: true);
-          await cleaned.writeAsString(jsonEncode(value.toJson()), flush: true);
-          await cleaned.rename(file.path);
+          // version stamp is what makes future migrations targeted. Except
+          // when the move was refused: then the file keeps its key.
+          if (movedIntoKeychain) {
+            final cleaned = File('${file.path}.tmp');
+            await cleaned.parent.create(recursive: true);
+            await cleaned.writeAsString(
+              jsonEncode(value.toJson()),
+              flush: true,
+            );
+            await cleaned.rename(file.path);
+          }
         }
       }
     } on FileSystemException {
@@ -70,29 +84,58 @@ class SettingsStore extends ChangeNotifier {
       await _quarantine(file);
     }
     if (secrets != null) {
-      final key = await secrets.read(AppSettings.apiKeySecretKey);
-      if (key != null && key.isNotEmpty) {
-        value = value.copyWithModelApiKey(key);
-      }
-      // The book's keys ride their own slots (ADR-0045 PF-2).
-      final restored = <ModelSettings>[];
-      for (final provider in value.savedProviders) {
-        final id = provider.id;
-        var entry = provider;
-        if (id != null) {
-          final bookKey = await secrets.read(AppSettings.providerSecretKey(id));
-          if (bookKey != null && bookKey.isNotEmpty) {
-            entry = entry.copyWith(apiKey: bookKey);
-          }
+      // A keychain this build cannot reach answers "nothing stored here", and
+      // that answer must not be fatal: what the document itself carries stays
+      // in force, and the next save will surface the refusal where the user
+      // can act on it.
+      try {
+        final key = await secrets.read(AppSettings.apiKeySecretKey);
+        if (key != null && key.isNotEmpty) {
+          value = value.copyWithModelApiKey(key);
         }
-        restored.add(entry);
+        // The book's keys ride their own slots (ADR-0045 PF-2).
+        final restored = <ModelSettings>[];
+        for (final provider in value.savedProviders) {
+          final id = provider.id;
+          var entry = provider;
+          if (id != null) {
+            final bookKey = await secrets.read(
+              AppSettings.providerSecretKey(id),
+            );
+            if (bookKey != null && bookKey.isNotEmpty) {
+              entry = entry.copyWith(apiKey: bookKey);
+            }
+          }
+          restored.add(entry);
+        }
+        value = value.copyWith(savedProviders: restored);
+      } on Object {
+        // Left as the document said it.
       }
-      value = value.copyWith(savedProviders: restored);
     }
     return SettingsStore._(file, value, secrets);
   }
 
   static const _fileName = 'settings.json';
+
+  /// Runs one keychain call and reports whether it answered.
+  ///
+  /// A refusal is a normal outcome, not a crash: what sits behind these calls
+  /// is an access control keyed to the build's signing identity, so a user can
+  /// be shown a permission prompt and decline it, and an unsigned build gets
+  /// `-34018` on every call. The launch has to survive either way — this file's
+  /// own rule is that a lost setting is recoverable while a dead app is not —
+  /// but the caller must still learn *which* answer arrived, because the
+  /// document may only be stripped of a plaintext key once that key has really
+  /// moved.
+  static Future<bool> _keychainAllows(Future<void> Function() call) async {
+    try {
+      await call();
+      return true;
+    } on Object {
+      return false;
+    }
+  }
 
   static Future<void> _quarantine(File file) async {
     try {
