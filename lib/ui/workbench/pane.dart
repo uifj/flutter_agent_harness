@@ -46,7 +46,6 @@ class WorkbenchPane extends StatefulWidget {
     required this.workbench,
     required this.pane,
     required this.alone,
-    this.reserveTrailing = 0,
   });
 
   final WorkbenchController workbench;
@@ -58,7 +57,6 @@ class WorkbenchPane extends StatefulWidget {
   final bool alone;
 
   /// Width the tab strip keeps free at its right end for the toggle cluster.
-  final double reserveTrailing;
 
   @override
   State<WorkbenchPane> createState() => _WorkbenchPaneState();
@@ -91,7 +89,6 @@ class _WorkbenchPaneState extends State<WorkbenchPane> {
             workbench: widget.workbench,
             pane: widget.pane,
             showSplitControls: widget.pane.tabs.isNotEmpty,
-            reserveTrailing: widget.reserveTrailing,
           ),
           Expanded(child: _body(color)),
         ],

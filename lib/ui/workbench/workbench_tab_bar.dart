@@ -64,7 +64,6 @@ class WorkbenchTabBar extends StatelessWidget {
     required this.workbench,
     required this.pane,
     required this.showSplitControls,
-    this.reserveTrailing = 0,
   });
 
   final WorkbenchController workbench;
@@ -74,11 +73,6 @@ class WorkbenchTabBar extends StatelessWidget {
   /// column at its minimum width, where a split would produce two panes too
   /// narrow to read.
   final bool showSplitControls;
-
-  /// Width pinned at the strip's right end for chrome that is not the strip's
-  /// own — the panel toggle cluster squeezing into the open panel's top-right
-  /// (`sidebar.module.css:83-85` reserves 72px the same way).
-  final double reserveTrailing;
 
   @override
   Widget build(BuildContext context) {
@@ -130,7 +124,6 @@ class WorkbenchTabBar extends StatelessWidget {
           // The `+` menu, after the tabs — the strip's one opener, so the panel
           // needs no header row of them.
           _NewTabButton(workbench: workbench),
-          SizedBox(width: reserveTrailing),
         ],
       ),
     );

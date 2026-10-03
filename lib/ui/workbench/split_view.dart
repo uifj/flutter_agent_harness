@@ -30,7 +30,6 @@ class SplitView extends StatelessWidget {
     required this.workbench,
     required this.node,
     required this.alone,
-    this.reserveTrailing = 0,
   });
 
   final WorkbenchController workbench;
@@ -40,36 +39,22 @@ class SplitView extends StatelessWidget {
   /// can turn off its edge drop zones.
   final bool alone;
 
-  /// Width each pane's tab strip keeps free at its right end — the toggle
-  /// cluster squeezing into the open right panel's corner.
-  final double reserveTrailing;
-
   @override
   Widget build(BuildContext context) => switch (node) {
     SidebarLeaf() => WorkbenchPane(
       workbench: workbench,
       pane: node as SidebarLeaf,
       alone: alone,
-      reserveTrailing: reserveTrailing,
     ),
-    SidebarSplit() => _Split(
-      workbench: workbench,
-      split: node as SidebarSplit,
-      reserveTrailing: reserveTrailing,
-    ),
+    SidebarSplit() => _Split(workbench: workbench, split: node as SidebarSplit),
   };
 }
 
 class _Split extends StatelessWidget {
-  const _Split({
-    required this.workbench,
-    required this.split,
-    required this.reserveTrailing,
-  });
+  const _Split({required this.workbench, required this.split});
 
   final WorkbenchController workbench;
   final SidebarSplit split;
-  final double reserveTrailing;
 
   @override
   Widget build(BuildContext context) {
@@ -110,7 +95,6 @@ class _Split extends StatelessWidget {
                 workbench: workbench,
                 node: split.children[i],
                 alone: false,
-                reserveTrailing: reserveTrailing,
               ),
             ),
           );

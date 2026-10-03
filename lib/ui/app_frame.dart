@@ -31,12 +31,13 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
+import '../l10n/locales.dart';
 import '../state/layout_controller.dart';
 import '../theme/dsw_alias.dart';
 import '../theme/dsw_motion.dart';
 import '../theme/dsw_shape.dart';
 import '../theme/dsw_theme.dart';
-import 'primitives/tappable.dart';
+import 'primitives/icon_button.dart';
 import 'layout/columns.dart';
 
 /// Which divider a gesture belongs to.
@@ -187,6 +188,20 @@ class _AppFrameState extends State<AppFrame> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                          // The toggles live in this strip and nowhere else, in
+                          // every panel state (ADR-0048). They used to float at
+                          // the viewport corner while the right panel was open,
+                          // and the panels' tab strips each carved 72px out of
+                          // themselves to make room — which is how a chrome
+                          // control ended up able to cover content: the reserve
+                          // only ever existed for one pane's strip at a time, and
+                          // a split column left the other pane with a dead hole
+                          // while the cluster still hovered over whatever was
+                          // beneath. ZCode's header keeps the same rule: the
+                          // toggle is a `shrink-0` sibling in a flex row that is
+                          // in flow (`WorkspaceHeaderActionSection.tsx:33-39`),
+                          // and the tab list is the part that yields.
+                          _CenterToggleStrip(layout: layout, narrow: merge),
                           Expanded(child: ClipRect(child: widget.center)),
                           _row(
                             height: bottomHeight,
@@ -273,18 +288,6 @@ class _AppFrameState extends State<AppFrame> {
               ),
             ),
           if (widget.overlay != null) Positioned.fill(child: widget.overlay!),
-          // The persistent panel toggles at the viewport's top-right corner:
-          // the bottom panel's glyph left of the workbench's, always pinned
-          // whether the panels are open or not — while the workbench is open
-          // they squeeze into its tab strip's reserved right end
-          // (`sidebar.module.css:57-78`).
-          Positioned(
-            top: 3,
-            right: 10,
-            // The merge's own breakpoint, not the sidebar's: between 768 and
-            // 1024 the desktop pair of toggles stays.
-            child: _ToggleCluster(layout: layout, narrow: merge),
-          ),
           // The collapsed rail is fixed-width: no handle while closed.
           if (!collapsed)
             _divider(
@@ -508,82 +511,84 @@ class _AppFrameState extends State<AppFrame> {
   }
 }
 
-/// The viewport-corner cluster of panel toggles — `sidebar.module.css:57-117`.
+/// The center column's top bar: one row of chrome that carries the panel
+/// toggles and is drawn in every panel state.
 ///
-/// Two 28px circular buttons side by side, the bottom panel's glyph LEFT of the
-/// workbench's. Pinned to the corner whether the panels are open or not; the
-/// workbench's open strips reserve their right end for it, so it squeezes into
-/// the tab band instead of covering tabs. A narrow viewport merges the two
-/// panels into one drawer, so the bottom toggle is not offered there.
-class _ToggleCluster extends StatelessWidget {
-  const _ToggleCluster({required this.layout, required this.narrow});
+/// It is the only home those toggles have, which is the point — a control that
+/// moves between an in-flow strip and a floating corner answers the same
+/// question two ways and can only be checked in one of them (ADR-0048).
+class _CenterToggleStrip extends StatelessWidget {
+  const _CenterToggleStrip({required this.layout, required this.narrow});
 
   final LayoutController layout;
   final bool narrow;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.dsw;
+    // One line of chrome, so the seat rides the text step like the tab strips
+    // beside it (`tabBarHeight * step`): a nailed 36 left this row the one piece
+    // of top chrome that did not breathe as the panels' strips grew.
+    final step = MediaQuery.textScalerOf(context).scale(1);
+    return Container(
+      height: 36 * step,
+      decoration: BoxDecoration(
+        color: color.bgBase,
+        border: Border(bottom: BorderSide(color: color.borderL1)),
+      ),
+      padding: const EdgeInsets.only(right: 10),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: _ToggleCluster(layout: layout, narrow: narrow, step: step),
+      ),
+    );
+  }
+}
+
+/// The pair of panel toggles — `sidebar.module.css:57-117`.
+///
+/// Two buttons side by side, the bottom panel's glyph LEFT of the workbench's.
+/// A narrow viewport merges the two panels into one drawer, so the bottom
+/// toggle is not offered there.
+class _ToggleCluster extends StatelessWidget {
+  const _ToggleCluster({
+    required this.layout,
+    required this.narrow,
+    required this.step,
+  });
+
+  final LayoutController layout;
+  final bool narrow;
+
+  /// The buttons' box scales with the text step, so the row and its seats agree
+  /// at every step (ADR-0017 S3).
+  final double step;
 
   @override
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
       if (!narrow)
-        _ToggleButton(
+        DswIconButton(
           icon: LucideIcons.panel_bottom,
+          // Through the dictionary: these four sentences were literals here, so
+          // a Chinese interface still said them in English (ADR-0008).
           tooltip: layout.bottom == 0
-              ? 'Open bottom panel'
-              : 'Collapse bottom panel',
+              ? context.tr('openBottomPanel')
+              : context.tr('collapseBottomPanel'),
           onTap: layout.toggleBottom,
+          size: 32 * step,
+          iconSize: DswShape.iconLg,
         ),
-      _ToggleButton(
+      DswIconButton(
         icon: LucideIcons.panel_right,
         tooltip: layout.workbench == 0
-            ? 'Open workbench panel'
-            : 'Collapse workbench panel',
+            ? context.tr('openWorkbenchPanel')
+            : context.tr('collapseWorkbenchPanel'),
         onTap: layout.toggleWorkbench,
+        size: 32 * step,
+        iconSize: DswShape.iconLg,
       ),
     ],
   );
-}
-
-/// One 32px circle of the cluster: transparent fill, secondary ink, hover or
-/// keyboard focus raises the fill — the app's own icon-button shape, no border,
-/// no shadow.
-class _ToggleButton extends StatelessWidget {
-  const _ToggleButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = context.dsw;
-    return Tooltip(
-      message: tooltip,
-      child: DswHoverTap(
-        onTap: onTap,
-        semanticLabel: tooltip,
-        excludeSemantics: true,
-        builder: (context, hovered, focused) {
-          final lit = hovered || focused;
-          return Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: lit ? color.interactiveBgHover : Colors.transparent,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              size: DswShape.iconLg,
-              color: lit ? color.labelPrimary : color.labelSecondary,
-            ),
-          );
-        },
-      ),
-    );
-  }
 }

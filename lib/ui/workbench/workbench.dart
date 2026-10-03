@@ -120,11 +120,6 @@ void _registerBuiltinTabs() {
 /// tree to show, not which state to read.
 enum WorkbenchPanel { right, bottom }
 
-/// What the open right panel's strips reserve at their right end for the
-/// viewport-corner toggle cluster — `sidebar.module.css:83-85` reserves 72px
-/// the same way, so the tabs genuinely yield space to the cluster.
-const _clusterReserve = 72.0;
-
 /// The side-chat controller a workbench with no app behind it falls back to —
 /// a test pumping a [Workbench] without passing one still gets a host, and a
 /// host-less side-chat tab would be a crash instead of an empty page.
@@ -219,9 +214,6 @@ class Workbench extends StatelessWidget {
                     workbench: workbench,
                     node: node,
                     alone: alone,
-                    reserveTrailing: panel == WorkbenchPanel.right
-                        ? _clusterReserve
-                        : 0,
                   );
                 },
               ),

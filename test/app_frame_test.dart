@@ -243,11 +243,11 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('the corner toggle cluster switches both panels', (tester) async {
+  testWidgets('the panel toggles switch both panels', (tester) async {
     await pump(tester);
     await cross(tester);
-    // Both toggles are pinned at the viewport corner from the first frame,
-    // whatever the panels' state.
+    // Both toggles are in the shell's top bar from the first frame, whatever
+    // the panels' state (ADR-0048: one home, in flow).
     expect(find.byTooltip('Collapse workbench panel'), findsOneWidget);
     expect(find.byTooltip('Open bottom panel'), findsOneWidget);
 
@@ -274,6 +274,8 @@ void main() {
   ) async {
     await pump(tester, width: 800);
     await cross(tester);
+    // 800 sits between the merge (768) and the sidebar's auto-collapse (1024):
+    // a split-screen laptop keeps the two-panel desktop, toggles and all.
     // 800 sits between the merge (768) and the sidebar's auto-collapse (1024):
     // a split-screen laptop keeps the two-panel desktop, toggles and all.
     expect(find.byTooltip('Collapse workbench panel'), findsOneWidget);
@@ -492,5 +494,60 @@ void main() {
       final offenders = unlabelledIconControls(tester);
       expect(offenders, isEmpty, reason: 'an icon-only control at $width');
     }
+  });
+
+  // ADR-0048: the cluster used to answer "where do I live" twice — in the
+  // center column's strip while the panel was closed, floating at the viewport
+  // corner while it was open. The floating half is what could cover content,
+  // and the panels each carved a 72px hole to make room for it. One home now,
+  // in flow, so the test is that the cluster sits inside the center column and
+  // moves with it.
+  testWidgets('the panel toggles have one home, and the centre pays for it', (
+    tester,
+  ) async {
+    await pump(tester, width: 1400);
+    await cross(tester);
+    expect(find.byTooltip('Collapse workbench panel'), findsOneWidget);
+    // Open: the cluster's right edge is the centre column's right edge, minus
+    // the strip's own 10px gutter. It is the workbench's right border that
+    // decides where the toggle sits — not the viewport.
+    expect(
+      tester.getRect(find.byTooltip('Collapse workbench panel')).right,
+      closeTo(1400 - workbenchDefault - 10, 1),
+    );
+
+    layout.closeWorkbench();
+    await cross(tester);
+    expect(find.byTooltip('Open workbench panel'), findsOneWidget);
+    // Closed: the same in-flow row, now reaching the viewport's edge because
+    // the centre owns the whole width. Same widget, one placement rule.
+    expect(
+      tester.getRect(find.byTooltip('Open workbench panel')).right,
+      closeTo(1400 - 10, 1),
+    );
+
+    // Merged: one drawer, so one toggle — and it is still the centre's row,
+    // which the drawer overlays rather than squeezes.
+    await resize(tester, 700);
+    await cross(tester);
+    expect(find.byTooltip('Open workbench panel'), findsOneWidget);
+    expect(find.byTooltip('Open bottom panel'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the shell top bar rides the text step', (tester) async {
+    await pump(tester, width: 1400, scale: amplifiedTextStep);
+    await cross(tester);
+    // The row and its seats grow together, like every other one-line chrome:
+    // a nailed 36 over nailed 32 was the strip that did not breathe.
+    expect(
+      tester.getSize(find.byTooltip('Collapse workbench panel')).width,
+      closeTo(32 * amplifiedTextStep, 0.1),
+    );
+    expect(
+      tester.getRect(find.byTooltip('Collapse workbench panel')).bottom,
+      lessThan(36 * amplifiedTextStep + 1),
+    );
+    expect(textDefects(tester), isEmpty);
   });
 }
