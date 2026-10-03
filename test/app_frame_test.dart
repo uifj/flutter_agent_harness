@@ -6,18 +6,21 @@
 // between. The 800px pass is the one that used to be a manual acceptance step.
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:agent_harness/model/conversation.dart';
 import 'package:agent_harness/model/turn_event.dart';
 import 'package:agent_harness/state/conversation_controller.dart';
 import 'package:agent_harness/state/layout_controller.dart';
 import 'package:agent_harness/state/session_index.dart';
+import 'package:agent_harness/state/session_registry.dart';
 import 'package:agent_harness/state/streaming_tail.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
 import 'package:agent_harness/ui/app_frame.dart';
 import 'package:agent_harness/ui/conversation/conversation_root.dart';
 import 'package:agent_harness/ui/layout/columns.dart';
 import 'package:agent_harness/ui/sidebar/sidebar.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -26,6 +29,8 @@ import 'fake_turn_source.dart';
 
 void main() {
   late FakeTurnSource source;
+  late Directory support;
+  late SessionRegistry registry;
   late SessionIndex index;
   late StreamingTail tail;
   late ConversationController controller;
@@ -33,7 +38,12 @@ void main() {
 
   setUp(() {
     source = FakeTurnSource();
-    index = SessionIndex(source);
+    // Registry-backed: pinning and renaming are sidecar writes, and a header
+    // menu whose pin does nothing but reorder the list in memory would be
+    // asserting a lie about the door it presses (ADR-0039).
+    support = Directory.systemTemp.createTempSync('app_frame');
+    registry = SessionRegistry.open(support);
+    index = SessionIndex(source, registry: registry);
     tail = StreamingTail();
     controller = ConversationController(runtime: source, tail: tail);
     layout = LayoutController();
@@ -43,6 +53,8 @@ void main() {
     controller.dispose();
     tail.dispose();
     index.dispose();
+    registry.dispose();
+    if (support.existsSync()) support.deleteSync(recursive: true);
     layout.dispose();
   });
 
@@ -60,6 +72,10 @@ void main() {
     Widget workbench = const SizedBox(),
     Widget bottom = const SizedBox(),
     Widget? center,
+    String? workspaceRoot,
+    SessionSummary? session,
+    VoidCallback? onPickWorkspace,
+    VoidCallback? onOpenSettings,
   }) async {
     tester.view.physicalSize = Size(width, 900);
     tester.view.devicePixelRatio = 1;
@@ -71,6 +87,11 @@ void main() {
         home: Scaffold(
           body: AppFrame(
             layout: layout,
+            workspaceRoot: workspaceRoot,
+            session: session,
+            sessions: session == null ? null : index,
+            onPickWorkspace: onPickWorkspace,
+            onOpenSettings: onOpenSettings,
             sidebarBuilder: (context, collapsed, width) => Sidebar(
               collapsed: collapsed,
               width: width,
@@ -101,6 +122,87 @@ void main() {
       await tester.pump(const Duration(milliseconds: 20));
     }
   }
+
+  testWidgets('the header names the workspace and the conversation', (
+    tester,
+  ) async {
+    // The strip used to be empty on the left, so the screen never said which
+    // folder was selected — only the system title bar did.
+    var picked = 0;
+    var settings = 0;
+    source.sessions = [
+      SessionSummary(
+        id: 's1',
+        updatedAt: DateTime(2026, 10, 3),
+        title: 'Rebuild the composer',
+        workspaceRoot: '/work/alpha',
+      ),
+    ];
+    await index.refresh();
+    index.setActive('s1');
+
+    await pump(
+      tester,
+      workspaceRoot: '/work/alpha',
+      session: index.active,
+      onPickWorkspace: () => picked++,
+      onOpenSettings: () => settings++,
+    );
+
+    // The strip, not the sidebar beside it: the group header shows the same
+    // folder name and carries the same `⋯` glyph.
+    final strip = find.byKey(const ValueKey('center-strip'));
+    // The folder's own name, not the path, and the conversation beside it.
+    expect(
+      find.descendant(of: strip, matching: find.text('alpha')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: strip, matching: find.text('Rebuild the composer')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.descendant(of: strip, matching: find.byIcon(LucideIcons.ellipsis)),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Pin to top'), findsOneWidget);
+    expect(find.text('Rename'), findsOneWidget);
+    expect(find.text('Copy session id'), findsOneWidget);
+    expect(find.text('Copy workspace path'), findsOneWidget);
+    expect(find.text('Reveal in file manager'), findsOneWidget);
+    expect(find.text('Settings'), findsOneWidget);
+    // The list's door, not the header's: nothing here destroys the transcript
+    // the reader is looking at.
+    expect(find.text('Delete'), findsNothing);
+
+    // Pressed, not collected: pinning has to reach the index.
+    await tester.tap(find.text('Pin to top'));
+    await tester.pumpAndSettle();
+    expect(index.sessions.single.pinnedAt, isNotNull);
+
+    await tester.tap(
+      find.descendant(of: strip, matching: find.byIcon(LucideIcons.ellipsis)),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+    expect(settings, 1);
+    expect(tester.takeException(), isNull);
+
+    // An unsaved conversation has no id to act on, so the menu is absent rather
+    // than empty — a `⋯` that opens nothing is a dead control (ADR-0022).
+    await pump(tester, workspaceRoot: '/work/alpha');
+    final bare = find.byKey(const ValueKey('center-strip'));
+    expect(
+      find.descendant(of: bare, matching: find.text('alpha')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: bare, matching: find.byIcon(LucideIcons.ellipsis)),
+      findsNothing,
+    );
+  });
 
   testWidgets('crossing the auto-collapse breakpoint and coming back', (
     tester,

@@ -353,6 +353,14 @@ class _DshAppState extends ConsumerState<DshApp> {
                     listenable: ref.watch(workspaceModeProvider),
                     builder: (context, _) => AppFrame(
                       layout: ref.watch(layoutProvider),
+                      // The centre column's header: which folder, which
+                      // conversation, and the menu of verbs that belongs to it.
+                      workspaceRoot: doc.workspaceRoot,
+                      sessions: ref.watch(sessionsProvider),
+                      session: ref.watch(sessionsProvider).active,
+                      onPickWorkspace: scope.pickFromHero,
+                      onOpenSettings: () =>
+                          setState(() => _settingsOpen = true),
                       // The plan-object store is a ChangeNotifier the
                       // providers cannot re-project; the builder re-reads its
                       // collections on every write so the sidebar's extension

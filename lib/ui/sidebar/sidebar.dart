@@ -15,9 +15,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
-import 'package:shadcn_ui/shadcn_ui.dart'
-    show ShadButton, ShadDialog, ShadInput, showShadDialog;
-
 import '../../l10n/locales.dart';
 import '../../model/app_settings.dart' as appcfg;
 import '../../model/conversation.dart';
@@ -33,13 +30,12 @@ import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
-import '../primitives/confirm_dialog.dart';
-import '../primitives/feedback.dart';
 import '../primitives/icon_button.dart';
 import '../primitives/menu.dart';
 import '../primitives/reveal.dart';
 import '../primitives/segmented.dart';
 import '../primitives/tappable.dart';
+import '../session_actions.dart';
 import '../settings/widgets/settings_quick_menu.dart';
 import '../layout/columns.dart';
 
@@ -801,7 +797,12 @@ class _SidebarState extends State<Sidebar> {
           }
           final session = line.session!;
           return DswContextMenu(
-            items: (_) => _sessionMenu(session),
+            items: (_) => sessionMenuEntries(
+              context,
+              session: session,
+              sessions: widget.sessions,
+              withDelete: true,
+            ),
             child: _SessionRow(
               session: session,
               selected: session.id == widget.sessions.activeId,
@@ -868,86 +869,6 @@ class _SidebarState extends State<Sidebar> {
             : () => widget.onRemoveWorkspace!(root),
       ),
     ];
-  }
-
-  List<DswMenuEntry> _sessionMenu(SessionSummary session) => [
-    DswMenuEntry(
-      label: context.tr(
-        session.pinnedAt == null ? 'pinSession' : 'unpinSession',
-      ),
-      icon: LucideIcons.pin,
-      onTap: () {
-        widget.sessions.setPinned(session.id, session.pinnedAt == null);
-        _warnIfNotSaved();
-      },
-    ),
-    DswMenuEntry(
-      label: context.tr('renameSession'),
-      icon: LucideIcons.pencil,
-      onTap: () => _rename(session),
-    ),
-    const DswMenuEntry.divider(),
-    DswMenuEntry(
-      label: context.tr('copySessionId'),
-      icon: LucideIcons.copy,
-      onTap: () => Clipboard.setData(ClipboardData(text: session.id)),
-    ),
-    if (session.workspaceRoot != null) ...[
-      DswMenuEntry(
-        label: context.tr('copyWorkspacePath'),
-        icon: LucideIcons.copy,
-        onTap: () =>
-            Clipboard.setData(ClipboardData(text: session.workspaceRoot!)),
-      ),
-      // Upstream puts reveal on the task row as well as the project row
-      // (`useTaskListItemContextActions.ts:168-175`): the question being asked
-      // is usually "where did this conversation's files go", which is about the
-      // conversation, not about a folder header.
-      DswMenuEntry(
-        label: context.tr('revealInFiles'),
-        icon: LucideIcons.external_link,
-        onTap: () => revealInFilesOrReport(context, session.workspaceRoot!),
-      ),
-    ],
-    DswMenuEntry(
-      label: context.tr('deleteSession'),
-      icon: LucideIcons.trash,
-      destructive: true,
-      onTap: () => _delete(session),
-    ),
-  ];
-
-  Future<void> _rename(SessionSummary session) async {
-    final next = await _promptForText(
-      context,
-      title: context.tr('renameSessionTitle'),
-      initial: session.title ?? '',
-    );
-    if (next == null || next.isEmpty) return;
-    widget.sessions.rename(session.id, next);
-    _warnIfNotSaved();
-  }
-
-  /// The sidecar write is the one thing these rows can lose without the screen
-  /// showing it: the list answers from memory either way, so the only honest
-  /// surface is the action that just failed. Returns whether it failed.
-  bool _warnIfNotSaved() {
-    if (widget.sessions.metadataError == null) return false;
-    showFeedback(context, context.tr('historyNotSaved'), destructive: true);
-    return true;
-  }
-
-  Future<void> _delete(SessionSummary session) async {
-    final confirmed = await showConfirmDialog(
-      context,
-      title: context.tr('deleteSessionTitle'),
-      description: context.tr('deleteSessionBody'),
-      confirmLabel: context.tr('deleteSession'),
-    );
-    if (!confirmed || !mounted) return;
-    widget.sessions.remove(session.id);
-    if (_warnIfNotSaved()) return;
-    showFeedback(context, context.tr('sessionDeleted'));
   }
 
   Widget _footer(DswAlias color, {required bool wide}) => Align(
@@ -1394,42 +1315,6 @@ class _WorkspaceGroupRow extends StatelessWidget {
 
 /// One line of text asked for the right way: shad's dialog, shad's field, and
 /// the `float` radius a dialog owns (ADR-0029). Returns null when dismissed.
-Future<String?> _promptForText(
-  BuildContext context, {
-  required String title,
-  required String initial,
-}) async {
-  final controller = TextEditingController(text: initial);
-  final step = MediaQuery.textScalerOf(context).scale(1);
-  final result = await showShadDialog<String>(
-    context: context,
-    builder: (context) => ShadDialog(
-      radius: BorderRadius.circular(DswShape.float),
-      title: Text(title, style: DswType.sStrong14),
-      actions: [
-        ShadButton.outline(
-          height: 24 * step,
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(context.tr('planCancel')),
-        ),
-        ShadButton(
-          height: 24 * step,
-          onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-          child: Text(context.tr('renameSession')),
-        ),
-      ],
-      child: ShadInput(
-        controller: controller,
-        style: DswType.s14,
-        autofocus: true,
-        textInputAction: TextInputAction.done,
-        onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
-      ),
-    ),
-  );
-  controller.dispose();
-  return result;
-}
 
 /// The section line above the groups: what the list is called, how it is
 /// arranged, whether every folder is folded, and a way to bring another folder

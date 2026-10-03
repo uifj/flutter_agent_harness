@@ -37,6 +37,17 @@ class SessionIndex extends ChangeNotifier {
   /// conversation.
   String? get activeId => _activeId;
 
+  /// The summary for [activeId], or null when the transcript is showing an
+  /// unsaved new conversation — which is why the header's menu is optional.
+  SessionSummary? get active {
+    final id = _activeId;
+    if (id == null) return null;
+    for (final session in _sessions) {
+      if (session.id == id) return session;
+    }
+    return null;
+  }
+
   bool get isLoading => _isLoading;
 
   /// Set when the last scan threw. The previous list is kept: a transient disk

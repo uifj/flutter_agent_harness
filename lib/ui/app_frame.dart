@@ -30,14 +30,21 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:path/path.dart' as p;
 
 import '../l10n/locales.dart';
+import '../model/conversation.dart';
 import '../state/layout_controller.dart';
+import '../state/session_index.dart';
 import '../theme/dsw_alias.dart';
 import '../theme/dsw_motion.dart';
 import '../theme/dsw_shape.dart';
 import '../theme/dsw_theme.dart';
+import '../theme/dsw_typography.dart';
 import 'primitives/icon_button.dart';
+import 'primitives/menu.dart';
+import 'primitives/tappable.dart';
+import 'session_actions.dart';
 import 'layout/columns.dart';
 
 /// Which divider a gesture belongs to.
@@ -53,6 +60,11 @@ class AppFrame extends StatefulWidget {
     required this.workbench,
     required this.bottom,
     this.overlay,
+    this.workspaceRoot,
+    this.session,
+    this.sessions,
+    this.onPickWorkspace,
+    this.onOpenSettings,
   });
 
   final LayoutController layout;
@@ -76,6 +88,16 @@ class AppFrame extends StatefulWidget {
 
   /// Floats over everything; only hit-tests where it paints.
   final Widget? overlay;
+
+  /// The centre column's header (ADR-0053): which folder this conversation runs
+  /// in, which conversation that is, and the verbs that belong to it. All three
+  /// are optional because the frame is also pumped by hosts that have none of it
+  /// — a fresh install has no folder, and an unsaved conversation has no id.
+  final String? workspaceRoot;
+  final SessionSummary? session;
+  final SessionIndex? sessions;
+  final VoidCallback? onPickWorkspace;
+  final VoidCallback? onOpenSettings;
 
   @override
   State<AppFrame> createState() => _AppFrameState();
@@ -201,7 +223,15 @@ class _AppFrameState extends State<AppFrame> {
                           // toggle is a `shrink-0` sibling in a flex row that is
                           // in flow (`WorkspaceHeaderActionSection.tsx:33-39`),
                           // and the tab list is the part that yields.
-                          _CenterToggleStrip(layout: layout, narrow: merge),
+                          _CenterToggleStrip(
+                            layout: layout,
+                            narrow: merge,
+                            workspaceRoot: widget.workspaceRoot,
+                            session: widget.session,
+                            sessions: widget.sessions,
+                            onPickWorkspace: widget.onPickWorkspace,
+                            onOpenSettings: widget.onOpenSettings,
+                          ),
                           Expanded(child: ClipRect(child: widget.center)),
                           _row(
                             height: bottomHeight,
@@ -518,10 +548,23 @@ class _AppFrameState extends State<AppFrame> {
 /// moves between an in-flow strip and a floating corner answers the same
 /// question two ways and can only be checked in one of them (ADR-0048).
 class _CenterToggleStrip extends StatelessWidget {
-  const _CenterToggleStrip({required this.layout, required this.narrow});
+  const _CenterToggleStrip({
+    required this.layout,
+    required this.narrow,
+    this.workspaceRoot,
+    this.session,
+    this.sessions,
+    this.onPickWorkspace,
+    this.onOpenSettings,
+  });
 
   final LayoutController layout;
   final bool narrow;
+  final String? workspaceRoot;
+  final SessionSummary? session;
+  final SessionIndex? sessions;
+  final VoidCallback? onPickWorkspace;
+  final VoidCallback? onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -531,16 +574,111 @@ class _CenterToggleStrip extends StatelessWidget {
     // of top chrome that did not breathe as the panels' strips grew.
     final step = MediaQuery.textScalerOf(context).scale(1);
     return Container(
+      // Named because the sidebar beside it shows the same folder name and the
+      // same `⋯` glyph: an assertion that cannot say which one it read is an
+      // assertion about neither.
+      key: const ValueKey('center-strip'),
       height: 36 * step,
       decoration: BoxDecoration(
         color: color.bgBase,
         border: Border(bottom: BorderSide(color: color.borderL1)),
       ),
-      padding: const EdgeInsets.only(right: 10),
-      child: Align(
-        alignment: Alignment.centerRight,
-        child: _ToggleCluster(layout: layout, narrow: narrow, step: step),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      child: Row(
+        children: [
+          // The header takes the slack and yields first: the two panel toggles
+          // are doors, and a long folder name or conversation title is the part
+          // that can be shortened (ADR-0017's "shed labels, not seats").
+          Expanded(
+            // Which conversation is showing, and what it is called, are
+            // notifications on the index rather than provider rebuilds
+            // (ADR-0039), so the header listens to it directly.
+            child: sessions == null
+                ? _header(context, color)
+                : ListenableBuilder(
+                    listenable: sessions!,
+                    builder: (context, _) => _header(context, color),
+                  ),
+          ),
+          _ToggleCluster(layout: layout, narrow: narrow, step: step),
+        ],
       ),
+    );
+  }
+
+  /// `WorkspaceHeader`-shaped: the folder, the conversation, one menu.
+  ///
+  /// Before this the strip's left half was empty, so the screen never said
+  /// which workspace was selected — the system title bar did (ADR-0019 ③), and
+  /// on a maximised desktop window that is the last place anyone looks.
+  Widget _header(BuildContext context, DswAlias color) {
+    final root = workspaceRoot;
+    final active = session;
+    final menu = active == null || sessions == null
+        ? null
+        : DswMenu(
+            label: context.tr('conversationActions'),
+            minWidth: 220,
+            // The trigger is visuals only: `DswMenu` supplies the tap, the focus
+            // ring and the semantics, and `label` is both the tooltip and the
+            // name a screen reader says (ADR-0024). Same spelling as the
+            // workspace group's own `⋯` in the sidebar.
+            trigger: (context) => Icon(
+              LucideIcons.ellipsis,
+              size: DswShape.iconTiny,
+              color: color.labelSecondary,
+            ),
+            items: (_) => sessionMenuEntries(
+              context,
+              session: active,
+              sessions: sessions!,
+              onOpenSettings: onOpenSettings,
+            ),
+          );
+    if (root == null && active == null) return const SizedBox.shrink();
+    return Row(
+      children: [
+        if (root != null)
+          DswHoverTap(
+            onTap: onPickWorkspace,
+            semanticLabel: context.tr('workspaceStatusBar'),
+            builder: (context, hovered, _) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: hovered ? color.interactiveBgHover : null,
+                borderRadius: BorderRadius.circular(DswShape.inner),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    LucideIcons.folder,
+                    size: DswShape.iconTiny,
+                    color: color.labelTertiary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    // The folder's own name, not the path: this line is a label,
+                    // and the full path is one menu row away (`copyWorkspacePath`).
+                    p.basename(root),
+                    style: DswType.xxs12.copyWith(color: color.labelSecondary),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        if (root != null && active?.title != null) const SizedBox(width: 8),
+        if (active?.title != null)
+          Flexible(
+            child: Text(
+              active!.title!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: DswType.sStrong14.copyWith(color: color.labelPrimary),
+            ),
+          ),
+        if (menu != null) ...[const SizedBox(width: 4), menu],
+      ],
     );
   }
 }
