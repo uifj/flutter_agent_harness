@@ -25,6 +25,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'amplified_text_probe.dart';
+import 'clipboard_probe.dart';
 import 'fake_turn_source.dart';
 
 void main() {
@@ -73,7 +74,7 @@ void main() {
     Widget bottom = const SizedBox(),
     Widget? center,
     String? workspaceRoot,
-    SessionSummary? session,
+    bool showHeader = false,
     VoidCallback? onPickWorkspace,
     VoidCallback? onOpenSettings,
   }) async {
@@ -88,8 +89,7 @@ void main() {
           body: AppFrame(
             layout: layout,
             workspaceRoot: workspaceRoot,
-            session: session,
-            sessions: session == null ? null : index,
+            sessions: showHeader ? index : null,
             onPickWorkspace: onPickWorkspace,
             onOpenSettings: onOpenSettings,
             sidebarBuilder: (context, collapsed, width) => Sidebar(
@@ -126,8 +126,7 @@ void main() {
   testWidgets('the header names the workspace and the conversation', (
     tester,
   ) async {
-    // The strip used to be empty on the left, so the screen never said which
-    // folder was selected — only the system title bar did.
+    final clipboard = ClipboardProbe(tester.binding.defaultBinaryMessenger);
     var picked = 0;
     var settings = 0;
     source.sessions = [
@@ -137,6 +136,12 @@ void main() {
         title: 'Rebuild the composer',
         workspaceRoot: '/work/alpha',
       ),
+      SessionSummary(
+        id: 's2',
+        updatedAt: DateTime(2026, 10, 2),
+        title: 'Ship the drawer',
+        workspaceRoot: '/work/beta',
+      ),
     ];
     await index.refresh();
     index.setActive('s1');
@@ -144,7 +149,7 @@ void main() {
     await pump(
       tester,
       workspaceRoot: '/work/alpha',
-      session: index.active,
+      showHeader: true,
       onPickWorkspace: () => picked++,
       onOpenSettings: () => settings++,
     );
@@ -152,6 +157,13 @@ void main() {
     // The strip, not the sidebar beside it: the group header shows the same
     // folder name and carries the same `⋯` glyph.
     final strip = find.byKey(const ValueKey('center-strip'));
+    Future<void> openMenu() async {
+      await tester.tap(
+        find.descendant(of: strip, matching: find.byIcon(LucideIcons.ellipsis)),
+      );
+      await tester.pumpAndSettle();
+    }
+
     // The folder's own name, not the path, and the conversation beside it.
     expect(
       find.descendant(of: strip, matching: find.text('alpha')),
@@ -162,10 +174,7 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.tap(
-      find.descendant(of: strip, matching: find.byIcon(LucideIcons.ellipsis)),
-    );
-    await tester.pumpAndSettle();
+    await openMenu();
     expect(find.text('Pin to top'), findsOneWidget);
     expect(find.text('Rename'), findsOneWidget);
     expect(find.text('Copy session id'), findsOneWidget);
@@ -176,30 +185,53 @@ void main() {
     // the reader is looking at.
     expect(find.text('Delete'), findsNothing);
 
-    // Pressed, not collected: pinning has to reach the index.
+    // Pressed, not collected: pinning has to reach the index, and the folder
+    // chip has to reach the host's picker.
     await tester.tap(find.text('Pin to top'));
     await tester.pumpAndSettle();
-    expect(index.sessions.single.pinnedAt, isNotNull);
-
-    await tester.tap(
-      find.descendant(of: strip, matching: find.byIcon(LucideIcons.ellipsis)),
-    );
+    expect(index.sessions.firstWhere((s) => s.id == 's1').pinnedAt, isNotNull);
+    await tester.tap(find.descendant(of: strip, matching: find.text('alpha')));
     await tester.pumpAndSettle();
+    expect(picked, 1);
+
+    await openMenu();
     await tester.tap(find.text('Settings'));
     await tester.pumpAndSettle();
     expect(settings, 1);
+
+    // The defect this block really guards (ADR-0055): switching conversations
+    // must move the header, and the menu must act on the conversation now on
+    // screen. The header used to be handed a `SessionSummary` value from
+    // `main.dart`, which computed it once off a provider that never re-emits —
+    // so after a switch it named the conversation the user had just left, and
+    // 「复制工作区路径」 copied that one's folder.
+    index.setActive('s2');
+    await tester.pump();
+    expect(
+      find.descendant(of: strip, matching: find.text('Ship the drawer')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: strip, matching: find.text('Rebuild the composer')),
+      findsNothing,
+    );
+
+    await openMenu();
+    await tester.tap(find.text('Copy workspace path'));
+    await tester.pumpAndSettle();
+    expect(clipboard.text, '/work/beta');
     expect(tester.takeException(), isNull);
 
     // An unsaved conversation has no id to act on, so the menu is absent rather
     // than empty — a `⋯` that opens nothing is a dead control (ADR-0022).
-    await pump(tester, workspaceRoot: '/work/alpha');
-    final bare = find.byKey(const ValueKey('center-strip'));
+    index.setActive(null);
+    await tester.pump();
     expect(
-      find.descendant(of: bare, matching: find.text('alpha')),
+      find.descendant(of: strip, matching: find.text('alpha')),
       findsOneWidget,
     );
     expect(
-      find.descendant(of: bare, matching: find.byIcon(LucideIcons.ellipsis)),
+      find.descendant(of: strip, matching: find.byIcon(LucideIcons.ellipsis)),
       findsNothing,
     );
   });

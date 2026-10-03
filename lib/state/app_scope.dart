@@ -21,6 +21,7 @@ import '../host/git.dart';
 import '../host/project_folder_ops.dart';
 import '../host/terminal_manager.dart';
 import '../model/app_settings.dart' as cfg;
+import '../model/session_groups.dart';
 import '../model/workspace.dart';
 import '../model/workspace_index.dart';
 import '../model/workbench_prefs.dart';
@@ -400,16 +401,29 @@ class AppScope {
   Future<void> save(cfg.AppSettings next) async {
     final previous = settings.value;
     await settings.save(next);
-    if (next.workspaceRoot != previous.workspaceRoot) {
+    // The workbench reads the same folder as the tools, through the same guard,
+    // so it moves first: everything below asks the controller where it is.
+    _workbench.workspaceRoot = next.workspaceRoot;
+    // Compared by identity, not by spelling: macOS answers `/private/var/…` for
+    // a path the picker wrote as `/var/…`, and since a folder change now ends
+    // the conversation below, treating one folder's two spellings as two folders
+    // would drop a transcript on a no-op save. `workspaceKey` is the answer the
+    // sidebar's groups already use (ADR-0039).
+    if (workspaceKey(next.workspaceRoot ?? '') !=
+        workspaceKey(previous.workspaceRoot ?? '')) {
       // A different folder is a different set of things the user approved.
       _approvals.useWorkspace(next.workspaceRoot);
       // A different folder has a different set of files to go back to; the
       // history does not follow the conversation across.
       _checkpoints.useWorkspace(next.workspaceRoot);
+      // And the conversation ends with the folder it was about (ADR-0054 runs
+      // both ways: opening a conversation walks into its folder, so choosing a
+      // folder cannot leave a transcript reading the previous one — its tools,
+      // its approvals and its rewind history are all re-keyed above). The old
+      // conversation is not lost: it stays on disk and in the sidebar under its
+      // own folder, one click away.
+      await newSession();
     }
-    // The workbench reads the same folder as the tools, through the same guard,
-    // so it moves whether or not the runtime is rebuilt.
-    _workbench.workspaceRoot = next.workspaceRoot;
     if (!next.requiresRuntimeRestart(previous)) {
       _runtime.workspaceRoot = next.workspaceRoot;
       return;
@@ -420,11 +434,11 @@ class AppScope {
     // The side chat's exchange belonged to the replaced runtime's agent; the
     // controller drops it the way the transcript drops its conversation.
     _sideChat.adoptSource(_runtime.side);
-    _selection.clear();
-    _sessions.setActive(null);
-    // The dropped conversation took its layout with it, the same as the two
-    // session commands below.
-    await _workbench.bindSession(null);
+    // One answer for "drop the conversation": it also re-mints the unsaved
+    // checkpoint token, which the old inline version of this forgot — the next
+    // persist then adopted the dropped conversation's mirrors, so a rewind in
+    // the new conversation offered to undo the previous one's writes.
+    await newSession();
     await _sessions.adoptRuntime(_runtime);
     // Disposed last: it may still be unwinding a turn the swap just abandoned.
     await replaced.dispose();
@@ -470,7 +484,7 @@ class AppScope {
   /// be, not a form to edit.
   Future<void> adoptRecent(String path) async {
     final current = settings.value;
-    if (current.workspaceRoot == path) return;
+    if (workspaceKey(current.workspaceRoot ?? '') == workspaceKey(path)) return;
     await save(current.withWorkspace(path));
   }
 

@@ -356,8 +356,9 @@ class _DshAppState extends ConsumerState<DshApp> {
                       // The centre column's header: which folder, which
                       // conversation, and the menu of verbs that belongs to it.
                       workspaceRoot: doc.workspaceRoot,
+                      // The index, not a snapshot out of it: the header reads
+                      // `active` on every rebuild the index itself announces.
                       sessions: ref.watch(sessionsProvider),
-                      session: ref.watch(sessionsProvider).active,
                       onPickWorkspace: scope.pickFromHero,
                       onOpenSettings: () =>
                           setState(() => _settingsOpen = true),

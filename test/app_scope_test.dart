@@ -90,6 +90,46 @@ void main() {
     expect(scope.runtime, same(before));
   });
 
+  test('one folder spelled two ways is still one folder', () async {
+    // macOS answers `/private/var/…` for a path the picker wrote as `/var/…`.
+    // Since a folder change now ends the conversation, a spelling difference
+    // must not read as a move — that would drop a transcript on a no-op save.
+    final resolved = support.resolveSymbolicLinksSync();
+    await scope.save(settings.value.withWorkspace(support.path));
+    scope.sessions.setActive('s-open');
+
+    await scope.save(settings.value.withWorkspace(resolved));
+
+    expect(scope.sessions.activeId, 's-open');
+  });
+
+  test('choosing a folder ends the conversation about the old one', () async {
+    // The other half of ADR-0054. Opening a conversation walks into its folder,
+    // so a folder chosen by hand cannot leave a transcript reading the previous
+    // project — the approvals book, the rewind history and the tools' guard are
+    // all re-keyed by the same write, and a live conversation on the far side of
+    // that is a conversation whose tools now answer about someone else's files.
+    final elsewhere = Directory.systemTemp.createTempSync('app_scope_next');
+    addTearDown(() {
+      if (elsewhere.existsSync()) elsewhere.deleteSync(recursive: true);
+    });
+    scope.sessions.setActive('s-open');
+    await scope.workbench.bindSession('s-open');
+    expect(scope.workbench.sessionId, 's-open');
+
+    await scope.save(settings.value.withWorkspace(elsewhere.path));
+
+    expect(
+      scope.sessions.activeId,
+      isNull,
+      reason: 'the transcript ended with its folder',
+    );
+    expect(scope.workbench.sessionId, isNull);
+    // The runtime followed the folder rather than being replaced: this is still
+    // the workspace-only path the first guard pins.
+    expect(scope.runtime.workspaceRoot, elsewhere.resolveSymbolicLinksSync());
+  });
+
   test('opening a conversation adopts the folder it was started in', () async {
     // Its own host: the sidecar row has to be on disk before the scope opens it.
     final root = Directory.systemTemp.createTempSync('app_scope_folder');

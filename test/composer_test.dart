@@ -714,6 +714,36 @@ void main() {
       expect(find.text('README.md'), findsOneWidget);
     });
 
+    testWidgets('a folder change drops the index the old folder built', (
+      tester,
+    ) async {
+      // The card survives a workspace switch — same composer, same State — and
+      // the `@` menu indexes a folder, so the cache has to belong to the folder
+      // it was built from. Left alone, the menu kept ranking the previous
+      // project's files for the rest of the card's life.
+      var root = 'alpha';
+      var looked = 0;
+      Future<List<FileEntry>> lookup() async {
+        looked++;
+        return [FileEntry(relative: '$root.dart', kind: 'file')];
+      }
+
+      await pump(tester, workspaceRoot: '/work/alpha', onLookupFiles: lookup);
+      await tester.enterText(find.byType(EditableText), '@');
+      await tester.pump();
+      expect(find.text('alpha.dart'), findsOneWidget);
+      expect(looked, 1);
+
+      root = 'beta';
+      await pump(tester, workspaceRoot: '/work/beta', onLookupFiles: lookup);
+      await tester.enterText(find.byType(EditableText), '@');
+      await tester.pump();
+
+      expect(looked, 2, reason: "the old folder's index was reused");
+      expect(find.text('beta.dart'), findsOneWidget);
+      expect(find.text('alpha.dart'), findsNothing);
+    });
+
     testWidgets('without a lookup the @ types as plain text', (tester) async {
       await pump(tester);
       await tester.enterText(find.byType(EditableText), '@main.dart');

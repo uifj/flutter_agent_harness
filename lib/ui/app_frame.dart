@@ -33,7 +33,6 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:path/path.dart' as p;
 
 import '../l10n/locales.dart';
-import '../model/conversation.dart';
 import '../state/layout_controller.dart';
 import '../state/session_index.dart';
 import '../theme/dsw_alias.dart';
@@ -61,7 +60,6 @@ class AppFrame extends StatefulWidget {
     required this.bottom,
     this.overlay,
     this.workspaceRoot,
-    this.session,
     this.sessions,
     this.onPickWorkspace,
     this.onOpenSettings,
@@ -90,11 +88,18 @@ class AppFrame extends StatefulWidget {
   final Widget? overlay;
 
   /// The centre column's header (ADR-0053): which folder this conversation runs
-  /// in, which conversation that is, and the verbs that belong to it. All three
-  /// are optional because the frame is also pumped by hosts that have none of it
-  /// — a fresh install has no folder, and an unsaved conversation has no id.
+  /// in, which conversation that is, and the verbs that belong to it. Both are
+  /// optional because the frame is also pumped by hosts that have neither — a
+  /// fresh install has no folder.
+  ///
+  /// There is deliberately no `session` field here. The active conversation was
+  /// passed in as a value from `main.dart`, which computes it once off
+  /// `sessionsProvider` — and that provider hands back the same `SessionIndex`
+  /// instance forever, so the builder never re-ran on `setActive` and the header
+  /// kept naming the conversation the user had just left, with its menu acting on
+  /// that one (ADR-0055). A value read out of a ChangeNotifier at assembly time
+  /// is a snapshot; only the notifier is live.
   final String? workspaceRoot;
-  final SessionSummary? session;
   final SessionIndex? sessions;
   final VoidCallback? onPickWorkspace;
   final VoidCallback? onOpenSettings;
@@ -227,7 +232,6 @@ class _AppFrameState extends State<AppFrame> {
                             layout: layout,
                             narrow: merge,
                             workspaceRoot: widget.workspaceRoot,
-                            session: widget.session,
                             sessions: widget.sessions,
                             onPickWorkspace: widget.onPickWorkspace,
                             onOpenSettings: widget.onOpenSettings,
@@ -552,7 +556,6 @@ class _CenterToggleStrip extends StatelessWidget {
     required this.layout,
     required this.narrow,
     this.workspaceRoot,
-    this.session,
     this.sessions,
     this.onPickWorkspace,
     this.onOpenSettings,
@@ -561,7 +564,6 @@ class _CenterToggleStrip extends StatelessWidget {
   final LayoutController layout;
   final bool narrow;
   final String? workspaceRoot;
-  final SessionSummary? session;
   final SessionIndex? sessions;
   final VoidCallback? onPickWorkspace;
   final VoidCallback? onOpenSettings;
@@ -613,7 +615,9 @@ class _CenterToggleStrip extends StatelessWidget {
   /// on a maximised desktop window that is the last place anyone looks.
   Widget _header(BuildContext context, DswAlias color) {
     final root = workspaceRoot;
-    final active = session;
+    // Read live, every build: the strip is rebuilt by the `ListenableBuilder`
+    // above precisely because the index notified, and `active` is what moved.
+    final active = sessions?.active;
     final menu = active == null || sessions == null
         ? null
         : DswMenu(

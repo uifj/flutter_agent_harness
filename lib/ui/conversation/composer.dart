@@ -184,6 +184,20 @@ class ComposerState extends State<Composer> {
     if (widget.workspaceRoot != oldWidget.workspaceRoot) {
       _gitBranch = null;
       _queryBranch();
+      // The `@` menu indexes the folder, so it belongs to the folder that is
+      // gone. Left alone, the card kept ranking the previous project's files
+      // for the rest of its life — the card survives a folder change (it is the
+      // same composer), and the generation bump stops a fetch that was already
+      // in flight from landing on top of the new root.
+      _fileIndex = null;
+      _indexLoading = false;
+      _indexGeneration++;
+      // The fetch is otherwise fired by a keystroke (see [_onDraftChanged]), and
+      // a folder switch is not one: with the `@` menu already open, the card
+      // would sit on an empty index until the user typed again.
+      if (widget.onLookupFiles != null && _activeMentionToken != null) {
+        _ensureFileIndex();
+      }
     }
     final previous = oldWidget.draftScope ?? '__new__';
     if (previous == _scope) return;
@@ -237,9 +251,9 @@ class ComposerState extends State<Composer> {
   // The @ mention menu (dsh-at-file)
   // -------------------------------------------------------------------------
 
-  /// The workspace index the mention menu ranks against, refreshed when the
-  /// token opens and dropped when the menu closes — the plugin's per-session
-  /// cache, in miniature. Null while no fetch has landed.
+  /// The workspace index the mention menu ranks against: fetched on the token's
+  /// first open and kept for the card's life, dropped when the folder changes.
+  /// Null while no fetch has landed.
   List<FileEntry>? _fileIndex;
 
   /// Whether the index fetch is in flight.
