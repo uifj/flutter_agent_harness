@@ -221,6 +221,10 @@ class _SettingsPanelState extends State<SettingsPanel> {
   /// pointer.
   late settings.ThemeMode _theme = widget.settings.theme;
 
+  /// The notification toggle (ADR-0045 PH). Held locally like the theme —
+  /// applied on Save.
+  late bool _notificationsOn = widget.settings.notificationsOn;
+
   /// The appearance/behaviour preferences (ADR-0005). Held and committed like
   /// the theme. None of them rebuilds the runtime — they ride Save purely to
   /// persist — so they need no restart warning, only the same draft-to-document
@@ -493,6 +497,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
       fontSize: _textSize,
       conversationWidth: _conversationWidth,
       expandToolCalls: _expandToolCalls,
+      notificationsOn: _notificationsOn,
       savedProviders: widget.settings.savedProviders,
       activeProviderId: widget.settings.activeProviderId,
     );
@@ -803,7 +808,15 @@ class _SettingsPanelState extends State<SettingsPanel> {
           },
           value: _locale,
           onChanged: (mode) => setState(() => _locale = mode),
-          last: true,
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+          child: _SwitchRow(
+            label: context.tr('notificationsOn'),
+            description: context.tr('notificationsOnDesc'),
+            value: _notificationsOn,
+            onChanged: (value) => setState(() => _notificationsOn = value),
+          ),
         ),
       ],
     ),

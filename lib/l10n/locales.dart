@@ -562,6 +562,9 @@ const enStrings = <String, String>{
   'modelsActiveTag': 'active',
   'modelsRemove': 'Remove from list',
   'modelsAddHint': 'Add a model id, press Enter',
+  'notificationsOn': 'Raise the window when a run finishes',
+  'notificationsOnDesc':
+      'When the window is hidden in the tray, finishing a run brings it back to the front.',
   'helpDocs': 'Product docs',
   'helpCommunity': 'User community',
   'helpReportIssue': 'Report an issue',
@@ -1357,6 +1360,8 @@ const zhStrings = <String, String>{
   'modelsActiveTag': '当前',
   'modelsRemove': '从列表移除',
   'modelsAddHint': '输入模型 id，回车添加',
+  'notificationsOn': '运行结束后唤起窗口',
+  'notificationsOnDesc': '窗口隐藏在托盘时，运行结束自动回到前台。',
   'helpDocs': '产品文档',
   'helpCommunity': '用户社群',
   'helpReportIssue': '问题上报',

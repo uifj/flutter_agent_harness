@@ -142,6 +142,7 @@ Future<void> main() async {
       crashArchiveProvider.overrideWithValue(crash),
       authSessionProvider.overrideWithValue(auth),
       zcodeOriginProvider.overrideWithValue(appOrigin),
+      appWindowProvider.overrideWithValue(windowManager),
     ],
   );
   runApp(

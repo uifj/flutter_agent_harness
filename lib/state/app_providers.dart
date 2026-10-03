@@ -23,6 +23,7 @@
 import 'dart:io';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../model/app_settings.dart';
 import '../model/user_profile.dart';
@@ -113,6 +114,12 @@ AuthSnapshot authSnapshot(Ref ref) {
 String zcodeOrigin(Ref ref) =>
     throw UnimplementedError('override zcodeOrigin in main or tests');
 
+/// The window handle for the attention raise (ADR-0045 PH): null in hosts
+/// without a window binding (tests) — the raise then no-ops.
+@Riverpod(keepAlive: true)
+WindowManager? appWindow(Ref ref) =>
+    throw UnimplementedError('override appWindow in main or tests');
+
 /// The workbench preferences, opened alongside the settings for the same
 /// reason: the first frame's tab menus already need the switches.
 @Riverpod(keepAlive: true)
@@ -134,6 +141,7 @@ AppScope appScope(Ref ref) {
     support: ref.watch(supportDirectoryProvider),
     settings: ref.watch(settingsStoreProvider),
     prefs: ref.watch(prefsStoreProvider),
+    window: ref.watch(appWindowProvider),
   );
   ref.onDispose(scope.dispose);
   return scope;

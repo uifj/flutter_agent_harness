@@ -127,6 +127,7 @@ class AppSettings {
     this.fontSize = AppFontSize.medium,
     this.conversationWidth = AppConversationWidth.normal,
     this.expandToolCalls = true,
+    this.notificationsOn = true,
     this.savedProviders = const [],
     this.activeProviderId,
   });
@@ -153,6 +154,7 @@ class AppSettings {
         json['conversationWidth'] as String?,
       ),
       expandToolCalls = json['expandToolCalls'] as bool? ?? true,
+      notificationsOn = json['notificationsOn'] as bool? ?? true,
       savedProviders = [
         for (final entry in (json['savedProviders'] as List? ?? const []))
           if (entry is Map<String, dynamic>) ModelSettings.fromJson(entry),
@@ -195,6 +197,10 @@ class AppSettings {
   /// Whether a newly-shown tool block starts expanded (starkins default on).
   final bool expandToolCalls;
 
+  /// Whether finishing a background run raises the hidden window (ADR-0045
+  /// PH). Persisted only when off the default.
+  final bool notificationsOn;
+
   /// The saved provider connections (ADR-0045 PF-2): an address book of
   /// configured `ModelSettings` entries, each with a stable [ModelSettings.id]
   /// and its API key in the secret store under
@@ -225,6 +231,7 @@ class AppSettings {
     AppFontSize? fontSize,
     AppConversationWidth? conversationWidth,
     bool? expandToolCalls,
+    bool? notificationsOn,
     List<ModelSettings>? savedProviders,
     String? activeProviderId,
   }) => AppSettings(
@@ -239,6 +246,7 @@ class AppSettings {
     fontSize: fontSize ?? this.fontSize,
     conversationWidth: conversationWidth ?? this.conversationWidth,
     expandToolCalls: expandToolCalls ?? this.expandToolCalls,
+    notificationsOn: notificationsOn ?? this.notificationsOn,
     savedProviders: savedProviders ?? this.savedProviders,
     activeProviderId: activeProviderId ?? this.activeProviderId,
   );
@@ -255,6 +263,9 @@ class AppSettings {
     fontSize: fontSize,
     conversationWidth: conversationWidth,
     expandToolCalls: expandToolCalls,
+    notificationsOn: notificationsOn,
+    savedProviders: savedProviders,
+    activeProviderId: activeProviderId,
   );
 
   /// [path] adopted as the workspace, moved to the front of the recent list in
@@ -271,6 +282,9 @@ class AppSettings {
     fontSize: fontSize,
     conversationWidth: conversationWidth,
     expandToolCalls: expandToolCalls,
+    notificationsOn: notificationsOn,
+    savedProviders: savedProviders,
+    activeProviderId: activeProviderId,
   );
 
   AppSettings forgetWorkspace(String path) => copyWith(
@@ -344,6 +358,7 @@ class AppSettings {
     if (conversationWidth != AppConversationWidth.normal)
       'conversationWidth': conversationWidth.name,
     if (!expandToolCalls) 'expandToolCalls': false,
+    if (!notificationsOn) 'notificationsOn': false,
     if (savedProviders.isNotEmpty)
       'savedProviders': [
         for (final provider in savedProviders) provider.toJson(),
@@ -365,6 +380,7 @@ class AppSettings {
       other.fontSize == fontSize &&
       other.conversationWidth == conversationWidth &&
       other.expandToolCalls == expandToolCalls &&
+      other.notificationsOn == notificationsOn &&
       _listEq(other.savedProviders, savedProviders) &&
       other.activeProviderId == activeProviderId;
 
@@ -381,6 +397,9 @@ class AppSettings {
     fontSize,
     conversationWidth,
     expandToolCalls,
+    notificationsOn,
+    Object.hashAll(savedProviders),
+    activeProviderId,
   );
 
   static bool _listEq<T>(List<T> a, List<T> b) {

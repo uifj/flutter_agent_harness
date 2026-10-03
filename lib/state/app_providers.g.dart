@@ -422,6 +422,55 @@ final class ZcodeOriginProvider
 
 String _$zcodeOriginHash() => r'668c6c8edb964c8572d5c00828673c6b2f78d910';
 
+/// The window handle for the attention raise (ADR-0045 PH): null in hosts
+/// without a window binding (tests) — the raise then no-ops.
+
+@ProviderFor(appWindow)
+final appWindowProvider = AppWindowProvider._();
+
+/// The window handle for the attention raise (ADR-0045 PH): null in hosts
+/// without a window binding (tests) — the raise then no-ops.
+
+final class AppWindowProvider
+    extends $FunctionalProvider<WindowManager?, WindowManager?, WindowManager?>
+    with $Provider<WindowManager?> {
+  /// The window handle for the attention raise (ADR-0045 PH): null in hosts
+  /// without a window binding (tests) — the raise then no-ops.
+  AppWindowProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'appWindowProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$appWindowHash();
+
+  @$internal
+  @override
+  $ProviderElement<WindowManager?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  WindowManager? create(Ref ref) {
+    return appWindow(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(WindowManager? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<WindowManager?>(value),
+    );
+  }
+}
+
+String _$appWindowHash() => r'e012b885f3b61153922ac672f050732e4f587c32';
+
 /// The workbench preferences, opened alongside the settings for the same
 /// reason: the first frame's tab menus already need the switches.
 
@@ -539,7 +588,7 @@ final class AppScopeProvider
   }
 }
 
-String _$appScopeHash() => r'a2c0b3eccbef5ce40ab1f33025e4c2c564737b11';
+String _$appScopeHash() => r'ad2a593bdff1060c21b74030b0c6f25aa8b88815';
 
 /// The settings document's current value. Theme, locale, workspace, model
 /// fields — everything the tree renders straight out of the document.

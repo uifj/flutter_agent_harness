@@ -12,6 +12,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:window_manager/window_manager.dart';
 import 'package:flutter/foundation.dart' show compute;
 
 import '../genkit/agent_runtime.dart';
@@ -24,6 +25,7 @@ import '../model/workspace.dart';
 import '../model/workspace_index.dart';
 import '../model/workbench_prefs.dart';
 import 'approval_rule_store.dart';
+import 'attention_service.dart';
 import 'checkpoint_store.dart';
 import 'crash_archive.dart';
 import 'usage_ledger.dart';
@@ -46,6 +48,7 @@ class AppScope {
     required Directory support,
     required this.settings,
     required this.prefs,
+    this.window,
   }) : _support = support {
     _sessionRoot = Directory('${support.path}/sessions')
       ..createSync(recursive: true);
@@ -117,6 +120,14 @@ class AppScope {
       },
     );
     _sessions.refresh();
+    // Attention rides the conversation's busy→idle edge (ADR-0045 PH); the
+    // controller exists by now, so this sits after its construction.
+    attention = AttentionService(
+      conversation: _conversation,
+      isBusy: () => _conversation.isBusy,
+      settings: settings,
+      window: window,
+    );
   }
 
   /// Application Support, handed down from `main`: snapshots and the session
@@ -145,8 +156,19 @@ class AppScope {
   /// The local crash archive — the settings screen's log entry reads it.
   late final CrashArchive crashArchive;
 
+  /// Raises the hidden window when a background run finishes (ADR-0045 PH).
+  /// Null in hosts without a window binding (tests) — the raise then no-ops.
+  late final AttentionService attention;
+
+  /// The window handle for [attention]; null means no raise path.
+  final WindowManager? window;
+
   /// The local usage ledger — the settings section reads its summary.
   UsageLedger get usageLedger => _usageLedger;
+
+  /// The attention service — the General section's notification toggle gates
+  /// its raise behavior through the settings document.
+  AttentionService get attentionService => attention;
 
   /// The id recorded changes get tagged with until the conversation earns a
   /// real session id — see [CheckpointStore.adoptConversation].
@@ -257,6 +279,7 @@ class AppScope {
   /// widget's `dispose` calls it — but the ordering rules below are the same
   /// kind of promise one would make there.
   void dispose() {
+    attention.dispose();
     _runtime.dispose();
     _conversation.dispose();
     _sideChat.dispose();
