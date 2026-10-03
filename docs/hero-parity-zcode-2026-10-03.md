@@ -43,3 +43,21 @@
   换句那条 `Timer` 在 widget 测试里量不到（`pump(duration)` 不推进墙上时钟，与 ADR-0023 那条同族），
   所以它只有真机这一道门。
 
+
+## 3. 复核补记（落地之后第二次逐像素看图）
+
+改完之后把参考那张截图裁成两条放大重看，两处新东西，各自有了断：
+
+- **草稿区外面那圈发丝边**（chip 之下、占位文字与工具栏所在的那个圆角盒）。参考的卡是
+  `chat-composer-input-surface w-full` + `rounded-2xl bg-surface shadow-xl/5`
+  （`ConversationComposer.tsx:2230-2233`，`rounded-2xl` = 我们的 `float` 档，已一致）；
+  但那枚 `chat-composer-input-surface` **在整个归档里只出现这一次**——
+  `grep -rln "chat-composer-input-surface" .` 只命中 `ConversationComposer.tsx`，
+  `grep -rn "input-surface" --include=*.css .` 零命中。也就是说这圈边由一份我们手上没有的样式表画的，
+  它的形状/色档无从取证。按 ADR-0041（"上游有"既不是"上游能用"也不是"我们缺"）**不搬**；
+  而且本仓库对"键盘在谁那里"只有一枚答案——卡的那道边（ADR-0038 明确把聚焦态的第三色收回来了），
+  再套一圈就是同一句话答两遍。要搬的前提是拿到真值（那圈边的 radius 与色档），不是照截图猜一个。
+- **发送钮空草稿时是灰的**。这一条查下来**不是差异**：参考也从不为禁用换填充
+  （`ConversationComposer.tsx:2086-2093` 只有 `bg-brand` + `disabled={!canSend}`），
+  灰是共享 Button 的禁用样式在起作用。我们的同一格由 shad 的 `ShadDisabled` 读主题 `disabledOpacity`
+  （40%）表达，机制同类。留在这里是为了让下一个人不必再为它开一次对照。
