@@ -1,8 +1,8 @@
 // The transcript.
 //
 // A port of `ChatView.module.css`: a full-bleed scroller with 16px of vertical
-// padding and sides of `clearance + 16`, holding a 748px column centred on the
-// same axis as the input card, with one 16px rhythm between rows.
+// padding and sides of `clearance + 16`, holding a [chatContentWidth] column
+// centred on the same axis as the input card, with one 16px rhythm between rows.
 //
 // dsh leaves virtualisation as a future note on its `.flowItem` seam;
 // `ListView.builder` already builds on demand, so this port is ahead of the

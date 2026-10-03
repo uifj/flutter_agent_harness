@@ -57,10 +57,17 @@ String formatTokenCount(int tokens) {
   return '${(tokens / 1000000 * 10).round() / 10}M';
 }
 
-/// `--dsh-chat-content-width`. The transcript column, and the axis every other
-/// card in this column is measured against. This is the *normal* conversation
-/// width; the 'wide' class (ADR-0005) is [chatContentWidthWide].
-const chatContentWidth = 748.0;
+/// The transcript column, and the axis every other card in this column is
+/// measured against. This is the *normal* conversation width; the 'wide' class
+/// (ADR-0005) is [chatContentWidthWide].
+///
+/// It was dsh's `--dsh-chat-content-width` (748) until the 2026-10-03 walkthrough
+/// judged the column too wide: at 16px body text a 748px measure is ~93 latin
+/// characters, well past the 60–75 the eye tracks back, and the input card built
+/// on it read as edge-to-edge in a default window. 672 is the same measure the
+/// reference's hero uses (`max-w-2xl`), chosen here for the line length rather
+/// than for the match.
+const chatContentWidth = 672.0;
 
 /// The 'wide' conversation column. Absent a design token upstream, picked as the
 /// next step past [chatContentWidth] that still leaves the details column room

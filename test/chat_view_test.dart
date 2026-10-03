@@ -49,7 +49,7 @@ void main() {
     tail.dispose();
   });
 
-  /// Pumps the column wide enough that the 748px content width, not the viewport,
+  /// Pumps the column wide enough that the content width, not the viewport,
   /// is what decides the layout.
   ///
   /// The amplified step is composed in `MaterialApp.builder`, not under `home:`:
@@ -302,9 +302,9 @@ void main() {
   // column is not off-centre: at 1400/1152/700 the card lands on the middle of
   // the width it is given, the reply starts one inset inside its left edge and
   // the aside ends one inset inside its right edge. The strip belongs to the
-  // aside, whose own cap is `min(525px, 82%)` of the column — 223px of the 748
+  // aside, whose own cap is `min(525px, 82%)` of the column — 147px of the 672
   // column at full width, and the percentage takes over below it (at 700 the
-  // column is 636 and the bubble is 521.5). Guarding the two axes, not the
+  // column is 636 and the bubble is 521.5, both independent of the constant). Guarding the two axes, not the
   // pixels, is what keeps a future `Center` from quietly becoming one-sided.
   testWidgets('the transcript and the aside share the card\'s two axes', (
     tester,

@@ -20,6 +20,7 @@ import 'package:agent_harness/state/streaming_tail.dart';
 import 'package:agent_harness/theme/dsw_shad_bridge.dart';
 import 'package:agent_harness/theme/dsw_theme.dart';
 import 'package:agent_harness/ui/appearance_scope.dart';
+import 'package:agent_harness/ui/conversation/conversation_root.dart';
 import 'package:agent_harness/ui/conversation/details_panel.dart';
 import 'package:agent_harness/ui/tool/tool_card.dart';
 import 'package:flutter/material.dart';
@@ -84,7 +85,7 @@ void main() {
         ),
         home: Scaffold(
           body: AppearanceScope(
-            contentWidth: 748,
+            contentWidth: chatContentWidth,
             expandToolCalls: true,
             child: Align(
               alignment: Alignment.topLeft,

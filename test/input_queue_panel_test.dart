@@ -91,7 +91,8 @@ void main() {
   testWidgets('a row can be dropped', (tester) async {
     await pump(tester);
 
-    await tester.tap(find.text('Remove').first);
+    // The × is the row's removal; the word lives in its tooltip.
+    await tester.tap(find.byIcon(LucideIcons.x).first);
     await tester.pump();
 
     expect(queuedTexts(), ['beta', 'gamma']);

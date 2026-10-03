@@ -22,6 +22,7 @@ import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../appearance_scope.dart';
 import '../primitives/capsule_button.dart';
+import '../primitives/icon_button.dart';
 import 'conversation_root.dart';
 
 class InputQueuePanel extends StatelessWidget {
@@ -174,10 +175,17 @@ class _QueueRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 4),
-          CapsuleButton(
-            label: context.tr('removeAttachment'),
-            size: CapsuleSize.sm,
-            variant: CapsuleVariant.ghost,
+          // An ×, not the word: at the system's 2.2x step "Remove" measured
+          // 178px beside a 436px delivery capsule, which left the queued draft
+          // a line of 0.0px and spilled the row. The attachment chips already
+          // say "drop this one" with this glyph under this same key, and the
+          // primitive puts the word back where it belongs — in the tooltip and
+          // the semantic name (ADR-0024, ADR-0017's "shed labels, not seats").
+          DswIconButton(
+            icon: LucideIcons.x,
+            iconSize: DswShape.iconTiny,
+            size: 28 * MediaQuery.textScalerOf(context).scale(1),
+            tooltip: context.tr('removeAttachment'),
             onTap: () => onRemove(item.id),
           ),
         ],

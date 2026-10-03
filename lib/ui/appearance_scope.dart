@@ -15,7 +15,7 @@
 //
 // The `fallback` argument is what keeps the tree honest without a scope: every
 // widget test pumps the conversation without mounting this widget, and must
-// fall back to the pre-ADR-0005 default (748, collapsed) so those tests measure
+// fall back to the unscoped defaults (the normal width, collapsed) so those tests measure
 // the same layout they always did. The app always mounts it, so the app never
 // sees the fallback.
 
