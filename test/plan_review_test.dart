@@ -165,14 +165,24 @@ void main() {
     ) async {
       await pump(tester);
       // Before any plan: the composer is there, the card is not.
-      expect(find.text('Ask anything, or describe a task'), findsOneWidget);
+      expect(
+        find.text(
+          'Ask Agent Harness anything, @ to add context, / for commands or capabilities',
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Plan review'), findsNothing);
 
       await deliverPlan(tester, '# the plan');
 
       expect(find.text('Plan review'), findsOneWidget);
       expect(find.text('the plan', findRichText: true), findsOneWidget);
-      expect(find.text('Ask anything, or describe a task'), findsNothing);
+      expect(
+        find.text(
+          'Ask Agent Harness anything, @ to add context, / for commands or capabilities',
+        ),
+        findsNothing,
+      );
     });
 
     testWidgets('no plan, or not plan mode, means no card', (tester) async {
@@ -237,7 +247,12 @@ void main() {
       expect(source.turns, 1);
       expect(controller.approvalMode, ApprovalMode.plan);
       expect(find.text('Plan review'), findsNothing);
-      expect(find.text('Ask anything, or describe a task'), findsOneWidget);
+      expect(
+        find.text(
+          'Ask Agent Harness anything, @ to add context, / for commands or capabilities',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('a discussed plan does not come back on the next rebuild', (

@@ -157,10 +157,16 @@ const enStrings = <String, String>{
   'closeDetailsPanel': 'Close details panel',
 
   // The hero and the composer
-  'askAnything': 'Ask anything',
-  'askAnythingHint': 'Ask anything, or describe a task',
   'queueDraftHint': 'Keep typing — this queues behind the current turn',
-  'heroSubtitle': 'Ask anything, or open a workspace to begin',
+  'askWithContextHint':
+      'Ask Agent Harness anything, @ to add context, / for commands or capabilities',
+  'addContext': 'Add context',
+  'greetingMorningEarly': 'Morning, ready when you are',
+  'greetingMorning': 'Morning, how can I help?',
+  'greetingNoon': 'Noon break?',
+  'greetingAfternoon': 'Good afternoon! Leave the rest to me.',
+  'greetingEvening': 'Evening, nice work today',
+  'greetingLateNight': 'It\'s late—remember to take care of yourself.',
 
   // Workspace status bar (below composer)
   'workspaceStatusBar': 'Workspace status bar',
@@ -390,7 +396,6 @@ const enStrings = <String, String>{
 
   // The composer's tool row
   'attachImage': 'Attach images',
-  'attach': 'Attach',
   'chooseImages': 'Choose image files…',
   'chooseDocuments': 'Attach documents (PDF, text)…',
   'pasteImage': 'Paste image from clipboard',
@@ -974,10 +979,15 @@ const zhStrings = <String, String>{
   'closeDetailsPanel': '关闭详情面板',
 
   // The hero and the composer
-  'askAnything': '随便问点什么',
-  'askAnythingHint': '输入问题，或描述一个任务',
   'queueDraftHint': '继续输入，会排在当前这轮之后',
-  'heroSubtitle': '随时提问，或打开工作区开始探索',
+  'askWithContextHint': '向 Agent Harness 提问，使用 @ 添加上下文，使用 / 选择命令或能力',
+  'addContext': '添加上下文',
+  'greetingMorningEarly': '早上好呀，新的一天开始啦',
+  'greetingMorning': '上午好呀，有什么想让我帮忙的吗',
+  'greetingNoon': '中午好呀，要不要先休息一下',
+  'greetingAfternoon': '下午好呀，接下来交给我吧',
+  'greetingEvening': '晚上好呀，今天辛苦啦',
+  'greetingLateNight': '夜深啦，别忘了照顾好自己哦',
 
   // Workspace status bar (below composer)
   'workspaceStatusBar': '工作区状态栏',
@@ -1203,7 +1213,6 @@ const zhStrings = <String, String>{
 
   // The composer's tool row
   'attachImage': '添加图片',
-  'attach': '附件',
   'chooseImages': '选择图片文件…',
   'chooseDocuments': '附加文档（PDF、文本）…',
   'pasteImage': '从剪贴板粘贴图片',

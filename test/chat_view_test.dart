@@ -19,7 +19,9 @@
 
 import 'dart:async';
 
+import 'package:agent_harness/l10n/locales.dart';
 import 'package:agent_harness/model/conversation.dart';
+import 'package:agent_harness/model/greeting.dart';
 import 'package:agent_harness/model/turn_event.dart';
 import 'package:agent_harness/state/conversation_controller.dart';
 import 'package:agent_harness/state/streaming_tail.dart';
@@ -135,6 +137,25 @@ void main() {
     await pump(tester);
     expect(tester.takeException(), isNull);
     expect(find.text('Deep diving...'), findsNothing);
+  });
+
+  testWidgets('the hero headline says the hour, and only that', (tester) async {
+    // H1 of `docs/hero-parity-zcode-2026-10-03.md`: the reference's empty-state
+    // header is the mark plus ONE greeting, picked from six time bands
+    // (`ConversationDraftEmptyState.tsx:29-35`). This app painted a fixed title
+    // and a second line under it; neither has a counterpart there, so both went
+    // along with their dictionary keys.
+    await pump(tester);
+
+    expect(
+      find.text(enStrings[Greetings.key(Greetings.of(DateTime.now()))]!),
+      findsOneWidget,
+    );
+    expect(find.text('Ask anything'), findsNothing);
+    expect(
+      find.text('Ask anything, or open a workspace to begin'),
+      findsNothing,
+    );
   });
 
   testWidgets('the mid-turn activity row mounts and keeps animating', (

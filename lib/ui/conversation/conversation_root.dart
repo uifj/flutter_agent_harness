@@ -11,6 +11,7 @@
 // pays for it in bottom padding, measured from the seat one frame late — which is
 // what dsh's own `--dsh-composer-height` resize observer does.
 
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:desktop_drop/desktop_drop.dart';
@@ -20,6 +21,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import '../../l10n/locales.dart';
 import '../../model/approval_mode.dart';
 import '../../model/conversation.dart';
+import '../../model/greeting.dart';
 import '../../model/workspace_index.dart';
 import '../../state/checkpoint_store.dart';
 import '../../state/conversation_controller.dart';
@@ -162,8 +164,31 @@ class _ConversationRootState extends State<ConversationRoot> {
   /// precisely because that is the identity a restore replays too.
   String? _settledPlan;
 
+  /// The hero's greeting is a fact about the clock, so it has to expire. The
+  /// reference schedules exactly this and re-renders on it
+  /// (`ConversationDraftEmptyState.tsx:38-52, :91-99`): a page left open across
+  /// 18:00 should not still say 下午好 at 19:00.
+  Timer? _greetingTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleGreeting();
+  }
+
+  void _scheduleGreeting() {
+    final now = DateTime.now();
+    _greetingTimer?.cancel();
+    _greetingTimer = Timer(Greetings.nextBoundary(now).difference(now), () {
+      if (!mounted) return;
+      setState(() {});
+      _scheduleGreeting();
+    });
+  }
+
   @override
   void dispose() {
+    _greetingTimer?.cancel();
     _seatHeight.dispose();
     super.dispose();
   }
@@ -243,6 +268,10 @@ class _ConversationRootState extends State<ConversationRoot> {
   /// that explains what the app needs before any tool will run.
   Widget _hero() {
     final contentWidth = AppearanceScope.widthOf(context, chatContentWidth);
+    // A workspace already picked means the card itself carries the chip (H2),
+    // so the picker only stands on its own before the first folder is chosen —
+    // a chip needs a name, and "no folder yet" is the one case it has none.
+    final picked = widget.workspaceRoot?.isNotEmpty ?? false;
     return Center(
       child: SizedBox(
         width:
@@ -253,9 +282,13 @@ class _ConversationRootState extends State<ConversationRoot> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _headline(),
-              const SizedBox(height: 8),
-              const HeroWorkspacePicker(),
-              const SizedBox(height: 8),
+              // `ConversationDraftEmptyState.tsx:170-176` — the header block and
+              // the card are separated by one `gap-6`, not by a stack of eights.
+              if (!picked) ...[
+                const SizedBox(height: 24),
+                const HeroWorkspacePicker(),
+              ],
+              const SizedBox(height: 24),
               _stack(hero: true),
             ],
           ),
@@ -269,28 +302,24 @@ class _ConversationRootState extends State<ConversationRoot> {
   /// The row scales down rather than overflowing when the centre column is at
   /// its floor — the hero is the one headline with no smaller step to fall
   /// back to, and a shrunken wordmark beats a clipped one.
+  /// `ConversationDraftEmptyState.tsx:177-197`: a mark, then the greeting — and
+  /// nothing else. The reference's header block has no subtitle: the sentence
+  /// already says who to ask, and the workspace it asks about is named inside the
+  /// card below. Its own size is measured and clamped to 20–30px (`:54-78`);
+  /// `heroTitle26` sits inside that band, so the ramp keeps its name (ADR-0027).
   Widget _headline() {
     final color = context.dsw;
     return FittedBox(
       fit: BoxFit.scaleDown,
-      child: Column(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(LucideIcons.droplet, size: 34, color: color.labelPrimary),
-              const SizedBox(width: 10),
-              Text(
-                context.tr('askAnything'),
-                style: DswType.heroTitle26.copyWith(color: color.labelPrimary),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
+          Icon(LucideIcons.droplet, size: 34, color: color.labelPrimary),
+          const SizedBox(width: 10),
           Text(
-            context.tr('heroSubtitle'),
-            style: DswType.xxs12.copyWith(color: color.labelSecondary),
+            context.tr(Greetings.key(Greetings.of(DateTime.now()))),
+            style: DswType.heroTitle26.copyWith(color: color.labelPrimary),
           ),
         ],
       ),

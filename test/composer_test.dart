@@ -2,7 +2,7 @@
 //
 // The row is three controls — attach, mode, send — and the first two are menus,
 // which is exactly the part a reducer or a controller test cannot see: what the
-// paperclip offers, what the mode chip says about the current mode, and what
+// `+` offers, what the mode chip says about the current mode, and what
 // typing `/` does to the draft. The plugin-backed actions (the file pick, the
 // clipboard paste) are deliberately not driven here — their platform channels
 // do not exist in a test harness, and the interesting contract is what the
@@ -210,12 +210,12 @@ void main() {
   );
 
   group('the row', () {
-    testWidgets('paints the paperclip, the mode chip, and the send button', (
+    testWidgets('paints the `+`, the mode chip, and the send button', (
       tester,
     ) async {
       await pump(tester);
 
-      expect(find.byIcon(LucideIcons.paperclip), findsOneWidget);
+      expect(find.byIcon(LucideIcons.plus), findsOneWidget);
       expect(find.text('Ask every time'), findsOneWidget);
       expect(find.byIcon(LucideIcons.arrow_up), findsOneWidget);
       // The menu is closed until the chip is tapped.
@@ -237,7 +237,7 @@ void main() {
       // on no bottom padding. The row must not lose a control to it.
       await pump(tester, hero: true);
 
-      expect(find.byIcon(LucideIcons.paperclip), findsOneWidget);
+      expect(find.byIcon(LucideIcons.plus), findsOneWidget);
       expect(find.text('Ask every time'), findsOneWidget);
       expect(find.byIcon(LucideIcons.arrow_up), findsOneWidget);
     });
@@ -246,7 +246,7 @@ void main() {
   group('the attach menu', () {
     testWidgets('offers a file pick and a clipboard paste', (tester) async {
       await pump(tester);
-      await tester.tap(find.byIcon(LucideIcons.paperclip));
+      await tester.tap(find.byIcon(LucideIcons.plus));
       await tester.pumpAndSettle();
 
       expect(find.text('Choose image files…'), findsOneWidget);
@@ -649,7 +649,12 @@ void main() {
 
     testWidgets('the hint says what sending would do now', (tester) async {
       await pump(tester);
-      expect(find.text('Ask anything, or describe a task'), findsOneWidget);
+      expect(
+        find.text(
+          'Ask Agent Harness anything, @ to add context, / for commands or capabilities',
+        ),
+        findsOneWidget,
+      );
 
       await pump(tester, busy: true, blocked: true);
       expect(
@@ -825,7 +830,7 @@ void main() {
       await pump(tester, width: 320, directory: seeded());
 
       expect(tester.takeException(), isNull);
-      expect(find.byIcon(LucideIcons.paperclip), findsOneWidget);
+      expect(find.byIcon(LucideIcons.plus), findsOneWidget);
       expect(find.byIcon(LucideIcons.shield_question_mark), findsOneWidget);
       expect(find.byIcon(LucideIcons.cpu), findsOneWidget);
       expect(find.byIcon(LucideIcons.arrow_up), findsOneWidget);
@@ -866,7 +871,7 @@ void main() {
       await pump(tester, width: 120, directory: seeded());
 
       expect(tester.takeException(), isNull);
-      expect(find.byIcon(LucideIcons.paperclip), findsOneWidget);
+      expect(find.byIcon(LucideIcons.plus), findsOneWidget);
       expect(find.byIcon(LucideIcons.arrow_up), findsOneWidget);
       expect(find.byIcon(LucideIcons.shield_question_mark), findsNothing);
       expect(find.byIcon(LucideIcons.cpu), findsNothing);
@@ -927,7 +932,7 @@ void main() {
         expect(rows, findsNothing);
       }
 
-      await open(find.byIcon(LucideIcons.paperclip), 'Choose image files…');
+      await open(find.byIcon(LucideIcons.plus), 'Choose image files…');
       await open(find.byIcon(LucideIcons.shield_question_mark), 'Plan first');
       expect(tester.takeException(), isNull);
     });
@@ -955,6 +960,75 @@ void main() {
       } finally {
         temp.deleteSync(recursive: true);
       }
+    });
+  });
+
+  // Two facts the hero batch (H2/H4 of
+  // `docs/hero-parity-zcode-2026-10-03.md`) put on the card, both read from what
+  // the tree paints rather than from a widget argument.
+  group('the card holds its chip and its send', () {
+    testWidgets('the workspace chip is a row of the card, above the draft', (
+      tester,
+    ) async {
+      // The reference's `contextHeader` reaches the composer from the shell and
+      // renders inside the same surface as the textarea — which folder a task
+      // runs in is part of the question, not a status line about the window.
+      final temp = Directory.systemTemp.createTempSync('chip-in-the-card');
+      try {
+        // runAsync: the chip asks git for the branch, and the fake-async zone
+        // cannot host a real process.
+        await tester.runAsync(() => pump(tester, workspaceRoot: temp.path));
+        await tester.pumpAndSettle();
+
+        final card = find.byWidgetPredicate(
+          (w) =>
+              w is AnimatedContainer &&
+              w.decoration is BoxDecoration &&
+              (w.decoration! as BoxDecoration).borderRadius ==
+                  BorderRadius.circular(DswShape.float),
+        );
+        final cardRect = tester.getRect(card);
+        final label = tester.getRect(find.text('Local'));
+        final glyph = tester.getRect(find.byIcon(LucideIcons.folder));
+
+        expect(cardRect.contains(label.topLeft), isTrue);
+        expect(cardRect.contains(label.bottomRight), isTrue);
+        expect(cardRect.contains(glyph.topLeft), isTrue);
+        final draft = tester.getRect(find.byType(EditableText));
+        expect(label.bottom, lessThanOrEqualTo(draft.top));
+        expect(glyph.bottom, lessThanOrEqualTo(draft.top));
+      } finally {
+        temp.deleteSync(recursive: true);
+      }
+    });
+
+    testWidgets('the send paints the control tier, not a disc', (tester) async {
+      // `rounded-lg` on a 34px box, per `ConversationComposer.tsx:2079-2084`. A
+      // `pill` radius here clips to half the box and renders an avatar-shaped
+      // button — ADR-0034's exact failure, which this app shipped until the
+      // hero batch.
+      await pump(tester);
+      await tester.pumpAndSettle();
+
+      final painted = tester
+          .widgetList<Container>(
+            find.descendant(
+              of: find.ancestor(
+                of: find.byIcon(LucideIcons.arrow_up),
+                matching: find.byType(shad.ShadButton),
+              ),
+              matching: find.byType(Container),
+            ),
+          )
+          .map((c) => (c.decoration as BoxDecoration?)?.borderRadius)
+          .whereType<BorderRadius>()
+          .toList();
+
+      expect(
+        painted,
+        contains(BorderRadius.circular(DswShape.control)),
+        reason: 'no painted corner was found at all: $painted',
+      );
     });
   });
 
@@ -1001,11 +1075,7 @@ void main() {
 
       testWidgets('the attach menu keeps its labels ($label)', (tester) async {
         await pumpCard(tester);
-        await open(
-          tester,
-          find.byIcon(LucideIcons.paperclip),
-          'the attach menu',
-        );
+        await open(tester, find.byIcon(LucideIcons.plus), 'the attach menu');
         expect(find.text('Choose image files…'), findsOneWidget);
       });
 
