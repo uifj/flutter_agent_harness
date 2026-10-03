@@ -1,6 +1,6 @@
 # 项目工作流规则（workflow）
 
-本项目 `agent_harness`：用 Flutter + Genkit 从零实现的**桌面端 AI Agent 工作台**（chat UI + tool-call 投影 + 分栏 workbench；macOS/Windows/Linux 三桌面目标，见 ADR-0003），设计思想分别取自 dsh（Runtime 内核）与 better-sidebar（工作台交互），不 fork 二者代码。
+本项目 **企划星 / PlanStar**（pubspec 包名 `planstar`）：用 Flutter + Genkit 从零实现的**桌面端 AI Agent 工作台**（chat UI + tool-call 投影 + 分栏 workbench；macOS/Windows/Linux 三桌面目标，见 ADR-0003），设计思想分别取自 dsh（Runtime 内核）与 better-sidebar（工作台交互），不 fork 二者代码。
 
 顶层形态是**两种工作区模式**（ADR-0007 立模式，ADR-0037 换内核）：**企划**（当前工作区内 .md 的本地工作台：一个集合 = Table/List/Gallery/Board/Calendar 对同一份 `PlanStruct` 记录的五种投影，外加 All Content／对象信息／模板／Date／Gallery／回收站几面库屏、主屏组件条与块编辑器）与**代理**（对话 + 工具环 + 双树工作台）。
 
@@ -81,7 +81,7 @@
 
 **genkit 升版。** 投影逻辑的依据全写在 `spike/agent_spike.dart` 头部的 FINDINGS（可执行证据）。升完依赖先 `dart run spike/agent_spike.dart` 重跑，再对照这三条：`Part` 是单一 json-backed 类型（`part is TextPart` 永不成立，要用 `PartExtension` 的 `isText`/`isToolRequest`/… 判别）；`SchemanticType.jsonSchema(...)` 不存在，运行时 schema 用 `SchemanticType.from<T>(jsonSchema: ..., parse: ...)`；`chunk.accumulatedText` 是 **turn-global**，不能当单条消息正文，要按 `chunk.raw.modelChunk.index` 分组。若升版使 FINDINGS 失效，先补 ADR 记录新事实，再改 `lib/genkit/`。
 
-**工作区指令注入（ADR-0009）。** `lib/genkit/instructions.dart` 会在开会话或换工作区时，把用户级 `~/.agent_harness/AGENTS.md` 与**从文件系统根到工作区这条链上**的 `AGENTS.md`/`.agents/AGENTS.md` 合成一个块，作为**首条用户消息的前置 TextPart** 发给模型（不是 system prompt——agent 只定义一次、workspace 是活 setter）。三条实操后果：① 本仓库的 `AGENTS.md` 与它指向的规则**现在是模型的输入**，写它就等于写给 agent 的指令，密钥/内部主机名一律不要放进去；② 只向上找、**不向下扫子目录**，子项目的 `AGENTS.md` 要靠 `read` 工具自己取；③ 预算是单文件 8 KiB / 总 24 KiB，超限会**在块里明说截断**，所以别指望长文件后半段生效。`openSession()` 恢复的会话不会重发（历史里已有）。改这块行为的回归面：`test/instructions_test.dart`。
+**工作区指令注入（ADR-0009）。** `lib/genkit/instructions.dart` 会在开会话或换工作区时，把用户级 `~/.planstar/AGENTS.md` 与**从文件系统根到工作区这条链上**的 `AGENTS.md`/`.agents/AGENTS.md` 合成一个块，作为**首条用户消息的前置 TextPart** 发给模型（不是 system prompt——agent 只定义一次、workspace 是活 setter）。三条实操后果：① 本仓库的 `AGENTS.md` 与它指向的规则**现在是模型的输入**，写它就等于写给 agent 的指令，密钥/内部主机名一律不要放进去；② 只向上找、**不向下扫子目录**，子项目的 `AGENTS.md` 要靠 `read` 工具自己取；③ 预算是单文件 8 KiB / 总 24 KiB，超限会**在块里明说截断**，所以别指望长文件后半段生效。`openSession()` 恢复的会话不会重发（历史里已有）。改这块行为的回归面：`test/instructions_test.dart`。
 
 **加/改一个 agent 工具。** 顺序是：`lib/genkit/tools.dart`（`WorkspaceTools` 只注册一次，工具在调用时读 workspace，换文件夹不重注册）→ 需要新事件形状时在 `lib/model/turn_event.dart` / `conversation.dart` 里表达 → `lib/genkit/agent_runtime.dart` 做投影 → UI 侧 `lib/ui/tool/tool_card.dart`。会写文件/执行命令的工具要走 `lib/model/approval_mode.dart` 的审批回路（interrupt → resume），判定见下一段。工具的 description 与返回给模型的 error 文本**不进 i18n**：那是模型读的，不是 UI 文案。验收：`dart run spike/runtime_smoke.dart`（离线跑 no-key / 空 store 路径；带 `DEEPSEEK_API_KEY` 则真跑一轮流式 + 工具环 + 审批 + **覆盖写镜像断言** + 恢复；判成败别看接了管道的退出码）。这道门能不能跑取决于 `lib/genkit/` 保持无 Flutter（ADR-0015，规则 6 守着）——工具需要跨层共享的状态时，把纯 Dart 的形状放进 `lib/model/`，别去 import `lib/state/`。
 
