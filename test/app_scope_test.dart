@@ -89,4 +89,50 @@ void main() {
     );
     expect(scope.runtime, same(before));
   });
+
+  test('opening a conversation adopts the folder it was started in', () async {
+    // Its own host: the sidecar row has to be on disk before the scope opens it.
+    final root = Directory.systemTemp.createTempSync('app_scope_folder');
+    // A real folder — the runtime resolves the workspace through the same guard
+    // the file tools use, so a made-up path is not something it can open.
+    final other = Directory.systemTemp.createTempSync('app_scope_elsewhere');
+    final sessions = Directory('${root.path}/sessions')..createSync();
+    File(
+      '${sessions.path}/sessions.json',
+    ).writeAsStringSync('{"s-elsewhere": {"workspaceRoot": "${other.path}"}}');
+    final scoped = AppScope(
+      support: root,
+      settings: await SettingsStore.open(root),
+      prefs: await PrefsStore.open(root),
+    );
+    addTearDown(() {
+      scoped.dispose();
+      if (root.existsSync()) root.deleteSync(recursive: true);
+      if (other.existsSync()) other.deleteSync(recursive: true);
+    });
+    final before = scoped.settings.value.workspaceRoot;
+
+    // No snapshot exists behind either id, and genkit says so by throwing. The
+    // guard is about what happened *before* that: `openSession` adopts the
+    // folder first, so a conversation the sidecar owns is read with the tools
+    // pointed at its own files, not at whatever folder was open before the row
+    // was clicked.
+    await expectLater(scoped.openSession('s-unlisted'), throwsStateError);
+    // A conversation with no ownership row claims no folder — the history
+    // written before ADR-0039 has none, and moving the workspace on a hunch
+    // would be a second way to be in the wrong place.
+    expect(scoped.settings.value.workspaceRoot, before);
+
+    await expectLater(scoped.openSession('s-elsewhere'), throwsStateError);
+    // Document, live runtime and workbench all move together: `save` is the one
+    // path that changes folders (ADR-0039), and it is what keeps the approvals
+    // book, the rewind history and the file tree on the same side of the move.
+    expect(scoped.settings.value.workspaceRoot, other.path);
+    expect(
+      scoped.runtime.workspaceRoot,
+      other.resolveSymbolicLinksSync(),
+      reason: "the tools answer about the transcript's own folder",
+    );
+    expect(scoped.workbench.workspaceRoot, other.path);
+  });
 }

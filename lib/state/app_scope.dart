@@ -495,6 +495,17 @@ class AppScope {
   }
 
   Future<void> openSession(String id) async {
+    // A conversation belongs to the folder it started in. Opening one whose
+    // workspace is not the live one left the tools answering about a different
+    // set of files than the transcript was talking about — the header added by
+    // ADR-0053 made that visible, it did not create it. The ownership fact is
+    // the sidecar's (ADR-0039 D1: a genkit snapshot cannot carry it), so this
+    // reads it there rather than asking the surface to remember to pass it.
+    //
+    // Adopted first, on purpose: `save` is the one path that may drop the open
+    // conversation, and nothing is lost by loading the transcript afterwards.
+    final root = _sessionRegistry.metaOf(id).workspaceRoot;
+    if (root != null) await adoptRecent(root);
     _conversationToken = id;
     _checkpoints.conversation = id;
     await _conversation.openSession(id);
