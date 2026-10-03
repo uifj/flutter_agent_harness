@@ -8,8 +8,8 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:agent_harness/model/approval_rule.dart';
-import 'package:agent_harness/state/approval_rule_store.dart';
+import 'package:planstar/model/approval_rule.dart';
+import 'package:planstar/state/approval_rule_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 

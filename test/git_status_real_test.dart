@@ -10,8 +10,8 @@
 
 import 'dart:io';
 
-import 'package:agent_harness/host/git.dart';
-import 'package:agent_harness/state/git_status_store.dart';
+import 'package:planstar/host/git.dart';
+import 'package:planstar/state/git_status_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 

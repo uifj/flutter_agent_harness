@@ -6,10 +6,10 @@
 // so every assertion here is about wiring: a row that stays behind after its
 // input left the queue is the same bug as a drag that does nothing.
 
-import 'package:agent_harness/state/conversation_controller.dart';
-import 'package:agent_harness/state/streaming_tail.dart';
-import 'package:agent_harness/theme/dsw_theme.dart';
-import 'package:agent_harness/ui/conversation/input_queue_panel.dart';
+import 'package:planstar/state/conversation_controller.dart';
+import 'package:planstar/state/streaming_tail.dart';
+import 'package:planstar/theme/dsw_theme.dart';
+import 'package:planstar/ui/conversation/input_queue_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';

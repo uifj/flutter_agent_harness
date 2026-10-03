@@ -13,9 +13,9 @@
 // no strip loses the toast without crashing — the behaviour the previews rely
 // on.
 
-import 'package:agent_harness/theme/dsw_shad_bridge.dart';
-import 'package:agent_harness/theme/dsw_theme.dart';
-import 'package:agent_harness/ui/primitives/feedback.dart';
+import 'package:planstar/theme/dsw_shad_bridge.dart';
+import 'package:planstar/theme/dsw_theme.dart';
+import 'package:planstar/ui/primitives/feedback.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';

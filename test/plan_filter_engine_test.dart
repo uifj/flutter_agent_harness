@@ -8,10 +8,10 @@
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:agent_harness/model/plan_dataview.dart';
-import 'package:agent_harness/model/plan_filter_engine.dart';
-import 'package:agent_harness/model/plan_relation.dart';
-import 'package:agent_harness/model/plan_struct.dart';
+import 'package:planstar/model/plan_dataview.dart';
+import 'package:planstar/model/plan_filter_engine.dart';
+import 'package:planstar/model/plan_relation.dart';
+import 'package:planstar/model/plan_struct.dart';
 
 /// 一个足够分辨所有条件的记录集：文本、数字、日期、勾选、状态、标签各不同。
 final _objects = <String, PlanObject>{

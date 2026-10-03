@@ -4,8 +4,8 @@
 
 import 'dart:io';
 
-import 'package:agent_harness/state/attention_service.dart';
-import 'package:agent_harness/state/settings_store.dart';
+import 'package:planstar/state/attention_service.dart';
+import 'package:planstar/state/settings_store.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:window_manager/window_manager.dart';

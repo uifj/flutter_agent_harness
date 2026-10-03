@@ -9,9 +9,9 @@
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:agent_harness/model/plan_block.dart';
-import 'package:agent_harness/model/plan_markdown_codec.dart';
-import 'package:agent_harness/model/plan_widget.dart';
+import 'package:planstar/model/plan_block.dart';
+import 'package:planstar/model/plan_markdown_codec.dart';
+import 'package:planstar/model/plan_widget.dart';
 
 void main() {
   /// Round-trip helper: encode, decode, and assert the shape survived.

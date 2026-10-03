@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "agent_harness" "\0"
+            VALUE "CompanyName", "top.planstar" "\0"
+            VALUE "FileDescription", "PlanStar" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "agent_harness" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "agent_harness.exe" "\0"
-            VALUE "ProductName", "agent_harness" "\0"
+            VALUE "InternalName", "PlanStar" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 PlanStar. All rights reserved." "\0"
+            VALUE "OriginalFilename", "planstar.exe" "\0"
+            VALUE "ProductName", "PlanStar" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

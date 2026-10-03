@@ -8,8 +8,8 @@
 // without the gutter, because the numbers are the card's chrome, not the file's
 // content.
 
-import 'package:agent_harness/theme/dsw_theme.dart';
-import 'package:agent_harness/ui/primitives/read_block.dart';
+import 'package:planstar/theme/dsw_theme.dart';
+import 'package:planstar/ui/primitives/read_block.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

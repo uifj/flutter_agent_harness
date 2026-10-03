@@ -11,8 +11,8 @@
 // The key *sets* are the invariant; the key *count* deliberately is not — a
 // hardcoded total rots the moment anyone adds a string.
 
-import 'package:agent_harness/l10n/locales.dart';
-import 'package:agent_harness/state/hotkey_service.dart';
+import 'package:planstar/l10n/locales.dart';
+import 'package:planstar/state/hotkey_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 List<String> _sortedDiff(Set<String> a, Set<String> b) {

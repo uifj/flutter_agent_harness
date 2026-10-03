@@ -12,8 +12,8 @@
 // guard. The same mistake overflowed the composer's workspace bar by 487 pixels
 // and would have overflowed every tool card whose path is long enough.
 
-import 'package:agent_harness/theme/dsw_theme.dart';
-import 'package:agent_harness/ui/primitives/disclosure_row.dart';
+import 'package:planstar/theme/dsw_theme.dart';
+import 'package:planstar/ui/primitives/disclosure_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

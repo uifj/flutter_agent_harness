@@ -19,9 +19,9 @@
 // reason a bare tap layer under it would be a second answer to the same
 // question.
 
-import 'package:agent_harness/theme/dsw_theme.dart';
-import 'package:agent_harness/ui/primitives/segmented.dart';
-import 'package:agent_harness/ui/primitives/tappable.dart';
+import 'package:planstar/theme/dsw_theme.dart';
+import 'package:planstar/ui/primitives/segmented.dart';
+import 'package:planstar/ui/primitives/tappable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';

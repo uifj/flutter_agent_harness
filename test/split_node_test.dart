@@ -2,8 +2,8 @@
 // no widgets, no filesystem — because that is the point of keeping the tree in
 // its own file.
 
-import 'package:agent_harness/model/sidebar_tab.dart';
-import 'package:agent_harness/model/split_node.dart';
+import 'package:planstar/model/sidebar_tab.dart';
+import 'package:planstar/model/split_node.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 SidebarTab _tab(String id) =>

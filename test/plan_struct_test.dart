@@ -9,10 +9,10 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:agent_harness/model/plan_dataview.dart';
-import 'package:agent_harness/model/plan_object_type.dart';
-import 'package:agent_harness/model/plan_relation.dart';
-import 'package:agent_harness/model/plan_struct.dart';
+import 'package:planstar/model/plan_dataview.dart';
+import 'package:planstar/model/plan_object_type.dart';
+import 'package:planstar/model/plan_relation.dart';
+import 'package:planstar/model/plan_struct.dart';
 
 void main() {
   group('a record is a map, not a class', () {

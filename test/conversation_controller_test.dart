@@ -4,10 +4,10 @@
 // ever notifies the conversation controller, every message widget in the list
 // rebuilds per token — the failure this file exists to catch.
 
-import 'package:agent_harness/model/conversation.dart';
-import 'package:agent_harness/model/turn_event.dart';
-import 'package:agent_harness/state/conversation_controller.dart';
-import 'package:agent_harness/state/streaming_tail.dart';
+import 'package:planstar/model/conversation.dart';
+import 'package:planstar/model/turn_event.dart';
+import 'package:planstar/state/conversation_controller.dart';
+import 'package:planstar/state/streaming_tail.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_turn_source.dart';

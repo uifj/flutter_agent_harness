@@ -6,7 +6,7 @@
 
 import 'dart:io';
 
-import 'package:agent_harness/genkit/file_search.dart';
+import 'package:planstar/genkit/file_search.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 

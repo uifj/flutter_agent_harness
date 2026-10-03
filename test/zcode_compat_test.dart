@@ -2,7 +2,7 @@
 // archived client's values — an endpoint path that drifts is a backend
 // contract break, so the expectations here are verbatim strings, not shapes.
 
-import 'package:agent_harness/model/zcode_compat/zcode_compat.dart';
+import 'package:planstar/model/zcode_compat/zcode_compat.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -1,5 +1,5 @@
-name: agent_harness
-description: "A Flutter desktop agent harness: chat UI, tool-call projection via Genkit, and a split-pane workbench."
+name: planstar
+description: "企划星 PlanStar: a Flutter desktop agent workbench — chat UI, tool-call projection via Genkit, and a split-pane workbench."
 version: 0.1.0
 # An app, never published — declared so the board_panel path dependency is
 # legitimate (a publishable package may not carry one).
@@ -78,6 +78,9 @@ flutter:
 
   assets:
     - assets/icon/app_icon_source.png
+    # Desktop has no native launch-screen slot (unlike iOS's LaunchScreen.storyboard),
+    # so the brand splash ships as an asset for app code to paint on the first frame.
+    - assets/branding/
 
   # To add assets to your package, add an assets section, like this:
   # assets:

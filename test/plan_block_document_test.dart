@@ -7,12 +7,12 @@
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:agent_harness/model/plan_block.dart';
-import 'package:agent_harness/model/plan_markdown_codec.dart';
-import 'package:agent_harness/state/plan_block_document.dart';
-import 'package:agent_harness/ui/plan/blocks/plan_block_actions.dart'
+import 'package:planstar/model/plan_block.dart';
+import 'package:planstar/model/plan_markdown_codec.dart';
+import 'package:planstar/state/plan_block_document.dart';
+import 'package:planstar/ui/plan/blocks/plan_block_actions.dart'
     show pasteFromText;
-import 'package:agent_harness/ui/plan/blocks/plan_block_drag.dart'
+import 'package:planstar/ui/plan/blocks/plan_block_drag.dart'
     show planAutoScrollStep;
 
 const _source = '''

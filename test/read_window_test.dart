@@ -5,7 +5,7 @@
 
 import 'dart:convert';
 
-import 'package:agent_harness/genkit/read_window.dart';
+import 'package:planstar/genkit/read_window.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// A line stream from literal lines, which is what `decodeLines` produces.

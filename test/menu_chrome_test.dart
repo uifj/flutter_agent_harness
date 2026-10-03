@@ -20,12 +20,12 @@
 // That the *count* of Material menus is zero is `test/shad_menu_adoption_test.dart`'s
 // job; this file is about what the surfaces that remain are painted with.
 
-import 'package:agent_harness/theme/dsw_alias.dart';
-import 'package:agent_harness/theme/dsw_shape.dart';
-import 'package:agent_harness/theme/dsw_shad_bridge.dart';
-import 'package:agent_harness/theme/dsw_theme.dart';
-import 'package:agent_harness/theme/dsw_typography.dart';
-import 'package:agent_harness/ui/primitives/menu.dart';
+import 'package:planstar/theme/dsw_alias.dart';
+import 'package:planstar/theme/dsw_shape.dart';
+import 'package:planstar/theme/dsw_shad_bridge.dart';
+import 'package:planstar/theme/dsw_theme.dart';
+import 'package:planstar/theme/dsw_typography.dart';
+import 'package:planstar/ui/primitives/menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';

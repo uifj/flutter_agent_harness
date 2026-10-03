@@ -7,8 +7,8 @@
 // contract: the bookmark is only a permission while it names the folder
 // that is the workspace.
 
-import 'package:agent_harness/host/project_folder_ops.dart';
-import 'package:agent_harness/model/app_settings.dart';
+import 'package:planstar/host/project_folder_ops.dart';
+import 'package:planstar/model/app_settings.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Records every call; answers are scripted per test.

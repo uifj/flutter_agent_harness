@@ -9,7 +9,7 @@
 // it never sees the fallback; the live widen / auto-expand wiring is verified on
 // device at ADR-0005 S5.
 
-import 'package:agent_harness/ui/appearance_scope.dart';
+import 'package:planstar/ui/appearance_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

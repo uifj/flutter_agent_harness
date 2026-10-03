@@ -10,7 +10,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:agent_harness/state/git_status_store.dart';
+import 'package:planstar/state/git_status_store.dart';
 
 import 'fake_git.dart';
 

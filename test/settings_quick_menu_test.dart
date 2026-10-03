@@ -9,9 +9,9 @@
 // trapped nor be locked out. The trigger is pinned to the bottom-left so the
 // menu, which opens upward, is on-screen.
 
-import 'package:agent_harness/model/app_settings.dart' as settings;
-import 'package:agent_harness/theme/dsw_theme.dart';
-import 'package:agent_harness/ui/settings/widgets/settings_quick_menu.dart';
+import 'package:planstar/model/app_settings.dart' as settings;
+import 'package:planstar/theme/dsw_theme.dart';
+import 'package:planstar/ui/settings/widgets/settings_quick_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';

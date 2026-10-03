@@ -20,7 +20,7 @@
 
 import 'dart:io';
 
-import 'package:agent_harness/l10n/locales.dart';
+import 'package:planstar/l10n/locales.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

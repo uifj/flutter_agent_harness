@@ -10,9 +10,9 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:agent_harness/model/checkpoint.dart';
-import 'package:agent_harness/model/workspace.dart';
-import 'package:agent_harness/state/checkpoint_store.dart';
+import 'package:planstar/model/checkpoint.dart';
+import 'package:planstar/model/workspace.dart';
+import 'package:planstar/state/checkpoint_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

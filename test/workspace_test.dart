@@ -3,7 +3,7 @@
 
 import 'dart:io';
 
-import 'package:agent_harness/model/workspace.dart';
+import 'package:planstar/model/workspace.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 

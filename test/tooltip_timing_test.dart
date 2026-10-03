@@ -26,8 +26,8 @@
 
 import 'dart:io';
 
-import 'package:agent_harness/theme/dsw_motion.dart';
-import 'package:agent_harness/theme/dsw_theme.dart';
+import 'package:planstar/theme/dsw_motion.dart';
+import 'package:planstar/theme/dsw_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

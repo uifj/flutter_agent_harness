@@ -7,9 +7,9 @@
 
 import 'dart:io' show HttpException;
 
-import 'package:agent_harness/genkit/models_endpoint.dart';
-import 'package:agent_harness/model/model_settings.dart';
-import 'package:agent_harness/state/model_directory.dart';
+import 'package:planstar/genkit/models_endpoint.dart';
+import 'package:planstar/model/model_settings.dart';
+import 'package:planstar/state/model_directory.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class FakeFetcher implements ModelsEndpointFetcher {

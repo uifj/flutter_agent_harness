@@ -286,7 +286,7 @@ class _ConversationRootState extends State<ConversationRoot> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(LucideIcons.droplet, size: 34, color: color.labelPrimary),
+              Icon(LucideIcons.sparkle, size: 34, color: color.labelPrimary),
               const SizedBox(width: 10),
               Text(
                 context.tr('askAnything'),

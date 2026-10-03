@@ -11,8 +11,8 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:agent_harness/model/workbench_prefs.dart';
-import 'package:agent_harness/state/prefs_store.dart';
+import 'package:planstar/model/workbench_prefs.dart';
+import 'package:planstar/state/prefs_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

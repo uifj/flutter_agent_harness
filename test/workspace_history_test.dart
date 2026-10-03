@@ -12,15 +12,15 @@ import 'package:flutter/gestures.dart' show kSecondaryButton, PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:agent_harness/model/conversation.dart';
-import 'package:agent_harness/model/workbench_prefs.dart';
-import 'package:agent_harness/state/session_index.dart';
-import 'package:agent_harness/state/session_registry.dart';
-import 'package:agent_harness/ui/layout/columns.dart';
-import 'package:agent_harness/theme/dsw_alias.dart';
-import 'package:agent_harness/theme/dsw_shad_bridge.dart';
-import 'package:agent_harness/theme/dsw_theme.dart';
-import 'package:agent_harness/ui/sidebar/sidebar.dart';
+import 'package:planstar/model/conversation.dart';
+import 'package:planstar/model/workbench_prefs.dart';
+import 'package:planstar/state/session_index.dart';
+import 'package:planstar/state/session_registry.dart';
+import 'package:planstar/ui/layout/columns.dart';
+import 'package:planstar/theme/dsw_alias.dart';
+import 'package:planstar/theme/dsw_shad_bridge.dart';
+import 'package:planstar/theme/dsw_theme.dart';
+import 'package:planstar/ui/sidebar/sidebar.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import 'fake_turn_source.dart';

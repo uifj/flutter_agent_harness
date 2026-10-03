@@ -6,12 +6,12 @@
 
 import 'dart:async';
 
-import 'package:agent_harness/model/approval_mode.dart';
-import 'package:agent_harness/model/attached_image.dart';
-import 'package:agent_harness/model/conversation.dart';
-import 'package:agent_harness/model/queued_input.dart';
-import 'package:agent_harness/model/turn_event.dart';
-import 'package:agent_harness/model/turn_source.dart';
+import 'package:planstar/model/approval_mode.dart';
+import 'package:planstar/model/attached_image.dart';
+import 'package:planstar/model/conversation.dart';
+import 'package:planstar/model/queued_input.dart';
+import 'package:planstar/model/turn_event.dart';
+import 'package:planstar/model/turn_source.dart';
 
 class FakeTurnSource implements TurnSource {
   final _turns = <StreamController<TurnEvent>>[];

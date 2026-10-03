@@ -14,13 +14,16 @@ abstract final class AppMeta {
   /// Must match pubspec.yaml's `version:` — pinned by test.
   static const String version = '0.1.0';
 
-  static const String productName = 'agent_harness';
+  /// The latin name, for every surface that is not the localized UI: the
+  /// MaterialApp title, the tray tooltip, the OS window title. The Chinese
+  /// brand (企划星) is the `appName` dictionary key, not this.
+  static const String productName = 'PlanStar';
 
   /// 产品文档 (product docs).
-  static const String docsUrl = 'https://docs.agent-harness.dev';
+  static const String docsUrl = 'https://docs.planstar.top';
 
   /// 用户社群 (user community).
-  static const String communityUrl = 'https://community.agent-harness.dev';
+  static const String communityUrl = 'https://community.planstar.top';
 
   /// 问题上报 (issue tracker).
   static const String issuesUrl =

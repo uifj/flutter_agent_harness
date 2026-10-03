@@ -8,13 +8,13 @@
 
 import 'dart:io' show HttpException;
 
-import 'package:agent_harness/genkit/models_endpoint.dart';
-import 'package:agent_harness/model/app_settings.dart';
-import 'package:agent_harness/model/model_settings.dart';
-import 'package:agent_harness/state/usage_ledger.dart' show UsageSummary;
-import 'package:agent_harness/theme/dsw_theme.dart';
-import 'package:agent_harness/theme/dsw_shad_bridge.dart';
-import 'package:agent_harness/ui/settings/model_settings.dart';
+import 'package:planstar/genkit/models_endpoint.dart';
+import 'package:planstar/model/app_settings.dart';
+import 'package:planstar/model/model_settings.dart';
+import 'package:planstar/state/usage_ledger.dart' show UsageSummary;
+import 'package:planstar/theme/dsw_theme.dart';
+import 'package:planstar/theme/dsw_shad_bridge.dart';
+import 'package:planstar/ui/settings/model_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';

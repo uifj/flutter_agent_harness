@@ -2,7 +2,7 @@
 // service, the tray and the settings table all read it. The registry test
 // pins the law: every command parseable, ids unique, scopes declared.
 
-import 'package:agent_harness/model/shortcut_registry.dart';
+import 'package:planstar/model/shortcut_registry.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 

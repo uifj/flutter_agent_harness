@@ -9,13 +9,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
-import 'package:agent_harness/l10n/locales.dart';
-import 'package:agent_harness/model/plan_mock_content.dart';
-import 'package:agent_harness/model/plan_object_type.dart';
-import 'package:agent_harness/state/plan_object_store.dart';
-import 'package:agent_harness/theme/dsw_shad_bridge.dart';
-import 'package:agent_harness/theme/dsw_theme.dart';
-import 'package:agent_harness/ui/plan/library/plan_templates_screen.dart';
+import 'package:planstar/l10n/locales.dart';
+import 'package:planstar/model/plan_mock_content.dart';
+import 'package:planstar/model/plan_object_type.dart';
+import 'package:planstar/state/plan_object_store.dart';
+import 'package:planstar/theme/dsw_shad_bridge.dart';
+import 'package:planstar/theme/dsw_theme.dart';
+import 'package:planstar/ui/plan/library/plan_templates_screen.dart';
 
 void main() {
   late Directory root;

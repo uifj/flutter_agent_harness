@@ -20,21 +20,21 @@
 // switch, extension rows, profile foot - and measure what only appears when it is
 // handed, then prove an amplified chrome can be scrolled past to reach sessions.
 
-import 'package:agent_harness/model/conversation.dart';
-import 'package:agent_harness/model/user_profile.dart';
-import 'package:agent_harness/state/session_index.dart';
-import 'package:agent_harness/state/workspace_mode_controller.dart';
-import 'package:agent_harness/theme/dsw_shape.dart';
-import 'package:agent_harness/theme/dsw_theme.dart';
-import 'package:agent_harness/ui/layout/columns.dart';
-import 'package:agent_harness/ui/primitives/tappable.dart';
-import 'package:agent_harness/ui/sidebar/sidebar.dart';
+import 'package:planstar/model/conversation.dart';
+import 'package:planstar/model/user_profile.dart';
+import 'package:planstar/state/session_index.dart';
+import 'package:planstar/state/workspace_mode_controller.dart';
+import 'package:planstar/theme/dsw_shape.dart';
+import 'package:planstar/theme/dsw_theme.dart';
+import 'package:planstar/ui/layout/columns.dart';
+import 'package:planstar/ui/primitives/tappable.dart';
+import 'package:planstar/ui/sidebar/sidebar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:agent_harness/state/hotkey_service.dart';
+import 'package:planstar/state/hotkey_service.dart';
 
 import 'fake_turn_source.dart';
 import 'amplified_text_probe.dart';
@@ -185,14 +185,14 @@ void main() {
     await index.refresh();
     await pump(tester, collapsed: false);
 
-    expect(find.text('Agent Harness'), findsOneWidget);
+    expect(find.text('PlanStar'), findsOneWidget);
     expect(find.text('DSH'), findsNothing);
 
     // Everything the column stretches has to begin on its inset, so a second
     // offset anywhere in a row is now a failing test rather than a sighted
     // reviewer's job.
     final left = DswShape.sidebarInset;
-    expect(tester.getTopLeft(find.byIcon(LucideIcons.droplet)).dx, left);
+    expect(tester.getTopLeft(find.byIcon(LucideIcons.sparkle)).dx, left);
     for (final label in ['New Session', 'Session 1']) {
       expect(
         tester

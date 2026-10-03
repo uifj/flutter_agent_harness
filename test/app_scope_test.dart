@@ -17,10 +17,10 @@
 
 import 'dart:io';
 
-import 'package:agent_harness/model/app_settings.dart';
-import 'package:agent_harness/state/app_scope.dart';
-import 'package:agent_harness/state/prefs_store.dart';
-import 'package:agent_harness/state/settings_store.dart';
+import 'package:planstar/model/app_settings.dart';
+import 'package:planstar/state/app_scope.dart';
+import 'package:planstar/state/prefs_store.dart';
+import 'package:planstar/state/settings_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -10,10 +10,10 @@
 
 import 'dart:io';
 
-import 'package:agent_harness/model/file_search_rank.dart';
-import 'package:agent_harness/model/mention_expansion.dart';
-import 'package:agent_harness/model/workspace.dart';
-import 'package:agent_harness/model/workspace_index.dart';
+import 'package:planstar/model/file_search_rank.dart';
+import 'package:planstar/model/mention_expansion.dart';
+import 'package:planstar/model/workspace.dart';
+import 'package:planstar/model/workspace_index.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 

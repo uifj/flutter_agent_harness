@@ -6,9 +6,9 @@
 
 import 'dart:convert';
 
-import 'package:agent_harness/model/zcode_compat/zcode_compat.dart';
-import 'package:agent_harness/state/auth_session.dart';
-import 'package:agent_harness/state/secret_store.dart';
+import 'package:planstar/model/zcode_compat/zcode_compat.dart';
+import 'package:planstar/state/auth_session.dart';
+import 'package:planstar/state/secret_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';

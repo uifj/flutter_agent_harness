@@ -9,7 +9,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:agent_harness/state/session_registry.dart';
+import 'package:planstar/state/session_registry.dart';
 
 void main() {
   late Directory root;

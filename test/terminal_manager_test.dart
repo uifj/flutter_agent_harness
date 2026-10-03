@@ -9,7 +9,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:agent_harness/host/terminal_manager.dart';
+import 'package:planstar/host/terminal_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_terminal_process.dart';

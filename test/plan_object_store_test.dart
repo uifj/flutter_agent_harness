@@ -11,14 +11,14 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:agent_harness/model/plan_dataview.dart';
-import 'package:agent_harness/model/plan_mock_content.dart';
-import 'package:agent_harness/model/plan_object_type.dart';
-import 'package:agent_harness/model/plan_relation.dart';
-import 'package:agent_harness/model/plan_space.dart';
-import 'package:agent_harness/model/plan_struct.dart';
-import 'package:agent_harness/model/plan_widget.dart';
-import 'package:agent_harness/state/plan_object_store.dart';
+import 'package:planstar/model/plan_dataview.dart';
+import 'package:planstar/model/plan_mock_content.dart';
+import 'package:planstar/model/plan_object_type.dart';
+import 'package:planstar/model/plan_relation.dart';
+import 'package:planstar/model/plan_space.dart';
+import 'package:planstar/model/plan_struct.dart';
+import 'package:planstar/model/plan_widget.dart';
+import 'package:planstar/state/plan_object_store.dart';
 
 void main() {
   late Directory root;

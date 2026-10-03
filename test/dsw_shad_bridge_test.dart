@@ -9,9 +9,9 @@
 // ShadTheme through MaterialApp.builder and reads the brightness back out of
 // Theme.of(context), so `themeMode: dark` must reach ShadTheme as dark.
 
-import 'package:agent_harness/theme/dsw_alias.dart';
-import 'package:agent_harness/theme/dsw_shad_bridge.dart';
-import 'package:agent_harness/theme/dsw_theme.dart';
+import 'package:planstar/theme/dsw_alias.dart';
+import 'package:planstar/theme/dsw_shad_bridge.dart';
+import 'package:planstar/theme/dsw_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';

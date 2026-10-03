@@ -7,8 +7,8 @@
 // initial getter is the only computation in the model — both are worth pinning
 // before the sidebar renders them.
 
-import 'package:agent_harness/host/profile_repository.dart';
-import 'package:agent_harness/model/user_profile.dart';
+import 'package:planstar/host/profile_repository.dart';
+import 'package:planstar/model/user_profile.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

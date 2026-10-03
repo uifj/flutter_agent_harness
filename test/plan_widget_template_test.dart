@@ -7,12 +7,12 @@
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:agent_harness/model/plan_block.dart';
-import 'package:agent_harness/model/plan_object_type.dart';
-import 'package:agent_harness/model/plan_relation.dart';
-import 'package:agent_harness/model/plan_struct.dart';
-import 'package:agent_harness/model/plan_template.dart';
-import 'package:agent_harness/model/plan_widget.dart';
+import 'package:planstar/model/plan_block.dart';
+import 'package:planstar/model/plan_object_type.dart';
+import 'package:planstar/model/plan_relation.dart';
+import 'package:planstar/model/plan_struct.dart';
+import 'package:planstar/model/plan_template.dart';
+import 'package:planstar/model/plan_widget.dart';
 
 void main() {
   group('widget forms, layouts and sources', () {

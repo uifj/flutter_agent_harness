@@ -5,13 +5,13 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:agent_harness/model/workbench.dart';
-import 'package:agent_harness/model/workspace.dart';
-import 'package:agent_harness/model/sidebar_state.dart';
-import 'package:agent_harness/model/sidebar_tab.dart';
-import 'package:agent_harness/model/split_node.dart';
-import 'package:agent_harness/state/workbench_controller.dart';
-import 'package:agent_harness/state/workbench_store.dart';
+import 'package:planstar/model/workbench.dart';
+import 'package:planstar/model/workspace.dart';
+import 'package:planstar/model/sidebar_state.dart';
+import 'package:planstar/model/sidebar_tab.dart';
+import 'package:planstar/model/split_node.dart';
+import 'package:planstar/state/workbench_controller.dart';
+import 'package:planstar/state/workbench_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Long enough for the store's debounce to have fired. Only used where the

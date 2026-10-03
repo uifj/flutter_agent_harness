@@ -64,8 +64,7 @@ const int totalByteCap = 24 * 1024;
 const List<String> instructionFileNames = ['AGENTS.md', '.agents/AGENTS.md'];
 
 /// The directory holding the user-level instructions, under the home folder.
-String userInstructionRoot(String homeRoot) =>
-    p.join(homeRoot, '.agent_harness');
+String userInstructionRoot(String homeRoot) => p.join(homeRoot, '.planstar');
 
 /// The home folder from the environment, or null when it does not say.
 ///

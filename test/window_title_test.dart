@@ -4,7 +4,7 @@
 // for — which conversation, which folder. Only this rule is testable; the OS
 // call itself needs a real window.
 
-import 'package:agent_harness/model/window_title.dart';
+import 'package:planstar/model/window_title.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

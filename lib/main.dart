@@ -31,6 +31,7 @@ import 'package:window_manager/window_manager.dart';
 import 'genkit/models_endpoint.dart';
 import 'host/project_folder_ops.dart';
 import 'host/reveal.dart';
+import 'host/support_directory.dart';
 import 'l10n/locales.dart';
 import 'model/app_settings.dart' as cfg;
 import 'state/app_providers.dart';
@@ -93,6 +94,15 @@ Future<void> main() async {
   // not user files. Inside the macOS sandbox container this is writable without
   // any further entitlement.
   final support = await getApplicationSupportDirectory();
+  // The app's own files are keyed by the application identity, which changed
+  // with the 企划星 rename. Move them before anything reads them, or a full
+  // install boots looking like a first run.
+  final movedFrom = await migrateSupportDirectory(support);
+  if (movedFrom != null) {
+    debugPrint(
+      'support directory migrated from "$movedFrom" to ${support.path}',
+    );
+  }
   final crash = CrashArchive(
     directory: Directory('${support.path}/logs/crash'),
   );
@@ -269,7 +279,7 @@ class _DshAppState extends ConsumerState<DshApp> {
         : chatContentWidth;
 
     return MaterialApp(
-      title: 'Agent Harness',
+      title: AppMeta.productName,
       debugShowCheckedModeBanner: false,
       theme: dswThemeData(Brightness.light),
       darkTheme: dswThemeData(Brightness.dark),

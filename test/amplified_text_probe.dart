@@ -15,7 +15,7 @@
 // numbers and the owner's creator chain, because a guard that cannot name the
 // widget it rejected is a guard nobody can act on.
 
-import 'package:agent_harness/ui/primitives/tappable.dart';
+import 'package:planstar/ui/primitives/tappable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';

@@ -9,9 +9,9 @@
 
 import 'dart:io';
 
-import 'package:agent_harness/theme/dsw_shad_bridge.dart';
-import 'package:agent_harness/theme/dsw_theme.dart';
-import 'package:agent_harness/ui/plan/plan_workspace.dart';
+import 'package:planstar/theme/dsw_shad_bridge.dart';
+import 'package:planstar/theme/dsw_theme.dart';
+import 'package:planstar/ui/plan/plan_workspace.dart';
 import 'amplified_text_probe.dart';
 import 'package:flutter/material.dart';
 

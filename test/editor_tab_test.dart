@@ -15,13 +15,13 @@
 
 import 'dart:io';
 
-import 'package:agent_harness/model/sidebar_tab.dart';
-import 'package:agent_harness/state/workbench_controller.dart';
-import 'package:agent_harness/state/workbench_store.dart';
-import 'package:agent_harness/ui/workbench/tabs/editor_tab.dart';
-import 'package:agent_harness/theme/dsw_theme.dart';
-import 'package:agent_harness/ui/conversation/assistant_markdown.dart';
-import 'package:agent_harness/theme/dsw_shad_bridge.dart';
+import 'package:planstar/model/sidebar_tab.dart';
+import 'package:planstar/state/workbench_controller.dart';
+import 'package:planstar/state/workbench_store.dart';
+import 'package:planstar/ui/workbench/tabs/editor_tab.dart';
+import 'package:planstar/theme/dsw_theme.dart';
+import 'package:planstar/ui/conversation/assistant_markdown.dart';
+import 'package:planstar/theme/dsw_shad_bridge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';

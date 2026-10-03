@@ -15,9 +15,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:agent_harness/theme/dsw_shape.dart';
-import 'package:agent_harness/theme/dsw_theme.dart';
-import 'package:agent_harness/ui/conversation/assistant_markdown.dart';
+import 'package:planstar/theme/dsw_shape.dart';
+import 'package:planstar/theme/dsw_theme.dart';
+import 'package:planstar/ui/conversation/assistant_markdown.dart';
 
 void main() {
   testWidgets('LaTeX inline and block formulas render without error', (

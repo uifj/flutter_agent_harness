@@ -10,6 +10,8 @@ import 'package:flutter/widgets.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../model/app_meta.dart';
+
 /// The app's system tray service. Manages the tray icon, context menu, and
 /// click-to-toggle-window behaviour.
 class TrayService with TrayListener {
@@ -22,7 +24,10 @@ class TrayService with TrayListener {
     // The icon path is relative to flutter_assets (declared in pubspec assets).
     const iconPath = 'assets/icon/app_icon_source.png';
     await trayManager.setIcon(iconPath, isTemplate: Platform.isMacOS);
-    await trayManager.setToolTip('Agent Harness');
+    // The latin name, not `appName`: this surface sits outside the widget tree,
+    // so it has no locale to read. A localized tooltip would need the setting
+    // threaded in *and* a re-set on change — otherwise it goes stale.
+    await trayManager.setToolTip(AppMeta.productName);
 
     final menu = Menu(
       items: [

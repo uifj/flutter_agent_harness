@@ -16,20 +16,20 @@
 
 import 'dart:io';
 
-import 'package:agent_harness/host/terminal_manager.dart';
-import 'package:agent_harness/model/workbench_prefs.dart';
-import 'package:agent_harness/model/fs_revision.dart';
-import 'package:agent_harness/model/sidebar_tab.dart';
-import 'package:agent_harness/state/git_status_store.dart';
-import 'package:agent_harness/state/workbench_controller.dart';
-import 'package:agent_harness/state/workbench_store.dart';
-import 'package:agent_harness/ui/primitives/menu.dart' show DswMenuRow;
-import 'package:agent_harness/ui/workbench/workbench.dart';
-import 'package:agent_harness/ui/workbench/workbench_prefs_scope.dart';
-import 'package:agent_harness/ui/workbench/workbench_tab_bar.dart';
-import 'package:agent_harness/state/conversation_controller.dart';
-import 'package:agent_harness/state/streaming_tail.dart';
-import 'package:agent_harness/theme/dsw_theme.dart';
+import 'package:planstar/host/terminal_manager.dart';
+import 'package:planstar/model/workbench_prefs.dart';
+import 'package:planstar/model/fs_revision.dart';
+import 'package:planstar/model/sidebar_tab.dart';
+import 'package:planstar/state/git_status_store.dart';
+import 'package:planstar/state/workbench_controller.dart';
+import 'package:planstar/state/workbench_store.dart';
+import 'package:planstar/ui/primitives/menu.dart' show DswMenuRow;
+import 'package:planstar/ui/workbench/workbench.dart';
+import 'package:planstar/ui/workbench/workbench_prefs_scope.dart';
+import 'package:planstar/ui/workbench/workbench_tab_bar.dart';
+import 'package:planstar/state/conversation_controller.dart';
+import 'package:planstar/state/streaming_tail.dart';
+import 'package:planstar/theme/dsw_theme.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';

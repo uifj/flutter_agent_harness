@@ -7,12 +7,12 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:agent_harness/model/app_settings.dart';
-import 'package:agent_harness/model/model_settings.dart';
-import 'package:agent_harness/model/app_settings_migration.dart';
-import 'package:agent_harness/state/prefs_store.dart';
-import 'package:agent_harness/state/secret_store.dart';
-import 'package:agent_harness/state/settings_store.dart';
+import 'package:planstar/model/app_settings.dart';
+import 'package:planstar/model/model_settings.dart';
+import 'package:planstar/model/app_settings_migration.dart';
+import 'package:planstar/state/prefs_store.dart';
+import 'package:planstar/state/secret_store.dart';
+import 'package:planstar/state/settings_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

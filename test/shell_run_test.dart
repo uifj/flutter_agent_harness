@@ -7,7 +7,7 @@
 
 import 'dart:io';
 
-import 'package:agent_harness/genkit/shell_run.dart';
+import 'package:planstar/genkit/shell_run.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 

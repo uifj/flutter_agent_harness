@@ -6,8 +6,8 @@
 // exercised by the app itself, where a stalled git is a support ticket rather
 // than a unit under test.
 
-import 'package:agent_harness/host/git.dart';
-import 'package:agent_harness/ui/workbench/tabs/git_tab.dart';
+import 'package:planstar/host/git.dart';
+import 'package:planstar/ui/workbench/tabs/git_tab.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_git.dart';

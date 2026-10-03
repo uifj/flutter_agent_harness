@@ -4,8 +4,8 @@
 // and answers '') and git_tab_test.dart (panel wiring, where an unstubbed
 // command is a bug worth failing on — hence [unknownResponse]'s strict default).
 
-import 'package:agent_harness/host/git.dart';
-import 'package:agent_harness/state/git_status_store.dart';
+import 'package:planstar/host/git.dart';
+import 'package:planstar/state/git_status_store.dart';
 
 /// The command key `git status` answers under.
 const fakeStatusKey = 'status --porcelain=v1 -z --untracked-files=all';

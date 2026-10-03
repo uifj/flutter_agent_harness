@@ -11,10 +11,10 @@
 // architecture rule (genkit confined to `lib/genkit/`) is about `lib/`, and a
 // test that builds store data is exactly the consumer that needs the types.
 
-import 'package:agent_harness/genkit/agent_runtime.dart' show AgentRuntime;
-import 'package:agent_harness/genkit/plan_tools.dart';
-import 'package:agent_harness/model/conversation.dart';
-import 'package:agent_harness/model/todo_state.dart';
+import 'package:planstar/genkit/agent_runtime.dart' show AgentRuntime;
+import 'package:planstar/genkit/plan_tools.dart';
+import 'package:planstar/model/conversation.dart';
+import 'package:planstar/model/todo_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:genkit/genkit.dart';
 

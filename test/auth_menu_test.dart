@@ -4,11 +4,11 @@
 // into the root overlay, so the host mounts the show call inside a real
 // overlay and lets the entry live for the assertions.
 
-import 'package:agent_harness/l10n/locales.dart';
-import 'package:agent_harness/model/app_settings.dart';
-import 'package:agent_harness/theme/dsw_shad_bridge.dart';
-import 'package:agent_harness/theme/dsw_theme.dart';
-import 'package:agent_harness/ui/settings/widgets/settings_quick_menu.dart';
+import 'package:planstar/l10n/locales.dart';
+import 'package:planstar/model/app_settings.dart';
+import 'package:planstar/theme/dsw_shad_bridge.dart';
+import 'package:planstar/theme/dsw_theme.dart';
+import 'package:planstar/ui/settings/widgets/settings_quick_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

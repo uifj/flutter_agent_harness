@@ -15,13 +15,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
-import 'package:agent_harness/model/plan_dataview.dart';
-import 'package:agent_harness/model/plan_mock_content.dart';
-import 'package:agent_harness/model/plan_struct.dart';
-import 'package:agent_harness/state/plan_object_store.dart';
-import 'package:agent_harness/theme/dsw_shad_bridge.dart';
-import 'package:agent_harness/theme/dsw_theme.dart';
-import 'package:agent_harness/ui/plan/dataview/plan_data_view_screen.dart';
+import 'package:planstar/model/plan_dataview.dart';
+import 'package:planstar/model/plan_mock_content.dart';
+import 'package:planstar/model/plan_struct.dart';
+import 'package:planstar/state/plan_object_store.dart';
+import 'package:planstar/theme/dsw_shad_bridge.dart';
+import 'package:planstar/theme/dsw_theme.dart';
+import 'package:planstar/ui/plan/dataview/plan_data_view_screen.dart';
 
 import 'amplified_text_probe.dart';
 

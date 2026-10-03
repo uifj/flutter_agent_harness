@@ -11,12 +11,12 @@
 // (`ConversationRowView.tsx:1253-1258`): a 12px corner with a near-square
 // top-right that points at the edge the message comes from, plus a hairline.
 
-import 'package:agent_harness/model/conversation.dart';
-import 'package:agent_harness/theme/dsw_alias.dart';
-import 'package:agent_harness/theme/dsw_shape.dart';
-import 'package:agent_harness/theme/dsw_theme.dart';
-import 'package:agent_harness/theme/dsw_typography.dart';
-import 'package:agent_harness/ui/conversation/message_item.dart';
+import 'package:planstar/model/conversation.dart';
+import 'package:planstar/theme/dsw_alias.dart';
+import 'package:planstar/theme/dsw_shape.dart';
+import 'package:planstar/theme/dsw_theme.dart';
+import 'package:planstar/theme/dsw_typography.dart';
+import 'package:planstar/ui/conversation/message_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

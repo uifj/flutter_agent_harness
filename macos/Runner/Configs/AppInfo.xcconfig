@@ -5,10 +5,16 @@
 // 'flutter create' template.
 
 // The application's name. By default this is also the title of the Flutter window.
-PRODUCT_NAME = Agent Harness
+// Kept in latin script: this feeds the .app filename, codesign identity and the
+// dmg name in build.yml. The Chinese brand is CFBundleDisplayName in Info.plist,
+// which is what Finder and the Dock show.
+PRODUCT_NAME = PlanStar
 
-// The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.stow.agentHarness
+// The application's bundle identifier: reverse-domain of planstar.top, with
+// `.desktop` left free for the mobile sibling. It names the support directory,
+// so the change is paired with `host/support_directory.dart`, which renames the
+// old `com.stow.agentHarness` folder onto this one before anything reads it.
+PRODUCT_BUNDLE_IDENTIFIER = top.planstar.desktop
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.stow. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 PlanStar. All rights reserved.

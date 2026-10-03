@@ -2,7 +2,7 @@
 // reads and acts on, so the messages are asserted as text: a refusal that does
 // not say what to do next costs a turn.
 
-import 'package:agent_harness/genkit/text_edit.dart';
+import 'package:planstar/genkit/text_edit.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

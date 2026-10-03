@@ -141,7 +141,7 @@ final rules = [
         'Flutter (`dart run spike/runtime_smoke.dart`) stops compiling',
     appliesTo: ['lib/genkit/'],
     pattern: RegExp(
-      r"^import '(?:package:flutter|package:agent_harness/state|\.\./state)",
+      r"^import '(?:package:flutter|package:planstar/state|\.\./state)",
     ),
   ),
 ];

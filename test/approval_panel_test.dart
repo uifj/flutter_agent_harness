@@ -7,10 +7,10 @@
 // whole when the system amplifies text — the last is what the bottom group
 // measures, over a command, a long path, and a call with no subject at all.
 
-import 'package:agent_harness/model/conversation.dart';
-import 'package:agent_harness/theme/dsw_theme.dart';
-import 'package:agent_harness/ui/conversation/approval_panel.dart';
-import 'package:agent_harness/ui/primitives/capsule_button.dart';
+import 'package:planstar/model/conversation.dart';
+import 'package:planstar/theme/dsw_theme.dart';
+import 'package:planstar/ui/conversation/approval_panel.dart';
+import 'package:planstar/ui/primitives/capsule_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

@@ -9,7 +9,7 @@
 // state is one collection id. The controller is pure view state (nothing
 // persisted), so what matters is exactly the reset semantics the UI relies on.
 
-import 'package:agent_harness/state/workspace_mode_controller.dart';
+import 'package:planstar/state/workspace_mode_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

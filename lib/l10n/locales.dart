@@ -33,8 +33,9 @@ enum AppLocaleId { en, zh }
 const enStrings = <String, String>{
   // The product name in the sidebar brand row. It was the literal 'DSH' — the
   // name of the project this one was written after, which is not a thing to
-  // ship. Not translated: a name is a name in either language.
-  'appName': 'Agent Harness',
+  // ship. Now it has a name of its own, and the two languages use different
+  // ones: 企划星 is the brand, PlanStar is its latin spelling.
+  'appName': 'PlanStar',
 
   // Common
   'close': 'Close',
@@ -572,13 +573,13 @@ const enStrings = <String, String>{
   'helpReportIssue': 'Report an issue',
   'helpFeatureRequest': 'Request a feature',
   'helpReleases': 'Check for updates',
-  'helpAbout': 'About agent_harness',
-  'helpAboutTitle': 'agent_harness',
+  'helpAbout': 'About PlanStar',
+  'helpAboutTitle': 'PlanStar',
   'helpAboutBody':
       'A desktop AI agent workbench: agent conversations over Genkit and a plan workspace with Anytype-style data views. Version {version}.',
   'authSignIn': 'Sign in',
   'authSignOut': 'Sign out',
-  'welcomeTitle': 'Welcome to agent_harness',
+  'welcomeTitle': 'Welcome to PlanStar',
   'welcomeIntro': 'Connect your account to start using the workbench.',
   'welcomeApiKeyIntro': 'Enter an API key from your provider to start.',
   'welcomeProviderZai': 'Continue with Z.ai',
@@ -857,7 +858,7 @@ const enStrings = <String, String>{
 /// at lookup, so a half-added string renders in English rather than as its
 /// key.
 const zhStrings = <String, String>{
-  'appName': 'Agent Harness',
+  'appName': '企划星',
 
   // Common
   'close': '关闭',
@@ -1371,12 +1372,12 @@ const zhStrings = <String, String>{
   'helpReportIssue': '问题上报',
   'helpFeatureRequest': '给产品提需求',
   'helpReleases': '发现新版本',
-  'helpAbout': '关于 agent_harness',
-  'helpAboutTitle': 'agent_harness',
+  'helpAbout': '关于企划星',
+  'helpAboutTitle': '企划星',
   'helpAboutBody': '桌面端 AI 代理工作台：Genkit 代理会话 + 企划数据视图工作区。当前版本 {version}。',
   'authSignIn': '登录',
   'authSignOut': '退出登录',
-  'welcomeTitle': '欢迎使用 agent_harness',
+  'welcomeTitle': '欢迎使用企划星',
   'welcomeIntro': '连接你的账号，开始使用工作台。',
   'welcomeApiKeyIntro': '输入服务商提供的 API key 即可开始。',
   'welcomeProviderZai': '使用 Z.ai 登录',

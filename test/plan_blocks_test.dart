@@ -17,17 +17,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
-import 'package:agent_harness/model/plan_block.dart';
-import 'package:agent_harness/state/plan_block_document.dart';
-import 'package:agent_harness/theme/dsw_shad_bridge.dart';
-import 'package:agent_harness/theme/dsw_theme.dart';
-import 'package:agent_harness/ui/plan/blocks/plan_block_actions.dart';
-import 'package:agent_harness/ui/plan/blocks/plan_block_editor.dart';
-import 'package:agent_harness/ui/plan/blocks/plan_block_view.dart';
-import 'package:agent_harness/ui/plan/dataview/plan_viewers.dart'
-    show PlanCheckbox;
-import 'package:agent_harness/ui/plan/plan_workspace.dart';
-import 'package:agent_harness/ui/primitives/tappable.dart';
+import 'package:planstar/model/plan_block.dart';
+import 'package:planstar/state/plan_block_document.dart';
+import 'package:planstar/theme/dsw_shad_bridge.dart';
+import 'package:planstar/theme/dsw_theme.dart';
+import 'package:planstar/ui/plan/blocks/plan_block_actions.dart';
+import 'package:planstar/ui/plan/blocks/plan_block_editor.dart';
+import 'package:planstar/ui/plan/blocks/plan_block_view.dart';
+import 'package:planstar/ui/plan/dataview/plan_viewers.dart' show PlanCheckbox;
+import 'package:planstar/ui/plan/plan_workspace.dart';
+import 'package:planstar/ui/primitives/tappable.dart';
 import 'package:plan_editor/plan_editor.dart';
 
 import 'amplified_text_probe.dart';

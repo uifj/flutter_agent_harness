@@ -5,8 +5,8 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:agent_harness/state/crash_archive.dart';
-import 'package:agent_harness/state/usage_ledger.dart';
+import 'package:planstar/state/crash_archive.dart';
+import 'package:planstar/state/usage_ledger.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

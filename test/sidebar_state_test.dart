@@ -1,9 +1,9 @@
 // The state reducers: the gesture vocabulary of the workbench, driven as plain
 // values. Anything that needs a widget tree belongs in workbench_ui_test.dart.
 
-import 'package:agent_harness/model/sidebar_state.dart';
-import 'package:agent_harness/model/sidebar_tab.dart';
-import 'package:agent_harness/model/split_node.dart';
+import 'package:planstar/model/sidebar_state.dart';
+import 'package:planstar/model/sidebar_tab.dart';
+import 'package:planstar/model/split_node.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 

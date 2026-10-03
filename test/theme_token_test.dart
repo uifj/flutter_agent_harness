@@ -8,10 +8,10 @@
 import 'dart:io';
 import 'dart:ui';
 
-import 'package:agent_harness/theme/dsw_alias.dart';
-import 'package:agent_harness/theme/dsw_static.dart';
-import 'package:agent_harness/theme/dsw_shape.dart';
-import 'package:agent_harness/theme/dsw_typography.dart';
+import 'package:planstar/theme/dsw_alias.dart';
+import 'package:planstar/theme/dsw_static.dart';
+import 'package:planstar/theme/dsw_shape.dart';
+import 'package:planstar/theme/dsw_typography.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

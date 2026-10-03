@@ -8,14 +8,14 @@
 
 import 'dart:async';
 
-import 'package:agent_harness/model/conversation.dart';
-import 'package:agent_harness/model/turn_event.dart';
-import 'package:agent_harness/state/conversation_controller.dart';
-import 'package:agent_harness/state/details_selection.dart';
-import 'package:agent_harness/state/streaming_tail.dart';
-import 'package:agent_harness/theme/dsw_theme.dart';
-import 'package:agent_harness/ui/conversation/details_panel.dart';
-import 'package:agent_harness/ui/tool/tool_card.dart';
+import 'package:planstar/model/conversation.dart';
+import 'package:planstar/model/turn_event.dart';
+import 'package:planstar/state/conversation_controller.dart';
+import 'package:planstar/state/details_selection.dart';
+import 'package:planstar/state/streaming_tail.dart';
+import 'package:planstar/theme/dsw_theme.dart';
+import 'package:planstar/ui/conversation/details_panel.dart';
+import 'package:planstar/ui/tool/tool_card.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';

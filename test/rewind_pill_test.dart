@@ -7,14 +7,14 @@
 // whether the report afterwards matches the preview before it. The store behind
 // it is a pair of closures: their behaviour is `checkpoint_test.dart`'s job.
 
-import 'package:agent_harness/model/conversation.dart';
-import 'package:agent_harness/state/checkpoint_store.dart';
-import 'package:agent_harness/theme/dsw_shad_bridge.dart';
-import 'package:agent_harness/theme/dsw_theme.dart';
-import 'package:agent_harness/ui/appearance_scope.dart';
-import 'package:agent_harness/ui/conversation/conversation_root.dart';
-import 'package:agent_harness/ui/tool/checkpoint_scope.dart';
-import 'package:agent_harness/ui/tool/tool_card.dart';
+import 'package:planstar/model/conversation.dart';
+import 'package:planstar/state/checkpoint_store.dart';
+import 'package:planstar/theme/dsw_shad_bridge.dart';
+import 'package:planstar/theme/dsw_theme.dart';
+import 'package:planstar/ui/appearance_scope.dart';
+import 'package:planstar/ui/conversation/conversation_root.dart';
+import 'package:planstar/ui/tool/checkpoint_scope.dart';
+import 'package:planstar/ui/tool/tool_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';

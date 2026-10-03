@@ -32,7 +32,7 @@ class BackupService {
   /// The file extension used for backup archives.
   static const backupExtension = 'zip';
 
-  /// The file name pattern for backups: `agent_harness_backup_YYYYMMDD_HHMMSS.zip`.
+  /// The file name pattern for backups: `planstar_backup_YYYYMMDD_HHMMSS.zip`.
   static String defaultFileName() {
     final now = DateTime.now();
     final stamp =
@@ -42,7 +42,7 @@ class BackupService {
         '${now.hour.toString().padLeft(2, '0')}'
         '${now.minute.toString().padLeft(2, '0')}_'
         '${now.second.toString().padLeft(2, '0')}';
-    return 'agent_harness_backup_$stamp.$backupExtension';
+    return 'planstar_backup_$stamp.$backupExtension';
   }
 
   /// Creates a backup archive at [destinationPath] containing all persistent

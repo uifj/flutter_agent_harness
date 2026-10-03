@@ -7,7 +7,7 @@
 // `slice` this was ported from clamps — a difference that would surface as a crash
 // on a short list rather than as a wrong number.
 
-import 'package:agent_harness/ui/primitives/head_tail_cap.dart';
+import 'package:planstar/ui/primitives/head_tail_cap.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

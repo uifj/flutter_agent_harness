@@ -6,8 +6,8 @@
 // the scope. The adopting itself is the app's to do — here it is only asserted
 // that the right callback leaves with the right path.
 
-import 'package:agent_harness/theme/dsw_theme.dart';
-import 'package:agent_harness/ui/conversation/hero_workspace_picker.dart';
+import 'package:planstar/theme/dsw_theme.dart';
+import 'package:planstar/ui/conversation/hero_workspace_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

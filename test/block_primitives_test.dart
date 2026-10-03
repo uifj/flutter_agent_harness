@@ -10,15 +10,15 @@
 // not a taste call: content that cannot fit is cut with no error (ADR-0017 S3's
 // measurement, ADR-0013-era narrow-column law from `composer_test.dart`).
 
-import 'package:agent_harness/ui/primitives/code_block.dart';
-import 'package:agent_harness/ui/primitives/copy_button.dart';
-import 'package:agent_harness/ui/primitives/diff_block.dart';
-import 'package:agent_harness/ui/primitives/pill.dart';
-import 'package:agent_harness/ui/primitives/search_block.dart';
-import 'package:agent_harness/ui/primitives/terminal_block.dart';
+import 'package:planstar/ui/primitives/code_block.dart';
+import 'package:planstar/ui/primitives/copy_button.dart';
+import 'package:planstar/ui/primitives/diff_block.dart';
+import 'package:planstar/ui/primitives/pill.dart';
+import 'package:planstar/ui/primitives/search_block.dart';
+import 'package:planstar/ui/primitives/terminal_block.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:agent_harness/theme/dsw_theme.dart';
+import 'package:planstar/theme/dsw_theme.dart';
 import 'amplified_text_probe.dart';
 
 /// A path long enough that the row has to choose: shorten it, scroll it, or lose

@@ -6,9 +6,9 @@
 // turn because a live turn needs an API key: what is worth pinning is which of
 // the four inputs wins, and that is a pure decision.
 
-import 'package:agent_harness/genkit/tools.dart';
-import 'package:agent_harness/model/approval_mode.dart';
-import 'package:agent_harness/model/approval_rule.dart';
+import 'package:planstar/genkit/tools.dart';
+import 'package:planstar/model/approval_mode.dart';
+import 'package:planstar/model/approval_rule.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

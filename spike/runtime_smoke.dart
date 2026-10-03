@@ -21,12 +21,12 @@ library;
 
 import 'dart:io';
 
-import 'package:agent_harness/genkit/agent_runtime.dart';
-import 'package:agent_harness/model/app_settings.dart';
-import 'package:agent_harness/model/checkpoint.dart';
-import 'package:agent_harness/model/conversation.dart';
-import 'package:agent_harness/model/model_settings.dart';
-import 'package:agent_harness/model/turn_event.dart';
+import 'package:planstar/genkit/agent_runtime.dart';
+import 'package:planstar/model/app_settings.dart';
+import 'package:planstar/model/checkpoint.dart';
+import 'package:planstar/model/conversation.dart';
+import 'package:planstar/model/model_settings.dart';
+import 'package:planstar/model/turn_event.dart';
 
 void banner(String title) {
   stdout.writeln('\n${'=' * 68}\n$title\n${'=' * 68}');

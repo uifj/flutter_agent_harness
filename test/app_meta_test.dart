@@ -3,7 +3,7 @@
 
 import 'dart:io';
 
-import 'package:agent_harness/model/app_meta.dart';
+import 'package:planstar/model/app_meta.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

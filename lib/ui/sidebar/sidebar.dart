@@ -593,7 +593,7 @@ class _SidebarState extends State<Sidebar> {
               child: Row(
                 children: [
                   Icon(
-                    LucideIcons.droplet,
+                    LucideIcons.sparkle,
                     size: 24,
                     color: color.labelPrimary,
                   ),
@@ -632,7 +632,7 @@ class _SidebarState extends State<Sidebar> {
                   size: wide ? 16 : 18,
                   color: wide ? color.labelSecondary : color.labelPrimary,
                 )
-              : Icon(LucideIcons.droplet, size: 24, color: color.labelPrimary),
+              : Icon(LucideIcons.sparkle, size: 24, color: color.labelPrimary),
         ),
       ],
     ),

@@ -2,7 +2,7 @@
 // source headers call out by contract: the sidebar never concedes, auto-closing
 // a panel is derived rather than remembered, and the workbench concedes last.
 
-import 'package:agent_harness/ui/layout/columns.dart';
+import 'package:planstar/ui/layout/columns.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

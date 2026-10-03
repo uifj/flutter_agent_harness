@@ -10,7 +10,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:agent_harness/host/terminal_manager.dart';
+import 'package:planstar/host/terminal_manager.dart';
 
 class FakeTerminalProcess implements TerminalProcess {
   FakeTerminalProcess();

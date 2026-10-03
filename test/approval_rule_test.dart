@@ -5,8 +5,8 @@
 // a human decision, so the matching is pinned here rather than trusted: what it
 // matches, in what priority, and what survives a round trip through the file.
 
-import 'package:agent_harness/model/approval_rule.dart';
-import 'package:agent_harness/model/conversation.dart';
+import 'package:planstar/model/approval_rule.dart';
+import 'package:planstar/model/conversation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
