@@ -61,3 +61,14 @@
   （`ConversationComposer.tsx:2086-2093` 只有 `bg-brand` + `disabled={!canSend}`），
   灰是共享 Button 的禁用样式在起作用。我们的同一格由 shad 的 `ShadDisabled` 读主题 `disabledOpacity`
   （40%）表达，机制同类。留在这里是为了让下一个人不必再为它开一次对照。
+- **问候语背后那枚大字标**（读代码才找到的那一格：`ConversationDraftEmptyState.tsx:178-187` 把它绝对居中在
+  header 之后，`w-[min(72vw,25rem)]`、`aspect-[5/4]`、`text-foreground-subtlest`，亮色档再叠
+  `opacity-70` 与一条到 70% 高度就透明的纵向遮罩）。**不搬，因为可搬的部分不是截图上那件东西**：
+  亮色档是**它们字母形的线框**（`:216-236` 内联 `<svg>`，一条 `Z` 的路径描 `currentColor`），
+  暗色档是**另一份自带渐变与模糊的资源**（`:237-244` 的 `<img src={darkEmptyStateLogoUrl}>`，注释自己写着
+  "深色资源包含专用渐变与模糊效果，不能通过 currentColor 复刻"；那份资源在归档里，
+  `packages/ui/src/assets/Z.svg`，由 `:8` 引入）。**两档都是它们的字母形**，所以不搬的理由不是拿不到，
+  而是**那是另一个产品的商标**：把它铺在我们的首页当水印，是身份与许可的决定，不是移植（最近的先例是
+  ADR-0001 对 vendored 资源的那条判词）。要这层氛围，形状得是我们自己的标识——那时它落在这个位置上
+  （`_headline` 之后、Stack 的底层、`aria-hidden` + 不吃指针 + 一条纵向渐隐遮罩）。
+  判词与 ADR-0041 同一条：**先确认搬过来的是那个东西，再确认搬得起。**

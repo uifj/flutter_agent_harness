@@ -29,7 +29,7 @@
 5. 工具栏左簇第一件。参考是 `+`（`PlusIcon size-4`，`ChatPromptActionMenu.tsx:252-259`，标题"添加上下文"），
    我们是一枚回形针开附件菜单。
 
-另两格**不在本次范围**，理由是可跑的取证而不是审美：
+另有三格**不在本次范围**，理由是可跑的取证而不是审美：
 
 - 额度横幅（`ConversationQuotaBanner.tsx` + `sessionQuotaBannerState.ts:29-52`）：本仓库有形状没有数据——
   `lib/model/zcode_compat/zcode_account.dart:77` 的 `ZcodeUsageQuotaSnapshot` 在生产代码里**零读者**
@@ -42,6 +42,11 @@
   usage 块累加，`conversation_controller.dart:184-185` 再汇总），**缺的是分母**——`model/known_models.dart`
   没有模型上下文窗口这一档，环形表没有可算的百分比；而 `reasoningLevel` 也没有进请求的通路。
   按 ADR-0022"一条偏好必须有人读回"，这两枚等 ADR-0045 的后端契约真的回这两个字段再接。
+- 问候语背后那枚大字标（`ConversationDraftEmptyState.tsx:178-187` 把它绝对居中在 header 之后，亮色档是内联
+  `<svg>` 的字母线框 `:216-236`，暗色档是 `:237-244` 那份自带渐变与模糊的 `packages/ui/src/assets/Z.svg`，
+  由 `:8` 引入）：资源**在**归档里，拿得到，但**那是另一个产品的商标**——把它铺在我们首页当水印是身份与
+  许可的决定，不是移植（最近的先例是 ADR-0001 对 vendored 资源那条判词）。要这层氛围就得先有自己的 hero
+  标识；位置已经留好——`_headline` 之后、Stack 的底层、`aria-hidden` + 不吃指针 + 一条纵向渐隐遮罩。
 
 ## 决策（Decision）
 
