@@ -821,6 +821,35 @@ void main() {
       current: const ModelSettings(apiKey: 'sk-live', model: defaultModel),
     );
 
+    testWidgets('the trailing group is anchored to the card\'s right edge', (
+      tester,
+    ) async {
+      // The row's own comment promises this: "the model chip and button are the
+      // trailing group and should feel anchored to the right". They were not.
+      // `Spacer` and the model chip's `Flexible` are BOTH flex children, so the
+      // free space split in half — and the half the chip did not need simply
+      // vanished instead of going to the spacer, leaving the send a few hundred
+      // pixels short of the 4px it is padded to.
+      await pump(tester, width: 900, directory: seeded());
+
+      final card = tester.getRect(
+        find.byWidgetPredicate(
+          (w) =>
+              w is AnimatedContainer &&
+              w.decoration is BoxDecoration &&
+              (w.decoration! as BoxDecoration).borderRadius ==
+                  BorderRadius.circular(DswShape.float),
+        ),
+      );
+      final send = tester.getRect(find.byIcon(LucideIcons.arrow_up));
+      // 4px of row pad + the 9px from the glyph's edge to its 34px box.
+      expect(
+        card.right - send.right,
+        lessThan(24),
+        reason: 'the send sits ${card.right - send.right}px from the card edge',
+      );
+    });
+
     testWidgets('320px keeps both menus', (tester) async {
       await pump(tester, width: 320, directory: seeded());
 

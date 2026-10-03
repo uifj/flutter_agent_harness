@@ -935,39 +935,69 @@ class ComposerState extends State<Composer> {
         // rides `conversation.input.model` beside the primary action, NOT in
         // the tools: it is a property of the next send, like the button, not
         // a modifier of the draft, like the attachments.
+        // Two clusters, and the slack belongs to the gap between them. A flat
+        // list with a `Spacer` could not say that: the two chips' `Flexible`
+        // each claimed a share of the slack and handed their unused parts back
+        // at the END of the row, so the send sat 60px off the edge this row's
+        // comment had been promising it was anchored to (measured at 900px, now
+        // guarded). The trailing group is laid out first and keeps its floor;
+        // the left cluster absorbs both the slack and the squeeze.
+        //
+        // 84px is the left cluster at its tightest — attach (34) + 4 + the mode
+        // chip down to its glyph and a couple of characters — measured, not
+        // guessed: at 94 the 260px case overflowed by 10. The bound only applies
+        // while the chips are seated at all; below `seatsFit` the trailing group
+        // is just the send, and squeezing it to a fraction of its own box is a
+        // layout blowup, not a degradation.
+        final trailingCeiling = seatsFit
+            ? constraints.maxWidth - 84
+            : double.infinity;
         return Row(
           children: [
-            _AttachButton(
-              onPick: _pickImages,
-              onPickDocuments: _pickDocuments,
-              onPaste: _pasteClipboardImage,
+            Expanded(
+              child: Row(
+                children: [
+                  _AttachButton(
+                    onPick: _pickImages,
+                    onPickDocuments: _pickDocuments,
+                    onPaste: _pasteClipboardImage,
+                  ),
+                  const SizedBox(width: 4),
+                  if (seatsFit) ...[
+                    // Flexible rather than fixed: the chip's label ellipsizes
+                    // before the row ever gets this tight.
+                    Flexible(
+                      child: _ModeChip(
+                        mode: widget.approvalMode,
+                        onSelect: widget.onApprovalMode == null
+                            ? null
+                            : (mode) => widget.onApprovalMode!(mode),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
-            const SizedBox(width: 4),
-            if (seatsFit) ...[
-              // Flexible rather than fixed: the chip's label ellipsizes
-              // before the row ever gets this tight.
-              Flexible(
-                child: _ModeChip(
-                  mode: widget.approvalMode,
-                  onSelect: widget.onApprovalMode == null
-                      ? null
-                      : (mode) => widget.onApprovalMode!(mode),
-                ),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: trailingCeiling),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (widget.modelDirectory != null && seatsFit) ...[
+                    Flexible(
+                      child: _ModelChip(
+                        directory: widget.modelDirectory!,
+                        onSelect: widget.onModelSelected,
+                        onOpenSettings: widget.onOpenSettings,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  _deliverChips(color, tight: !actionsFit),
+                  _primary(color),
+                ],
               ),
-            ],
-            const Spacer(),
-            if (widget.modelDirectory != null && seatsFit)
-              Flexible(
-                child: _ModelChip(
-                  directory: widget.modelDirectory!,
-                  onSelect: widget.onModelSelected,
-                  onOpenSettings: widget.onOpenSettings,
-                ),
-              ),
-            if (widget.modelDirectory != null && seatsFit)
-              const SizedBox(width: 8),
-            _deliverChips(color, tight: !actionsFit),
-            _primary(color),
+            ),
           ],
         );
       },
