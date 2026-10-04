@@ -417,6 +417,9 @@ const enStrings = <String, String>{
   'searchingFiles': 'Searching the workspace…',
   'commandNewSession': 'Start a new session',
   'quickPhrases': 'Quick phrases',
+  'preRestoreTitle': 'Pre-restore snapshots',
+  'preRestoreDesc':
+      'Each restore first copies the files it will overwrite here. The newest 3 are kept.',
   'settingsEnvironment': 'Environment variables',
   'settingsEnvironmentIntro':
       'Injected into shell commands; reference them as \$NAME. Values live in the keychain and are redacted from command output shown to the model.',
@@ -1267,6 +1270,8 @@ const zhStrings = <String, String>{
   'searchingFiles': '正在搜索工作区…',
   'commandNewSession': '开始新会话',
   'quickPhrases': '快捷短语',
+  'preRestoreTitle': '恢复前快照',
+  'preRestoreDesc': '每次恢复前，将被覆盖的文件先复制到这里。保留最近 3 份。',
   'settingsEnvironment': '环境变量',
   'settingsEnvironmentIntro':
       '注入 shell 命令，以 \$NAME 引用。值保存在钥匙串，并会从展示给模型的命令输出中脱敏。',

@@ -100,6 +100,7 @@ class SettingsPanel extends StatefulWidget {
     this.onOpenCrashLog,
     this.crashFiles,
     this.onOpenDiagnosticsFolder,
+    this.onOpenPreRestoreFolder,
     required this.quickPhrases,
     required this.environment,
     required this.onClose,
@@ -141,6 +142,10 @@ class SettingsPanel extends StatefulWidget {
   /// Opens the diagnostics directory in the file manager (ADR-0058); null
   /// hides the row.
   final VoidCallback? onOpenDiagnosticsFolder;
+
+  /// Opens the pre-restore snapshots in the file manager (ADR-0065); null
+  /// hides the row.
+  final VoidCallback? onOpenPreRestoreFolder;
 
   /// The quick phrase library (ADR-0063): this section is its only editor;
   /// the composer reads the same store through the host.
@@ -1917,6 +1922,15 @@ class _SettingsPanelState extends State<SettingsPanel> {
             onTap: _restoreBackup,
           ),
         ),
+        if (widget.onOpenPreRestoreFolder != null)
+          _ActionRow(
+            title: context.tr('preRestoreTitle'),
+            description: context.tr('preRestoreDesc'),
+            button: CapsuleButton(
+              label: context.tr('revealInFiles'),
+              onTap: widget.onOpenPreRestoreFolder!,
+            ),
+          ),
         _ActionRow(
           title: context.tr('settingsReset'),
           description: context.tr('settingsResetDesc'),

@@ -758,6 +758,11 @@ class _DshAppState extends ConsumerState<DshApp> {
           '${ref.watch(supportDirectoryProvider).path}/diagnostics',
         );
       },
+      onOpenPreRestoreFolder: () {
+        revealInFileManager(
+          '${ref.watch(supportDirectoryProvider).path}/pre-restore',
+        );
+      },
       onClose: () => setState(() => _settingsOpen = false),
       onPickFolder: scope.pickFolder,
       // The field hints on the settings page name directories the user can open,

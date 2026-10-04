@@ -10,6 +10,8 @@
 
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import 'package:archive/archive.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -128,6 +130,15 @@ class BackupService {
       }
     }
 
+    // Third line of defence (ADR-0065): whatever this restore is about to
+    // overwrite is copied aside first. ADR-0042 keeps the restore from
+    // writing somewhere it should not; this keeps the OLD bytes findable
+    // when the restore succeeds but the user picked the wrong archive.
+    await snapshotBeforeRestore(
+      support.path,
+      targets.values.whereType<String>(),
+    );
+
     var count = 0;
     for (final file in archive) {
       if (!file.isFile) continue;
@@ -139,5 +150,64 @@ class BackupService {
     }
 
     return count;
+  }
+
+  /// How many pre-restore snapshots survive a new restore (ADR-0065).
+  static const preRestoreRetained = 3;
+  static const _preRestoreDirName = 'pre-restore';
+
+  /// Copies every existing file the restore will overwrite into
+  /// `<support>/pre-restore/<stamp>/<relative-path>`, mirroring the layout so
+  /// a rollback is "copy the directory back" with no manifest of its own.
+  /// Only touched files are snapshotted: data the restore never touches is
+  /// not part of "the world before the restore", and folding it in would
+  /// make the copy lie about what it can restore.
+  @visibleForTesting
+  static Future<void> snapshotBeforeRestore(
+    String supportPath,
+    Iterable<String> targets,
+  ) async {
+    final stamp = _preRestoreStamp(DateTime.now());
+    final snapshotRoot = Directory(
+      p.join(supportPath, _preRestoreDirName, stamp),
+    );
+    var copied = 0;
+    for (final target in targets) {
+      final file = File(target);
+      if (!await file.exists()) continue;
+      final relative = p.relative(target, from: supportPath);
+      final copy = File(p.join(snapshotRoot.path, relative));
+      await copy.parent.create(recursive: true);
+      await file.copy(copy.path);
+      copied++;
+    }
+    if (copied == 0) {
+      // Nothing existing was touched; an empty snapshot folder would claim
+      // otherwise.
+      return;
+    }
+    await _prunePreRestoreSnapshots(supportPath);
+  }
+
+  static String _preRestoreStamp(DateTime now) =>
+      '${now.year}'
+      '${now.month.toString().padLeft(2, '0')}'
+      '${now.day.toString().padLeft(2, '0')}_'
+      '${now.hour.toString().padLeft(2, '0')}'
+      '${now.minute.toString().padLeft(2, '0')}'
+      '${now.second.toString().padLeft(2, '0')}'
+      '_${now.millisecondsSinceEpoch % 1000}';
+
+  /// Keeps the newest [preRestoreRetained] snapshots.
+  static Future<void> _prunePreRestoreSnapshots(String supportPath) async {
+    final root = Directory(p.join(supportPath, _preRestoreDirName));
+    if (!await root.exists()) return;
+    final snapshots = [
+      await for (final entity in root.list())
+        if (entity is Directory) entity,
+    ]..sort((a, b) => a.path.compareTo(b.path));
+    for (var i = 0; i < snapshots.length - preRestoreRetained; i++) {
+      await snapshots[i].delete(recursive: true);
+    }
   }
 }
