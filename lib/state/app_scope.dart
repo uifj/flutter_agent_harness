@@ -41,6 +41,7 @@ import 'prefs_store.dart';
 import 'quick_phrase_store.dart';
 import 'session_index.dart';
 import 'environment_store.dart';
+import 'instruction_card_store.dart';
 import 'secret_store.dart';
 import 'session_registry.dart';
 import 'settings_store.dart';
@@ -63,6 +64,7 @@ class AppScope {
     // Workspace environment variables (ADR-0064): names on disk, values in
     // the keychain.
     _environment = EnvironmentStore.open(support, SecureSecretStore());
+    _instructionCards = InstructionCardStore.open(support);
     _approvals = ApprovalRuleStore.open(support);
     _checkpoints = CheckpointStore.open(support);
     // Local usage ledger (ADR-0045 PC): one JSONL line per finished model
@@ -176,6 +178,7 @@ class AppScope {
   /// the settings page's management section.
   late final QuickPhraseStore _quickPhrases;
   late final EnvironmentStore _environment;
+  late final InstructionCardStore _instructionCards;
 
   /// The local crash archive — the settings screen's log entry reads it.
   late final CrashArchive crashArchive;
@@ -195,6 +198,8 @@ class AppScope {
   QuickPhraseStore get quickPhrases => _quickPhrases;
 
   EnvironmentStore get environment => _environment;
+
+  InstructionCardStore get instructionCards => _instructionCards;
 
   /// The attention service — the General section's notification toggle gates
   /// its raise behavior through the settings document.
@@ -414,6 +419,7 @@ class AppScope {
     // The parameter shadows the store field inside this method; the closures
     // below must ask the STORE (live), not this build-time snapshot.
     final store = this.settings;
+    final cards = _instructionCards;
     return AgentRuntime(
       settings: settings,
       sessionRoot: _sessionRoot,
@@ -425,6 +431,11 @@ class AppScope {
       // Live environment read (ADR-0064): the values come from the keychain
       // at each bash call, so an edit lands on the next command.
       environmentLoader: () => _environment.load(),
+      // Enabled cards' texts, read live at queue time (ADR-0067).
+      cardsLoader: () async => [
+        for (final id in store.value.enabledCardIds)
+          if (cards.cardOf(id) != null) cards.cardOf(id)!.text,
+      ],
       // Live reads (ADR-0058): a diagnostics toggle must not rebuild the
       // runtime — the closures ask the store on every model call, so a save
       // takes effect on the next call without dropping the conversation.
@@ -473,6 +484,12 @@ class AppScope {
       // conversation is not lost: it stays on disk and in the sidebar under its
       // own folder, one click away.
       await newSession();
+    }
+    // A card enable-set change re-queues the instruction block (ADR-0067):
+    // the block is baked per conversation start, like the folder brief.
+    if (next.enabledCardIds.length != previous.enabledCardIds.length ||
+        !{...next.enabledCardIds}.containsAll(previous.enabledCardIds)) {
+      await _runtime.refreshInstructions();
     }
     if (!next.requiresRuntimeRestart(previous)) {
       _runtime.workspaceRoot = next.workspaceRoot;

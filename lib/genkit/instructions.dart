@@ -32,6 +32,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import '../model/mention_expansion.dart' show workspaceReferenceTag;
+import '../model/instruction_card.dart' show instructionCardsBlock;
 
 /// Where an instruction file came from.
 enum InstructionOrigin { user, project }
@@ -197,8 +198,15 @@ String conversationSummaryBlock(String summary) {
 ///
 /// Model-facing text, so it is not an i18n string — a tool description and this
 /// block are read by the model, not by the user (`workflow.md` §3).
-String? renderInstructions(List<InstructionFile> files) {
-  if (files.isEmpty) return null;
+String? renderInstructions(
+  List<InstructionFile> files, {
+  List<String>? cardTexts,
+}) {
+  // Cards can carry a block on their own: a user with no AGENTS.md but an
+  // enabled card still gets an injection (ADR-0067).
+  final hasCards =
+      cardTexts != null && instructionCardsBlock(cardTexts) != null;
+  if (files.isEmpty && !hasCards) return null;
   final buffer = StringBuffer()
     ..writeln(instructionsOpenTag)
     ..writeln(
@@ -222,6 +230,13 @@ String? renderInstructions(List<InstructionFile> files) {
       );
     }
   }
+  final cards = cardTexts == null ? null : instructionCardsBlock(cardTexts);
+  if (cards != null) {
+    buffer
+      ..writeln()
+      ..writeln('### Additional instructions from the user')
+      ..writeln(cards);
+  }
   buffer.write('</project-instructions>');
   return buffer.toString();
 }
@@ -230,8 +245,10 @@ String? renderInstructions(List<InstructionFile> files) {
 String? instructionsForWorkspace({
   required String? workspaceRoot,
   required String? homeRoot,
+  List<String>? cardTexts,
 }) => renderInstructions(
   discoverInstructions(workspaceRoot: workspaceRoot, homeRoot: homeRoot),
+  cardTexts: cardTexts,
 );
 
 class _Clip {

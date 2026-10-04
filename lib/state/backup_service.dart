@@ -62,7 +62,15 @@ class BackupService {
     final archive = Archive();
 
     // Files to back up (relative to support directory).
-    final files = <String>['settings.json', 'prefs.json', 'plan_tasks.json'];
+    // quick_phrases.json (ADR-0063) and instruction_cards.json (ADR-0067)
+    // ride along: both are user content, the "follows the person" class.
+    final files = <String>[
+      'settings.json',
+      'prefs.json',
+      'plan_tasks.json',
+      'quick_phrases.json',
+      'instruction_cards.json',
+    ];
 
     // Add individual files.
     for (final relative in files) {

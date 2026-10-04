@@ -826,6 +826,7 @@ class AgentRuntime implements TurnSource {
     required _StopFlag stop,
     required _UsageLedger usage,
     required ModelRef<dynamic> modelRef,
+    required Future<List<String>> Function()? cardsLoader,
     required List<ToolAuditRecord> toolAudit,
     required ApprovalModeHolder approval,
     required _GuideHolder guides,
@@ -841,6 +842,7 @@ class AgentRuntime implements TurnSource {
        _stop = stop,
        _usage = usage,
        _modelRef = modelRef,
+       _cardsLoader = cardsLoader,
        _toolAudit = toolAudit,
        _approval = approval,
        _guides = guides;
@@ -861,6 +863,7 @@ class AgentRuntime implements TurnSource {
     CheckpointSink? checkpoints,
     DiagnosticHooks? diagnostics,
     EnvironmentLoader? environmentLoader,
+    Future<List<String>> Function()? cardsLoader,
   }) {
     final model = settings.model;
     final activeModelId = model.isConfigured ? model.model : null;
@@ -1040,6 +1043,7 @@ class AgentRuntime implements TurnSource {
       stop: stop,
       usage: usage,
       modelRef: modelRef,
+      cardsLoader: cardsLoader,
       activeModelId: activeModelId,
       toolAudit: toolAudit,
       approval: approval,
@@ -1062,6 +1066,9 @@ class AgentRuntime implements TurnSource {
   /// agent was defined with — rebuilt per runtime, like everything else the
   /// factory bakes in.
   final ModelRef<dynamic> _modelRef;
+
+  /// Reads the enabled instruction cards' texts (ADR-0067). Null = no cards.
+  final Future<List<String>> Function()? _cardsLoader;
 
   /// The model id this runtime was built for — the usage ledger's per-model
   /// bucket (ADR-0045 PC). Null when the runtime was built unconfigured.
@@ -1131,10 +1138,18 @@ class AgentRuntime implements TurnSource {
     return response.text;
   }
 
-  void _queueInstructions() {
+  /// Re-queues the instruction block from current state (ADR-0067): the
+  /// cards' enable-set changed without a folder change.
+  Future<void> refreshInstructions() => _queueInstructions();
+
+  Future<void> _queueInstructions() async {
+    // Cards read at queue time (ADR-0067): a settings save re-queues via
+    // the same path, so the next conversation carries the current set.
+    final cardTexts = await _cardsLoader?.call() ?? const <String>[];
     _pendingInstructions = instructionsForWorkspace(
       workspaceRoot: _tools.workspace?.root,
       homeRoot: detectHomeRoot(),
+      cardTexts: cardTexts.isEmpty ? null : cardTexts,
     );
   }
 

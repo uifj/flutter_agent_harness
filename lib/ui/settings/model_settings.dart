@@ -53,6 +53,8 @@ import '../../state/approval_rule_store.dart';
 import '../../state/backup_service.dart';
 import '../../model/shortcut_registry.dart' as shortcuts;
 import '../../state/usage_ledger.dart';
+import '../../model/instruction_card.dart';
+import '../../state/instruction_card_store.dart';
 import '../../state/environment_store.dart';
 import '../../state/quick_phrase_store.dart';
 import '../../model/quick_phrase.dart';
@@ -81,6 +83,7 @@ enum _Section {
   shortcuts,
   phrases,
   environment,
+  cards,
   usage,
   diagnostics,
   approvals,
@@ -103,6 +106,7 @@ class SettingsPanel extends StatefulWidget {
     this.onOpenPreRestoreFolder,
     required this.quickPhrases,
     required this.environment,
+    required this.instructionCards,
     required this.onClose,
     required this.onPickFolder,
     required this.supportPath,
@@ -154,6 +158,10 @@ class SettingsPanel extends StatefulWidget {
   /// The workspace environment store (ADR-0064): this section manages names;
   /// values live in the keychain and are never shown again.
   final EnvironmentStore environment;
+
+  /// The instruction card store (ADR-0067): this section edits cards and
+  /// their enable set (on the settings document through onSave).
+  final InstructionCardStore instructionCards;
 
   final VoidCallback onClose;
 
@@ -645,6 +653,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
         context.tr('settingsEnvironment'),
         LucideIcons.variable,
       ),
+      _NavItem(_Section.cards, context.tr('settingsCards'), LucideIcons.layers),
       _NavItem(
         _Section.usage,
         context.tr('settingsUsage'),
@@ -809,6 +818,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     _Section.shortcuts => _shortcutsSection(color),
                     _Section.phrases => _phrasesSection(color),
                     _Section.environment => _environmentSection(context, color),
+                    _Section.cards => _cardsSection(context, color),
                     _Section.usage => _usageSection(color),
                     _Section.diagnostics => _diagnosticsSection(color),
                     _Section.backup => _backupSection(color),
@@ -1745,6 +1755,147 @@ class _SettingsPanelState extends State<SettingsPanel> {
     );
     value.dispose();
     if (saved == true) await store.updateValue(name, value.text);
+  }
+
+  /// Instruction cards (ADR-0067): edit cards here; the enable switches
+  /// write the settings document through onSave — the same draft path the
+  /// toggles use, so Save is the commit point for the enable-set.
+  List<Widget> _cardsSection(BuildContext context, DswAlias color) {
+    final store = widget.instructionCards;
+    final enabled = widget.settings.enabledCardIds;
+    return [
+      _heading(
+        color,
+        context.tr('settingsCards'),
+        context.tr('settingsCardsIntro'),
+      ),
+      const SizedBox(height: 12),
+      SettingsCard(
+        dividers: true,
+        children: [
+          ListenableBuilder(
+            listenable: store,
+            builder: (context, _) {
+              final cards = store.cards;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (cards.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          context.tr('cardsEmpty'),
+                          style: DswType.xxs12.copyWith(
+                            color: color.labelTertiary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  for (final card in cards)
+                    _CardRow(
+                      title: card.title,
+                      text: card.text,
+                      enabled: enabled.contains(card.id),
+                      onToggle: (value) {
+                        final next = value
+                            ? [...enabled, card.id]
+                            : [
+                                for (final id in enabled)
+                                  if (id != card.id) id,
+                              ];
+                        _saveWith(
+                          widget.settings.copyWith(enabledCardIds: next),
+                        );
+                      },
+                      onEdit: () => _editCard(card),
+                      onDelete: () {
+                        store.remove(card.id);
+                        if (enabled.contains(card.id)) {
+                          _saveWith(
+                            widget.settings.copyWith(
+                              enabledCardIds: [
+                                for (final id in enabled)
+                                  if (id != card.id) id,
+                              ],
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                ],
+              );
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: CapsuleButton(
+              label: context.tr('cardAdd'),
+              enabled: !store.isFull,
+              onTap: () => _editCard(null),
+            ),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  Future<void> _editCard(InstructionCard? card) async {
+    final title = TextEditingController(text: card?.title ?? '');
+    final body = TextEditingController(text: card?.text ?? '');
+    final step = MediaQuery.textScalerOf(context).scale(1);
+    final saved = await showShadDialog<bool>(
+      context: context,
+      builder: (dialogContext) => ShadDialog(
+        radius: BorderRadius.circular(DswShape.float),
+        title: Text(context.tr('cardAdd'), style: DswType.sStrong14),
+        actions: [
+          ShadButton.outline(
+            height: 24 * step,
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(context.tr('cancel')),
+          ),
+          ShadButton(
+            height: 24 * step,
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.tr('save')),
+          ),
+        ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ShadInput(
+              controller: title,
+              placeholder: Text(context.tr('cardTitleHint')),
+              autofocus: true,
+            ),
+            const SizedBox(height: 8),
+            ShadInput(
+              controller: body,
+              placeholder: Text(context.tr('cardTextHint')),
+              minLines: 3,
+              maxLines: 6,
+            ),
+          ],
+        ),
+      ),
+    );
+    title.dispose();
+    body.dispose();
+    if (saved != true) return;
+    if (card == null) {
+      widget.instructionCards.add(title.text, body.text);
+    } else {
+      widget.instructionCards.update(
+        card.id,
+        title: title.text,
+        text: body.text,
+      );
+    }
   }
 
   /// Quick phrases (ADR-0063): the library's only editor. Changes commit
@@ -3243,6 +3394,72 @@ class _EnvironmentRow extends StatelessWidget {
             tooltip: context.tr('envDelete'),
             onTap: onDelete,
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One instruction card of the management list: title, one-line preview,
+/// an enable switch writing the settings document, and edit/delete.
+class _CardRow extends StatelessWidget {
+  const _CardRow({
+    required this.title,
+    required this.text,
+    required this.enabled,
+    required this.onToggle,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final String title;
+  final String text;
+  final bool enabled;
+  final ValueChanged<bool> onToggle;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.dsw;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: DswType.s14.copyWith(color: color.labelPrimary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  text,
+                  style: DswType.xxs12.copyWith(color: color.labelTertiary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          DswIconButton(
+            icon: LucideIcons.pencil,
+            tooltip: context.tr('edit'),
+            onTap: onEdit,
+          ),
+          const SizedBox(width: 4),
+          DswIconButton(
+            icon: LucideIcons.trash,
+            tooltip: context.tr('cardDelete'),
+            onTap: onDelete,
+          ),
+          const SizedBox(width: 4),
+          ShadSwitch(value: enabled, onChanged: onToggle),
         ],
       ),
     );

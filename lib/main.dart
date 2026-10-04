@@ -779,6 +779,7 @@ class _DshAppState extends ConsumerState<DshApp> {
       approvals: scope.approvals,
       quickPhrases: scope.quickPhrases,
       environment: scope.environment,
+      instructionCards: scope.instructionCards,
     );
   }
 }

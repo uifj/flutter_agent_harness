@@ -130,6 +130,7 @@ class AppSettings {
     this.notificationsOn = true,
     this.diagnosticRequestLog = true,
     this.diagnosticContextLog = false,
+    this.enabledCardIds = const [],
     this.savedProviders = const [],
     this.activeProviderId,
   });
@@ -159,6 +160,10 @@ class AppSettings {
       notificationsOn = json['notificationsOn'] as bool? ?? true,
       diagnosticRequestLog = json['diagnosticRequestLog'] as bool? ?? true,
       diagnosticContextLog = json['diagnosticContextLog'] as bool? ?? false,
+      enabledCardIds = [
+        for (final id in (json['enabledCardIds'] as List? ?? const []))
+          if (id is String) id,
+      ],
       savedProviders = [
         for (final entry in (json['savedProviders'] as List? ?? const []))
           if (entry is Map<String, dynamic>) ModelSettings.fromJson(entry),
@@ -214,6 +219,11 @@ class AppSettings {
   /// See [diagnosticRequestLog] (ADR-0058 S2). Persisted only when on.
   final bool diagnosticContextLog;
 
+  /// Which instruction cards (ADR-0067) the runtime injects. Content lives
+  /// in the card store; this is the enable-set preference. Persisted only
+  /// when non-empty.
+  final List<String> enabledCardIds;
+
   /// The saved provider connections (ADR-0045 PF-2): an address book of
   /// configured `ModelSettings` entries, each with a stable [ModelSettings.id]
   /// and its API key in the secret store under
@@ -247,6 +257,7 @@ class AppSettings {
     bool? notificationsOn,
     bool? diagnosticRequestLog,
     bool? diagnosticContextLog,
+    List<String>? enabledCardIds,
     List<ModelSettings>? savedProviders,
     String? activeProviderId,
   }) => AppSettings(
@@ -264,6 +275,7 @@ class AppSettings {
     notificationsOn: notificationsOn ?? this.notificationsOn,
     diagnosticRequestLog: diagnosticRequestLog ?? this.diagnosticRequestLog,
     diagnosticContextLog: diagnosticContextLog ?? this.diagnosticContextLog,
+    enabledCardIds: enabledCardIds ?? this.enabledCardIds,
     savedProviders: savedProviders ?? this.savedProviders,
     activeProviderId: activeProviderId ?? this.activeProviderId,
   );
@@ -304,6 +316,7 @@ class AppSettings {
     notificationsOn: notificationsOn,
     diagnosticRequestLog: diagnosticRequestLog,
     diagnosticContextLog: diagnosticContextLog,
+    enabledCardIds: enabledCardIds,
     savedProviders: savedProviders,
     activeProviderId: activeProviderId,
   );
@@ -388,6 +401,7 @@ class AppSettings {
     // Diagnostics (ADR-0058): request log defaults on, context snapshot off.
     if (!diagnosticRequestLog) 'diagnosticRequestLog': false,
     if (diagnosticContextLog) 'diagnosticContextLog': true,
+    if (enabledCardIds.isNotEmpty) 'enabledCardIds': enabledCardIds,
     if (savedProviders.isNotEmpty)
       'savedProviders': [
         for (final provider in savedProviders) provider.toJson(),
@@ -412,6 +426,7 @@ class AppSettings {
       other.notificationsOn == notificationsOn &&
       other.diagnosticRequestLog == diagnosticRequestLog &&
       other.diagnosticContextLog == diagnosticContextLog &&
+      _listEq(other.enabledCardIds, enabledCardIds) &&
       _listEq(other.savedProviders, savedProviders) &&
       other.activeProviderId == activeProviderId;
 
@@ -432,6 +447,7 @@ class AppSettings {
     diagnosticRequestLog,
     diagnosticContextLog,
     Object.hashAll(savedProviders),
+    Object.hashAll(enabledCardIds),
     activeProviderId,
   );
 

@@ -12,6 +12,7 @@ import 'dart:io';
 import 'amplified_text_probe.dart';
 import 'package:planstar/model/app_settings.dart';
 import 'package:planstar/state/quick_phrase_store.dart';
+import 'package:planstar/state/instruction_card_store.dart';
 import 'package:planstar/state/environment_store.dart';
 import 'package:planstar/state/secret_store.dart';
 import 'package:planstar/model/model_settings.dart';
@@ -243,6 +244,9 @@ void main() {
             environment: EnvironmentStore.open(
               Directory.systemTemp.createTempSync('phrases'),
               SecureSecretStore(),
+            ),
+            instructionCards: InstructionCardStore.open(
+              Directory.systemTemp.createTempSync('phrases'),
             ),
             onReset: () async {},
             usageSummary: const UsageSummary(
