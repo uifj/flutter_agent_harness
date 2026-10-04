@@ -199,6 +199,15 @@ class _SidebarState extends State<Sidebar> {
   /// The open quick-menu's overlay entry, owned by this state (audit F2).
   OverlayEntry? _quickMenu;
 
+  /// Removes the quick-menu overlay if present, then forgets it. Idempotent:
+  /// the menu's own dismissal can re-enter this (ADR-0072), so nulling the
+  /// field BEFORE the remove is what makes a second call a no-op.
+  void _dismissQuickMenu() {
+    final entry = _quickMenu;
+    _quickMenu = null;
+    if (entry != null && entry.mounted) entry.remove();
+  }
+
   /// The last width the column had while expanded, held so the fading content
   /// keeps its expanded layout instead of reflowing into the rail.
   double _lastWideWidth = sidebarDefault;
@@ -229,8 +238,7 @@ class _SidebarState extends State<Sidebar> {
     // The quick-menu overlay entry is owned here (audit F2): the sidebar going
     // away — a body swap to the full settings view, most commonly — must take
     // its popup with it, or the menu floats over the new surface.
-    if (_quickMenu != null && _quickMenu!.mounted) _quickMenu!.remove();
-    _quickMenu = null;
+    _dismissQuickMenu();
     super.dispose();
   }
 
@@ -1012,7 +1020,7 @@ class _SidebarState extends State<Sidebar> {
   /// stack on itself.
   void _openQuickMenu() {
     if (!_canMenu) return;
-    if (_quickMenu != null && _quickMenu!.mounted) _quickMenu!.remove();
+    _dismissQuickMenu();
     _quickMenu = showSettingsQuickMenu(
       context: context,
       link: _menuLink,
@@ -1032,8 +1040,7 @@ class _SidebarState extends State<Sidebar> {
   /// swap unmounts this sidebar, and a leftover entry would float over the new
   /// surface (audit F2).
   void _openSettingsSafe() {
-    if (_quickMenu != null && _quickMenu!.mounted) _quickMenu!.remove();
-    _quickMenu = null;
+    _dismissQuickMenu();
     widget.onOpenSettings();
   }
 

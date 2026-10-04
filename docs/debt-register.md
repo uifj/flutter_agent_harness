@@ -84,6 +84,8 @@
 >
 > 2026-10-02 同日新建 [`user-research/`](user-research/README.md) 目录（章程 + [`outline-2026-10-02.md`](user-research/outline-2026-10-02.md) 出实效大纲 + [`deep-dive-2026-10-02.md`](user-research/deep-dive-2026-10-02.md) 深入研究）。三件事记在这里，因为它们改变的是**排序依据**而不是功能清单：① **一手用户证据 = 0**，且姊妹项目 plan-stars 也没有真实用户（软著表"首次发表日期：**未发表**"、`.env` 全 localhost、广场 showcase 是硬编码 mock `discover-projects.ts:17`），所以形态②（账号+消费订阅，已由 ADR-0045 立为总纲）是押在一个**两个产品加起来都没有一个外部用户**的假设上；② **"两面共享工作区"只在文件层为真**——笔记正文按工作区相对路径读写（`lib/ui/plan/plan_workspace.dart:219`、`:247`），而对象库是 Application Support 下唯一一份 `plan_space.json`（`lib/main.dart:106`），切工作区不动它；③ **"发布自己工作区的 md"有一个未决的单位歧义**（一篇 `.md` 还是一个企划），且对面没有 Markdown 通道——详见下面三行新增的观察。研究产出的纪律写在 `user-research/README.md`：**每篇必须绑一个会改变行动的决策问题 + 一个证伪判据 + 一个截止日期**，且建议把"人群/收费/形态/发布边界类 ADR 的背景必须引用 research 编号，或明写'无一手证据，作者推断'"加进 [README.md](README.md) 的 ADR 流程（**这条规则本身待用户批准，我没擅自改规范文档**）。
 
+| 崩溃归档首立一功：真机运行（ADR-0056 迁移后的首次启动）把旧目录里的历史崩溃一并带来，暴露 `_SidebarState._openSettingsSafe` 的 **OverlayEntry 双重移除**（快速菜单自己的关闭路径会再入同一方法，旧代码 remove 后置空，再入时 mounted 仍真 ⇒ framework 断言）。修复：三处收口成 `_dismissQuickMenu()` 幂等撤销——**先置空再 remove**，二次调用天然 no-op；快捷菜单的打开点同款。此即 ADR-0045 PC 崩溃归档设计的第一次兑现 | DEF | P2 | 已修复 @ 本批（test 待 widget 宿主模拟再入路径，真机复验：快捷菜单→打开设置 不再异常） | 2026-10-04 | — |
+
 ## ADR-0002 迁移进度（截至 2026-09-15）
 
 - **riverpod**：Stage 1-3 完成——boot stores 经 `ProviderContainer` override（38a9949）、`AppScope` keepAlive provider（5d5aa75）、9 个 per-controller provider + read seams、`main.dart` 转纯 Consumer 树（178f941）。riverpod import 仅限 `main.dart` + `state/app_providers.dart`。
