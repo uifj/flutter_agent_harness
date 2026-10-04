@@ -27,6 +27,14 @@ abstract interface class TurnSource {
     required bool approved,
   });
 
+  /// Delivers the user's answers to a pending ask_user call (ADR-0059) and
+  /// streams the rest of the paused turn. The answers ARE the tool result —
+  /// the resume uses genkit's respond path, not a restart.
+  Stream<TurnEvent> respondToAskUser({
+    required String ref,
+    required Map<String, Object?> answers,
+  });
+
   /// Hands [input] to the running turn, to be read at its next model call.
   ///
   /// Returns false when nothing is running — the caller then has to deliver it

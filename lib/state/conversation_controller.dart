@@ -21,6 +21,7 @@ import 'package:flutter/foundation.dart';
 
 import '../model/approval_mode.dart';
 import '../model/approval_rule.dart';
+import '../model/ask_user.dart';
 import '../model/attached_image.dart';
 import '../model/conversation.dart';
 import '../model/queued_input.dart';
@@ -344,6 +345,35 @@ class ConversationController extends ChangeNotifier {
     );
     // The steer that waited out the pause has had its model call by now; the
     // ones that never got one come back through _drain, ahead of the line.
+    await _drain();
+  }
+
+  /// Delivers the user's answers to the pending ask_user call (ADR-0059) and
+  /// lets the paused turn continue. No rule is remembered here: an answer is
+  /// a one-off fact, a standing allow is a judgment — collapsing the two is
+  /// how "always allow" would silently start speaking for the user.
+  Future<void> respondToAskUser(List<AskUserAnswer> answers) async {
+    final request = _pendingApproval;
+    if (request == null || _isBusy) return;
+
+    _pendingApproval = null;
+    // Marked running before the resume so the question card stops looking
+    // like a question the moment the answer is submitted; the runtime
+    // projects the settled result itself (respond has no restart output to
+    // recover, so the [ToolCallSucceeded] comes straight from it).
+    _updateTool(
+      request.ref,
+      (node) => node.copyWith(status: ToolStatus.running, clearApproval: true),
+    );
+    _isBusy = true;
+    notifyListeners();
+
+    await _consume(
+      _runtime.respondToAskUser(
+        ref: request.ref,
+        answers: AskUserAnswer.payload(answers),
+      ),
+    );
     await _drain();
   }
 

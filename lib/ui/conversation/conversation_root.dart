@@ -31,6 +31,7 @@ import '../../theme/dsw_typography.dart';
 import '../appearance_scope.dart';
 import '../tool/checkpoint_scope.dart';
 import 'approval_panel.dart';
+import 'ask_user_panel.dart';
 import 'chat_view.dart';
 import 'composer.dart';
 import 'hero_workspace_picker.dart';
@@ -466,11 +467,19 @@ class _ConversationRootState extends State<ConversationRoot> {
               ),
               onStop: widget.conversation.stop,
             ),
-      _ => ApprovalPanel(
-        request: approval,
-        onRespond: (approved, {remember = false}) =>
-            widget.conversation.respondToApproval(approved, remember: remember),
-      ),
+      _ =>
+        // ask_user shares the approval's seat but answers differently — the
+        // payload is a set of answers, not a verdict (ADR-0059).
+        approval.details['kind'] == 'ask_user'
+            ? AskUserPanel(
+                request: approval,
+                onSubmit: widget.conversation.respondToAskUser,
+              )
+            : ApprovalPanel(
+                request: approval,
+                onRespond: (approved, {remember = false}) => widget.conversation
+                    .respondToApproval(approved, remember: remember),
+              ),
     };
 
     final content = Column(

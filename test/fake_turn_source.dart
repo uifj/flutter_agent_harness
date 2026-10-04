@@ -94,6 +94,21 @@ class FakeTurnSource implements TurnSource {
     return controller.stream;
   }
 
+  /// What ask_user resumes carried, per ref — asserted by the controller test.
+  final askUserAnswers = <String, Map<String, Object?>>{};
+
+  @override
+  Stream<TurnEvent> respondToAskUser({
+    required String ref,
+    required Map<String, Object?> answers,
+  }) {
+    askUserAnswers[ref] = answers;
+    final controller = StreamController<TurnEvent>();
+    _turns.add(controller);
+    runOpen = true;
+    return controller.stream;
+  }
+
   @override
   void stop() {
     stopCalls++;

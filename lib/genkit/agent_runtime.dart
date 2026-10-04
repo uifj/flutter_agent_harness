@@ -1238,6 +1238,38 @@ class AgentRuntime implements TurnSource {
     );
   }
 
+  /// Delivers the user's answers to a pending ask_user call (ADR-0059) and
+  /// streams the rest of the paused turn.
+  ///
+  /// The resume takes genkit's respond path, not a restart: the answers ARE
+  /// the tool's result, the tool never runs again. Because a respond has no
+  /// restarted output to recover from the snapshot (ADR-0016's mechanism),
+  /// the card's settled result is projected here, once, before the resumed
+  /// stream begins.
+  @override
+  Stream<TurnEvent> respondToAskUser({
+    required String ref,
+    required Map<String, Object?> answers,
+  }) async* {
+    final chat = _chat;
+    final pending = _pendingInterrupts[ref];
+    if (chat == null || pending == null) {
+      yield const TurnFinished(
+        outcome: TurnOutcome.failed,
+        errorMessage: 'That question is no longer pending.',
+      );
+      return;
+    }
+    _pendingInterrupts.remove(ref);
+    yield _toolResult(ref, answers);
+    yield* _drive(
+      (cancel) => chat.resumeStream(
+        respond: [pending.respond(answers)],
+        cancel: cancel,
+      ),
+    );
+  }
+
   /// Stops the running turn.
   ///
   /// Three things at once, because no one of them is sufficient: cancel the token

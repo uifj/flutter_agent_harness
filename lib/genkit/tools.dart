@@ -26,6 +26,7 @@ import 'package:schemantic/schemantic.dart';
 
 import '../model/approval_mode.dart';
 import '../model/approval_rule.dart';
+import '../model/ask_user.dart';
 import '../model/checkpoint.dart';
 import '../model/fs_revision.dart';
 import '../model/workspace.dart';
@@ -144,6 +145,7 @@ class WorkspaceTools {
     _glob(),
     _grep(),
     _bash(),
+    _askUser(),
   ];
 
   // ---------------------------------------------------------------------------
@@ -425,6 +427,85 @@ class WorkspaceTools {
   // ---------------------------------------------------------------------------
   // Discovery
   // ---------------------------------------------------------------------------
+
+  Tool _askUser() => _ai.defineTool<Map<String, dynamic>, Map<String, dynamic>>(
+    name: 'ask_user',
+    description:
+        'Pause the turn and ask the user a question whose answer only they '
+        'have — a decision that is theirs to make, a preference, or a fact '
+        'you cannot look up. The question renders as a form the user answers '
+        'in place, and the answers come back as this tool\'s result. Use it '
+        'sparingly and only when proceeding without the answer risks doing '
+        'the wrong thing; do not use it to confirm steps you can take or to '
+        'ask about anything the workspace already answers. Ask at most once '
+        'per turn.',
+    inputSchema: _objectSchema(
+      {
+        'questions': {
+          'type': 'array',
+          'description':
+              '1-4 questions, asked together so the user answers in one pass.',
+          'items': {
+            'type': 'object',
+            'properties': {
+              'question': {
+                'type': 'string',
+                'description': 'The question, phrased so a choice answers it.',
+              },
+              'options': {
+                'type': 'array',
+                'items': {'type': 'string'},
+                'description':
+                    'Up to 4 concrete choices. Omit for an open question '
+                    'answered with free text.',
+              },
+              'multi': {
+                'type': 'boolean',
+                'description':
+                    'Whether several options may be chosen. Defaults to false.',
+              },
+            },
+            'required': ['question'],
+          },
+        },
+      },
+      required: ['questions'],
+    ),
+    fn: (input, context) async {
+      // Not a gate question (ADR-0059): no mode and no rule may answer for
+      // the user, so this interrupts in every mode including auto. The
+      // refusal below is for the resumed-in-error case only — the answer
+      // rides the resume itself (respond path), the tool never runs twice.
+      if (context.resumed != null) {
+        return ToolResult.response({
+          'ok': false,
+          'error':
+              'ask_user cannot run twice; the user\'s answer already came '
+              'back with the resume.',
+        });
+      }
+      final questions = askUserQuestionsOf(input);
+      if (questions.isEmpty) {
+        return ToolResult.response({
+          'ok': false,
+          'error':
+              'ask_user needs 1-4 questions, each with a non-empty question '
+              'field and at most ${AskUserQuestion.maxOptions} options.',
+        });
+      }
+      return ToolResult.interrupt({
+        'kind': 'ask_user',
+        'questions': [
+          for (final question in questions)
+            {
+              'question': question.question,
+              'options': question.options,
+              'multi': question.multi,
+            },
+        ],
+      });
+    },
+  );
 
   Tool _glob() => _ai.defineTool<Map<String, dynamic>, Map<String, dynamic>>(
     name: 'glob',
@@ -794,3 +875,19 @@ class GateDecision {
 }
 
 enum GateOutcome { proceed, ask, refused }
+
+/// Validates the ask_user input into typed questions (ADR-0059). Public and
+/// pure so the schema bounds — 1-4 questions, non-empty text, up to 4
+/// options — are testable without a tool registry. Junk entries drop; an
+/// input with nothing valid left yields an empty list, which the tool turns
+/// into a refusal the model can read.
+List<AskUserQuestion> askUserQuestionsOf(Object? input) {
+  final raw = input is Map ? input['questions'] : null;
+  if (raw is! List) return const [];
+  final questions = <AskUserQuestion>[];
+  for (final entry in raw.take(AskUserQuestion.maxQuestions)) {
+    final question = AskUserQuestion.fromJson(entry);
+    if (question.isValid) questions.add(question);
+  }
+  return questions;
+}
