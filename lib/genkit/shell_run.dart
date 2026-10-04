@@ -86,6 +86,7 @@ Future<ShellRun> runBash({
   required String workdir,
   Duration timeout = bashTimeout,
   int maxStreamBytes = bashMaxStreamBytes,
+  Map<String, String>? extraEnvironment,
 }) async {
   final process = await Process.start(
     '/bin/bash',
@@ -93,7 +94,9 @@ Future<ShellRun> runBash({
     workingDirectory: workdir,
     // The app's own environment, minus nothing: the user's PATH is what makes
     // their toolchain reachable, and a scrubbed environment would make half of
-    // what they ask for fail in ways they cannot see from here.
+    // what they ask for fail in ways they cannot see from here. The user's
+    // variables merge on top (ADR-0064) — that is the whole point of them.
+    environment: extraEnvironment,
     includeParentEnvironment: true,
   );
 

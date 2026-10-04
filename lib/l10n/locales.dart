@@ -417,6 +417,13 @@ const enStrings = <String, String>{
   'searchingFiles': 'Searching the workspace…',
   'commandNewSession': 'Start a new session',
   'quickPhrases': 'Quick phrases',
+  'settingsEnvironment': 'Environment variables',
+  'settingsEnvironmentIntro':
+      'Injected into shell commands; reference them as \$NAME. Values live in the keychain and are redacted from command output shown to the model.',
+  'envAdd': 'Add variable',
+  'envDelete': 'Delete variable',
+  'envNameHint': 'NAME (letters, digits, underscore)',
+  'envValueHint': 'Value — stored in the keychain',
   'settingsPhrases': 'Quick phrases',
   'settingsPhrasesIntro':
       'Reusable snippets the composer inserts at the cursor. Up to 20.',
@@ -1260,6 +1267,13 @@ const zhStrings = <String, String>{
   'searchingFiles': '正在搜索工作区…',
   'commandNewSession': '开始新会话',
   'quickPhrases': '快捷短语',
+  'settingsEnvironment': '环境变量',
+  'settingsEnvironmentIntro':
+      '注入 shell 命令，以 \$NAME 引用。值保存在钥匙串，并会从展示给模型的命令输出中脱敏。',
+  'envAdd': '新建变量',
+  'envDelete': '删除变量',
+  'envNameHint': '变量名（字母、数字、下划线）',
+  'envValueHint': '值——存入钥匙串',
   'settingsPhrases': '快捷短语',
   'settingsPhrasesIntro': '输入卡光标处一键插入的常用话术。最多 20 条。',
   'quickPhraseAdd': '新建短语',

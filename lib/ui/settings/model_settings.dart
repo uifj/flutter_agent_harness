@@ -53,6 +53,7 @@ import '../../state/approval_rule_store.dart';
 import '../../state/backup_service.dart';
 import '../../model/shortcut_registry.dart' as shortcuts;
 import '../../state/usage_ledger.dart';
+import '../../state/environment_store.dart';
 import '../../state/quick_phrase_store.dart';
 import '../../model/quick_phrase.dart';
 import '../primitives/confirm_dialog.dart';
@@ -79,6 +80,7 @@ enum _Section {
   extensions,
   shortcuts,
   phrases,
+  environment,
   usage,
   diagnostics,
   approvals,
@@ -99,6 +101,7 @@ class SettingsPanel extends StatefulWidget {
     this.crashFiles,
     this.onOpenDiagnosticsFolder,
     required this.quickPhrases,
+    required this.environment,
     required this.onClose,
     required this.onPickFolder,
     required this.supportPath,
@@ -142,6 +145,10 @@ class SettingsPanel extends StatefulWidget {
   /// The quick phrase library (ADR-0063): this section is its only editor;
   /// the composer reads the same store through the host.
   final QuickPhraseStore quickPhrases;
+
+  /// The workspace environment store (ADR-0064): this section manages names;
+  /// values live in the keychain and are never shown again.
+  final EnvironmentStore environment;
 
   final VoidCallback onClose;
 
@@ -629,6 +636,11 @@ class _SettingsPanelState extends State<SettingsPanel> {
         LucideIcons.text_cursor_input,
       ),
       _NavItem(
+        _Section.environment,
+        context.tr('settingsEnvironment'),
+        LucideIcons.variable,
+      ),
+      _NavItem(
         _Section.usage,
         context.tr('settingsUsage'),
         LucideIcons.chart_column,
@@ -791,6 +803,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     _Section.extensions => _extensionsSection(color),
                     _Section.shortcuts => _shortcutsSection(color),
                     _Section.phrases => _phrasesSection(color),
+                    _Section.environment => _environmentSection(context, color),
                     _Section.usage => _usageSection(color),
                     _Section.diagnostics => _diagnosticsSection(color),
                     _Section.backup => _backupSection(color),
@@ -1589,6 +1602,144 @@ class _SettingsPanelState extends State<SettingsPanel> {
         ],
       ),
     ];
+  }
+
+  /// Workspace environment variables (ADR-0064): names on the list, values
+  /// in the keychain and never displayed again. The store is a
+  /// ChangeNotifier; the list section listens so add/remove repaints.
+  List<Widget> _environmentSection(BuildContext context, DswAlias color) {
+    final store = widget.environment;
+    return [
+      _heading(
+        color,
+        context.tr('settingsEnvironment'),
+        context.tr('settingsEnvironmentIntro'),
+      ),
+      const SizedBox(height: 12),
+      SettingsCard(
+        dividers: true,
+        children: [
+          ListenableBuilder(
+            listenable: store,
+            builder: (context, _) => Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (store.error != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        store.error!,
+                        style: DswType.xxs12.copyWith(
+                          color: color.stateErrorPrimary,
+                        ),
+                      ),
+                    ),
+                  ),
+                for (final name in store.names)
+                  _EnvironmentRow(
+                    name: name,
+                    onEdit: () => _editEnvironmentValue(context, store, name),
+                    onDelete: () => store.remove(name),
+                  ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: CapsuleButton(
+              label: context.tr('envAdd'),
+              onTap: () => _addEnvironmentVariable(context, store),
+            ),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  Future<void> _addEnvironmentVariable(
+    BuildContext context,
+    EnvironmentStore store,
+  ) async {
+    final name = TextEditingController();
+    final value = TextEditingController();
+    final step = MediaQuery.textScalerOf(context).scale(1);
+    final saved = await showShadDialog<bool>(
+      context: context,
+      builder: (dialogContext) => ShadDialog(
+        radius: BorderRadius.circular(DswShape.float),
+        title: Text(context.tr('envAdd'), style: DswType.sStrong14),
+        actions: [
+          ShadButton.outline(
+            height: 24 * step,
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(context.tr('cancel')),
+          ),
+          ShadButton(
+            height: 24 * step,
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.tr('save')),
+          ),
+        ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ShadInput(
+              controller: name,
+              placeholder: Text(context.tr('envNameHint')),
+              autofocus: true,
+            ),
+            const SizedBox(height: 8),
+            ShadInput(
+              controller: value,
+              placeholder: Text(context.tr('envValueHint')),
+            ),
+          ],
+        ),
+      ),
+    );
+    name.dispose();
+    value.dispose();
+    if (saved == true) await store.add(name.text.trim(), value.text);
+  }
+
+  Future<void> _editEnvironmentValue(
+    BuildContext context,
+    EnvironmentStore store,
+    String name,
+  ) async {
+    final value = TextEditingController();
+    final step = MediaQuery.textScalerOf(context).scale(1);
+    final saved = await showShadDialog<bool>(
+      context: context,
+      builder: (dialogContext) => ShadDialog(
+        radius: BorderRadius.circular(DswShape.float),
+        title: Text(name, style: DswType.sStrong14),
+        actions: [
+          ShadButton.outline(
+            height: 24 * step,
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(context.tr('cancel')),
+          ),
+          ShadButton(
+            height: 24 * step,
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.tr('save')),
+          ),
+        ],
+        child: ShadInput(
+          controller: value,
+          placeholder: Text(context.tr('envValueHint')),
+          autofocus: true,
+        ),
+      ),
+    );
+    value.dispose();
+    if (saved == true) await store.updateValue(name, value.text);
   }
 
   /// Quick phrases (ADR-0063): the library's only editor. Changes commit
@@ -3029,6 +3180,53 @@ class _PhraseRow extends StatelessWidget {
           DswIconButton(
             icon: LucideIcons.trash,
             tooltip: context.tr('quickPhraseDelete'),
+            onTap: onDelete,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One environment variable of the management list: the name, with edit
+/// (rewrite the keychain value) and delete. The value itself is never read
+/// back for display — a secret shown once is a secret stored twice.
+class _EnvironmentRow extends StatelessWidget {
+  const _EnvironmentRow({
+    required this.name,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final String name;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.dsw;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              name,
+              style: DswType.s14.copyWith(color: color.labelPrimary),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          DswIconButton(
+            icon: LucideIcons.pencil,
+            tooltip: context.tr('edit'),
+            onTap: onEdit,
+          ),
+          const SizedBox(width: 4),
+          DswIconButton(
+            icon: LucideIcons.trash,
+            tooltip: context.tr('envDelete'),
             onTap: onDelete,
           ),
         ],

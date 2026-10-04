@@ -28,6 +28,7 @@ import '../model/approval_mode.dart';
 import '../model/approval_rule.dart';
 import '../model/ask_user.dart';
 import '../model/checkpoint.dart';
+import '../model/environment.dart';
 import '../model/fs_revision.dart';
 import '../model/workspace.dart';
 import 'file_search.dart';
@@ -63,6 +64,7 @@ class WorkspaceTools {
     ApprovalModeHolder? approval,
     this.rules,
     this.checkpoints,
+    this.environmentLoader,
   }) : _approval = approval ?? ApprovalModeHolder();
 
   final Genkit _ai;
@@ -79,6 +81,10 @@ class WorkspaceTools {
   /// Null leaves the tools exactly as they were before: the write happens and
   /// nothing can be rewound, which is the honest reading of a bare runtime.
   final CheckpointSink? checkpoints;
+
+  /// The workspace environment variables (ADR-0064), loaded at call time.
+  /// Null or an empty map changes nothing.
+  final EnvironmentLoader? environmentLoader;
 
   /// Null until the user opens a folder — in which case every tool refuses,
   /// telling the model why.
@@ -736,9 +742,15 @@ class WorkspaceTools {
 
       final requested = _int(input['timeoutMs']);
       try {
+        // The user's variables inject into the process environment, and the
+        // values are redacted from what flows back: a value that reaches the
+        // transcript reaches every later read of it (ADR-0064).
+        final extraEnvironment = await environmentLoader?.call() ?? const {};
+        final secrets = extraEnvironment.values;
         final run = await runBash(
           command: command,
           workdir: workdir,
+          extraEnvironment: extraEnvironment.isEmpty ? null : extraEnvironment,
           timeout: requested == null || requested < 1
               ? bashTimeout
               : Duration(
@@ -750,7 +762,7 @@ class WorkspaceTools {
         // command's output to fix it. `ok: false` would hide that behind an
         // error line.
         return ToolResult.response({
-          'output': renderShellRun(run),
+          'output': redactToolOutput(renderShellRun(run), secrets),
           'exitCode': run.exitCode,
           'workdir': ws.relative(workdir),
           if (run.signal != null) 'signal': run.signal,

@@ -773,6 +773,7 @@ class _DshAppState extends ConsumerState<DshApp> {
       // "Always allow" is not the only place they can be seen (ADR-0012).
       approvals: scope.approvals,
       quickPhrases: scope.quickPhrases,
+      environment: scope.environment,
     );
   }
 }

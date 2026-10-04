@@ -2,7 +2,6 @@
 // cursor. User content, not a preference — it lives in its own store, rides
 // the backup, and knows nothing about who consumes it.
 
-
 class QuickPhrase {
   const QuickPhrase({
     required this.id,

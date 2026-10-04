@@ -10,6 +10,8 @@ import 'dart:io';
 
 import 'package:planstar/genkit/models_endpoint.dart';
 import 'package:planstar/state/quick_phrase_store.dart';
+import 'package:planstar/state/environment_store.dart';
+import 'package:planstar/state/secret_store.dart';
 import 'package:planstar/model/app_settings.dart';
 import 'package:planstar/model/model_settings.dart';
 import 'package:planstar/state/usage_ledger.dart' show UsageSummary;
@@ -106,6 +108,10 @@ void main() {
           body: SettingsPanel(
             quickPhrases: QuickPhraseStore.open(
               Directory.systemTemp.createTempSync('phrases'),
+            ),
+            environment: EnvironmentStore.open(
+              Directory.systemTemp.createTempSync('phrases'),
+              SecureSecretStore(),
             ),
             usageSummary: const UsageSummary(
               turns: 0,
@@ -236,6 +242,10 @@ void main() {
             body: SettingsPanel(
               quickPhrases: QuickPhraseStore.open(
                 Directory.systemTemp.createTempSync('phrases'),
+              ),
+              environment: EnvironmentStore.open(
+                Directory.systemTemp.createTempSync('phrases'),
+                SecureSecretStore(),
               ),
               usageSummary: const UsageSummary(
                 turns: 0,

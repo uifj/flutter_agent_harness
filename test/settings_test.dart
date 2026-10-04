@@ -12,9 +12,10 @@ import 'dart:io';
 import 'amplified_text_probe.dart';
 import 'package:planstar/model/app_settings.dart';
 import 'package:planstar/state/quick_phrase_store.dart';
+import 'package:planstar/state/environment_store.dart';
+import 'package:planstar/state/secret_store.dart';
 import 'package:planstar/model/model_settings.dart';
 import 'package:planstar/model/workbench_prefs.dart';
-import 'package:planstar/state/secret_store.dart';
 import 'package:planstar/state/usage_ledger.dart';
 import 'package:planstar/state/settings_store.dart';
 import 'package:planstar/theme/dsw_theme.dart';
@@ -238,6 +239,10 @@ void main() {
           body: SettingsPanel(
             quickPhrases: QuickPhraseStore.open(
               Directory.systemTemp.createTempSync('phrases'),
+            ),
+            environment: EnvironmentStore.open(
+              Directory.systemTemp.createTempSync('phrases'),
+              SecureSecretStore(),
             ),
             onReset: () async {},
             usageSummary: const UsageSummary(

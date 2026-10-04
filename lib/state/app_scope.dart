@@ -40,6 +40,8 @@ import 'model_directory.dart';
 import 'prefs_store.dart';
 import 'quick_phrase_store.dart';
 import 'session_index.dart';
+import 'environment_store.dart';
+import 'secret_store.dart';
 import 'session_registry.dart';
 import 'settings_store.dart';
 import 'side_chat_controller.dart';
@@ -58,6 +60,9 @@ class AppScope {
       ..createSync(recursive: true);
     _sessionRegistry = SessionRegistry.open(_sessionRoot);
     _quickPhrases = QuickPhraseStore.open(support);
+    // Workspace environment variables (ADR-0064): names on disk, values in
+    // the keychain.
+    _environment = EnvironmentStore.open(support, SecureSecretStore());
     _approvals = ApprovalRuleStore.open(support);
     _checkpoints = CheckpointStore.open(support);
     // Local usage ledger (ADR-0045 PC): one JSONL line per finished model
@@ -170,6 +175,7 @@ class AppScope {
   /// The quick phrase library (ADR-0063) — read by the composer's menu and
   /// the settings page's management section.
   late final QuickPhraseStore _quickPhrases;
+  late final EnvironmentStore _environment;
 
   /// The local crash archive — the settings screen's log entry reads it.
   late final CrashArchive crashArchive;
@@ -187,6 +193,8 @@ class AppScope {
   DiagnosticLogStore get diagnostics => _diagnostics;
 
   QuickPhraseStore get quickPhrases => _quickPhrases;
+
+  EnvironmentStore get environment => _environment;
 
   /// The attention service — the General section's notification toggle gates
   /// its raise behavior through the settings document.
@@ -414,6 +422,9 @@ class AppScope {
       // must not replace what the user already approved.
       approvalRules: _approvals.book,
       checkpoints: _checkpoints,
+      // Live environment read (ADR-0064): the values come from the keychain
+      // at each bash call, so an edit lands on the next command.
+      environmentLoader: () => _environment.load(),
       // Live reads (ADR-0058): a diagnostics toggle must not rebuild the
       // runtime — the closures ask the store on every model call, so a save
       // takes effect on the next call without dropping the conversation.

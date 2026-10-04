@@ -29,6 +29,7 @@ import '../model/attached_image.dart';
 import '../model/checkpoint.dart';
 import '../model/conversation.dart';
 import '../model/diagnostic_record.dart';
+import '../model/environment.dart';
 import '../model/mention_expansion.dart';
 import '../model/model_settings.dart';
 import '../model/queued_input.dart';
@@ -859,6 +860,7 @@ class AgentRuntime implements TurnSource {
     ApprovalRuleBook? approvalRules,
     CheckpointSink? checkpoints,
     DiagnosticHooks? diagnostics,
+    EnvironmentLoader? environmentLoader,
   }) {
     final model = settings.model;
     final activeModelId = model.isConfigured ? model.model : null;
@@ -952,6 +954,7 @@ class AgentRuntime implements TurnSource {
       approval: approval,
       rules: approvalRules,
       checkpoints: checkpoints,
+      environmentLoader: environmentLoader,
     );
     final planTools = PlanTools(ai);
     final workspaceToolList = tools.define();
