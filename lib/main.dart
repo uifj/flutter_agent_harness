@@ -727,6 +727,11 @@ class _DshAppState extends ConsumerState<DshApp> {
           '${ref.watch(supportDirectoryProvider).path}/logs/crash',
         );
       },
+      onOpenDiagnosticsFolder: () {
+        revealInFileManager(
+          '${ref.watch(supportDirectoryProvider).path}/diagnostics',
+        );
+      },
       onClose: () => setState(() => _settingsOpen = false),
       onPickFolder: scope.pickFolder,
       // The field hints on the settings page name directories the user can open,

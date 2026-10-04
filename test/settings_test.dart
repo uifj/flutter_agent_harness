@@ -115,6 +115,49 @@ void main() {
         );
       },
     );
+
+    test('diagnostics toggles round-trip and never restart the runtime', () {
+      // Defaults: request log on, context snapshot off (ADR-0058).
+      expect(const AppSettings().diagnosticRequestLog, isTrue);
+      expect(const AppSettings().diagnosticContextLog, isFalse);
+      // Off-default-only persistence, both directions.
+      final flipped = const AppSettings().copyWith(
+        diagnosticRequestLog: false,
+        diagnosticContextLog: true,
+      );
+      final json = flipped.toJson();
+      expect(json.containsKey('diagnosticRequestLog'), isTrue);
+      expect(json.containsKey('diagnosticContextLog'), isTrue);
+      expect(
+        AppSettings.fromJson(
+          jsonDecode(jsonEncode(json)) as Map<String, dynamic>,
+        ),
+        flipped,
+      );
+      expect(
+        const AppSettings().toJson().containsKey('diagnosticRequestLog'),
+        isFalse,
+      );
+      // A toggle is read live per model call — it must not rebuild the
+      // runtime, which would drop the open conversation.
+      expect(flipped.requiresRuntimeRestart(const AppSettings()), isFalse);
+    });
+
+    test('a key restore via copyWithModelApiKey keeps every preference', () {
+      // copyWithModelApiKey re-passes every field by hand; it once dropped
+      // notificationsOn, so a boot-time keychain restore silently reset the
+      // toggle. Every preference field must survive it.
+      const settings = AppSettings(
+        notificationsOn: false,
+        diagnosticRequestLog: false,
+        diagnosticContextLog: true,
+      );
+      final restored = settings.copyWithModelApiKey('sk-restored');
+      expect(restored.model.apiKey, 'sk-restored');
+      expect(restored.notificationsOn, isFalse);
+      expect(restored.diagnosticRequestLog, isFalse);
+      expect(restored.diagnosticContextLog, isTrue);
+    });
   });
 
   group('SettingsStore', () {

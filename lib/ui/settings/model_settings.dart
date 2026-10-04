@@ -74,6 +74,7 @@ enum _Section {
   extensions,
   shortcuts,
   usage,
+  diagnostics,
   approvals,
   backup,
 }
@@ -90,6 +91,7 @@ class SettingsPanel extends StatefulWidget {
     required this.onDeleteSavedProvider,
     this.onOpenCrashLog,
     this.crashFiles,
+    this.onOpenDiagnosticsFolder,
     required this.onClose,
     required this.onPickFolder,
     required this.supportPath,
@@ -125,6 +127,10 @@ class SettingsPanel extends StatefulWidget {
 
   /// Whether a crash-log directory exists at all.
   final bool? crashFiles;
+
+  /// Opens the diagnostics directory in the file manager (ADR-0058); null
+  /// hides the row.
+  final VoidCallback? onOpenDiagnosticsFolder;
 
   final VoidCallback onClose;
 
@@ -224,6 +230,12 @@ class _SettingsPanelState extends State<SettingsPanel> {
   /// The notification toggle (ADR-0045 PH). Held locally like the theme —
   /// applied on Save.
   late bool _notificationsOn = widget.settings.notificationsOn;
+
+  /// The diagnostics toggles (ADR-0058). Held and committed like the
+  /// notification toggle; neither rebuilds the runtime, so Save just
+  /// persists and the next model call picks them up.
+  late bool _diagnosticRequestLog = widget.settings.diagnosticRequestLog;
+  late bool _diagnosticContextLog = widget.settings.diagnosticContextLog;
 
   /// The appearance/behaviour preferences (ADR-0005). Held and committed like
   /// the theme. None of them rebuilds the runtime — they ride Save purely to
@@ -498,6 +510,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
       conversationWidth: _conversationWidth,
       expandToolCalls: _expandToolCalls,
       notificationsOn: _notificationsOn,
+      diagnosticRequestLog: _diagnosticRequestLog,
+      diagnosticContextLog: _diagnosticContextLog,
       savedProviders: widget.settings.savedProviders,
       activeProviderId: widget.settings.activeProviderId,
     );
@@ -602,6 +616,11 @@ class _SettingsPanelState extends State<SettingsPanel> {
         _Section.usage,
         context.tr('settingsUsage'),
         LucideIcons.chart_column,
+      ),
+      _NavItem(
+        _Section.diagnostics,
+        context.tr('settingsDiagnostics'),
+        LucideIcons.stethoscope,
       ),
       _NavItem(
         _Section.backup,
@@ -756,6 +775,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     _Section.extensions => _extensionsSection(color),
                     _Section.shortcuts => _shortcutsSection(color),
                     _Section.usage => _usageSection(color),
+                    _Section.diagnostics => _diagnosticsSection(color),
                     _Section.backup => _backupSection(color),
                     _Section.approvals => _approvalsSection(color),
                   },
@@ -1553,6 +1573,52 @@ class _SettingsPanelState extends State<SettingsPanel> {
       ),
     ];
   }
+
+  /// Diagnostics (ADR-0058): the two local log toggles and a way to reach
+  /// the files. Held as drafts and committed on Save like every other
+  /// preference on this panel; the runtime reads them live per model call,
+  /// so a save needs no restart.
+  List<Widget> _diagnosticsSection(DswAlias color) => [
+    _heading(
+      color,
+      context.tr('settingsDiagnostics'),
+      context.tr('settingsDiagnosticsIntro'),
+    ),
+    const SizedBox(height: 12),
+    SettingsCard(
+      dividers: true,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+          child: _SwitchRow(
+            label: context.tr('diagnosticRequestLog'),
+            description: context.tr('diagnosticRequestLogDesc'),
+            value: _diagnosticRequestLog,
+            onChanged: (value) => setState(() => _diagnosticRequestLog = value),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+          child: _SwitchRow(
+            label: context.tr('diagnosticContextLog'),
+            description: context.tr('diagnosticContextLogDesc'),
+            value: _diagnosticContextLog,
+            onChanged: (value) => setState(() => _diagnosticContextLog = value),
+          ),
+        ),
+        if (widget.onOpenDiagnosticsFolder != null)
+          _ActionRow(
+            title: context.tr('diagnosticFolderTitle'),
+            description: context.tr('diagnosticFolderDesc'),
+            button: CapsuleButton(
+              label: context.tr('revealInFiles'),
+              onTap: widget.onOpenDiagnosticsFolder!,
+            ),
+            last: true,
+          ),
+      ],
+    ),
+  ];
 
   List<Widget> _backupSection(DswAlias color) => [
     _heading(

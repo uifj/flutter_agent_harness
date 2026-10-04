@@ -9,6 +9,7 @@
 // `spike/agent_spike.dart`; re-run that spike after any genkit version bump.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:genkit/genkit.dart';
@@ -27,6 +28,7 @@ import '../model/approval_rule.dart';
 import '../model/attached_image.dart';
 import '../model/checkpoint.dart';
 import '../model/conversation.dart';
+import '../model/diagnostic_record.dart';
 import '../model/mention_expansion.dart';
 import '../model/model_settings.dart';
 import '../model/queued_input.dart';
@@ -305,6 +307,197 @@ class _UsagePlugin extends GenkitPlugin {
     ),
   ];
 }
+
+// --- Diagnostics (ADR-0058) -------------------------------------------------
+//
+// The requests log wants duration and outcome per model call; the contexts
+// log wants the messages as the request actually carried them. Both live at
+// the same model seam the usage capture already proved, and both leave the
+// runtime as function values (DiagnosticHooks) so this layer never learns
+// about lib/state.
+
+/// Tool request/response payloads and reasoning/data parts are capped at
+/// this many encoded characters — the contexts log is for reading, not for
+/// replaying bytes. Text parts are never capped: their whole words are the
+/// point.
+const _diagnosticPayloadCap = 4096;
+
+/// The placeholder a media URL's bytes are replaced with. Attachment data
+/// URLs are the user's own files; they never land in the log.
+const _diagnosticMediaPlaceholder = '<media elided>';
+
+/// Serializes one model request into a [ContextSnapshotRecord] — public and
+/// pure so the part-shape rules (dispatch, caps, elision) are testable
+/// without a fake model, the same seam ADR-0009 gave `sessionTitle`.
+ContextSnapshotRecord contextSnapshotOf(ModelRequest request, String model) {
+  return ContextSnapshotRecord(
+    timestamp: DateTime.now().toUtc().millisecondsSinceEpoch,
+    model: model,
+    messages: [
+      for (final message in request.messages)
+        ContextMessage(
+          role: message.role.value,
+          parts: [for (final part in message.content) _diagnosticPartOf(part)],
+        ),
+    ],
+  );
+}
+
+ContextPart _diagnosticPartOf(Part part) {
+  // Dispatch on the json shape, not on `is TextPart`: `Message.content`
+  // rebuilds every part as the base [Part] carrying the raw map, and the
+  // runtime predicates (PartExtension) are how the rest of this file reads
+  // them too (`_restartedOutputs`).
+  if (part.isText) {
+    return ContextPart(kind: 'text', text: part.text);
+  }
+  if (part.isToolRequest) {
+    final request = part.toolRequest!;
+    return ContextPart(
+      kind: 'toolRequest',
+      name: request.name,
+      payload: _diagnosticCappedJson(request.input),
+    );
+  }
+  if (part.isToolResponse) {
+    final response = part.toolResponse!;
+    return ContextPart(
+      kind: 'toolResponse',
+      name: response.name,
+      payload: _diagnosticCappedJson(response.output),
+    );
+  }
+  if (part.isMedia) {
+    // Only the bytes are sensitive, but a data: URL IS the bytes — its whole
+    // body goes to the placeholder, while a plain remote URL stays readable.
+    final media = part.media!;
+    final isData = media.url.startsWith('data:');
+    return ContextPart(
+      kind: 'media',
+      name: media.contentType,
+      text: isData ? null : media.url,
+      payload: isData ? _diagnosticMediaPlaceholder : null,
+      elided: isData,
+    );
+  }
+  if (part.isReasoning) {
+    return ContextPart(kind: 'reasoning', text: part.reasoning);
+  }
+  if (part.isData) {
+    return ContextPart(kind: 'data', payload: _diagnosticCappedJson(part.data));
+  }
+  if (part.isCustom) {
+    return ContextPart(
+      kind: 'custom',
+      payload: _diagnosticCappedJson(part.custom),
+    );
+  }
+  if (part.isResource) {
+    return ContextPart(
+      kind: 'resource',
+      payload: _diagnosticCappedJson(part.resource),
+    );
+  }
+  // A part shape this capture does not know yet: named, not dropped, and
+  // definitely not thrown over — a genkit upgrade must not break logging.
+  return ContextPart(kind: 'other');
+}
+
+String? _diagnosticCappedJson(Object? value) {
+  if (value == null) return null;
+  String encoded;
+  try {
+    encoded = jsonEncode(value);
+  } on JsonUnsupportedObjectError {
+    encoded = value.toString();
+  }
+  if (encoded.length <= _diagnosticPayloadCap) return encoded;
+  return '${encoded.substring(0, _diagnosticPayloadCap)}…(truncated)';
+}
+
+/// Records one settled model call — duration, outcome, the provider's usage
+/// block — and, when the context log is on, the request's message snapshot.
+/// Registered after the stop gate (same region as the usage capture), so a
+/// call the gate throws away costs neither a line nor a snapshot.
+class _DiagnosticCapture extends GenerateMiddleware {
+  _DiagnosticCapture(this._hooks, this._modelLabel);
+
+  final DiagnosticHooks _hooks;
+  final String _modelLabel;
+
+  @override
+  Future<ModelResponse> model(
+    ModelRequest request,
+    ActionFnArg<ModelResponseChunk, ModelRequest, void> ctx,
+    Future<ModelResponse> Function(
+      ModelRequest request,
+      ActionFnArg<ModelResponseChunk, ModelRequest, void> ctx,
+    )
+    next,
+  ) async {
+    if (_hooks.contextEnabled()) {
+      _hooks.onContext(contextSnapshotOf(request, _modelLabel));
+    }
+    final watch = Stopwatch()..start();
+    try {
+      final response = await next(request, ctx);
+      watch.stop();
+      if (_hooks.requestEnabled()) {
+        final usage = response.usage;
+        _hooks.onRequest(
+          ModelCallRecord(
+            timestamp: DateTime.now().toUtc().millisecondsSinceEpoch,
+            model: _modelLabel,
+            durationMs: watch.elapsedMilliseconds,
+            ok: true,
+            inputTokens: usage?.inputTokens?.round(),
+            outputTokens: usage?.outputTokens?.round(),
+            totalTokens: usage?.totalTokens?.round(),
+          ),
+        );
+      }
+      return response;
+    } catch (error) {
+      watch.stop();
+      if (_hooks.requestEnabled()) {
+        final words = error.toString();
+        _hooks.onRequest(
+          ModelCallRecord(
+            timestamp: DateTime.now().toUtc().millisecondsSinceEpoch,
+            model: _modelLabel,
+            durationMs: watch.elapsedMilliseconds,
+            ok: false,
+            error: words.length <= 300
+                ? words
+                : '${words.substring(0, 300)}…(truncated)',
+          ),
+        );
+      }
+      rethrow;
+    }
+  }
+}
+
+class _DiagnosticsPlugin extends GenkitPlugin {
+  _DiagnosticsPlugin(this._hooks, this._modelLabel);
+
+  final DiagnosticHooks? _hooks;
+  final String _modelLabel;
+
+  @override
+  String get name => _diagnosticsName;
+
+  @override
+  List<GenerateMiddlewareDef> middleware() => [
+    if (_hooks != null)
+      defineMiddleware<Map<String, dynamic>>(
+        name: _diagnosticsName,
+        create: (config, ctx) => _DiagnosticCapture(_hooks, _modelLabel),
+      ),
+  ];
+}
+
+const _diagnosticsName = 'dshDiagnostics';
 
 const _toolGateName = 'dshToolGate';
 
@@ -649,6 +842,7 @@ class AgentRuntime implements TurnSource {
     required Directory support,
     ApprovalRuleBook? approvalRules,
     CheckpointSink? checkpoints,
+    DiagnosticHooks? diagnostics,
   }) {
     final model = settings.model;
     final activeModelId = model.isConfigured ? model.model : null;
@@ -706,6 +900,9 @@ class AgentRuntime implements TurnSource {
         providerPlugin,
         _StopGatePlugin(stop),
         _UsagePlugin(usage),
+        // Diagnostics (ADR-0058): null hooks register no middleware at all —
+        // the seam exists, the cost is opt-in per toggle.
+        _DiagnosticsPlugin(diagnostics, activeModelId ?? 'unknown'),
         _ToolGatePlugin(approval, toolAudit, approvalRules),
         _GuidePlugin(guides),
         AgentsPlugin(),

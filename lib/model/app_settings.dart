@@ -128,6 +128,8 @@ class AppSettings {
     this.conversationWidth = AppConversationWidth.normal,
     this.expandToolCalls = true,
     this.notificationsOn = true,
+    this.diagnosticRequestLog = true,
+    this.diagnosticContextLog = false,
     this.savedProviders = const [],
     this.activeProviderId,
   });
@@ -155,6 +157,8 @@ class AppSettings {
       ),
       expandToolCalls = json['expandToolCalls'] as bool? ?? true,
       notificationsOn = json['notificationsOn'] as bool? ?? true,
+      diagnosticRequestLog = json['diagnosticRequestLog'] as bool? ?? true,
+      diagnosticContextLog = json['diagnosticContextLog'] as bool? ?? false,
       savedProviders = [
         for (final entry in (json['savedProviders'] as List? ?? const []))
           if (entry is Map<String, dynamic>) ModelSettings.fromJson(entry),
@@ -201,6 +205,15 @@ class AppSettings {
   /// PH). Persisted only when off the default.
   final bool notificationsOn;
 
+  /// The diagnostics toggles (ADR-0058). The requests log defaults on — one
+  /// short line per model call; the contexts snapshot defaults off, since it
+  /// carries whole conversation text. Both are read live by the composition
+  /// root, so flipping one never rebuilds the runtime.
+  final bool diagnosticRequestLog;
+
+  /// See [diagnosticRequestLog] (ADR-0058 S2). Persisted only when on.
+  final bool diagnosticContextLog;
+
   /// The saved provider connections (ADR-0045 PF-2): an address book of
   /// configured `ModelSettings` entries, each with a stable [ModelSettings.id]
   /// and its API key in the secret store under
@@ -232,6 +245,8 @@ class AppSettings {
     AppConversationWidth? conversationWidth,
     bool? expandToolCalls,
     bool? notificationsOn,
+    bool? diagnosticRequestLog,
+    bool? diagnosticContextLog,
     List<ModelSettings>? savedProviders,
     String? activeProviderId,
   }) => AppSettings(
@@ -247,6 +262,8 @@ class AppSettings {
     conversationWidth: conversationWidth ?? this.conversationWidth,
     expandToolCalls: expandToolCalls ?? this.expandToolCalls,
     notificationsOn: notificationsOn ?? this.notificationsOn,
+    diagnosticRequestLog: diagnosticRequestLog ?? this.diagnosticRequestLog,
+    diagnosticContextLog: diagnosticContextLog ?? this.diagnosticContextLog,
     savedProviders: savedProviders ?? this.savedProviders,
     activeProviderId: activeProviderId ?? this.activeProviderId,
   );
@@ -264,6 +281,8 @@ class AppSettings {
     conversationWidth: conversationWidth,
     expandToolCalls: expandToolCalls,
     notificationsOn: notificationsOn,
+    diagnosticRequestLog: diagnosticRequestLog,
+    diagnosticContextLog: diagnosticContextLog,
     savedProviders: savedProviders,
     activeProviderId: activeProviderId,
   );
@@ -283,6 +302,8 @@ class AppSettings {
     conversationWidth: conversationWidth,
     expandToolCalls: expandToolCalls,
     notificationsOn: notificationsOn,
+    diagnosticRequestLog: diagnosticRequestLog,
+    diagnosticContextLog: diagnosticContextLog,
     savedProviders: savedProviders,
     activeProviderId: activeProviderId,
   );
@@ -332,6 +353,11 @@ class AppSettings {
     fontSize: fontSize,
     conversationWidth: conversationWidth,
     expandToolCalls: expandToolCalls,
+    // Was missing through the keychain migration (ADR-0045 PB) — a boot-time
+    // key restore would have silently reset the toggle to its default.
+    notificationsOn: notificationsOn,
+    diagnosticRequestLog: diagnosticRequestLog,
+    diagnosticContextLog: diagnosticContextLog,
     savedProviders: savedProviders,
     activeProviderId: activeProviderId,
   );
@@ -359,6 +385,9 @@ class AppSettings {
       'conversationWidth': conversationWidth.name,
     if (!expandToolCalls) 'expandToolCalls': false,
     if (!notificationsOn) 'notificationsOn': false,
+    // Diagnostics (ADR-0058): request log defaults on, context snapshot off.
+    if (!diagnosticRequestLog) 'diagnosticRequestLog': false,
+    if (diagnosticContextLog) 'diagnosticContextLog': true,
     if (savedProviders.isNotEmpty)
       'savedProviders': [
         for (final provider in savedProviders) provider.toJson(),
@@ -381,6 +410,8 @@ class AppSettings {
       other.conversationWidth == conversationWidth &&
       other.expandToolCalls == expandToolCalls &&
       other.notificationsOn == notificationsOn &&
+      other.diagnosticRequestLog == diagnosticRequestLog &&
+      other.diagnosticContextLog == diagnosticContextLog &&
       _listEq(other.savedProviders, savedProviders) &&
       other.activeProviderId == activeProviderId;
 
@@ -398,6 +429,8 @@ class AppSettings {
     conversationWidth,
     expandToolCalls,
     notificationsOn,
+    diagnosticRequestLog,
+    diagnosticContextLog,
     Object.hashAll(savedProviders),
     activeProviderId,
   );

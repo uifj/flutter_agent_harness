@@ -615,6 +615,18 @@ const enStrings = <String, String>{
   'usageCrashLogDesc':
       'Local reports for the last crashes, kept for the newest 5 files. Nothing is uploaded.',
   'usageCrashLogOpen': 'Open folder',
+  'settingsDiagnostics': 'Diagnostics',
+  'settingsDiagnosticsIntro':
+      'Local logs for debugging the agent: one line per model call, and — if you turn it on — the full messages sent to the model. Kept for 30 days on this machine only.',
+  'diagnosticRequestLog': 'Request log',
+  'diagnosticRequestLogDesc':
+      'Record every model call: duration, outcome and token usage.',
+  'diagnosticContextLog': 'Context snapshot',
+  'diagnosticContextLogDesc':
+      'Also record the full messages each call sends to the model. Large; off by default.',
+  'diagnosticFolderTitle': 'Diagnostics folder',
+  'diagnosticFolderDesc':
+      'requests-*.jsonl and contexts-*.jsonl, one file per month.',
   'settingsReset': 'Reset',
   'settingsResetDesc':
       'Quarantine settings and preferences and start from defaults. The API key is removed from the keychain. Sessions and plan data are kept.',
@@ -1409,6 +1421,15 @@ const zhStrings = <String, String>{
   'usageCrashLogTitle': '崩溃与错误归档',
   'usageCrashLogDesc': '最近崩溃的本地报告，仅保留最新 5 个文件，不会上传。',
   'usageCrashLogOpen': '打开文件夹',
+  'settingsDiagnostics': '诊断日志',
+  'settingsDiagnosticsIntro':
+      '用于排查 agent 行为的本地日志：每次模型调用一行；开启后还会记录每次调用发给模型的完整消息。仅保留 30 天，不会离开这台设备。',
+  'diagnosticRequestLog': '请求日志',
+  'diagnosticRequestLogDesc': '记录每次模型调用：耗时、成败与 Token 用量。',
+  'diagnosticContextLog': '上下文快照',
+  'diagnosticContextLogDesc': '同时记录每次调用实际发给模型的完整消息。体积较大，默认关闭。',
+  'diagnosticFolderTitle': '诊断文件夹',
+  'diagnosticFolderDesc': 'requests-*.jsonl 与 contexts-*.jsonl，每月一个文件。',
   'settingsReset': '重置',
   'settingsResetDesc': '隔离设置与偏好文件并恢复默认。API key 将从钥匙串移除。会话与企划数据保留。',
   'settingsResetConfirmTitle': '重置设置与偏好？',

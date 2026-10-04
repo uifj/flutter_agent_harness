@@ -21,6 +21,7 @@ import '../host/git.dart';
 import '../host/project_folder_ops.dart';
 import '../host/terminal_manager.dart';
 import '../model/app_settings.dart' as cfg;
+import '../model/diagnostic_record.dart';
 import '../model/session_groups.dart';
 import '../model/workspace.dart';
 import '../model/workspace_index.dart';
@@ -29,6 +30,7 @@ import 'approval_rule_store.dart';
 import 'attention_service.dart';
 import 'checkpoint_store.dart';
 import 'crash_archive.dart';
+import 'diagnostic_log_store.dart';
 import 'usage_ledger.dart';
 import 'conversation_controller.dart';
 import 'details_selection.dart';
@@ -59,6 +61,11 @@ class AppScope {
     // Local usage ledger (ADR-0045 PC): one JSONL line per finished model
     // turn, 30-day window. The crash archive rides the same support root.
     _usageLedger = UsageLedger(directory: Directory('${support.path}/usage'));
+    // Diagnostics (ADR-0058): the requests/contexts logs. Not in the backup
+    // manifest — like usage/, they stay on this machine.
+    _diagnostics = DiagnosticLogStore(
+      directory: Directory('${support.path}/diagnostics'),
+    );
     crashArchive = CrashArchive(
       directory: Directory('${support.path}/logs/crash'),
     );
@@ -154,6 +161,10 @@ class AppScope {
   late final CheckpointStore _checkpoints;
   late final UsageLedger _usageLedger;
 
+  /// The diagnostics logs (ADR-0058) — read by the settings page's reveal
+  /// action; the records themselves flow in through [DiagnosticHooks].
+  late final DiagnosticLogStore _diagnostics;
+
   /// The local crash archive — the settings screen's log entry reads it.
   late final CrashArchive crashArchive;
 
@@ -166,6 +177,8 @@ class AppScope {
 
   /// The local usage ledger — the settings section reads its summary.
   UsageLedger get usageLedger => _usageLedger;
+
+  DiagnosticLogStore get diagnostics => _diagnostics;
 
   /// The attention service — the General section's notification toggle gates
   /// its raise behavior through the settings document.
@@ -381,15 +394,33 @@ class AppScope {
     _workbench.openTerminalInBottom();
   }
 
-  AgentRuntime _build(cfg.AppSettings settings) => AgentRuntime(
-    settings: settings,
-    sessionRoot: _sessionRoot,
-    support: _support,
-    // The same book across a rebuild: a settings save that replaces the runtime
-    // must not replace what the user already approved.
-    approvalRules: _approvals.book,
-    checkpoints: _checkpoints,
-  )..workspaceRoot = settings.workspaceRoot;
+  AgentRuntime _build(cfg.AppSettings settings) {
+    // The parameter shadows the store field inside this method; the closures
+    // below must ask the STORE (live), not this build-time snapshot.
+    final store = this.settings;
+    return AgentRuntime(
+      settings: settings,
+      sessionRoot: _sessionRoot,
+      support: _support,
+      // The same book across a rebuild: a settings save that replaces the runtime
+      // must not replace what the user already approved.
+      approvalRules: _approvals.book,
+      checkpoints: _checkpoints,
+      // Live reads (ADR-0058): a diagnostics toggle must not rebuild the
+      // runtime — the closures ask the store on every model call, so a save
+      // takes effect on the next call without dropping the conversation.
+      diagnostics: DiagnosticHooks(
+        requestEnabled: () => store.value.diagnosticRequestLog,
+        contextEnabled: () => store.value.diagnosticContextLog,
+        onRequest: (record) {
+          _diagnostics.recordRequest(record);
+        },
+        onContext: (record) {
+          _diagnostics.recordContext(record);
+        },
+      ),
+    )..workspaceRoot = settings.workspaceRoot;
+  }
 
   /// Persists the edited settings, then brings the runtime in line with them.
   ///
