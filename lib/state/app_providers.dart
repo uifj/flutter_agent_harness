@@ -28,6 +28,7 @@ import 'package:window_manager/window_manager.dart';
 import '../model/app_settings.dart';
 import '../model/user_profile.dart';
 import '../model/workbench_prefs.dart';
+import 'app_database.dart';
 import 'app_scope.dart';
 import 'conversation_controller.dart';
 import 'details_selection.dart';
@@ -138,6 +139,7 @@ PrefsStore prefsStore(Ref ref) =>
 @Riverpod(keepAlive: true)
 AppScope appScope(Ref ref) {
   final scope = AppScope(
+    appDatabase: ref.watch(appDatabaseProvider),
     support: ref.watch(supportDirectoryProvider),
     settings: ref.watch(settingsStoreProvider),
     prefs: ref.watch(prefsStoreProvider),
@@ -250,6 +252,10 @@ WorkspaceModeController workspaceMode(Ref ref) {
 /// The mock data lives in ONE place: the seed `main` passes to `open`. Nothing
 /// below reads a flag for "is this mock", which is what keeps swapping in a
 /// real source a one-line change instead of a branch per widget.
+@Riverpod(keepAlive: true)
+AppDatabase appDatabase(Ref ref) =>
+    throw UnimplementedError('override appDatabase in main or tests');
+
 @Riverpod(keepAlive: true)
 PlanObjectStore planObjectStore(Ref ref) =>
     throw UnimplementedError('override planObjectStore in main or tests');

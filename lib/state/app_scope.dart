@@ -55,6 +55,7 @@ import 'workbench_store.dart';
 
 class AppScope {
   AppScope({
+    required this.appDatabase,
     required Directory support,
     required this.settings,
     required this.prefs,
@@ -81,9 +82,7 @@ class AppScope {
     crashArchive = CrashArchive(
       directory: Directory('${support.path}/logs/crash'),
     );
-    _scheduledTasks = ScheduledTaskStore(
-      AppDatabase.open(File('${support.path}/planstar.db')),
-    );
+    _scheduledTasks = ScheduledTaskStore(appDatabase);
     _runtime = _build(settings.value);
     // The saved approvals belong to a folder, so the book has to be pointed at
     // the open one before any tool can run.
@@ -189,6 +188,7 @@ class AppScope {
   /// The quick phrase library (ADR-0063) — read by the composer's menu and
   /// the settings page's management section.
   late final QuickPhraseStore _quickPhrases;
+  final AppDatabase appDatabase;
   late final EnvironmentStore _environment;
   late final InstructionCardStore _instructionCards;
 

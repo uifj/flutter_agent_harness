@@ -18,6 +18,7 @@
 import 'dart:io';
 
 import 'package:planstar/model/app_settings.dart';
+import 'package:planstar/state/app_database.dart';
 import 'package:planstar/state/app_scope.dart';
 import 'package:planstar/state/prefs_store.dart';
 import 'package:planstar/state/settings_store.dart';
@@ -25,6 +26,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   late Directory support;
+  AppDatabase? appDb;
   late SettingsStore settings;
   late PrefsStore prefs;
   late AppScope scope;
@@ -32,8 +34,14 @@ void main() {
   setUp(() async {
     support = Directory.systemTemp.createTempSync('dsh_scope_');
     settings = await SettingsStore.open(support);
+    appDb = AppDatabase.open(File('${support.path}/planstar.db'));
     prefs = await PrefsStore.open(support);
-    scope = AppScope(support: support, settings: settings, prefs: prefs);
+    scope = AppScope(
+      appDatabase: appDb!,
+      support: support,
+      settings: settings,
+      prefs: prefs,
+    );
   });
 
   tearDown(() async {
@@ -141,6 +149,7 @@ void main() {
       '${sessions.path}/sessions.json',
     ).writeAsStringSync('{"s-elsewhere": {"workspaceRoot": "${other.path}"}}');
     final scoped = AppScope(
+      appDatabase: appDb!,
       support: root,
       settings: await SettingsStore.open(root),
       prefs: await PrefsStore.open(root),

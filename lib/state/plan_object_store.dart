@@ -12,14 +12,20 @@
 //    doing the same (`DataViewSubscriptionContainer.kt:96`) is that a
 //    de-duplicating listener can swallow a render; the salt is what stops that.
 //
-// Everything else is the same discipline the settings store already uses:
-// atomic tmp+rename, a corrupt file reads as empty, `lib/state` never imports
-// `lib/ui`.
+// Since ADR-0071 the space persists in the AppDatabase (plan_space_meta +
+// plan_records) instead of plan_space.json: _commit writes a transaction
+// that upserts every record and drops the absent ones, a legacy file is
+// imported once and deleted, and a corrupt file reads as empty — the same
+// discipline, one carrier. `lib/state` never imports `lib/ui`.
 
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
+
+import 'app_database.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../model/plan_block.dart';
 import '../model/plan_dataview.dart';
@@ -75,7 +81,7 @@ class PlanViewerStage {
 
 class PlanObjectStore extends ChangeNotifier {
   PlanObjectStore._({
-    required File file,
+    required AppDatabase db,
     required Map<String, PlanObject> objects,
     required List<PlanCollection> collections,
     required List<PlanObjectType> types,
@@ -84,7 +90,7 @@ class PlanObjectStore extends ChangeNotifier {
     required List<PlanWidget> widgets,
     required Set<String> bin,
     required this.revision,
-  }) : _file = file,
+  }) : _db = db,
        _objects = objects,
        _collections = collections,
        _types = types,
@@ -95,33 +101,64 @@ class PlanObjectStore extends ChangeNotifier {
 
   static const _fileName = 'plan_space.json';
 
-  /// Open the space from Application Support, seeding it with [seed] when the
-  /// file is missing. A corrupt file reads as empty rather than throwing the
-  /// workspace back to a hero picker.
+  /// Open the space from the AppDatabase, importing a legacy
+  /// `plan_space.json` once when it is there, and seeding with [seed] when
+  /// the space has never existed. A corrupt legacy file is deleted unread —
+  /// the same "corrupt reads as empty" stance the file carrier took.
   static Future<PlanObjectStore> open(
+    AppDatabase db, {
+    Directory? root,
+    PlanSpaceSeed? seed,
+  }) async {
+    final support = root ?? await getApplicationSupportDirectory();
+    return _openInner(db, support, seed: seed);
+  }
+
+  static Future<PlanObjectStore> _openInner(
+    AppDatabase db,
     Directory root, {
     PlanSpaceSeed? seed,
   }) async {
-    final file = File('${root.path}/$_fileName');
-    if (file.existsSync()) {
+    // One legacy import, then the database is the only carrier.
+    final legacyFile = File('${root.path}/$_fileName');
+    Map<String, Object?>? legacyJson;
+    if (legacyFile.existsSync()) {
       try {
-        final decoded = jsonDecode(await file.readAsString());
-        if (decoded is Map<String, Object?>) {
-          return PlanObjectStore._read(
-            file: file,
-            json: decoded,
-            fallback: seed,
-          );
-        }
+        final decoded = jsonDecode(legacyFile.readAsStringSync());
+        if (decoded is Map<String, Object?>) legacyJson = decoded;
       } on FormatException {
-        // Not JSON: fall through to the seed.
+        // Not JSON: treated as absent.
       } on FileSystemException {
         // Unreadable: same.
       }
+      legacyFile.deleteSync();
+    }
+
+    final metaRow = await db.select(db.planSpaceMetaRows).getSingleOrNull();
+    if (metaRow != null && legacyJson != null) {
+      // Both carriers present can only mean a crash between an import and
+      // its file deletion; the database row is the newer truth — drop the
+      // file (already deleted above) and continue from the row.
+    }
+    if (metaRow != null) {
+      final records = await db.select(db.planRecordRows).get();
+      return PlanObjectStore._fromRows(db: db, meta: metaRow, records: records);
+    }
+    if (legacyJson != null) {
+      // The import must LAND before the file is gone for good: persist the
+      // parsed state immediately, or a reopen would find nothing (the file
+      // was already deleted above).
+      final imported = PlanObjectStore._read(
+        db: db,
+        json: legacyJson,
+        fallback: seed,
+      );
+      await imported._save();
+      return imported;
     }
     final seedSpace = seed ?? PlanSpaceSeed.empty;
     return PlanObjectStore._(
-      file: file,
+      db: db,
       objects: {for (final o in seedSpace.objects) o.id: o},
       collections: [...seedSpace.collections],
       types: [...seedSpace.types],
@@ -133,8 +170,42 @@ class PlanObjectStore extends ChangeNotifier {
     );
   }
 
+  static Future<PlanObjectStore> _fromRows({
+    required AppDatabase db,
+    required PlanSpaceMetaRow meta,
+    required List<PlanRecordRow> records,
+  }) async {
+    final byKind = <String, List<Map<String, Object?>>>{};
+    for (final row in records) {
+      final decoded = jsonDecode(row.payload);
+      if (decoded is Map<String, Object?>) {
+        byKind.putIfAbsent(row.kind, () => []).add(decoded);
+      }
+    }
+    List<T> of<T>(String kind, T Function(Map<String, Object?>) decode) => [
+      for (final entry in byKind[kind] ?? const <Map<String, Object?>>[])
+        decode(entry),
+    ];
+    // collection is decoded by [of] below.
+    final objects = of('object', PlanObject.fromJson);
+    return PlanObjectStore._(
+      db: db,
+      objects: {for (final object in objects) object.id: object},
+      collections: of('collection', PlanCollection.fromJson),
+      types: of('type', PlanObjectType.fromJson),
+      relations: of('relation', PlanRelation.fromJson),
+      templates: of('template', PlanTemplate.fromJson),
+      widgets: of('widget', PlanWidget.fromJson),
+      bin: {
+        for (final id in (jsonDecode(meta.bin) as List? ?? const []))
+          if (id is String) id,
+      },
+      revision: meta.revision,
+    );
+  }
+
   static PlanObjectStore _read({
-    required File file,
+    required AppDatabase db,
     required Map<String, Object?> json,
     required PlanSpaceSeed? fallback,
   }) {
@@ -153,7 +224,7 @@ class PlanObjectStore extends ChangeNotifier {
 
     final objects = list('objects', PlanObject.fromJson, const []);
     return PlanObjectStore._(
-      file: file,
+      db: db,
       objects: {for (final object in objects) object.id: object},
       collections: list('collections', PlanCollection.fromJson, const []),
       types: list('types', PlanObjectType.fromJson, const []),
@@ -168,7 +239,7 @@ class PlanObjectStore extends ChangeNotifier {
     );
   }
 
-  final File _file;
+  final AppDatabase _db;
 
   Map<String, PlanObject> _objects;
   List<PlanCollection> _collections;
@@ -1208,25 +1279,58 @@ class PlanObjectStore extends ChangeNotifier {
   }
 
   Future<void> _save() async {
-    final temp = File('${_file.path}.tmp');
-    await temp.parent.create(recursive: true);
-    await temp.writeAsString(
-      jsonEncode({
-        'revision': revision,
-        'objects': [
-          for (final id in _objects.keys.toList()..sort())
-            _objects[id]!.toJson(),
-        ],
-        'collections': [for (final c in _collections) c.toJson()],
-        'types': [for (final t in _types) t.toJson()],
-        'relations': [for (final r in _relations) r.toJson()],
-        'templates': [for (final t in _templates) t.toJson()],
-        'widgets': [for (final w in _widgets) w.toJson()],
-        'bin': [..._bin]..sort(),
-      }),
-      flush: true,
-    );
-    await temp.rename(_file.path);
+    // One transaction: upsert every record, drop the ones this state no
+    // longer has, and write the meta row. The in-memory state is the truth;
+    // the database mirrors it wholesale, which keeps a half-written space
+    // impossible.
+    PlanRecordRow record(String kind, String id, String payload) =>
+        PlanRecordRow(kind: kind, id: id, payload: payload);
+    final rows = <PlanRecordRow>[
+      for (final object in _objects.values)
+        record('object', object.id, jsonEncode(object.toJson())),
+      for (final collection in _collections)
+        record('collection', collection.id, jsonEncode(collection.toJson())),
+      for (final type in _types)
+        record('type', type.uniqueKey, jsonEncode(type.toJson())),
+      for (final relation in _relations)
+        record('relation', relation.key, jsonEncode(relation.toJson())),
+      for (final template in _templates)
+        record('template', template.id, jsonEncode(template.toJson())),
+      for (final widget in _widgets)
+        record('widget', widget.id, jsonEncode(widget.toJson())),
+    ];
+    await _db.transaction(() async {
+      // Reconcile: absent rows go, present rows land. The record table is
+      // small (hundreds), so a wholesale reconcile is cheaper than diffing.
+      await _db.delete(_db.planRecordRows).go();
+      if (rows.isNotEmpty) {
+        await _db.batch((batch) {
+          batch.insertAllOnConflictUpdate(_db.planRecordRows, rows);
+        });
+      }
+      // Upsert: drift 2.31 has no into().insertOnUpdate; update-then-insert
+      // inside the transaction is the honest spelling.
+      final updated =
+          await (_db.update(
+            _db.planSpaceMetaRows,
+          )..where((row) => row.id.equals('space'))).write(
+            PlanSpaceMetaRowsCompanion(
+              revision: Value(revision),
+              bin: Value(jsonEncode([..._bin]..sort())),
+            ),
+          );
+      if (updated == 0) {
+        await _db
+            .into(_db.planSpaceMetaRows)
+            .insert(
+              PlanSpaceMetaRow(
+                id: 'space',
+                revision: revision,
+                bin: jsonEncode([..._bin]..sort()),
+              ),
+            );
+      }
+    });
   }
 
   List<String> _asIdList(Object? value) => switch (value) {

@@ -35,6 +35,7 @@ import 'host/reveal.dart';
 import 'host/support_directory.dart';
 import 'l10n/locales.dart';
 import 'model/app_settings.dart' as cfg;
+import 'state/app_database.dart';
 import 'state/app_providers.dart';
 import 'state/window_geometry_store.dart';
 import 'state/details_selection.dart';
@@ -123,7 +124,13 @@ Future<void> main() async {
   final prefsStore = await PrefsStore.open(support);
   // The plan workspace's object store (ADR-0037): the same bootstrap rule, and
   // the only place the mock seed is named.
-  final planSpace = await PlanObjectStore.open(support, seed: planMockSeed());
+  // One database connection for every domain (ADR-0060/0071).
+  final appDatabase = AppDatabase.open(File('${support.path}/planstar.db'));
+  final planSpace = await PlanObjectStore.open(
+    appDatabase,
+    root: support,
+    seed: planMockSeed(),
+  );
   // The workspace access a previous launch recorded has to be claimed BEFORE
   // anything reads under the root — the file tree's first listing, the
   // session restore, the tools. A failure here is not an error: the hero
@@ -172,6 +179,7 @@ Future<void> main() async {
       settingsStoreProvider.overrideWithValue(settings),
       prefsStoreProvider.overrideWithValue(prefsStore),
       planObjectStoreProvider.overrideWithValue(planSpace),
+      appDatabaseProvider.overrideWithValue(appDatabase),
       usageSummaryProvider.overrideWithValue(bootUsageSummary),
       crashArchiveNonEmptyProvider.overrideWithValue(crash.knownNonEmpty),
       crashArchiveProvider.overrideWithValue(crash),

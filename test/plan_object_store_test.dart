@@ -12,6 +12,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:planstar/model/plan_dataview.dart';
+import 'package:planstar/state/app_database.dart';
 import 'package:planstar/model/plan_mock_content.dart';
 import 'package:planstar/model/plan_object_type.dart';
 import 'package:planstar/model/plan_relation.dart';
@@ -21,18 +22,25 @@ import 'package:planstar/model/plan_widget.dart';
 import 'package:planstar/state/plan_object_store.dart';
 
 void main() {
+  _legacyGroup();
+
   late Directory root;
 
   setUp(() async {
     root = await Directory.systemTemp.createTemp('plan_space');
   });
 
+  AppDatabase? db;
+
   tearDown(() async {
+    await db?.close();
     if (root.existsSync()) await root.delete(recursive: true);
   });
 
-  Future<PlanObjectStore> open({PlanSpaceSeed? seed}) =>
-      PlanObjectStore.open(root, seed: seed ?? planMockSeed());
+  Future<PlanObjectStore> open({PlanSpaceSeed? seed}) async {
+    db = AppDatabase.open(File('${root.path}/planstar.db'));
+    return PlanObjectStore.open(db!, root: root, seed: seed ?? planMockSeed());
+  }
 
   group('the file is the only truth', () {
     test(
@@ -44,11 +52,13 @@ void main() {
         final file = File('${root.path}/plan_space.json');
         expect(file.existsSync(), isFalse);
         await store.toggleRecord('r-task-1');
-        expect(file.existsSync(), isTrue);
-        final decoded =
-            jsonDecode(file.readAsStringSync()) as Map<String, Object?>;
-        expect(decoded['objects'], hasLength(11));
         expect(store.byId('r-task-1')!.isDone, isTrue);
+        // The rows are in the database now (ADR-0071): a fresh connection
+        // reads the persisted state back.
+        final freshDb = AppDatabase.open(File('${root.path}/planstar.db'));
+        final rows = await freshDb.select(freshDb.planRecordRows).get();
+        await freshDb.close();
+        expect(rows.where((row) => row.kind == 'object'), hasLength(11));
       },
     );
 
@@ -591,6 +601,63 @@ void main() {
           .stageFor(PlanMockKeys.taskSet, viewerId: 'v-board')
           .groups;
       expect(groups.keys.toList(), ['doing', 'todo', 'shipped', 'blocked', '']);
+    });
+  });
+}
+
+// ADR-0071: the one-time import from the legacy plan_space.json carrier.
+void _legacyGroup() {
+  group('legacy plan_space.json import', () {
+    late Directory root;
+    AppDatabase? db;
+
+    setUp(() async {
+      root = await Directory.systemTemp.createTemp('plan_space_legacy');
+    });
+
+    tearDown(() async {
+      await db?.close();
+      if (root.existsSync()) await root.delete(recursive: true);
+    });
+
+    test('imports once, keeps records, deletes the file', () async {
+      File('${root.path}/plan_space.json').writeAsStringSync(
+        jsonEncode({
+          'revision': 4,
+          'objects': [
+            {
+              'id': 'r-1',
+              'type': 'task',
+              'struct': {'status': 'todo'},
+            },
+          ],
+          'collections': [],
+          'types': [],
+          'relations': [],
+          'templates': [],
+          'widgets': [],
+          'bin': ['r-2'],
+        }),
+      );
+
+      db = AppDatabase.open(File('${root.path}/planstar.db'));
+      final store = await PlanObjectStore.open(db!, root: root, seed: null);
+      expect(store.objects, hasLength(1));
+      expect(store.revision, 4);
+      expect(store.binIds, {'r-2'});
+      expect(File('${root.path}/plan_space.json').existsSync(), isFalse);
+
+      // The database is now the only carrier: reopening reads the rows.
+      final reopened = await PlanObjectStore.open(db!, root: root, seed: null);
+      expect(reopened.objects, hasLength(1));
+    });
+
+    test('a corrupt legacy file is deleted unread', () async {
+      File('${root.path}/plan_space.json').writeAsStringSync('{"torn');
+      db = AppDatabase.open(File('${root.path}/planstar.db'));
+      final store = await PlanObjectStore.open(db!, root: root, seed: null);
+      expect(store.objects, isEmpty);
+      expect(File('${root.path}/plan_space.json').existsSync(), isFalse);
     });
   });
 }

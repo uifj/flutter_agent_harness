@@ -16,6 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import 'package:planstar/model/plan_dataview.dart';
+import 'package:planstar/state/app_database.dart';
 import 'package:planstar/model/plan_mock_content.dart';
 import 'package:planstar/model/plan_struct.dart';
 import 'package:planstar/state/plan_object_store.dart';
@@ -35,14 +36,17 @@ const _graphCopy =
 
 void main() {
   late Directory root;
+  AppDatabase? db;
   late PlanObjectStore store;
 
   setUp(() async {
     root = await Directory.systemTemp.createTemp('plan_dataview');
-    store = await PlanObjectStore.open(root, seed: planMockSeed());
+    db = AppDatabase.open(File('${root.path}/planstar.db'));
+    store = await PlanObjectStore.open(db!, root: root, seed: planMockSeed());
   });
 
   tearDown(() async {
+    await db?.close();
     store.dispose();
     if (root.existsSync()) await root.delete(recursive: true);
   });

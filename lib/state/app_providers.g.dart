@@ -588,7 +588,7 @@ final class AppScopeProvider
   }
 }
 
-String _$appScopeHash() => r'ad2a593bdff1060c21b74030b0c6f25aa8b88815';
+String _$appScopeHash() => r'fe8099a3aa854bd85eef7fa3db8e4f72ccbcf2e6';
 
 /// The settings document's current value. Theme, locale, workspace, model
 /// fields — everything the tree renders straight out of the document.
@@ -1182,8 +1182,8 @@ String _$workspaceModeHash() => r'2e17f5e7553863c2043fd1b432ee7e2ed7ab4734';
 /// below reads a flag for "is this mock", which is what keeps swapping in a
 /// real source a one-line change instead of a branch per widget.
 
-@ProviderFor(planObjectStore)
-final planObjectStoreProvider = PlanObjectStoreProvider._();
+@ProviderFor(appDatabase)
+final appDatabaseProvider = AppDatabaseProvider._();
 
 /// The plan workspace's object store (ADR-0037 P2): records, types, relations,
 /// viewers, templates and widgets for one plan space. Same bootstrap rule as
@@ -1194,10 +1194,9 @@ final planObjectStoreProvider = PlanObjectStoreProvider._();
 /// below reads a flag for "is this mock", which is what keeps swapping in a
 /// real source a one-line change instead of a branch per widget.
 
-final class PlanObjectStoreProvider
-    extends
-        $FunctionalProvider<PlanObjectStore, PlanObjectStore, PlanObjectStore>
-    with $Provider<PlanObjectStore> {
+final class AppDatabaseProvider
+    extends $FunctionalProvider<AppDatabase, AppDatabase, AppDatabase>
+    with $Provider<AppDatabase> {
   /// The plan workspace's object store (ADR-0037 P2): records, types, relations,
   /// viewers, templates and widgets for one plan space. Same bootstrap rule as
   /// the settings store — `main` opens it before the first frame and overrides
@@ -1206,6 +1205,48 @@ final class PlanObjectStoreProvider
   /// The mock data lives in ONE place: the seed `main` passes to `open`. Nothing
   /// below reads a flag for "is this mock", which is what keeps swapping in a
   /// real source a one-line change instead of a branch per widget.
+  AppDatabaseProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'appDatabaseProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$appDatabaseHash();
+
+  @$internal
+  @override
+  $ProviderElement<AppDatabase> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  AppDatabase create(Ref ref) {
+    return appDatabase(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AppDatabase value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AppDatabase>(value),
+    );
+  }
+}
+
+String _$appDatabaseHash() => r'bb4ac8e48cb29d4274f3d6c1b538d7d29620f578';
+
+@ProviderFor(planObjectStore)
+final planObjectStoreProvider = PlanObjectStoreProvider._();
+
+final class PlanObjectStoreProvider
+    extends
+        $FunctionalProvider<PlanObjectStore, PlanObjectStore, PlanObjectStore>
+    with $Provider<PlanObjectStore> {
   PlanObjectStoreProvider._()
     : super(
         from: null,

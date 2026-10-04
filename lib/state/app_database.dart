@@ -64,7 +64,45 @@ class ScheduledTaskRunRows extends Table {
   TextColumn get preview => text().withDefault(const Constant(''))();
 }
 
-@DriftDatabase(tables: [UsageRows, ScheduledTaskRows, ScheduledTaskRunRows])
+/// The plan space's single meta row (ADR-0071): revision and the recycle
+/// bin's id list. Content rows live in [PlanRecordRows].
+class PlanSpaceMetaRows extends Table {
+  @override
+  String get tableName => 'plan_space_meta';
+
+  TextColumn get id => text()();
+  IntColumn get revision => integer()();
+  TextColumn get bin => text().withDefault(const Constant('[]'))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// One record of the plan space (ADR-0071): six collections in one table,
+/// partitioned by kind. The payload stays the model's hand-written JSON —
+/// columnizing Anytype's Struct view here would put the data model in two
+/// places (ADR-0037).
+class PlanRecordRows extends Table {
+  @override
+  String get tableName => 'plan_records';
+
+  TextColumn get kind => text()();
+  TextColumn get id => text()();
+  TextColumn get payload => text()();
+
+  @override
+  Set<Column> get primaryKey => {kind, id};
+}
+
+@DriftDatabase(
+  tables: [
+    UsageRows,
+    ScheduledTaskRows,
+    ScheduledTaskRunRows,
+    PlanSpaceMetaRows,
+    PlanRecordRows,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
@@ -78,7 +116,7 @@ class AppDatabase extends _$AppDatabase {
       );
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -92,6 +130,10 @@ class AppDatabase extends _$AppDatabase {
       if (from < 2) {
         await m.createTable(scheduledTaskRows);
         await m.createTable(scheduledTaskRunRows);
+      }
+      if (from < 3) {
+        await m.createTable(planSpaceMetaRows);
+        await m.createTable(planRecordRows);
       }
     },
   );

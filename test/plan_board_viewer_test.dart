@@ -14,6 +14,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:planstar/model/plan_mock_content.dart';
+import 'package:planstar/state/app_database.dart';
 import 'package:planstar/model/plan_object_type.dart';
 import 'package:planstar/model/plan_space.dart';
 import 'package:planstar/model/plan_struct.dart';
@@ -51,14 +52,21 @@ PlanSpaceSeed _seedWithFiftyFiveTodos() {
 
 void main() {
   late Directory root;
+  AppDatabase? db;
   late PlanObjectStore store;
 
   setUp(() async {
     root = Directory.systemTemp.createTempSync('plan_board');
-    store = await PlanObjectStore.open(root, seed: _seedWithFiftyFiveTodos());
+    db = AppDatabase.open(File('${root.path}/planstar.db'));
+    store = await PlanObjectStore.open(
+      db!,
+      root: root,
+      seed: _seedWithFiftyFiveTodos(),
+    );
   });
 
-  tearDown(() {
+  tearDown(() async {
+    await db?.close();
     store.dispose();
     root.deleteSync(recursive: true);
   });

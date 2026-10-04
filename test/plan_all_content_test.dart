@@ -11,6 +11,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 
 import 'package:planstar/l10n/locales.dart';
 import 'package:planstar/model/plan_all_content.dart';
+import 'package:planstar/state/app_database.dart';
 import 'package:planstar/model/plan_mock_content.dart';
 import 'package:planstar/model/plan_object_type.dart';
 import 'package:planstar/model/plan_struct.dart';
@@ -21,16 +22,19 @@ import 'package:planstar/ui/plan/library/plan_all_content_screen.dart';
 
 void main() {
   late Directory root;
+  AppDatabase? db;
   late PlanObjectStore store;
   PlanAllContentState? lastState;
 
   setUp(() async {
     root = await Directory.systemTemp.createTemp('plan_all_content');
-    store = await PlanObjectStore.open(root, seed: planMockSeed());
+    db = AppDatabase.open(File('${root.path}/planstar.db'));
+    store = await PlanObjectStore.open(db!, root: root, seed: planMockSeed());
     lastState = null;
   });
 
-  tearDown(() {
+  tearDown(() async {
+    await db?.close();
     store.dispose();
     if (root.existsSync()) root.deleteSync(recursive: true);
   });
