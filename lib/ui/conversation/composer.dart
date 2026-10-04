@@ -68,6 +68,7 @@ class Composer extends StatefulWidget {
     this.onNewSession,
     this.onCompress,
     this.phrases = const [],
+    this.onCopyTranscript,
     this.modelDirectory,
     this.onModelSelected,
     this.onLookupFiles,
@@ -127,6 +128,10 @@ class Composer extends StatefulWidget {
   /// The quick phrase library (ADR-0063), snapshotted by the host. Empty
   /// hides the button — a menu that opens onto nothing is a fake door.
   final List<QuickPhrase> phrases;
+
+  /// The `/copy` command's target (ADR-0066): the whole transcript's text,
+  /// assembled by the host. Null keeps the command out of the menu.
+  final Future<void> Function()? onCopyTranscript;
 
   /// The model seat's directory — dsh's `conversation.input.model`. Absent
   /// keeps the row as it was (tests, previews); the chip is the one control
@@ -674,6 +679,14 @@ class ComposerState extends State<Composer> {
         description: 'commandCompressDesc',
         icon: LucideIcons.fold_vertical,
         action: () => widget.onCompress!(),
+      ),
+    if (widget.onCopyTranscript != null)
+      _CommandEntry(
+        command: '/copy',
+        label: 'commandCopyTranscript',
+        description: 'commandCopyTranscriptDesc',
+        icon: LucideIcons.clipboard,
+        action: () => widget.onCopyTranscript!(),
       ),
   ];
 

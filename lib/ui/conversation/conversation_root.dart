@@ -20,6 +20,9 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import '../../l10n/locales.dart';
 import '../../model/approval_mode.dart';
 import '../../model/conversation.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
+
+import '../../model/context_compression.dart';
 import '../../model/quick_phrase.dart';
 import '../../model/workspace_index.dart';
 import '../../state/checkpoint_store.dart';
@@ -458,6 +461,14 @@ class _ConversationRootState extends State<ConversationRoot> {
     }
   }
 
+  /// `/copy` (ADR-0066): every user and assistant turn, in order, joined by
+  /// newlines — the same assembly the compressor summarizes, uncapped.
+  Future<void> _copyTranscript() async {
+    await Clipboard.setData(
+      ClipboardData(text: transcriptTextOf(widget.conversation.nodes)),
+    );
+  }
+
   /// The composer stack. A pending approval takes the card's place rather than
   /// stacking above it: while the agent is waiting on an answer there is nothing
   /// useful to type. A plan awaiting review takes it next — plan mode is over
@@ -479,6 +490,9 @@ class _ConversationRootState extends State<ConversationRoot> {
               onApprovalMode: (mode) => widget.conversation.approvalMode = mode,
               onNewSession: widget.conversation.startNewSession,
               phrases: widget.quickPhrases,
+              onCopyTranscript: widget.conversation.nodes.isEmpty
+                  ? null
+                  : _copyTranscript,
               onCompress:
                   widget.conversation.isBusy ||
                       widget.conversation.isCompressing

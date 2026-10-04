@@ -29,6 +29,12 @@ String? resolveBackupEntry(String supportPath, String name) {
   return p.isWithin(supportPath, target) ? target : null;
 }
 
+/// Writes one exported message to [path] (ADR-0066). The UI holds the picked
+/// path only; the bytes go through here so lib/ui stays off dart:io.
+Future<void> writeMessageExport(String path, String text) async {
+  await File(path).writeAsString(text, flush: true);
+}
+
 /// The app's local backup/restore service.
 class BackupService {
   /// The file extension used for backup archives.

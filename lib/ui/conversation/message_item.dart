@@ -12,7 +12,13 @@ import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
+import '../../l10n/locales.dart';
+import '../../state/backup_service.dart' show writeMessageExport;
+import '../primitives/menu.dart';
 import '../primitives/state_dot.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
+import 'package:flutter_lucide/flutter_lucide.dart';
 import '../tool/tool_card.dart';
 import 'assistant_body.dart';
 
@@ -23,14 +29,75 @@ class MessageItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => switch (node) {
-    UserMessageNode(:final text) => _UserBubble(text: text),
-    AssistantMessageNode(:final text, :final reasoning) => AssistantBody(
-      reasoning: reasoning,
-      text: text,
+    UserMessageNode(:final text) => _messageMenu(
+      context,
+      _UserBubble(text: text),
+      text,
+    ),
+    AssistantMessageNode(:final text, :final reasoning) => _messageMenu(
+      context,
+      AssistantBody(reasoning: reasoning, text: text),
+      text,
     ),
     ToolCallNode() => ToolCard(node: node as ToolCallNode),
     ErrorNode(:final message) => _TurnError(message: message),
   };
+
+  /// The message-level verbs (ADR-0066): copy the text in place, or take it
+  /// away as a file. Markdown export writes the message as-is — converting
+  /// markdown to "plain text" is an ill-defined transform, and doing it
+  /// badly would be a lie about what was said.
+  Widget _messageMenu(BuildContext context, Widget child, String text) =>
+      DswContextMenu(
+        items: (menuContext) => [
+          DswMenuEntry(
+            icon: LucideIcons.copy,
+            label: menuContext.tr('messageCopyText'),
+            onTap: () async {
+              await Clipboard.setData(ClipboardData(text: text));
+            },
+          ),
+          DswMenuEntry(
+            icon: LucideIcons.file_output,
+            label: menuContext.tr('messageExportMd'),
+            onTap: () => _exportMessage(menuContext, text, 'md'),
+          ),
+          DswMenuEntry(
+            icon: LucideIcons.download,
+            label: menuContext.tr('messageExportTxt'),
+            onTap: () => _exportMessage(menuContext, text, 'txt'),
+          ),
+        ],
+        child: child,
+      );
+
+  Future<void> _exportMessage(
+    BuildContext context,
+    String text,
+    String extension,
+  ) async {
+    final path = await FilePicker.platform.saveFile(
+      dialogTitle: context.tr('messageExportMd'),
+      fileName: _exportFileName(extension),
+      type: FileType.custom,
+      allowedExtensions: [extension],
+    );
+    if (path == null) return;
+    await writeMessageExport(path, text);
+  }
+}
+
+/// `planstar_message_YYYYMMDD_HHMMSS.<ext>` — the backup's stamp format.
+String _exportFileName(String extension) {
+  final now = DateTime.now();
+  final stamp =
+      '${now.year}'
+      '${now.month.toString().padLeft(2, '0')}'
+      '${now.day.toString().padLeft(2, '0')}_'
+      '${now.hour.toString().padLeft(2, '0')}'
+      '${now.minute.toString().padLeft(2, '0')}'
+      '${now.second.toString().padLeft(2, '0')}';
+  return 'planstar_message_$stamp.$extension';
 }
 
 /// `MessageItem.module.css:4-29` (Figma User_Bubble/message_container

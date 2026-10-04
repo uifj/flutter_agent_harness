@@ -13,6 +13,21 @@ import 'conversation.dart';
 const compressionPerMessageCap = 800;
 const compressionTotalCap = 12000;
 
+/// The whole transcript as one clipboard payload (ADR-0066): every user and
+/// assistant turn in order, joined by newlines — the compressor's source
+/// assembly, uncapped and prefixed by speaker.
+String transcriptTextOf(List<ConversationNode> nodes) {
+  final lines = <String>[];
+  for (final node in nodes) {
+    if (node is UserMessageNode && node.text.trim().isNotEmpty) {
+      lines.add('user: ${node.text.trim()}');
+    } else if (node is AssistantMessageNode && node.text.trim().isNotEmpty) {
+      lines.add('assistant: ${node.text.trim()}');
+    }
+  }
+  return lines.join('\n');
+}
+
 /// Builds the summarizer's source text from the transcript's user and
 /// assistant turns. Tool calls are excluded (the S1 boundary, ADR-0061):
 /// they are the largest and least conversational part of a transcript.
