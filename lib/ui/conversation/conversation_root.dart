@@ -29,6 +29,7 @@ import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../appearance_scope.dart';
+import '../primitives/feedback.dart';
 import '../tool/checkpoint_scope.dart';
 import 'approval_panel.dart';
 import 'ask_user_panel.dart';
@@ -434,6 +435,22 @@ class _ConversationRootState extends State<ConversationRoot> {
     );
   }
 
+  /// The `/compress` command's handler (ADR-0061): one summarizer call, then
+  /// the fresh session carries the summary. The feedback strip is the only
+  /// surface that says what happened — the transcript itself just resets.
+  Future<void> _compress() async {
+    final messenger = context;
+    showFeedback(messenger, context.tr('compressStarted'));
+    try {
+      final compressed = await widget.conversation.compressContext();
+      if (!mounted) return;
+      if (compressed) showFeedback(context, context.tr('compressDone'));
+    } catch (error) {
+      if (!mounted) return;
+      showFeedback(context, context.tr('compressFailed'), destructive: true);
+    }
+  }
+
   /// The composer stack. A pending approval takes the card's place rather than
   /// stacking above it: while the agent is waiting on an answer there is nothing
   /// useful to type. A plan awaiting review takes it next — plan mode is over
@@ -454,6 +471,11 @@ class _ConversationRootState extends State<ConversationRoot> {
               approvalMode: widget.conversation.approvalMode,
               onApprovalMode: (mode) => widget.conversation.approvalMode = mode,
               onNewSession: widget.conversation.startNewSession,
+              onCompress:
+                  widget.conversation.isBusy ||
+                      widget.conversation.isCompressing
+                  ? null
+                  : _compress,
               modelDirectory: widget.modelDirectory,
               onModelSelected: widget.onModelSelected,
               onLookupFiles: widget.onLookupFiles,

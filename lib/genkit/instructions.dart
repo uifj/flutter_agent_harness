@@ -156,16 +156,40 @@ List<InstructionFile> discoverInstructions({
 const instructionsOpenTag = '<project-instructions>';
 
 /// True for text the runtime put into the user's message on the user's behalf:
-/// the workspace instruction block (ADR-0009) and the `@` file references.
+/// the workspace instruction block (ADR-0009), the `@` file references, and
+/// the compression summary (ADR-0061).
 ///
-/// Both ride the first user message as their own text parts, so anything that
-/// reads that message to describe the conversation to a human — a session
-/// title, primarily — must drop them. They are model-facing prose, and they
-/// spend the whole title budget before the user's own sentence begins.
+/// All of them ride the first user message as their own text parts, so
+/// anything that reads that message to describe the conversation to a human —
+/// a session title, primarily — must drop them. They are model-facing prose,
+/// and they spend the whole title budget before the user's own sentence
+/// begins.
 bool isInjectedPart(String text) {
   final head = text.trimLeft();
   return head.startsWith(instructionsOpenTag) ||
-      head.startsWith(workspaceReferenceTag);
+      head.startsWith(workspaceReferenceTag) ||
+      head.startsWith(conversationSummaryOpenTag);
+}
+
+/// The opening tag of the compression summary block (ADR-0061). The summary
+/// rides the same channel as the workspace instructions — context the model
+/// must know, not words the user typed — so it earns the same exclusion.
+const conversationSummaryOpenTag = '<conversation-summary>';
+
+/// Wraps a compression summary into the injected block the next send carries.
+String conversationSummaryBlock(String summary) {
+  final buffer = StringBuffer()
+    ..writeln(conversationSummaryOpenTag)
+    ..writeln(
+      'A summary of the conversation this one continues, written when the '
+      'previous transcript was compressed. Treat it as established context: '
+      'the user\'s standing requests and decisions below still hold. Details '
+      'may be missing — ask when something matters and is not here.',
+    )
+    ..writeln()
+    ..writeln(summary.trim())
+    ..write('</conversation-summary>');
+  return buffer.toString();
 }
 
 /// The block injected ahead of the user's own words, or null when there is

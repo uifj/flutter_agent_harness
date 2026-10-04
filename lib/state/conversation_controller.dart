@@ -24,6 +24,7 @@ import '../model/approval_rule.dart';
 import '../model/ask_user.dart';
 import '../model/attached_image.dart';
 import '../model/conversation.dart';
+import '../model/context_compression.dart';
 import '../model/queued_input.dart';
 import '../model/turn_event.dart';
 import '../model/turn_source.dart';
@@ -401,6 +402,36 @@ class ConversationController extends ChangeNotifier {
     _runtime.startNewSession();
     _reset();
     notifyListeners();
+  }
+
+  /// Whether a compression is mid-flight. The composer's `/compress` entry
+  /// disappears for the duration — one summarizer call at a time.
+  bool _isCompressing = false;
+  bool get isCompressing => _isCompressing;
+
+  /// Compresses the conversation (ADR-0061): summarize what the user saw,
+  /// start a fresh session, arm the summary so the next send carries it.
+  /// Returns false when there was nothing to compress (guarded callers do
+  /// not reach this, but a transcript of only tool nodes is possible).
+  /// Throws when the summarizer call fails — the transcript is untouched,
+  /// and the UI says so.
+  Future<bool> compressContext() async {
+    if (_isBusy || _isCompressing || _pendingApproval != null) return false;
+    final transcript = compressionTranscriptOf(_nodes);
+    if (transcript.isEmpty) return false;
+    _isCompressing = true;
+    notifyListeners();
+    try {
+      final summary = await _runtime.summarizeForCompression(transcript);
+      startNewSession();
+      // After startNewSession: the runtime clears the slot there, because a
+      // blank session is not the continuation — this one is.
+      _runtime.setPendingSummary(summary);
+      return true;
+    } finally {
+      _isCompressing = false;
+      notifyListeners();
+    }
   }
 
   /// Loads a persisted conversation into the transcript.

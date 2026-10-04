@@ -65,6 +65,7 @@ class Composer extends StatefulWidget {
     required this.onStop,
     this.onApprovalMode,
     this.onNewSession,
+    this.onCompress,
     this.modelDirectory,
     this.onModelSelected,
     this.onLookupFiles,
@@ -115,6 +116,11 @@ class Composer extends StatefulWidget {
 
   /// The `/new` command's target. Absent means the menu does not offer it.
   final VoidCallback? onNewSession;
+
+  /// The `/compress` command's target (ADR-0061). Absent — busy, already
+  /// compressing, or an empty conversation — means the menu does not offer
+  /// it; the command list is the gate.
+  final Future<void> Function()? onCompress;
 
   /// The model seat's directory — dsh's `conversation.input.model`. Absent
   /// keeps the row as it was (tests, previews); the chip is the one control
@@ -641,6 +647,14 @@ class ComposerState extends State<Composer> {
         description: 'commandNewSessionDesc',
         icon: LucideIcons.plus,
         action: widget.onNewSession!,
+      ),
+    if (widget.onCompress != null)
+      _CommandEntry(
+        command: '/compress',
+        label: 'commandCompress',
+        description: 'commandCompressDesc',
+        icon: LucideIcons.fold_vertical,
+        action: () => widget.onCompress!(),
       ),
   ];
 

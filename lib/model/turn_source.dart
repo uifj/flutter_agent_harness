@@ -35,6 +35,15 @@ abstract interface class TurnSource {
     required Map<String, Object?> answers,
   });
 
+  /// Summarizes [transcript] for a context compression (ADR-0061) with one
+  /// standalone model call. Throws on failure — the caller surfaces it.
+  Future<String> summarizeForCompression(String transcript);
+
+  /// Arms the compression summary the next send of this session will carry
+  /// (ADR-0061). Call after [startNewSession]; the runtime clears it on any
+  /// other session change.
+  void setPendingSummary(String summary);
+
   /// Hands [input] to the running turn, to be read at its next model call.
   ///
   /// Returns false when nothing is running — the caller then has to deliver it

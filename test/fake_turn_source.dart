@@ -109,6 +109,29 @@ class FakeTurnSource implements TurnSource {
     return controller.stream;
   }
 
+  /// The transcript the compression summarizer received, per call.
+  final summarizedTranscripts = <String>[];
+
+  /// What [summarizeForCompression] answers, or what it throws.
+  Object? summaryResult = 'a summary';
+
+  /// How many times the summary was armed.
+  final pendingSummaries = <String>[];
+
+  @override
+  Future<String> summarizeForCompression(String transcript) async {
+    summarizedTranscripts.add(transcript);
+    final result = summaryResult;
+    if (result is Exception) throw result;
+    if (result is Error) throw result;
+    return result as String? ?? 'a summary';
+  }
+
+  @override
+  void setPendingSummary(String summary) {
+    pendingSummaries.add(summary);
+  }
+
   @override
   void stop() {
     stopCalls++;

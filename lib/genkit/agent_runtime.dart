@@ -99,6 +99,20 @@ instead — with file paths and line numbers where they matter. Be concise:
 only your final message is returned to the caller.
 ''';
 
+/// The standalone summarizer's system prompt (ADR-0061). Model-facing text,
+/// so it is not an i18n string (workflow.md §3).
+const _summarizerSystemPrompt = '''
+You compress a conversation into the summary its next session will start
+from. Write it so a fresh assistant instance can continue seamlessly:
+keep the user's standing requests and decisions verbatim where they are
+short enough, name the files, paths and approaches already tried, note
+what was concluded and what is still open. Write plain prose in the
+user's language, third person about the work ("the user asked…", "the
+assistant changed…"). Do not greet, do not ask questions, do not add
+commentary about the task itself. Omit tool output details; keep what
+was learned from them.
+''';
+
 /// The side chat's prompt: the thread pinned in the workbench's Side Chat tab.
 ///
 /// No tools and no store — a side question is a one-shot aside, not a session,
@@ -810,6 +824,7 @@ class AgentRuntime implements TurnSource {
     required mcp.GenkitMcpHost? host,
     required _StopFlag stop,
     required _UsageLedger usage,
+    required ModelRef<dynamic> modelRef,
     required List<ToolAuditRecord> toolAudit,
     required ApprovalModeHolder approval,
     required _GuideHolder guides,
@@ -824,6 +839,7 @@ class AgentRuntime implements TurnSource {
        _host = host,
        _stop = stop,
        _usage = usage,
+       _modelRef = modelRef,
        _toolAudit = toolAudit,
        _approval = approval,
        _guides = guides;
@@ -1020,6 +1036,7 @@ class AgentRuntime implements TurnSource {
       host: host,
       stop: stop,
       usage: usage,
+      modelRef: modelRef,
       activeModelId: activeModelId,
       toolAudit: toolAudit,
       approval: approval,
@@ -1037,6 +1054,11 @@ class AgentRuntime implements TurnSource {
   final mcp.GenkitMcpHost? _host;
   final _StopFlag _stop;
   final _UsageLedger _usage;
+
+  /// The model the standalone summarizer calls (ADR-0061). The same ref the
+  /// agent was defined with — rebuilt per runtime, like everything else the
+  /// factory bakes in.
+  final ModelRef<dynamic> _modelRef;
 
   /// The model id this runtime was built for — the usage ledger's per-model
   /// bucket (ADR-0045 PC). Null when the runtime was built unconfigured.
@@ -1078,6 +1100,33 @@ class AgentRuntime implements TurnSource {
   /// instructions cannot be baked into `system` (ADR-0009). A restored session
   /// leaves it null — its own history already carries the block.
   String? _pendingInstructions;
+
+  /// The compression summary (ADR-0061), pending for the next send of the
+  /// session it was made for. Its own slot, because the two behave
+  /// differently: instructions re-queue on every new conversation, a summary
+  /// is cleared by [startNewSession] and [openSession] — it belongs to
+  /// exactly the continuation it was written for, not to a blank session or
+  /// a restored old one.
+  String? _pendingSummary;
+
+  @override
+  void setPendingSummary(String summary) {
+    _pendingSummary = conversationSummaryBlock(summary);
+  }
+
+  /// Summarizes [transcript] with one standalone model call — not the agent's
+  /// chat, so no tools, no stop gate, no middleware (ADR-0061: the costs of
+  /// that are listed in the ADR's consequences).
+  @override
+  Future<String> summarizeForCompression(String transcript) async {
+    final response = await _ai.generate(
+      model: _modelRef,
+      system: _summarizerSystemPrompt,
+      prompt: transcript,
+      maxTurns: 1,
+    );
+    return response.text;
+  }
 
   void _queueInstructions() {
     _pendingInstructions = instructionsForWorkspace(
@@ -1162,9 +1211,14 @@ class AgentRuntime implements TurnSource {
     final chat = _chat ??= _agent.chat();
     // The workspace's instructions ride the first message of a conversation,
     // drained here so a queue set at startup or by a folder switch cannot be
-    // sent twice.
+    // sent twice. The compression summary (ADR-0061) rides the same channel
+    // with its own slot and its own lifecycle: instructions re-queue on every
+    // new session, a summary belongs to exactly the one session it was made
+    // for.
     final instructions = _pendingInstructions;
     _pendingInstructions = null;
+    final summary = _pendingSummary;
+    _pendingSummary = null;
     // dsh-at-file's pre-step, inline: every validated `@path` token in the
     // user's own words becomes an existence-only reference part ahead of the
     // body, so the model sees the pointer without the send being blocked on
@@ -1173,13 +1227,17 @@ class AgentRuntime implements TurnSource {
     // Images ride the message as media parts — the data-URI form genkit's
     // `Media.url` carries inline images as. A bare text send keeps the plain
     // string path, which is what a store round-trip preserves best.
-    if (instructions == null && references.isEmpty && images.isEmpty) {
+    if (instructions == null &&
+        summary == null &&
+        references.isEmpty &&
+        images.isEmpty) {
       return _drive((cancel) => chat.sendStream(text: text, cancel: cancel));
     }
     final message = Message(
       role: Role.user,
       content: [
         if (instructions != null) TextPart(text: instructions),
+        if (summary != null) TextPart(text: summary),
         for (final reference in references) TextPart(text: reference),
         if (text.isNotEmpty) TextPart(text: text),
         for (final image in images)
@@ -1560,6 +1618,10 @@ class AgentRuntime implements TurnSource {
     _guides.clear();
     _planTools.reset();
     _queueInstructions();
+    // After the instruction queue: a compression summary belongs to the
+    // continuation it was written for (ADR-0061), and a blank `+` session is
+    // not that continuation. The compress flow sets it back after this.
+    _pendingSummary = null;
   }
 
   /// Restores a persisted conversation and returns its transcript.
@@ -1574,8 +1636,12 @@ class AgentRuntime implements TurnSource {
     _pendingInterrupts.clear();
     _guides.clear();
     // The restored transcript already carries the instruction block it was
-    // started with; re-queueing would send the same folder brief twice.
+    // started with; re-queueing would send the same folder brief twice. A
+    // pending compression summary is dropped for the same reason — the old
+    // conversation has its own history and must not eat a summary that was
+    // written for the continuation (ADR-0061).
     _pendingInstructions = null;
+    _pendingSummary = null;
     _planTools.restoreFrom(chat.messages);
     return projectMessages(chat.messages);
   }
