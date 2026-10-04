@@ -163,7 +163,7 @@ Kelivo 对 `docs/zcode-vs-agent-harness-2026-09.md` 路线图的影响——**B/
 
 > 每条都要先立 ADR（下一编号以 `ls docs/adr/` 现场为准，当前 **ADR-0056**）再动手。标 ★ 的建议优先。
 
-> **执行进度**：A3 已落（ADR-0058 @ 2026-10-04：请求日志 + 上下文快照两份 JSONL，S3 存储明细未做；登记表 ADR-0058 行为状态源）。并发会话同日落了 ADR-0056（PlanStar 身份，对应本仓库品牌批次）与 ADR-0057（Android/iOS 品牌脚手架——注意这与本评估"C1 手机面全部不搬"的判据不冲突：ADR-0057 明文"只带品牌、不保证运行"）。
+> **执行进度（2026-10-04）**：A3 已落（ADR-0058：请求日志 + 上下文快照两份 JSONL，S3 存储明细未做）；**A1 ask_user 已落**（ADR-0059：`ask_user` 工具 + `AskUserPanel` 占 composer 座位，答案经 respond 路径作为工具结果回去）。**drift 已引入**（ADR-0060：单库多域 `<support>/planstar.db`，S1 = usage 台账迁库 + 旧 JSONL 一次性导入；架构门禁第 8 条钉住 drift 只住 lib/state）——对应本评估 §3.5 的数据层判定与 ZCode C1 的前置。并发会话同日落了 ADR-0056（PlanStar 身份）与 ADR-0057（Android/iOS 品牌脚手架——与本评估"C1 手机面全部不搬"的判据不冲突：ADR-0057 明文"只带品牌、不保证运行"）。下一项：A2 会话压缩。
 
 ### A 组：零新依赖、不踩不变量、当场可验收
 
