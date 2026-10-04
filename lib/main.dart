@@ -26,6 +26,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadButton, ShadDialog;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadSonner, ShadTheme;
+import 'package:screen_retriever/screen_retriever.dart' as retriever;
 import 'package:window_manager/window_manager.dart';
 
 import 'genkit/models_endpoint.dart';
@@ -35,6 +36,7 @@ import 'host/support_directory.dart';
 import 'l10n/locales.dart';
 import 'model/app_settings.dart' as cfg;
 import 'state/app_providers.dart';
+import 'state/window_geometry_store.dart';
 import 'state/details_selection.dart';
 import 'state/hotkey_service.dart';
 import 'model/plan_mock_content.dart';
@@ -129,6 +131,29 @@ Future<void> main() async {
   await restoreWorkspaceAccess(bookmark: settings.value.workspaceBookmark);
   // Window manager: required for global hotkeys and system tray.
   await windowManager.ensureInitialized();
+  // The window's last shape (ADR-0062): restore clamped to the primary
+  // display, keep the window reachable (min 960x640), and save as the user
+  // drags. A failure here is cosmetic — the default window shows anyway.
+  final geometryStore = WindowGeometryStore.open(support);
+  await windowManager.setMinimumSize(const Size(960, 640));
+  try {
+    final display = await retriever.screenRetriever.getPrimaryDisplay();
+    final visible = Rect.fromLTWH(
+      display.visiblePosition?.dx ?? 0,
+      display.visiblePosition?.dy ?? 0,
+      display.visibleSize?.width ?? display.size.width,
+      display.visibleSize?.height ?? display.size.height,
+    );
+    final restored = geometryStore.value?.clampedTo(visible);
+    if (restored != null) {
+      await windowManager.setBounds(
+        Rect.fromLTWH(restored.x, restored.y, restored.width, restored.height),
+      );
+    }
+    windowManager.addListener(WindowGeometryListener(store: geometryStore));
+  } on Exception {
+    // No display answer: the platform default stands.
+  }
   // The container owns the store providers (ADR-0002 stage 1): `main` opens
   // the stores above — async bootstrap stays imperative, a first frame racing
   // a FutureProvider for its own settings document is a bug, not a loading

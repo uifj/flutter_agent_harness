@@ -59,6 +59,7 @@ dependencies:
   xterm: ^4.0.0
   drift: ^2.31.0
   sqlite3_flutter_libs: ^0.6.0+eol
+  screen_retriever: ^0.2.2
 
 dev_dependencies:
   flutter_test:
