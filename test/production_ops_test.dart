@@ -81,48 +81,74 @@ void main() {
       error: error,
     );
 
-    test('records into monthly files and reads back', () async {
+    test('records and reads back, ordered by time', () async {
       final ledger = UsageLedger(directory: Directory('${root.path}/usage'));
-      await ledger.record(
-        entry(DateTime.utc(2026, 9, 15).millisecondsSinceEpoch),
-      );
-      await ledger.record(
-        entry(DateTime.utc(2026, 10, 1).millisecondsSinceEpoch),
-      );
-      final entries = await ledger.entries();
-      expect(entries, hasLength(2));
-      expect(entries.first.totalTokens, 15);
-      final files = Directory(
-        '${root.path}/usage',
-      ).listSync().whereType<File>().toList();
-      expect(files, hasLength(2)); // one per month
+      try {
+        await ledger.record(
+          entry(DateTime.utc(2026, 9, 15).millisecondsSinceEpoch),
+        );
+        await ledger.record(
+          entry(DateTime.utc(2026, 10, 1).millisecondsSinceEpoch),
+        );
+        final entries = await ledger.entries();
+        expect(entries, hasLength(2));
+        expect(entries.first.totalTokens, 15);
+        expect(entries.first.timestamp, lessThan(entries.last.timestamp));
+        // The rows live in the drift database now (ADR-0060).
+        expect(File('${root.path}/usage/usage.db').existsSync(), isTrue);
+      } finally {
+        await ledger.close();
+      }
     });
 
-    test('prune drops entries past the window and empty files', () async {
+    test('prune drops rows past the window with one DELETE', () async {
       final ledger = UsageLedger(directory: Directory('${root.path}/usage'));
-      final now = DateTime.utc(2026, 10, 2);
-      await ledger.record(
-        entry(now.subtract(const Duration(days: 40)).millisecondsSinceEpoch),
-      );
-      await ledger.record(
-        entry(now.subtract(const Duration(days: 5)).millisecondsSinceEpoch),
-      );
-      await ledger.prune(now: now);
-      final entries = await ledger.entries();
-      expect(entries, hasLength(1));
-      expect(
-        entries.single.timestamp,
-        now.subtract(const Duration(days: 5)).millisecondsSinceEpoch,
-      );
+      try {
+        final now = DateTime.utc(2026, 10, 2);
+        await ledger.record(
+          entry(now.subtract(const Duration(days: 40)).millisecondsSinceEpoch),
+        );
+        await ledger.record(
+          entry(now.subtract(const Duration(days: 5)).millisecondsSinceEpoch),
+        );
+        await ledger.prune(now: now);
+        final entries = await ledger.entries();
+        expect(entries, hasLength(1));
+        expect(
+          entries.single.timestamp,
+          now.subtract(const Duration(days: 5)).millisecondsSinceEpoch,
+        );
+      } finally {
+        await ledger.close();
+      }
     });
 
-    test('a torn tail line is dropped, not fatal', () async {
+    test('legacy monthly files import once, torn lines and all', () async {
       final dir = Directory('${root.path}/usage')..createSync(recursive: true);
+      File('${dir.path}/usage-202609.jsonl').writeAsStringSync(
+        '{"timestamp":100,"model":"old","inputTokens":2,"outputTokens":1}\n'
+        '{"timestamp":200,"model":"old","inputTokens":3,"outputTokens":1}\n',
+      );
       File('${dir.path}/usage-202610.jsonl').writeAsStringSync(
         '{"timestamp":1,"model":"m","inputTokens":1,"outputTokens":1}\n{"torn',
       );
       final ledger = UsageLedger(directory: dir);
-      expect(await ledger.entries(), hasLength(1));
+      try {
+        final entries = await ledger.entries();
+        // The valid rows from both files; the torn tail dropped, the files
+        // imported and gone — the database is the only copy now.
+        expect(entries, hasLength(3));
+        expect(entries.first.timestamp, 1);
+        expect(entries[1].timestamp, 100);
+        expect(
+          dir.listSync().whereType<File>().where(
+            (file) => file.path.endsWith('.jsonl'),
+          ),
+          isEmpty,
+        );
+      } finally {
+        await ledger.close();
+      }
     });
 
     test('summarize folds tokens, per-model buckets and the error rate', () {

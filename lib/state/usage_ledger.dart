@@ -1,11 +1,20 @@
-// Local usage ledger (ADR-0045 PC): one JSONL file per month under
-// `<support>/usage/`, one line per model turn, 30-day prune after every
-// append (the same retention stance as ZCode's usage tables —
-// `usage.ts:17-18`). The aggregation is a pure function so the settings
-// section can render it without re-reading between saves.
+// Local usage ledger (ADR-0045 PC, carried into drift by ADR-0060): rows in
+// `<support>/planstar.db`, one per model turn, 30-day prune after every
+// append. Aggregation is a pure fold so the settings section can render
+// without re-reading; the heavy lifting (window delete, ordered read) now
+// lives in SQL.
+//
+// The JSONL era's files (`usage-YYYYMM.jsonl`) are imported once on first
+// use and deleted — a crash between a file's import and its deletion can
+// double-count a few rows inside the 30-day window, which is a bounded harm
+// against losing the old totals outright.
 
 import 'dart:convert';
 import 'dart:io';
+
+import 'package:drift/drift.dart';
+
+import 'app_database.dart';
 
 /// One recorded model turn.
 class UsageEntry {
@@ -65,97 +74,132 @@ class UsageSummary {
   double get errorRate => turns == 0 ? 0 : errorCount / turns;
 }
 
-/// Appends and prunes. The file is `<support>/usage/usage-YYYYMM.jsonl`.
+/// Appends and prunes. The rows live in the AppDatabase's `usage_rows` table;
+/// the database file is `<directory>/usage.db` so the ledger's construction
+/// stays `UsageLedger(directory: …)`.
 class UsageLedger {
   UsageLedger({required Directory directory, this.retentionDays = 30})
-    : _directory = directory;
+    : _db = AppDatabase.open(File('${directory.path}/usage.db')),
+      _directory = directory {
+    // One import, started at construction, awaited by every reader below —
+    // so the first `record` cannot land ahead of the rows it would skew.
+    _imported = _importLegacyJsonl();
+  }
 
+  final AppDatabase _db;
   final Directory _directory;
   final int retentionDays;
+  late final Future<void> _imported;
 
   Future<void> record(UsageEntry entry) async {
-    await _directory.create(recursive: true);
-    final month = DateTime.fromMillisecondsSinceEpoch(
-      entry.timestamp,
-      isUtc: true,
-    );
-    final file = File(
-      '${_directory.path}/usage-${month.year}${_two(month.month)}.jsonl',
-    );
-    await file.writeAsString(
-      '${jsonEncode(entry.toJson())}\n',
-      mode: FileMode.append,
-      flush: true,
-    );
+    await _imported;
+    await _db
+        .into(_db.usageRows)
+        .insert(
+          UsageRowsCompanion.insert(
+            timestamp: entry.timestamp,
+            model: entry.model,
+            inputTokens: entry.inputTokens,
+            outputTokens: entry.outputTokens,
+            reasoningTokens: Value(entry.reasoningTokens),
+            error: Value(entry.error),
+          ),
+        );
     cache.add(entry);
     await prune();
   }
 
-  /// Deletes entries older than [retentionDays] by rewriting the affected
-  /// monthly files; the ledger never grows past the window.
+  /// Deletes rows older than [retentionDays]; the ledger never grows past
+  /// the window. What used to be a file rewrite is one indexed DELETE.
   Future<void> prune({DateTime? now}) async {
+    await _imported;
     final cutoff =
         (now ?? DateTime.now()).toUtc().millisecondsSinceEpoch -
         retentionDays * 86400000;
-    if (!await _directory.exists()) return;
-    for (final file in await _directory.list().toList().then(
-      (entries) => entries.whereType<File>(),
-    )) {
-      if (!file.path.contains('usage-') || !file.path.endsWith('.jsonl')) {
-        continue;
-      }
-      final kept = <String>[];
-      for (final line in await file.readAsLines()) {
-        if (line.trim().isEmpty) continue;
-        try {
-          final entry = UsageEntry.fromJson(
-            jsonDecode(line) as Map<String, Object?>,
-          );
-          if (entry.timestamp >= cutoff) kept.add(line);
-        } on FormatException {
-          // A torn tail line from a killed process: drop it, the next entry
-          // starts a fresh line.
-        }
-      }
-      if (kept.isEmpty) {
-        await file.delete();
-      } else {
-        await file.writeAsString('${kept.join('\n')}\n', flush: true);
-      }
-    }
+    await (_db.delete(
+      _db.usageRows,
+    )..where((row) => row.timestamp.isSmallerThanValue(cutoff))).go();
   }
 
-  /// Every surviving entry, oldest first — [summarize] folds it.
+  /// Every surviving row, oldest first — [summarize] folds it.
   Future<List<UsageEntry>> entries() async {
-    if (!await _directory.exists()) return const [];
+    await _imported;
+    final rows = await (_db.select(
+      _db.usageRows,
+    )..orderBy([(row) => OrderingTerm(expression: row.timestamp)])).get();
+    return [
+      for (final row in rows)
+        UsageEntry(
+          timestamp: row.timestamp,
+          model: row.model,
+          inputTokens: row.inputTokens,
+          outputTokens: row.outputTokens,
+          reasoningTokens: row.reasoningTokens,
+          error: row.error,
+        ),
+    ];
+  }
+
+  /// The entries read at open time, kept so the settings screen can render a
+  /// summary synchronously; [record] appends to both the database and this
+  /// list.
+  final List<UsageEntry> cache = [];
+
+  /// Releases the database. Tests call this; the app closes with the process.
+  Future<void> close() => _db.close();
+
+  /// Imports the pre-drift monthly files (ADR-0060): read, insert, delete —
+  /// per file, so a torn line only costs its own file's tail. A file that
+  /// cannot be parsed at all is deleted unread: the same "corrupt metadata
+  /// must not brick the app" stance `SettingsStore.open` takes.
+  Future<void> _importLegacyJsonl() async {
+    if (!await _directory.exists()) return;
     final files =
         (await _directory.list().toList())
             .whereType<File>()
             .where(
               (file) =>
-                  file.path.contains('usage-') && file.path.endsWith('.jsonl'),
+                  file.uri.pathSegments.last.startsWith('usage-') &&
+                  file.uri.pathSegments.last.endsWith('.jsonl'),
             )
             .toList()
           ..sort((a, b) => a.path.compareTo(b.path));
-    final entries = <UsageEntry>[];
+    if (files.isEmpty) return;
     for (final file in files) {
-      for (final line in await file.readAsLines()) {
-        if (line.trim().isEmpty) continue;
-        try {
-          entries.add(
-            UsageEntry.fromJson(jsonDecode(line) as Map<String, Object?>),
-          );
-        } on FormatException {
-          // Same torn-tail rule as prune.
+      final entries = <UsageEntry>[];
+      try {
+        for (final line in await file.readAsLines()) {
+          if (line.trim().isEmpty) continue;
+          try {
+            entries.add(
+              UsageEntry.fromJson(jsonDecode(line) as Map<String, Object?>),
+            );
+          } on FormatException {
+            // A torn tail line from a killed process: drop it, the next
+            // entry starts a fresh line — the JSONL era's own rule.
+          }
         }
+      } on FileSystemException {
+        // Unreadable: skip the file, leave it in place for a later boot.
+        continue;
       }
+      for (final entry in entries) {
+        await _db
+            .into(_db.usageRows)
+            .insert(
+              UsageRowsCompanion.insert(
+                timestamp: entry.timestamp,
+                model: entry.model,
+                inputTokens: entry.inputTokens,
+                outputTokens: entry.outputTokens,
+                reasoningTokens: Value(entry.reasoningTokens),
+                error: Value(entry.error),
+              ),
+            );
+      }
+      await file.delete();
     }
-    return entries;
   }
-
-  /// The entries read at open time, kept so the settings screen can render a
-  /// summary synchronously; [record] appends to both the file and this list.
-  final List<UsageEntry> cache = [];
 
   static UsageSummary summarize(List<UsageEntry> entries) {
     final perModel = <String, int>{};
@@ -173,6 +217,4 @@ class UsageLedger {
       perModelTokens: perModel,
     );
   }
-
-  static String _two(int value) => value.toString().padLeft(2, '0');
 }

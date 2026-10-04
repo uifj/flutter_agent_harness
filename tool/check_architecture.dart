@@ -144,6 +144,15 @@ final rules = [
       r"^import '(?:package:flutter|package:planstar/state|\.\./state)",
     ),
   ),
+  Rule(
+    name: 'drift-stays-in-lib-state',
+    description:
+        'drift imports live in lib/state/ (ADR-0060) — the database is '
+        'assembled beside the stores; the vocabulary and the UI never see it',
+    appliesTo: ['lib/'],
+    skip: ['lib/state/'],
+    pattern: RegExp(r"^import '(?:package:drift|package:sqlite3)"),
+  ),
 ];
 
 /// Files past this line count are reported as a warning, never a failure.
