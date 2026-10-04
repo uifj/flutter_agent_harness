@@ -163,7 +163,16 @@ Kelivo 对 `docs/zcode-vs-agent-harness-2026-09.md` 路线图的影响——**B/
 
 > 每条都要先立 ADR（下一编号以 `ls docs/adr/` 现场为准，当前 **ADR-0056**）再动手。标 ★ 的建议优先。
 
-> **执行进度（2026-10-04）**：A3 已落（ADR-0058：请求日志 + 上下文快照两份 JSONL，S3 存储明细未做）；**A1 ask_user 已落**（ADR-0059：`ask_user` 工具 + `AskUserPanel` 占 composer 座位，答案经 respond 路径作为工具结果回去）。**drift 已引入**（ADR-0060：单库多域 `<support>/planstar.db`，S1 = usage 台账迁库 + 旧 JSONL 一次性导入；架构门禁第 8 条钉住 drift 只住 lib/state）——对应本评估 §3.5 的数据层判定与 ZCode C1 的前置。并发会话同日落了 ADR-0056（PlanStar 身份）与 ADR-0057（Android/iOS 品牌脚手架——与本评估"C1 手机面全部不搬"的判据不冲突：ADR-0057 明文"只带品牌、不保证运行"）。**A2 会话压缩已落**（ADR-0061：`/compress` = 摘要 + 新会话，摘要骑 ADR-0009 注入通道的独立槽；自动阈值等 contextWindow 数据，见评估 B3）。下一项：B 组（多 Key+代理 / skills 渐进披露 / 定时任务）与 S3 存储明细。
+> **执行进度（2026-10-04，A/B 组推进完毕）**——逐项判定与证据：
+>
+> **已落（9 个 ADR，9 个 commit）**：A3→ADR-0058（诊断日志，S3 存储明细未做）；A1→ADR-0059（ask_user，无人值守语义留给 B7 闭环）；A2→ADR-0061（/compress 摘要+新会话）；B7→ADR-0069（定时任务 S1：drift 两表 + 15s ticker + runDetached，遇审批/ask_user 判失败——ADR-0059 的无人值守债闭环）；A8→ADR-0068（**判定修正**：genkit 0.16.1 自带 RetryPlugin，注册即用，上游 _retry 的流中途重复边界如实记录）；A7→ADR-0063（快捷短语）；A6→ADR-0067（指令注入卡片， join 进 <project-instructions> 块尾）；A5→ADR-0066（消息导出 md/txt + /copy 整段复制；图片导出 S2）；A9→ADR-0062（窗口几何持久化 + 最小尺寸 960×640——登记表窄窗观察行的出路①落地）；B2→ADR-0064（环境变量 keychain + 输出脱敏）；B9-S1→ADR-0065（恢复前可回滚副本）；B6→**判定修正为已对齐**（genkit_middleware 的 skills() 本就是名录+use_skill 渐进披露，评估时"全量注入"是误读）；B9-S2/GFS 快照与 WebDAV/S3 未做。
+>
+> **书面判定（不实施，附证据）**：
+> - **A4 消息多版本回复——被上游能力卡住**。本仓库无 regenerate/消息编辑机制，历史真值在 genkit FileSessionStore 快照里（0.16 未暴露会话内截断/改写 API）；真实现要么等上游会话变更 API，要么把消息存储从 genkit 快照整体迁出到自建 drift 库（那是 C1 级别的存储迁移，不是一次 ADR 批次）。保留为产品缺口，登记表观察行。
+> - **B1 多 Key/代理——代理半边被 genkit 插件参数面卡住**（provider 插件不接受自定义 HttpClient，SOCKS5 注入点不存在）；多 Key 的"激活即重建 runtime"已由 ADR-0045 PF 覆盖，真轮询池等上游。B4 reasoning effort 同参数面受限（genkit_openai 的 config 类型由包定义），留 S2。
+> - **B5 FTS 全局搜索——消息文本不在我们的库里**（见 A4 同一根因）；drift 已就位（ADR-0060），等 A4 的存储迁移一并做，不先建半份索引。
+> - **B3 能力矩阵 ModelSpec 化、B8 长期记忆、B10 时间线投影、B11 增量渲染、B12 上下文分桶——评估成立、未排期**。B8 开工前必须先拍板形态（提取型 vs ZCode 文件型），引用 user-research 编号或明写无一手证据（ADR 纪律）。
+> - A 组剩余小件（选择复制整段/导出图片）与各"余真机走查"项按登记表各行跟踪。
 
 ### A 组：零新依赖、不踩不变量、当场可验收
 
