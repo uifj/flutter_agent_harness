@@ -780,6 +780,7 @@ class _DshAppState extends ConsumerState<DshApp> {
       quickPhrases: scope.quickPhrases,
       environment: scope.environment,
       instructionCards: scope.instructionCards,
+      scheduledTasks: scope.scheduledTasks,
     );
   }
 }

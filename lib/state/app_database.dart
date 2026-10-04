@@ -34,7 +34,37 @@ class UsageRows extends Table {
   BoolColumn get error => boolean().withDefault(const Constant(false))();
 }
 
-@DriftDatabase(tables: [UsageRows])
+/// One scheduled task (ADR-0069): minute-of-day + weekday-mask schedule.
+class ScheduledTaskRows extends Table {
+  @override
+  String get tableName => 'scheduled_tasks';
+
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get prompt => text()();
+  IntColumn get hour => integer()();
+  IntColumn get minute => integer()();
+  IntColumn get weekdaysMask => integer().withDefault(const Constant(0))();
+  BoolColumn get enabled => boolean().withDefault(const Constant(true))();
+  IntColumn get lastRunAt => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// One fire of a scheduled task (ADR-0069): outcome and a 200-char preview.
+class ScheduledTaskRunRows extends Table {
+  @override
+  String get tableName => 'scheduled_task_runs';
+
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get taskId => text()();
+  IntColumn get startedAt => integer()();
+  BoolColumn get ok => boolean()();
+  TextColumn get preview => text().withDefault(const Constant(''))();
+}
+
+@DriftDatabase(tables: [UsageRows, ScheduledTaskRows, ScheduledTaskRunRows])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
@@ -48,7 +78,7 @@ class AppDatabase extends _$AppDatabase {
       );
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -57,6 +87,12 @@ class AppDatabase extends _$AppDatabase {
       await customStatement(
         'CREATE INDEX usage_rows_timestamp ON usage_rows (timestamp)',
       );
+    },
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.createTable(scheduledTaskRows);
+        await m.createTable(scheduledTaskRunRows);
+      }
     },
   );
 }

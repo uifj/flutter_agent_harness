@@ -514,6 +514,16 @@ class _DiagnosticsPlugin extends GenkitPlugin {
 
 const _diagnosticsName = 'dshDiagnostics';
 
+/// A detached run stopped because it needs the user (ADR-0069): the task
+/// fires again only at its next scheduled minute.
+class ScheduledTaskNeedsUserException implements Exception {
+  const ScheduledTaskNeedsUserException();
+
+  @override
+  String toString() =>
+      'The task needs a user present: it asked for an approval or an answer.';
+}
+
 const _toolGateName = 'dshToolGate';
 
 /// What one tool call did, as the gate saw it — the audit trail dsh writes to
@@ -1143,6 +1153,28 @@ class AgentRuntime implements TurnSource {
   /// Re-queues the instruction block from current state (ADR-0067): the
   /// cards' enable-set changed without a folder change.
   Future<void> refreshInstructions() => _queueInstructions();
+
+  /// Runs [prompt] as a detached one-shot conversation (ADR-0069): its own
+  /// chat, no projection, no queue, no live-conversation impact. Answers
+  /// with the assistant's full text. A run that asks for the user — an
+  /// approval interrupt or an ask_user call — stops and fails with a
+  /// message, closing the debt ADR-0059 left for unattended execution.
+  Future<String> runDetached(String prompt) async {
+    final chat = _agent.chat();
+    final turn = chat.sendStream(text: prompt, cancel: CancellationToken());
+    final buffer = StringBuffer();
+    await for (final chunk in turn.stream) {
+      buffer.write(chunk.text);
+    }
+    final response = await turn.response;
+    // The turn settled paused on a question to the user (an approval gate or
+    // an ask_user call): the run fails and fires again at its next minute —
+    // no user, no execution (ADR-0069 closes ADR-0059's unattended debt).
+    if (response.interrupts.isNotEmpty) {
+      throw const ScheduledTaskNeedsUserException();
+    }
+    return buffer.toString();
+  }
 
   Future<void> _queueInstructions() async {
     // Cards read at queue time (ADR-0067): a settings save re-queues via

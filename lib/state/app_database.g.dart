@@ -467,15 +467,875 @@ class UsageRowsCompanion extends UpdateCompanion<UsageRow> {
   }
 }
 
+class $ScheduledTaskRowsTable extends ScheduledTaskRows
+    with TableInfo<$ScheduledTaskRowsTable, ScheduledTaskRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ScheduledTaskRowsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _promptMeta = const VerificationMeta('prompt');
+  @override
+  late final GeneratedColumn<String> prompt = GeneratedColumn<String>(
+    'prompt',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hourMeta = const VerificationMeta('hour');
+  @override
+  late final GeneratedColumn<int> hour = GeneratedColumn<int>(
+    'hour',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _minuteMeta = const VerificationMeta('minute');
+  @override
+  late final GeneratedColumn<int> minute = GeneratedColumn<int>(
+    'minute',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _weekdaysMaskMeta = const VerificationMeta(
+    'weekdaysMask',
+  );
+  @override
+  late final GeneratedColumn<int> weekdaysMask = GeneratedColumn<int>(
+    'weekdays_mask',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _enabledMeta = const VerificationMeta(
+    'enabled',
+  );
+  @override
+  late final GeneratedColumn<bool> enabled = GeneratedColumn<bool>(
+    'enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _lastRunAtMeta = const VerificationMeta(
+    'lastRunAt',
+  );
+  @override
+  late final GeneratedColumn<int> lastRunAt = GeneratedColumn<int>(
+    'last_run_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    prompt,
+    hour,
+    minute,
+    weekdaysMask,
+    enabled,
+    lastRunAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'scheduled_tasks';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ScheduledTaskRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('prompt')) {
+      context.handle(
+        _promptMeta,
+        prompt.isAcceptableOrUnknown(data['prompt']!, _promptMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_promptMeta);
+    }
+    if (data.containsKey('hour')) {
+      context.handle(
+        _hourMeta,
+        hour.isAcceptableOrUnknown(data['hour']!, _hourMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_hourMeta);
+    }
+    if (data.containsKey('minute')) {
+      context.handle(
+        _minuteMeta,
+        minute.isAcceptableOrUnknown(data['minute']!, _minuteMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_minuteMeta);
+    }
+    if (data.containsKey('weekdays_mask')) {
+      context.handle(
+        _weekdaysMaskMeta,
+        weekdaysMask.isAcceptableOrUnknown(
+          data['weekdays_mask']!,
+          _weekdaysMaskMeta,
+        ),
+      );
+    }
+    if (data.containsKey('enabled')) {
+      context.handle(
+        _enabledMeta,
+        enabled.isAcceptableOrUnknown(data['enabled']!, _enabledMeta),
+      );
+    }
+    if (data.containsKey('last_run_at')) {
+      context.handle(
+        _lastRunAtMeta,
+        lastRunAt.isAcceptableOrUnknown(data['last_run_at']!, _lastRunAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ScheduledTaskRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ScheduledTaskRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      prompt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}prompt'],
+      )!,
+      hour: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}hour'],
+      )!,
+      minute: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}minute'],
+      )!,
+      weekdaysMask: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}weekdays_mask'],
+      )!,
+      enabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}enabled'],
+      )!,
+      lastRunAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_run_at'],
+      ),
+    );
+  }
+
+  @override
+  $ScheduledTaskRowsTable createAlias(String alias) {
+    return $ScheduledTaskRowsTable(attachedDatabase, alias);
+  }
+}
+
+class ScheduledTaskRow extends DataClass
+    implements Insertable<ScheduledTaskRow> {
+  final String id;
+  final String name;
+  final String prompt;
+  final int hour;
+  final int minute;
+  final int weekdaysMask;
+  final bool enabled;
+  final int? lastRunAt;
+  const ScheduledTaskRow({
+    required this.id,
+    required this.name,
+    required this.prompt,
+    required this.hour,
+    required this.minute,
+    required this.weekdaysMask,
+    required this.enabled,
+    this.lastRunAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['prompt'] = Variable<String>(prompt);
+    map['hour'] = Variable<int>(hour);
+    map['minute'] = Variable<int>(minute);
+    map['weekdays_mask'] = Variable<int>(weekdaysMask);
+    map['enabled'] = Variable<bool>(enabled);
+    if (!nullToAbsent || lastRunAt != null) {
+      map['last_run_at'] = Variable<int>(lastRunAt);
+    }
+    return map;
+  }
+
+  ScheduledTaskRowsCompanion toCompanion(bool nullToAbsent) {
+    return ScheduledTaskRowsCompanion(
+      id: Value(id),
+      name: Value(name),
+      prompt: Value(prompt),
+      hour: Value(hour),
+      minute: Value(minute),
+      weekdaysMask: Value(weekdaysMask),
+      enabled: Value(enabled),
+      lastRunAt: lastRunAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastRunAt),
+    );
+  }
+
+  factory ScheduledTaskRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ScheduledTaskRow(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      prompt: serializer.fromJson<String>(json['prompt']),
+      hour: serializer.fromJson<int>(json['hour']),
+      minute: serializer.fromJson<int>(json['minute']),
+      weekdaysMask: serializer.fromJson<int>(json['weekdaysMask']),
+      enabled: serializer.fromJson<bool>(json['enabled']),
+      lastRunAt: serializer.fromJson<int?>(json['lastRunAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'prompt': serializer.toJson<String>(prompt),
+      'hour': serializer.toJson<int>(hour),
+      'minute': serializer.toJson<int>(minute),
+      'weekdaysMask': serializer.toJson<int>(weekdaysMask),
+      'enabled': serializer.toJson<bool>(enabled),
+      'lastRunAt': serializer.toJson<int?>(lastRunAt),
+    };
+  }
+
+  ScheduledTaskRow copyWith({
+    String? id,
+    String? name,
+    String? prompt,
+    int? hour,
+    int? minute,
+    int? weekdaysMask,
+    bool? enabled,
+    Value<int?> lastRunAt = const Value.absent(),
+  }) => ScheduledTaskRow(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    prompt: prompt ?? this.prompt,
+    hour: hour ?? this.hour,
+    minute: minute ?? this.minute,
+    weekdaysMask: weekdaysMask ?? this.weekdaysMask,
+    enabled: enabled ?? this.enabled,
+    lastRunAt: lastRunAt.present ? lastRunAt.value : this.lastRunAt,
+  );
+  ScheduledTaskRow copyWithCompanion(ScheduledTaskRowsCompanion data) {
+    return ScheduledTaskRow(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      prompt: data.prompt.present ? data.prompt.value : this.prompt,
+      hour: data.hour.present ? data.hour.value : this.hour,
+      minute: data.minute.present ? data.minute.value : this.minute,
+      weekdaysMask: data.weekdaysMask.present
+          ? data.weekdaysMask.value
+          : this.weekdaysMask,
+      enabled: data.enabled.present ? data.enabled.value : this.enabled,
+      lastRunAt: data.lastRunAt.present ? data.lastRunAt.value : this.lastRunAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ScheduledTaskRow(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('prompt: $prompt, ')
+          ..write('hour: $hour, ')
+          ..write('minute: $minute, ')
+          ..write('weekdaysMask: $weekdaysMask, ')
+          ..write('enabled: $enabled, ')
+          ..write('lastRunAt: $lastRunAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    prompt,
+    hour,
+    minute,
+    weekdaysMask,
+    enabled,
+    lastRunAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ScheduledTaskRow &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.prompt == this.prompt &&
+          other.hour == this.hour &&
+          other.minute == this.minute &&
+          other.weekdaysMask == this.weekdaysMask &&
+          other.enabled == this.enabled &&
+          other.lastRunAt == this.lastRunAt);
+}
+
+class ScheduledTaskRowsCompanion extends UpdateCompanion<ScheduledTaskRow> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String> prompt;
+  final Value<int> hour;
+  final Value<int> minute;
+  final Value<int> weekdaysMask;
+  final Value<bool> enabled;
+  final Value<int?> lastRunAt;
+  final Value<int> rowid;
+  const ScheduledTaskRowsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.prompt = const Value.absent(),
+    this.hour = const Value.absent(),
+    this.minute = const Value.absent(),
+    this.weekdaysMask = const Value.absent(),
+    this.enabled = const Value.absent(),
+    this.lastRunAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ScheduledTaskRowsCompanion.insert({
+    required String id,
+    required String name,
+    required String prompt,
+    required int hour,
+    required int minute,
+    this.weekdaysMask = const Value.absent(),
+    this.enabled = const Value.absent(),
+    this.lastRunAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       prompt = Value(prompt),
+       hour = Value(hour),
+       minute = Value(minute);
+  static Insertable<ScheduledTaskRow> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? prompt,
+    Expression<int>? hour,
+    Expression<int>? minute,
+    Expression<int>? weekdaysMask,
+    Expression<bool>? enabled,
+    Expression<int>? lastRunAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (prompt != null) 'prompt': prompt,
+      if (hour != null) 'hour': hour,
+      if (minute != null) 'minute': minute,
+      if (weekdaysMask != null) 'weekdays_mask': weekdaysMask,
+      if (enabled != null) 'enabled': enabled,
+      if (lastRunAt != null) 'last_run_at': lastRunAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ScheduledTaskRowsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<String>? prompt,
+    Value<int>? hour,
+    Value<int>? minute,
+    Value<int>? weekdaysMask,
+    Value<bool>? enabled,
+    Value<int?>? lastRunAt,
+    Value<int>? rowid,
+  }) {
+    return ScheduledTaskRowsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      prompt: prompt ?? this.prompt,
+      hour: hour ?? this.hour,
+      minute: minute ?? this.minute,
+      weekdaysMask: weekdaysMask ?? this.weekdaysMask,
+      enabled: enabled ?? this.enabled,
+      lastRunAt: lastRunAt ?? this.lastRunAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (prompt.present) {
+      map['prompt'] = Variable<String>(prompt.value);
+    }
+    if (hour.present) {
+      map['hour'] = Variable<int>(hour.value);
+    }
+    if (minute.present) {
+      map['minute'] = Variable<int>(minute.value);
+    }
+    if (weekdaysMask.present) {
+      map['weekdays_mask'] = Variable<int>(weekdaysMask.value);
+    }
+    if (enabled.present) {
+      map['enabled'] = Variable<bool>(enabled.value);
+    }
+    if (lastRunAt.present) {
+      map['last_run_at'] = Variable<int>(lastRunAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ScheduledTaskRowsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('prompt: $prompt, ')
+          ..write('hour: $hour, ')
+          ..write('minute: $minute, ')
+          ..write('weekdaysMask: $weekdaysMask, ')
+          ..write('enabled: $enabled, ')
+          ..write('lastRunAt: $lastRunAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ScheduledTaskRunRowsTable extends ScheduledTaskRunRows
+    with TableInfo<$ScheduledTaskRunRowsTable, ScheduledTaskRunRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ScheduledTaskRunRowsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _taskIdMeta = const VerificationMeta('taskId');
+  @override
+  late final GeneratedColumn<String> taskId = GeneratedColumn<String>(
+    'task_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _startedAtMeta = const VerificationMeta(
+    'startedAt',
+  );
+  @override
+  late final GeneratedColumn<int> startedAt = GeneratedColumn<int>(
+    'started_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _okMeta = const VerificationMeta('ok');
+  @override
+  late final GeneratedColumn<bool> ok = GeneratedColumn<bool>(
+    'ok',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("ok" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _previewMeta = const VerificationMeta(
+    'preview',
+  );
+  @override
+  late final GeneratedColumn<String> preview = GeneratedColumn<String>(
+    'preview',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, taskId, startedAt, ok, preview];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'scheduled_task_runs';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ScheduledTaskRunRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('task_id')) {
+      context.handle(
+        _taskIdMeta,
+        taskId.isAcceptableOrUnknown(data['task_id']!, _taskIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_taskIdMeta);
+    }
+    if (data.containsKey('started_at')) {
+      context.handle(
+        _startedAtMeta,
+        startedAt.isAcceptableOrUnknown(data['started_at']!, _startedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startedAtMeta);
+    }
+    if (data.containsKey('ok')) {
+      context.handle(_okMeta, ok.isAcceptableOrUnknown(data['ok']!, _okMeta));
+    } else if (isInserting) {
+      context.missing(_okMeta);
+    }
+    if (data.containsKey('preview')) {
+      context.handle(
+        _previewMeta,
+        preview.isAcceptableOrUnknown(data['preview']!, _previewMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ScheduledTaskRunRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ScheduledTaskRunRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      taskId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}task_id'],
+      )!,
+      startedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}started_at'],
+      )!,
+      ok: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}ok'],
+      )!,
+      preview: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}preview'],
+      )!,
+    );
+  }
+
+  @override
+  $ScheduledTaskRunRowsTable createAlias(String alias) {
+    return $ScheduledTaskRunRowsTable(attachedDatabase, alias);
+  }
+}
+
+class ScheduledTaskRunRow extends DataClass
+    implements Insertable<ScheduledTaskRunRow> {
+  final int id;
+  final String taskId;
+  final int startedAt;
+  final bool ok;
+  final String preview;
+  const ScheduledTaskRunRow({
+    required this.id,
+    required this.taskId,
+    required this.startedAt,
+    required this.ok,
+    required this.preview,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['task_id'] = Variable<String>(taskId);
+    map['started_at'] = Variable<int>(startedAt);
+    map['ok'] = Variable<bool>(ok);
+    map['preview'] = Variable<String>(preview);
+    return map;
+  }
+
+  ScheduledTaskRunRowsCompanion toCompanion(bool nullToAbsent) {
+    return ScheduledTaskRunRowsCompanion(
+      id: Value(id),
+      taskId: Value(taskId),
+      startedAt: Value(startedAt),
+      ok: Value(ok),
+      preview: Value(preview),
+    );
+  }
+
+  factory ScheduledTaskRunRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ScheduledTaskRunRow(
+      id: serializer.fromJson<int>(json['id']),
+      taskId: serializer.fromJson<String>(json['taskId']),
+      startedAt: serializer.fromJson<int>(json['startedAt']),
+      ok: serializer.fromJson<bool>(json['ok']),
+      preview: serializer.fromJson<String>(json['preview']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'taskId': serializer.toJson<String>(taskId),
+      'startedAt': serializer.toJson<int>(startedAt),
+      'ok': serializer.toJson<bool>(ok),
+      'preview': serializer.toJson<String>(preview),
+    };
+  }
+
+  ScheduledTaskRunRow copyWith({
+    int? id,
+    String? taskId,
+    int? startedAt,
+    bool? ok,
+    String? preview,
+  }) => ScheduledTaskRunRow(
+    id: id ?? this.id,
+    taskId: taskId ?? this.taskId,
+    startedAt: startedAt ?? this.startedAt,
+    ok: ok ?? this.ok,
+    preview: preview ?? this.preview,
+  );
+  ScheduledTaskRunRow copyWithCompanion(ScheduledTaskRunRowsCompanion data) {
+    return ScheduledTaskRunRow(
+      id: data.id.present ? data.id.value : this.id,
+      taskId: data.taskId.present ? data.taskId.value : this.taskId,
+      startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
+      ok: data.ok.present ? data.ok.value : this.ok,
+      preview: data.preview.present ? data.preview.value : this.preview,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ScheduledTaskRunRow(')
+          ..write('id: $id, ')
+          ..write('taskId: $taskId, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('ok: $ok, ')
+          ..write('preview: $preview')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, taskId, startedAt, ok, preview);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ScheduledTaskRunRow &&
+          other.id == this.id &&
+          other.taskId == this.taskId &&
+          other.startedAt == this.startedAt &&
+          other.ok == this.ok &&
+          other.preview == this.preview);
+}
+
+class ScheduledTaskRunRowsCompanion
+    extends UpdateCompanion<ScheduledTaskRunRow> {
+  final Value<int> id;
+  final Value<String> taskId;
+  final Value<int> startedAt;
+  final Value<bool> ok;
+  final Value<String> preview;
+  const ScheduledTaskRunRowsCompanion({
+    this.id = const Value.absent(),
+    this.taskId = const Value.absent(),
+    this.startedAt = const Value.absent(),
+    this.ok = const Value.absent(),
+    this.preview = const Value.absent(),
+  });
+  ScheduledTaskRunRowsCompanion.insert({
+    this.id = const Value.absent(),
+    required String taskId,
+    required int startedAt,
+    required bool ok,
+    this.preview = const Value.absent(),
+  }) : taskId = Value(taskId),
+       startedAt = Value(startedAt),
+       ok = Value(ok);
+  static Insertable<ScheduledTaskRunRow> custom({
+    Expression<int>? id,
+    Expression<String>? taskId,
+    Expression<int>? startedAt,
+    Expression<bool>? ok,
+    Expression<String>? preview,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (taskId != null) 'task_id': taskId,
+      if (startedAt != null) 'started_at': startedAt,
+      if (ok != null) 'ok': ok,
+      if (preview != null) 'preview': preview,
+    });
+  }
+
+  ScheduledTaskRunRowsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? taskId,
+    Value<int>? startedAt,
+    Value<bool>? ok,
+    Value<String>? preview,
+  }) {
+    return ScheduledTaskRunRowsCompanion(
+      id: id ?? this.id,
+      taskId: taskId ?? this.taskId,
+      startedAt: startedAt ?? this.startedAt,
+      ok: ok ?? this.ok,
+      preview: preview ?? this.preview,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (taskId.present) {
+      map['task_id'] = Variable<String>(taskId.value);
+    }
+    if (startedAt.present) {
+      map['started_at'] = Variable<int>(startedAt.value);
+    }
+    if (ok.present) {
+      map['ok'] = Variable<bool>(ok.value);
+    }
+    if (preview.present) {
+      map['preview'] = Variable<String>(preview.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ScheduledTaskRunRowsCompanion(')
+          ..write('id: $id, ')
+          ..write('taskId: $taskId, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('ok: $ok, ')
+          ..write('preview: $preview')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $UsageRowsTable usageRows = $UsageRowsTable(this);
+  late final $ScheduledTaskRowsTable scheduledTaskRows =
+      $ScheduledTaskRowsTable(this);
+  late final $ScheduledTaskRunRowsTable scheduledTaskRunRows =
+      $ScheduledTaskRunRowsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [usageRows];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+    usageRows,
+    scheduledTaskRows,
+    scheduledTaskRunRows,
+  ];
 }
 
 typedef $$UsageRowsTableCreateCompanionBuilder =
@@ -710,10 +1570,496 @@ typedef $$UsageRowsTableProcessedTableManager =
       UsageRow,
       PrefetchHooks Function()
     >;
+typedef $$ScheduledTaskRowsTableCreateCompanionBuilder =
+    ScheduledTaskRowsCompanion Function({
+      required String id,
+      required String name,
+      required String prompt,
+      required int hour,
+      required int minute,
+      Value<int> weekdaysMask,
+      Value<bool> enabled,
+      Value<int?> lastRunAt,
+      Value<int> rowid,
+    });
+typedef $$ScheduledTaskRowsTableUpdateCompanionBuilder =
+    ScheduledTaskRowsCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<String> prompt,
+      Value<int> hour,
+      Value<int> minute,
+      Value<int> weekdaysMask,
+      Value<bool> enabled,
+      Value<int?> lastRunAt,
+      Value<int> rowid,
+    });
+
+class $$ScheduledTaskRowsTableFilterComposer
+    extends Composer<_$AppDatabase, $ScheduledTaskRowsTable> {
+  $$ScheduledTaskRowsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get prompt => $composableBuilder(
+    column: $table.prompt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get hour => $composableBuilder(
+    column: $table.hour,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get minute => $composableBuilder(
+    column: $table.minute,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get weekdaysMask => $composableBuilder(
+    column: $table.weekdaysMask,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get enabled => $composableBuilder(
+    column: $table.enabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastRunAt => $composableBuilder(
+    column: $table.lastRunAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ScheduledTaskRowsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ScheduledTaskRowsTable> {
+  $$ScheduledTaskRowsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get prompt => $composableBuilder(
+    column: $table.prompt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get hour => $composableBuilder(
+    column: $table.hour,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get minute => $composableBuilder(
+    column: $table.minute,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get weekdaysMask => $composableBuilder(
+    column: $table.weekdaysMask,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get enabled => $composableBuilder(
+    column: $table.enabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastRunAt => $composableBuilder(
+    column: $table.lastRunAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ScheduledTaskRowsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ScheduledTaskRowsTable> {
+  $$ScheduledTaskRowsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get prompt =>
+      $composableBuilder(column: $table.prompt, builder: (column) => column);
+
+  GeneratedColumn<int> get hour =>
+      $composableBuilder(column: $table.hour, builder: (column) => column);
+
+  GeneratedColumn<int> get minute =>
+      $composableBuilder(column: $table.minute, builder: (column) => column);
+
+  GeneratedColumn<int> get weekdaysMask => $composableBuilder(
+    column: $table.weekdaysMask,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get enabled =>
+      $composableBuilder(column: $table.enabled, builder: (column) => column);
+
+  GeneratedColumn<int> get lastRunAt =>
+      $composableBuilder(column: $table.lastRunAt, builder: (column) => column);
+}
+
+class $$ScheduledTaskRowsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ScheduledTaskRowsTable,
+          ScheduledTaskRow,
+          $$ScheduledTaskRowsTableFilterComposer,
+          $$ScheduledTaskRowsTableOrderingComposer,
+          $$ScheduledTaskRowsTableAnnotationComposer,
+          $$ScheduledTaskRowsTableCreateCompanionBuilder,
+          $$ScheduledTaskRowsTableUpdateCompanionBuilder,
+          (
+            ScheduledTaskRow,
+            BaseReferences<
+              _$AppDatabase,
+              $ScheduledTaskRowsTable,
+              ScheduledTaskRow
+            >,
+          ),
+          ScheduledTaskRow,
+          PrefetchHooks Function()
+        > {
+  $$ScheduledTaskRowsTableTableManager(
+    _$AppDatabase db,
+    $ScheduledTaskRowsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ScheduledTaskRowsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ScheduledTaskRowsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ScheduledTaskRowsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> prompt = const Value.absent(),
+                Value<int> hour = const Value.absent(),
+                Value<int> minute = const Value.absent(),
+                Value<int> weekdaysMask = const Value.absent(),
+                Value<bool> enabled = const Value.absent(),
+                Value<int?> lastRunAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ScheduledTaskRowsCompanion(
+                id: id,
+                name: name,
+                prompt: prompt,
+                hour: hour,
+                minute: minute,
+                weekdaysMask: weekdaysMask,
+                enabled: enabled,
+                lastRunAt: lastRunAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                required String prompt,
+                required int hour,
+                required int minute,
+                Value<int> weekdaysMask = const Value.absent(),
+                Value<bool> enabled = const Value.absent(),
+                Value<int?> lastRunAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ScheduledTaskRowsCompanion.insert(
+                id: id,
+                name: name,
+                prompt: prompt,
+                hour: hour,
+                minute: minute,
+                weekdaysMask: weekdaysMask,
+                enabled: enabled,
+                lastRunAt: lastRunAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ScheduledTaskRowsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ScheduledTaskRowsTable,
+      ScheduledTaskRow,
+      $$ScheduledTaskRowsTableFilterComposer,
+      $$ScheduledTaskRowsTableOrderingComposer,
+      $$ScheduledTaskRowsTableAnnotationComposer,
+      $$ScheduledTaskRowsTableCreateCompanionBuilder,
+      $$ScheduledTaskRowsTableUpdateCompanionBuilder,
+      (
+        ScheduledTaskRow,
+        BaseReferences<
+          _$AppDatabase,
+          $ScheduledTaskRowsTable,
+          ScheduledTaskRow
+        >,
+      ),
+      ScheduledTaskRow,
+      PrefetchHooks Function()
+    >;
+typedef $$ScheduledTaskRunRowsTableCreateCompanionBuilder =
+    ScheduledTaskRunRowsCompanion Function({
+      Value<int> id,
+      required String taskId,
+      required int startedAt,
+      required bool ok,
+      Value<String> preview,
+    });
+typedef $$ScheduledTaskRunRowsTableUpdateCompanionBuilder =
+    ScheduledTaskRunRowsCompanion Function({
+      Value<int> id,
+      Value<String> taskId,
+      Value<int> startedAt,
+      Value<bool> ok,
+      Value<String> preview,
+    });
+
+class $$ScheduledTaskRunRowsTableFilterComposer
+    extends Composer<_$AppDatabase, $ScheduledTaskRunRowsTable> {
+  $$ScheduledTaskRunRowsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get taskId => $composableBuilder(
+    column: $table.taskId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get ok => $composableBuilder(
+    column: $table.ok,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get preview => $composableBuilder(
+    column: $table.preview,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ScheduledTaskRunRowsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ScheduledTaskRunRowsTable> {
+  $$ScheduledTaskRunRowsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get taskId => $composableBuilder(
+    column: $table.taskId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get ok => $composableBuilder(
+    column: $table.ok,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get preview => $composableBuilder(
+    column: $table.preview,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ScheduledTaskRunRowsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ScheduledTaskRunRowsTable> {
+  $$ScheduledTaskRunRowsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get taskId =>
+      $composableBuilder(column: $table.taskId, builder: (column) => column);
+
+  GeneratedColumn<int> get startedAt =>
+      $composableBuilder(column: $table.startedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get ok =>
+      $composableBuilder(column: $table.ok, builder: (column) => column);
+
+  GeneratedColumn<String> get preview =>
+      $composableBuilder(column: $table.preview, builder: (column) => column);
+}
+
+class $$ScheduledTaskRunRowsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ScheduledTaskRunRowsTable,
+          ScheduledTaskRunRow,
+          $$ScheduledTaskRunRowsTableFilterComposer,
+          $$ScheduledTaskRunRowsTableOrderingComposer,
+          $$ScheduledTaskRunRowsTableAnnotationComposer,
+          $$ScheduledTaskRunRowsTableCreateCompanionBuilder,
+          $$ScheduledTaskRunRowsTableUpdateCompanionBuilder,
+          (
+            ScheduledTaskRunRow,
+            BaseReferences<
+              _$AppDatabase,
+              $ScheduledTaskRunRowsTable,
+              ScheduledTaskRunRow
+            >,
+          ),
+          ScheduledTaskRunRow,
+          PrefetchHooks Function()
+        > {
+  $$ScheduledTaskRunRowsTableTableManager(
+    _$AppDatabase db,
+    $ScheduledTaskRunRowsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ScheduledTaskRunRowsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ScheduledTaskRunRowsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ScheduledTaskRunRowsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> taskId = const Value.absent(),
+                Value<int> startedAt = const Value.absent(),
+                Value<bool> ok = const Value.absent(),
+                Value<String> preview = const Value.absent(),
+              }) => ScheduledTaskRunRowsCompanion(
+                id: id,
+                taskId: taskId,
+                startedAt: startedAt,
+                ok: ok,
+                preview: preview,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String taskId,
+                required int startedAt,
+                required bool ok,
+                Value<String> preview = const Value.absent(),
+              }) => ScheduledTaskRunRowsCompanion.insert(
+                id: id,
+                taskId: taskId,
+                startedAt: startedAt,
+                ok: ok,
+                preview: preview,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ScheduledTaskRunRowsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ScheduledTaskRunRowsTable,
+      ScheduledTaskRunRow,
+      $$ScheduledTaskRunRowsTableFilterComposer,
+      $$ScheduledTaskRunRowsTableOrderingComposer,
+      $$ScheduledTaskRunRowsTableAnnotationComposer,
+      $$ScheduledTaskRunRowsTableCreateCompanionBuilder,
+      $$ScheduledTaskRunRowsTableUpdateCompanionBuilder,
+      (
+        ScheduledTaskRunRow,
+        BaseReferences<
+          _$AppDatabase,
+          $ScheduledTaskRunRowsTable,
+          ScheduledTaskRunRow
+        >,
+      ),
+      ScheduledTaskRunRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
   $AppDatabaseManager(this._db);
   $$UsageRowsTableTableManager get usageRows =>
       $$UsageRowsTableTableManager(_db, _db.usageRows);
+  $$ScheduledTaskRowsTableTableManager get scheduledTaskRows =>
+      $$ScheduledTaskRowsTableTableManager(_db, _db.scheduledTaskRows);
+  $$ScheduledTaskRunRowsTableTableManager get scheduledTaskRunRows =>
+      $$ScheduledTaskRunRowsTableTableManager(_db, _db.scheduledTaskRunRows);
 }

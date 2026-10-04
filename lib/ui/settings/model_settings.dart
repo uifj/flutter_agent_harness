@@ -36,6 +36,7 @@ import 'package:shadcn_ui/shadcn_ui.dart'
         ShadDialog,
         ShadInput,
         ShadOption,
+        ShadBadge,
         ShadSeparator,
         ShadSwitch,
         showShadDialog;
@@ -55,6 +56,8 @@ import '../../model/shortcut_registry.dart' as shortcuts;
 import '../../state/usage_ledger.dart';
 import '../../model/instruction_card.dart';
 import '../../state/instruction_card_store.dart';
+import '../../model/scheduled_task.dart';
+import '../../state/scheduled_task_store.dart';
 import '../../state/environment_store.dart';
 import '../../state/quick_phrase_store.dart';
 import '../../model/quick_phrase.dart';
@@ -84,6 +87,7 @@ enum _Section {
   phrases,
   environment,
   cards,
+  tasks,
   usage,
   diagnostics,
   approvals,
@@ -107,6 +111,7 @@ class SettingsPanel extends StatefulWidget {
     required this.quickPhrases,
     required this.environment,
     required this.instructionCards,
+    required this.scheduledTasks,
     required this.onClose,
     required this.onPickFolder,
     required this.supportPath,
@@ -162,6 +167,10 @@ class SettingsPanel extends StatefulWidget {
   /// The instruction card store (ADR-0067): this section edits cards and
   /// their enable set (on the settings document through onSave).
   final InstructionCardStore instructionCards;
+
+  /// The scheduled task store (ADR-0069): created and deleted here; the
+  /// scheduler in the scope reads it every quarter minute.
+  final ScheduledTaskStore scheduledTasks;
 
   final VoidCallback onClose;
 
@@ -655,6 +664,11 @@ class _SettingsPanelState extends State<SettingsPanel> {
       ),
       _NavItem(_Section.cards, context.tr('settingsCards'), LucideIcons.layers),
       _NavItem(
+        _Section.tasks,
+        context.tr('settingsTasks'),
+        LucideIcons.alarm_clock,
+      ),
+      _NavItem(
         _Section.usage,
         context.tr('settingsUsage'),
         LucideIcons.chart_column,
@@ -819,6 +833,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     _Section.phrases => _phrasesSection(color),
                     _Section.environment => _environmentSection(context, color),
                     _Section.cards => _cardsSection(context, color),
+                    _Section.tasks => _tasksSection(context, color),
                     _Section.usage => _usageSection(color),
                     _Section.diagnostics => _diagnosticsSection(color),
                     _Section.backup => _backupSection(color),
@@ -1896,6 +1911,183 @@ class _SettingsPanelState extends State<SettingsPanel> {
         text: body.text,
       );
     }
+  }
+
+  /// Scheduled tasks (ADR-0069): the list plus a create dialog. Enable
+  /// writes straight to the store — the scheduler reads it live; a disabled
+  /// task keeps its definition for later.
+  List<Widget> _tasksSection(BuildContext context, DswAlias color) {
+    final store = widget.scheduledTasks;
+    return [
+      _heading(
+        color,
+        context.tr('settingsTasks'),
+        context.tr('settingsTasksIntro'),
+      ),
+      const SizedBox(height: 12),
+      SettingsCard(
+        dividers: true,
+        children: [
+          FutureBuilder<List<ScheduledTask>>(
+            future: store.tasks(),
+            builder: (context, snapshot) {
+              final tasks = snapshot.data ?? const <ScheduledTask>[];
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (tasks.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          context.tr('tasksEmpty'),
+                          style: DswType.xxs12.copyWith(
+                            color: color.labelTertiary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  for (final task in tasks)
+                    _TaskRow(
+                      task: task,
+                      onToggle: (value) =>
+                          store.setEnabled(task.id, enabled: value),
+                      onDelete: () => store.remove(task.id),
+                    ),
+                ],
+              );
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: CapsuleButton(
+              label: context.tr('taskAdd'),
+              onTap: () => _addTask(context, store),
+            ),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  Future<void> _addTask(BuildContext context, ScheduledTaskStore store) async {
+    final color = context.dsw;
+    final name = TextEditingController();
+    final prompt = TextEditingController();
+    final hour = TextEditingController(text: '9');
+    final minute = TextEditingController(text: '0');
+    final weekdays = <int>{};
+    final step = MediaQuery.textScalerOf(context).scale(1);
+    final saved = await showShadDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => ShadDialog(
+          radius: BorderRadius.circular(DswShape.float),
+          title: Text(context.tr('taskAdd'), style: DswType.sStrong14),
+          actions: [
+            ShadButton.outline(
+              height: 24 * step,
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(context.tr('cancel')),
+            ),
+            ShadButton(
+              height: 24 * step,
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(context.tr('save')),
+            ),
+          ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ShadInput(
+                controller: name,
+                placeholder: Text(context.tr('taskNameHint')),
+                autofocus: true,
+              ),
+              const SizedBox(height: 8),
+              ShadInput(
+                controller: prompt,
+                placeholder: Text(context.tr('taskPromptHint')),
+                minLines: 2,
+                maxLines: 4,
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  SizedBox(
+                    width: 64,
+                    child: ShadInput(
+                      controller: hour,
+                      placeholder: Text(context.tr('taskHourHint')),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 64,
+                    child: ShadInput(
+                      controller: minute,
+                      placeholder: Text(context.tr('taskMinuteHint')),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 4,
+                children: [
+                  for (final weekday in const [1, 2, 3, 4, 5, 6, 7])
+                    DswHoverTap(
+                      onTap: () => setDialogState(() {
+                        weekdays.contains(weekday)
+                            ? weekdays.remove(weekday)
+                            : weekdays.add(weekday);
+                      }),
+                      toggled: weekdays.contains(weekday),
+                      semanticLabel: context.tr('taskWeekday', {'n': weekday}),
+                      builder: (context, hovered, focused) => ShadBadge(
+                        backgroundColor: weekdays.contains(weekday)
+                            ? color.interactiveSelected
+                            : hovered
+                            ? color.interactiveBgHover
+                            : Colors.transparent,
+                        child: Text(
+                          context.tr('taskWeekday', {'n': weekday}),
+                          style: DswType.xxs12.copyWith(
+                            color: weekdays.contains(weekday)
+                                ? color.labelPrimary
+                                : color.labelSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    for (final controller in [name, prompt, hour, minute]) {
+      controller.dispose();
+    }
+    if (saved != true) return;
+    final hourValue = int.tryParse(hour.text.trim());
+    final minuteValue = int.tryParse(minute.text.trim());
+    if (hourValue == null || minuteValue == null) return;
+    await store.add(
+      name: name.text,
+      prompt: prompt.text,
+      hour: hourValue,
+      minute: minuteValue,
+      weekdaysMask: weekdays.isEmpty
+          ? 0
+          : weekdays.fold(0, (mask, day) => mask | (1 << (day - 1))),
+    );
   }
 
   /// Quick phrases (ADR-0063): the library's only editor. Changes commit
@@ -3460,6 +3652,61 @@ class _CardRow extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           ShadSwitch(value: enabled, onChanged: onToggle),
+        ],
+      ),
+    );
+  }
+}
+
+/// One scheduled task of the list: name over the schedule summary, with the
+/// enable switch and delete.
+class _TaskRow extends StatelessWidget {
+  const _TaskRow({
+    required this.task,
+    required this.onToggle,
+    required this.onDelete,
+  });
+
+  final ScheduledTask task;
+  final ValueChanged<bool> onToggle;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.dsw;
+    final time =
+        '${task.hour.toString().padLeft(2, '0')}:'
+        '${task.minute.toString().padLeft(2, '0')}';
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  task.name,
+                  style: DswType.s14.copyWith(color: color.labelPrimary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  time,
+                  style: DswType.xxs12.copyWith(color: color.labelTertiary),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          DswIconButton(
+            icon: LucideIcons.trash,
+            tooltip: context.tr('taskDelete'),
+            onTap: onDelete,
+          ),
+          const SizedBox(width: 4),
+          ShadSwitch(value: task.enabled, onChanged: onToggle),
         ],
       ),
     );

@@ -9,6 +9,7 @@
 // controller's own `notifyListeners`, which is what keeps the widget a view
 // and this object testable without one.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -40,9 +41,11 @@ import 'model_directory.dart';
 import 'prefs_store.dart';
 import 'quick_phrase_store.dart';
 import 'session_index.dart';
+import 'app_database.dart';
 import 'environment_store.dart';
 import 'instruction_card_store.dart';
 import 'secret_store.dart';
+import 'scheduled_task_store.dart';
 import 'session_registry.dart';
 import 'settings_store.dart';
 import 'side_chat_controller.dart';
@@ -78,6 +81,9 @@ class AppScope {
     crashArchive = CrashArchive(
       directory: Directory('${support.path}/logs/crash'),
     );
+    _scheduledTasks = ScheduledTaskStore(
+      AppDatabase.open(File('${support.path}/planstar.db')),
+    );
     _runtime = _build(settings.value);
     // The saved approvals belong to a folder, so the book has to be pointed at
     // the open one before any tool can run.
@@ -100,6 +106,12 @@ class AppScope {
     _workbench.setDisabledTabs(_disabledTabsOf(prefs.value));
     prefs.addListener(_onPrefs);
     _layout.addListener(_onLayoutEdge);
+    // The scheduler ticks four times a minute; the due check matches the
+    // clock minute and the single-flight flag absorbs double lands (ADR-0069).
+    _scheduleTimer = Timer.periodic(
+      const Duration(seconds: 15),
+      (_) => _fireDueTasks(),
+    );
     _conversation = ConversationController(
       runtime: _runtime,
       tail: _tail,
@@ -180,6 +192,12 @@ class AppScope {
   late final EnvironmentStore _environment;
   late final InstructionCardStore _instructionCards;
 
+  /// The scheduled task store and its ticker (ADR-0069): the store rides the
+  /// AppDatabase, the ticker lives as long as the scope does.
+  late final ScheduledTaskStore _scheduledTasks;
+  // ignore: unused_field
+  Timer? _scheduleTimer;
+
   /// The local crash archive — the settings screen's log entry reads it.
   late final CrashArchive crashArchive;
 
@@ -200,6 +218,8 @@ class AppScope {
   EnvironmentStore get environment => _environment;
 
   InstructionCardStore get instructionCards => _instructionCards;
+
+  ScheduledTaskStore get scheduledTasks => _scheduledTasks;
 
   /// The attention service — the General section's notification toggle gates
   /// its raise behavior through the settings document.
@@ -413,6 +433,33 @@ class AppScope {
     );
     if (alreadyHasTerminal) return;
     _workbench.openTerminalInBottom();
+  }
+
+  /// Fires every task due now, detached from the live conversation. Errors
+  /// become failed run records; a task that needs the user fails the same
+  /// way (ADR-0069).
+  Future<void> _fireDueTasks() async {
+    final now = DateTime.now();
+    final due = await _scheduledTasks.dueAt(now);
+    for (final task in due) {
+      await _scheduledTasks.markFired(task.id, now);
+      try {
+        final answer = await _runtime.runDetached(task.prompt);
+        await _scheduledTasks.recordRun(
+          taskId: task.id,
+          startedAt: now,
+          ok: true,
+          preview: answer,
+        );
+      } catch (error) {
+        await _scheduledTasks.recordRun(
+          taskId: task.id,
+          startedAt: now,
+          ok: false,
+          preview: error.toString(),
+        );
+      }
+    }
   }
 
   AgentRuntime _build(cfg.AppSettings settings) {

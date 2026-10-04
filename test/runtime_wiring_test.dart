@@ -11,7 +11,10 @@ void main() {
   test('the retry plugin rides the model seam', () {
     final source = _readRuntime();
     expect(source.contains('RetryPlugin()'), isTrue);
-    expect(source.contains("middlewareRef<RetryOptions>(name: 'retry')"), isTrue);
+    expect(
+      source.contains("middlewareRef<RetryOptions>(name: 'retry')"),
+      isTrue,
+    );
   });
 }
 
