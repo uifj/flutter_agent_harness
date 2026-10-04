@@ -11,6 +11,7 @@ import 'dart:io';
 
 import 'amplified_text_probe.dart';
 import 'package:planstar/model/app_settings.dart';
+import 'package:planstar/state/quick_phrase_store.dart';
 import 'package:planstar/model/model_settings.dart';
 import 'package:planstar/model/workbench_prefs.dart';
 import 'package:planstar/state/secret_store.dart';
@@ -235,6 +236,9 @@ void main() {
         // the harness supplies the same one rather than a lighter wrapper.
         home: Scaffold(
           body: SettingsPanel(
+            quickPhrases: QuickPhraseStore.open(
+              Directory.systemTemp.createTempSync('phrases'),
+            ),
             onReset: () async {},
             usageSummary: const UsageSummary(
               turns: 0,

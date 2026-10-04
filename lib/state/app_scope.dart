@@ -38,6 +38,7 @@ import 'git_status_store.dart';
 import 'layout_controller.dart';
 import 'model_directory.dart';
 import 'prefs_store.dart';
+import 'quick_phrase_store.dart';
 import 'session_index.dart';
 import 'session_registry.dart';
 import 'settings_store.dart';
@@ -56,6 +57,7 @@ class AppScope {
     _sessionRoot = Directory('${support.path}/sessions')
       ..createSync(recursive: true);
     _sessionRegistry = SessionRegistry.open(_sessionRoot);
+    _quickPhrases = QuickPhraseStore.open(support);
     _approvals = ApprovalRuleStore.open(support);
     _checkpoints = CheckpointStore.open(support);
     // Local usage ledger (ADR-0045 PC): one JSONL line per finished model
@@ -165,6 +167,10 @@ class AppScope {
   /// action; the records themselves flow in through [DiagnosticHooks].
   late final DiagnosticLogStore _diagnostics;
 
+  /// The quick phrase library (ADR-0063) — read by the composer's menu and
+  /// the settings page's management section.
+  late final QuickPhraseStore _quickPhrases;
+
   /// The local crash archive — the settings screen's log entry reads it.
   late final CrashArchive crashArchive;
 
@@ -179,6 +185,8 @@ class AppScope {
   UsageLedger get usageLedger => _usageLedger;
 
   DiagnosticLogStore get diagnostics => _diagnostics;
+
+  QuickPhraseStore get quickPhrases => _quickPhrases;
 
   /// The attention service — the General section's notification toggle gates
   /// its raise behavior through the settings document.

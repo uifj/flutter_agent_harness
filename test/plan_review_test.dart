@@ -129,7 +129,11 @@ void main() {
         MaterialApp(
           theme: dswThemeData(Brightness.light),
           home: Scaffold(
-            body: ConversationRoot(conversation: controller, tail: tail),
+            body: ConversationRoot(
+              conversation: controller,
+              tail: tail,
+              quickPhrases: const [],
+            ),
           ),
         ),
       );

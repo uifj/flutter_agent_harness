@@ -28,6 +28,7 @@ import '../../model/approval_mode.dart';
 import '../../model/attached_image.dart';
 import '../../model/file_search_rank.dart';
 import '../../model/known_models.dart';
+import '../../model/quick_phrase.dart';
 import '../../model/queued_input.dart';
 import '../../model/workspace_index.dart';
 import '../../state/document_extractor.dart';
@@ -66,6 +67,7 @@ class Composer extends StatefulWidget {
     this.onApprovalMode,
     this.onNewSession,
     this.onCompress,
+    this.phrases = const [],
     this.modelDirectory,
     this.onModelSelected,
     this.onLookupFiles,
@@ -121,6 +123,10 @@ class Composer extends StatefulWidget {
   /// compressing, or an empty conversation — means the menu does not offer
   /// it; the command list is the gate.
   final Future<void> Function()? onCompress;
+
+  /// The quick phrase library (ADR-0063), snapshotted by the host. Empty
+  /// hides the button — a menu that opens onto nothing is a fake door.
+  final List<QuickPhrase> phrases;
 
   /// The model seat's directory — dsh's `conversation.input.model`. Absent
   /// keeps the row as it was (tests, previews); the chip is the one control
@@ -353,6 +359,19 @@ class ComposerState extends State<Composer> {
     } else {
       setState(() {});
     }
+  }
+
+  /// Inserts a quick phrase (ADR-0063) at the cursor and lands the caret
+  /// after it. The phrase is draft material, not a draft: it never sends.
+  void _insertPhrase(String phrase) {
+    final base = _controller.text;
+    final offset = _controller.selection.baseOffset.clamp(0, base.length);
+    _controller.value = TextEditingValue(
+      text: '${base.substring(0, offset)}$phrase${base.substring(offset)}',
+      selection: TextSelection.collapsed(offset: offset + phrase.length),
+    );
+    _focus.requestFocus();
+    setState(() => _wasEmpty = false);
   }
 
   @override
@@ -991,6 +1010,13 @@ class ComposerState extends State<Composer> {
                     onPaste: _pasteClipboardImage,
                   ),
                   const SizedBox(width: 4),
+                  if (widget.phrases.isNotEmpty) ...[
+                    _QuickPhrasesButton(
+                      phrases: widget.phrases,
+                      onInsert: _insertPhrase,
+                    ),
+                    const SizedBox(width: 4),
+                  ],
                   if (seatsFit) ...[
                     // Flexible rather than fixed: the chip's label ellipsizes
                     // before the row ever gets this tight.
@@ -1437,6 +1463,43 @@ class _AttachButton extends StatelessWidget {
         child: Center(
           child: Icon(
             LucideIcons.paperclip,
+            size: DswShape.iconSm,
+            color: color.labelTertiary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The quick phrases menu (ADR-0063): the library's titles; a pick inserts
+/// the text at the cursor. Hidden entirely when the library is empty.
+class _QuickPhrasesButton extends StatelessWidget {
+  const _QuickPhrasesButton({required this.phrases, required this.onInsert});
+
+  final List<QuickPhrase> phrases;
+  final void Function(String text) onInsert;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.dsw;
+    return DswMenu(
+      label: context.tr('quickPhrases'),
+      minWidth: 220,
+      items: (context) => [
+        for (final phrase in phrases)
+          DswMenuEntry(
+            icon: LucideIcons.text_cursor_input,
+            label: phrase.title,
+            onTap: () => onInsert(phrase.text),
+          ),
+      ],
+      trigger: (context) => SizedBox(
+        width: 28,
+        height: 24,
+        child: Center(
+          child: Icon(
+            LucideIcons.text_cursor_input,
             size: DswShape.iconSm,
             color: color.labelTertiary,
           ),

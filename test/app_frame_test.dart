@@ -105,7 +105,11 @@ void main() {
             ),
             center:
                 center ??
-                ConversationRoot(conversation: controller, tail: tail),
+                ConversationRoot(
+                  conversation: controller,
+                  tail: tail,
+                  quickPhrases: const [],
+                ),
             details: details,
             workbench: workbench,
             bottom: bottom,

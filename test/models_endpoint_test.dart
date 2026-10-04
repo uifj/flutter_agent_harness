@@ -6,9 +6,10 @@
 // is driven through the `ModelsEndpointFetcher` seam with a fake, the same
 // seam the app hands its HTTP implementation to.
 
-import 'dart:io' show HttpException;
+import 'dart:io';
 
 import 'package:planstar/genkit/models_endpoint.dart';
+import 'package:planstar/state/quick_phrase_store.dart';
 import 'package:planstar/model/app_settings.dart';
 import 'package:planstar/model/model_settings.dart';
 import 'package:planstar/state/usage_ledger.dart' show UsageSummary;
@@ -103,6 +104,9 @@ void main() {
         ),
         home: Scaffold(
           body: SettingsPanel(
+            quickPhrases: QuickPhraseStore.open(
+              Directory.systemTemp.createTempSync('phrases'),
+            ),
             usageSummary: const UsageSummary(
               turns: 0,
               totalTokens: 0,
@@ -230,6 +234,9 @@ void main() {
           ),
           home: Scaffold(
             body: SettingsPanel(
+              quickPhrases: QuickPhraseStore.open(
+                Directory.systemTemp.createTempSync('phrases'),
+              ),
               usageSummary: const UsageSummary(
                 turns: 0,
                 totalTokens: 0,

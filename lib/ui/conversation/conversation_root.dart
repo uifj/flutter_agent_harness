@@ -20,6 +20,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import '../../l10n/locales.dart';
 import '../../model/approval_mode.dart';
 import '../../model/conversation.dart';
+import '../../model/quick_phrase.dart';
 import '../../model/workspace_index.dart';
 import '../../state/checkpoint_store.dart';
 import '../../state/conversation_controller.dart';
@@ -110,6 +111,7 @@ class ConversationRoot extends StatefulWidget {
     required this.conversation,
     required this.tail,
     this.modelDirectory,
+    required this.quickPhrases,
     this.onModelSelected,
     this.onLookupFiles,
     this.workspaceRoot,
@@ -125,6 +127,11 @@ class ConversationRoot extends StatefulWidget {
   /// The composer's model seat — dsh's `conversation.input.model`. Absent
   /// leaves the row without the chip (tests).
   final ModelDirectory? modelDirectory;
+
+  /// The quick phrase library, snapshotted by the host (ADR-0063). Edits
+  /// happen on the settings page, which replaces this tree — by the time the
+  /// composer is visible again the host has rebuilt it with a fresh list.
+  final List<QuickPhrase> quickPhrases;
 
   /// Commits a model the seat picked. Absent leaves the chip inert.
   final ValueChanged<String>? onModelSelected;
@@ -471,6 +478,7 @@ class _ConversationRootState extends State<ConversationRoot> {
               approvalMode: widget.conversation.approvalMode,
               onApprovalMode: (mode) => widget.conversation.approvalMode = mode,
               onNewSession: widget.conversation.startNewSession,
+              phrases: widget.quickPhrases,
               onCompress:
                   widget.conversation.isBusy ||
                       widget.conversation.isCompressing

@@ -84,7 +84,11 @@ void main() {
         ),
         theme: dswThemeData(Brightness.light),
         home: Scaffold(
-          body: ConversationRoot(conversation: controller, tail: tail),
+          body: ConversationRoot(
+            conversation: controller,
+            tail: tail,
+            quickPhrases: const [],
+          ),
         ),
       ),
     );
@@ -329,6 +333,7 @@ void main() {
             body: ConversationRoot(
               conversation: probeController,
               tail: probeTail,
+              quickPhrases: const [],
             ),
           ),
         ),

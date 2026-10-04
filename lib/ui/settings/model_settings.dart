@@ -31,11 +31,14 @@ import 'package:shadcn_ui/shadcn_ui.dart'
         ShadAccordionController,
         ShadAccordionItem,
         ShadBorder,
+        ShadButton,
         ShadCard,
+        ShadDialog,
         ShadInput,
         ShadOption,
         ShadSeparator,
-        ShadSwitch;
+        ShadSwitch,
+        showShadDialog;
 
 import '../../genkit/models_endpoint.dart';
 
@@ -50,6 +53,8 @@ import '../../state/approval_rule_store.dart';
 import '../../state/backup_service.dart';
 import '../../model/shortcut_registry.dart' as shortcuts;
 import '../../state/usage_ledger.dart';
+import '../../state/quick_phrase_store.dart';
+import '../../model/quick_phrase.dart';
 import '../primitives/confirm_dialog.dart';
 import '../primitives/icon_button.dart';
 import '../../theme/dsw_shad_bridge.dart';
@@ -73,6 +78,7 @@ enum _Section {
   workbench,
   extensions,
   shortcuts,
+  phrases,
   usage,
   diagnostics,
   approvals,
@@ -92,6 +98,7 @@ class SettingsPanel extends StatefulWidget {
     this.onOpenCrashLog,
     this.crashFiles,
     this.onOpenDiagnosticsFolder,
+    required this.quickPhrases,
     required this.onClose,
     required this.onPickFolder,
     required this.supportPath,
@@ -131,6 +138,10 @@ class SettingsPanel extends StatefulWidget {
   /// Opens the diagnostics directory in the file manager (ADR-0058); null
   /// hides the row.
   final VoidCallback? onOpenDiagnosticsFolder;
+
+  /// The quick phrase library (ADR-0063): this section is its only editor;
+  /// the composer reads the same store through the host.
+  final QuickPhraseStore quickPhrases;
 
   final VoidCallback onClose;
 
@@ -613,6 +624,11 @@ class _SettingsPanelState extends State<SettingsPanel> {
         LucideIcons.keyboard,
       ),
       _NavItem(
+        _Section.phrases,
+        context.tr('settingsPhrases'),
+        LucideIcons.text_cursor_input,
+      ),
+      _NavItem(
         _Section.usage,
         context.tr('settingsUsage'),
         LucideIcons.chart_column,
@@ -774,6 +790,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     _Section.workbench => _workbenchSection(color),
                     _Section.extensions => _extensionsSection(color),
                     _Section.shortcuts => _shortcutsSection(color),
+                    _Section.phrases => _phrasesSection(color),
                     _Section.usage => _usageSection(color),
                     _Section.diagnostics => _diagnosticsSection(color),
                     _Section.backup => _backupSection(color),
@@ -1572,6 +1589,109 @@ class _SettingsPanelState extends State<SettingsPanel> {
         ],
       ),
     ];
+  }
+
+  /// Quick phrases (ADR-0063): the library's only editor. Changes commit
+  /// through the store immediately — phrases are content, not panel drafts,
+  /// and the composer reads them when it next mounts.
+  List<Widget> _phrasesSection(DswAlias color) {
+    final store = widget.quickPhrases;
+    final phrases = store.phrases;
+    return [
+      _heading(
+        color,
+        context.tr('settingsPhrases'),
+        context.tr('settingsPhrasesIntro'),
+      ),
+      const SizedBox(height: 12),
+      SettingsCard(
+        dividers: true,
+        children: [
+          for (final phrase in phrases)
+            _PhraseRow(
+              phrase: phrase,
+              onEdit: () => _editPhrase(phrase),
+              onDelete: () => store.remove(phrase.id),
+            ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                CapsuleButton(
+                  label: context.tr('quickPhraseAdd'),
+                  enabled: !store.isFull,
+                  onTap: () => _editPhrase(null),
+                ),
+                if (store.isFull) ...[
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Text(
+                      context.tr('quickPhraseFull'),
+                      style: DswType.xxs12.copyWith(color: color.labelTertiary),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  /// One editor for create and update: two fields, one save. An empty title
+  /// or body does not write — a row that inserts nothing is not a phrase.
+  Future<void> _editPhrase(QuickPhrase? phrase) async {
+    final title = TextEditingController(text: phrase?.title ?? '');
+    final body = TextEditingController(text: phrase?.text ?? '');
+    final step = MediaQuery.textScalerOf(context).scale(1);
+    final saved = await showShadDialog<bool>(
+      context: context,
+      builder: (dialogContext) => ShadDialog(
+        radius: BorderRadius.circular(DswShape.float),
+        title: Text(
+          context.tr(phrase == null ? 'quickPhraseAdd' : 'edit'),
+          style: DswType.sStrong14,
+        ),
+        actions: [
+          ShadButton.outline(
+            height: 24 * step,
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(context.tr('cancel')),
+          ),
+          ShadButton(
+            height: 24 * step,
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.tr('save')),
+          ),
+        ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ShadInput(
+              controller: title,
+              placeholder: Text(context.tr('quickPhraseTitleHint')),
+              autofocus: true,
+            ),
+            const SizedBox(height: 8),
+            ShadInput(
+              controller: body,
+              placeholder: Text(context.tr('quickPhraseTextHint')),
+              minLines: 3,
+              maxLines: 5,
+            ),
+          ],
+        ),
+      ),
+    );
+    title.dispose();
+    body.dispose();
+    if (saved != true) return;
+    if (phrase == null) {
+      widget.quickPhrases.add(title.text, body.text);
+    } else {
+      widget.quickPhrases.update(phrase.id, title: title.text, text: body.text);
+    }
   }
 
   /// Diagnostics (ADR-0058): the two local log toggles and a way to reach
@@ -2855,6 +2975,64 @@ class _ManualModelsField extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// One phrase of the management list: title over a one-line preview, with
+/// edit and delete as the row's trailing pair.
+class _PhraseRow extends StatelessWidget {
+  const _PhraseRow({
+    required this.phrase,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final QuickPhrase phrase;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.dsw;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  phrase.title,
+                  style: DswType.s14.copyWith(color: color.labelPrimary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  phrase.text,
+                  style: DswType.xxs12.copyWith(color: color.labelTertiary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          DswIconButton(
+            icon: LucideIcons.pencil,
+            tooltip: context.tr('edit'),
+            onTap: onEdit,
+          ),
+          const SizedBox(width: 4),
+          DswIconButton(
+            icon: LucideIcons.trash,
+            tooltip: context.tr('quickPhraseDelete'),
+            onTap: onDelete,
+          ),
+        ],
+      ),
     );
   }
 }

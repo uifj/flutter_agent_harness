@@ -610,6 +610,7 @@ class _DshAppState extends ConsumerState<DshApp> {
         onAdopt: scope.adoptRecent,
         child: ConversationRoot(
           conversation: ref.watch(conversationProvider),
+          quickPhrases: scope.quickPhrases.phrases,
           tail: ref.watch(streamingTailProvider),
           modelDirectory: ref.watch(modelDirectoryProvider),
           // The seat offers; the host commits. The commit is a plain
@@ -771,6 +772,7 @@ class _DshAppState extends ConsumerState<DshApp> {
       // The saved approvals are listed where they can be revoked — the panel's
       // "Always allow" is not the only place they can be seen (ADR-0012).
       approvals: scope.approvals,
+      quickPhrases: scope.quickPhrases,
     );
   }
 }
