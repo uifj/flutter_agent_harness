@@ -919,6 +919,7 @@ class AgentRuntime implements TurnSource {
       promptDir: null,
       plugins: [
         providerPlugin,
+        RetryPlugin(),
         _StopGatePlugin(stop),
         _UsagePlugin(usage),
         // Diagnostics (ADR-0058): null hooks register no middleware at all —
@@ -1019,6 +1020,7 @@ class AgentRuntime implements TurnSource {
       use: [
         middlewareRef<Map<String, dynamic>>(name: _stopGateName),
         middlewareRef<Map<String, dynamic>>(name: _usageName),
+        middlewareRef<RetryOptions>(name: 'retry'),
         middlewareRef<Map<String, dynamic>>(name: _toolGateName),
         middlewareRef<Map<String, dynamic>>(name: _guideName),
         agents(agents: const [_subagentName], maxDelegations: _maxDelegations),
