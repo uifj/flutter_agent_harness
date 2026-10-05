@@ -205,7 +205,17 @@ class _SidebarState extends State<Sidebar> {
   void _dismissQuickMenu() {
     final entry = _quickMenu;
     _quickMenu = null;
-    if (entry != null && entry.mounted) entry.remove();
+    if (entry == null) return;
+    // OverlayEntry.mounted tracks the entry's widget state, not the overlay
+    // pointer — after the menu's own dismissal path has removed the entry,
+    // mounted can still answer true while remove()'s `_overlay!` throws (both
+    // crashes in the archive are exactly this). remove() throws ONLY on that
+    // double-remove, which is the one outcome this guard exists to absorb.
+    try {
+      entry.remove();
+    } catch (_) {
+      // Already gone: the menu dismissed itself first.
+    }
   }
 
   /// The last width the column had while expanded, held so the fading content
