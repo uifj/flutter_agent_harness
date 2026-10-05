@@ -67,6 +67,8 @@ void main() {
 
   Future<void> pump(
     WidgetTester tester, {
+    void Function(String url)? onOpenLink,
+    VoidCallback? onAbout,
     double width = 1400,
     double? scale,
     Widget details = const SizedBox(),
@@ -113,6 +115,8 @@ void main() {
             details: details,
             workbench: workbench,
             bottom: bottom,
+            onOpenLink: onOpenLink,
+            onAbout: onAbout,
           ),
         ),
       ),
@@ -687,5 +691,48 @@ void main() {
       lessThan(36 * amplifiedTextStep + 1),
     );
     expect(textDefects(tester), isEmpty);
+  });
+  // ADR-0072: the product links moved from the sidebar quick menu into the
+  // header's app menu — a sparkle button left of the bottom-panel toggle.
+  group('the header app menu', () {
+    testWidgets('offers the six product entries and opens a link', (
+      tester,
+    ) async {
+      final opened = <String>[];
+      var about = 0;
+      await pump(
+        tester,
+        onOpenLink: opened.add,
+        onAbout: () => about++,
+        showHeader: true,
+      );
+
+      // The menu is closed until the sparkle is tapped.
+      expect(find.text('Product docs'), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('header-app-menu')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Product docs'), findsOneWidget);
+      expect(find.text('User community'), findsOneWidget);
+      expect(find.text('Report an issue'), findsOneWidget);
+      expect(find.text('Request a feature'), findsOneWidget);
+      expect(find.text('Check for updates'), findsOneWidget);
+      expect(find.text('About PlanStar'), findsOneWidget);
+
+      await tester.tap(find.text('Product docs'));
+      await tester.pumpAndSettle();
+      expect(opened, ['https://docs.planstar.top']);
+
+      await tester.tap(find.byKey(const ValueKey('header-app-menu')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('About PlanStar'));
+      await tester.pumpAndSettle();
+      expect(about, 1);
+    });
+
+    testWidgets('no host callbacks, no button', (tester) async {
+      await pump(tester);
+      expect(find.byKey(const ValueKey('header-app-menu')), findsNothing);
+    });
   });
 }

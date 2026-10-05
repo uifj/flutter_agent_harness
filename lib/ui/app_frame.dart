@@ -41,6 +41,7 @@ import '../theme/dsw_shape.dart';
 import '../theme/dsw_theme.dart';
 import '../theme/dsw_typography.dart';
 import 'primitives/icon_button.dart';
+import '../model/app_meta.dart';
 import 'primitives/menu.dart';
 import 'primitives/tappable.dart';
 import 'session_actions.dart';
@@ -63,6 +64,8 @@ class AppFrame extends StatefulWidget {
     this.sessions,
     this.onPickWorkspace,
     this.onOpenSettings,
+    this.onOpenLink,
+    this.onAbout,
   });
 
   final LayoutController layout;
@@ -103,6 +106,13 @@ class AppFrame extends StatefulWidget {
   final SessionIndex? sessions;
   final VoidCallback? onPickWorkspace;
   final VoidCallback? onOpenSettings;
+
+  /// Opens a product link in the system browser (ADR-0072): the header's
+  /// app menu hosts the docs/community/issue links.
+  final void Function(String url)? onOpenLink;
+
+  /// Opens the about dialog; null hides the menu entry.
+  final VoidCallback? onAbout;
 
   @override
   State<AppFrame> createState() => _AppFrameState();
@@ -235,6 +245,8 @@ class _AppFrameState extends State<AppFrame> {
                             sessions: widget.sessions,
                             onPickWorkspace: widget.onPickWorkspace,
                             onOpenSettings: widget.onOpenSettings,
+                            onOpenLink: widget.onOpenLink,
+                            onAbout: widget.onAbout,
                           ),
                           Expanded(child: ClipRect(child: widget.center)),
                           _row(
@@ -559,6 +571,8 @@ class _CenterToggleStrip extends StatelessWidget {
     this.sessions,
     this.onPickWorkspace,
     this.onOpenSettings,
+    this.onOpenLink,
+    this.onAbout,
   });
 
   final LayoutController layout;
@@ -567,6 +581,8 @@ class _CenterToggleStrip extends StatelessWidget {
   final SessionIndex? sessions;
   final VoidCallback? onPickWorkspace;
   final VoidCallback? onOpenSettings;
+  final void Function(String url)? onOpenLink;
+  final VoidCallback? onAbout;
 
   @override
   Widget build(BuildContext context) {
@@ -602,7 +618,13 @@ class _CenterToggleStrip extends StatelessWidget {
                     builder: (context, _) => _header(context, color),
                   ),
           ),
-          _ToggleCluster(layout: layout, narrow: narrow, step: step),
+          _ToggleCluster(
+            layout: layout,
+            narrow: narrow,
+            step: step,
+            onOpenLink: onOpenLink,
+            onAbout: onAbout,
+          ),
         ],
       ),
     );
@@ -697,6 +719,8 @@ class _ToggleCluster extends StatelessWidget {
     required this.layout,
     required this.narrow,
     required this.step,
+    this.onOpenLink,
+    this.onAbout,
   });
 
   final LayoutController layout;
@@ -706,10 +730,69 @@ class _ToggleCluster extends StatelessWidget {
   /// at every step (ADR-0017 S3).
   final double step;
 
+  /// The header app menu's hosts (ADR-0072); null hides the button — the same
+  /// "a menu that opens onto nothing is a fake door" rule the quick menu runs.
+  final void Function(String url)? onOpenLink;
+  final VoidCallback? onAbout;
+
   @override
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
+      if (onOpenLink != null) ...[
+        DswMenu(
+          label: context.tr('appName'),
+          minWidth: 200,
+          items: (menuContext) => [
+            DswMenuEntry(
+              icon: LucideIcons.book_open,
+              label: menuContext.tr('helpDocs'),
+              onTap: () => onOpenLink!(AppMeta.docsUrl),
+            ),
+            DswMenuEntry(
+              icon: LucideIcons.users,
+              label: menuContext.tr('helpCommunity'),
+              onTap: () => onOpenLink!(AppMeta.communityUrl),
+            ),
+            DswMenuEntry(
+              icon: LucideIcons.bug,
+              label: menuContext.tr('helpReportIssue'),
+              onTap: () => onOpenLink!(AppMeta.issuesUrl),
+            ),
+            DswMenuEntry(
+              icon: LucideIcons.lightbulb,
+              label: menuContext.tr('helpFeatureRequest'),
+              onTap: () => onOpenLink!(AppMeta.featureRequestUrl),
+            ),
+            DswMenuEntry(
+              icon: LucideIcons.refresh_cw,
+              label: menuContext.tr('helpReleases'),
+              onTap: () => onOpenLink!(AppMeta.releasesUrl),
+            ),
+            if (onAbout != null)
+              DswMenuEntry(
+                icon: LucideIcons.info,
+                label: menuContext.tr('helpAbout'),
+                onTap: onAbout,
+              ),
+          ],
+          trigger: (menuContext) => SizedBox(
+            // Named against the sidebar's brand sparkle — same glyph,
+            // different surface, and a test must say which it meant.
+            key: const ValueKey('header-app-menu'),
+            width: 32 * step,
+            height: 32 * step,
+            child: Center(
+              child: Icon(
+                LucideIcons.sparkle,
+                size: DswShape.iconLg,
+                color: menuContext.dsw.labelSecondary,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+      ],
       if (!narrow)
         DswIconButton(
           icon: LucideIcons.panel_bottom,

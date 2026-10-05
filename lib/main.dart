@@ -405,6 +405,13 @@ class _DshAppState extends ConsumerState<DshApp> {
                       onPickWorkspace: scope.pickFromHero,
                       onOpenSettings: () =>
                           setState(() => _settingsOpen = true),
+                      // The header app menu's product links (ADR-0072) —
+                      // the same hosts the quick menu used before they moved.
+                      onOpenLink: (url) => launchUrl(
+                        Uri.parse(url),
+                        mode: LaunchMode.externalApplication,
+                      ),
+                      onAbout: () => _showAboutDialog(),
                       // The plan-object store is a ChangeNotifier the
                       // providers cannot re-project; the builder re-reads its
                       // collections on every write so the sidebar's extension

@@ -26,8 +26,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
-import '../../../model/app_meta.dart';
-
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadSeparator;
 
@@ -315,70 +313,6 @@ class _QuickMenuState extends State<_QuickMenu> {
         dswEnsureShadTheme(
           context,
           ShadSeparator.horizontal(thickness: 1, color: color.borderL2),
-        ),
-        // The help group (ADR-0045 PG): ZCode's avatar menu carries the same
-        // five entries; links open the system browser through the host.
-        _AuthRow(
-          label: context.tr('helpDocs'),
-          icon: LucideIcons.book_open,
-          onTap: () => widget.onOpenLink?.call(AppMeta.docsUrl),
-        ),
-        _AuthRow(
-          label: context.tr('helpCommunity'),
-          icon: LucideIcons.users,
-          onTap: () => widget.onOpenLink?.call(AppMeta.communityUrl),
-        ),
-        _AuthRow(
-          label: context.tr('helpReportIssue'),
-          icon: LucideIcons.bug,
-          onTap: () => widget.onOpenLink?.call(AppMeta.issuesUrl),
-        ),
-        _AuthRow(
-          label: context.tr('helpFeatureRequest'),
-          icon: LucideIcons.lightbulb,
-          onTap: () => widget.onOpenLink?.call(AppMeta.featureRequestUrl),
-        ),
-        _AuthRow(
-          label: context.tr('helpReleases'),
-          icon: LucideIcons.refresh_cw,
-          onTap: () => widget.onOpenLink?.call(AppMeta.releasesUrl),
-        ),
-        _AuthRow(
-          label: context.tr('helpAbout'),
-          icon: LucideIcons.info,
-          onTap: () => widget.onAbout?.call(),
-        ),
-        // The help group (ADR-0045 PG): ZCode's avatar menu carries the same
-        // five entries; links open the system browser through the host.
-        _AuthRow(
-          label: context.tr('helpDocs'),
-          icon: LucideIcons.book_open,
-          onTap: () => widget.onOpenLink?.call(AppMeta.docsUrl),
-        ),
-        _AuthRow(
-          label: context.tr('helpCommunity'),
-          icon: LucideIcons.users,
-          onTap: () => widget.onOpenLink?.call(AppMeta.communityUrl),
-        ),
-        _AuthRow(
-          label: context.tr('helpReportIssue'),
-          icon: LucideIcons.bug,
-          onTap: () => widget.onOpenLink?.call(AppMeta.issuesUrl),
-        ),
-        _AuthRow(
-          label: context.tr('helpFeatureRequest'),
-          icon: LucideIcons.lightbulb,
-          onTap: () => widget.onOpenLink?.call(AppMeta.featureRequestUrl),
-        ),
-        _AuthRow(
-          label: context.tr('helpReleases'),
-          icon: LucideIcons.refresh_cw,
-          onTap: () => widget.onOpenLink?.call(AppMeta.releasesUrl),
-        ),
-        _AuthRow(
-          label: context.tr('helpAbout'),
-          icon: LucideIcons.info,
-          onTap: () => widget.onAbout?.call(),
         ),
         _OpenSettingsRow(onTap: widget.onOpenSettings),
         if (widget.onLogin != null)
