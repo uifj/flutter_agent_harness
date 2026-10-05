@@ -18,7 +18,6 @@
 
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show compute;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -27,24 +26,18 @@ import '../../state/plan_block_document.dart';
 import 'blocks/plan_block_editor.dart';
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter_lucide/flutter_lucide.dart';
-import 'package:shadcn_ui/shadcn_ui.dart'
-    show ShadButton, ShadDialog, ShadInput, showShadDialog;
 import 'package:path/path.dart' as p;
 import 'package:re_editor/re_editor.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../l10n/locales.dart';
-import '../../model/workspace_index.dart';
 import '../../theme/dsw_alias.dart';
-import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
 import '../conversation/assistant_markdown.dart';
 import '../primitives/capsule_button.dart';
-import '../primitives/feedback.dart';
 import '../primitives/confirm_dialog.dart';
-import '../primitives/menu.dart';
-import '../primitives/tappable.dart';
+import '../primitives/feedback.dart';
 
 /// The plan workspace center pane. [workspaceRoot] is the current agent
 /// workspace; null means there is no vault to read yet. [onPickWorkspace]
@@ -55,14 +48,14 @@ class PlanWorkspace extends StatefulWidget {
     super.key,
     this.workspaceRoot,
     this.onPickWorkspace,
-    this.collections = const [],
-    this.onOpenCollection,
+    this.initialNote,
+    this.onNoteConsumed,
   });
 
-  /// The plan collections the vault can be swapped for (ADR-0037 P3). Passed
-  /// in rather than read from a provider: riverpod stays in the assembly root.
-  final List<({String id, String name})> collections;
-  final void Function(String id)? onOpenCollection;
+  /// The note the sidebar's vault tree asked to open (ADR-0073), consumed via
+  /// [onNoteConsumed] once the editor has it. Null = keep whatever is open.
+  final String? initialNote;
+  final VoidCallback? onNoteConsumed;
 
   final String? workspaceRoot;
   final VoidCallback? onPickWorkspace;
@@ -72,13 +65,6 @@ class PlanWorkspace extends StatefulWidget {
 }
 
 class _PlanWorkspaceState extends State<PlanWorkspace> {
-  /// Every `*.md` in the vault, sorted by path — the index runs off the UI
-  /// thread through the same `compute` the composer's mention menu uses.
-  List<FileEntry> _notes = const [];
-
-  /// The hierarchical tree built from [_notes] + directory entries.
-  List<_TreeNode> _treeNodes = const [];
-
   /// The selected note's workspace-relative path, or null (nothing picked yet).
   String? _selected;
 
@@ -94,13 +80,19 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
   /// transcript's own markdown renderer.
   _PlanNoteMode _mode = _PlanNoteMode.edit;
 
-  /// Expanded directory paths in the tree.
-  Set<String> _expandedDirs = <String>{};
-
   @override
   void initState() {
     super.initState();
-    _reloadVault();
+    _openInitialNote();
+  }
+
+  /// Opens [widget.initialNote] if one is pending (ADR-0073), then hands the
+  /// token back so a later request re-triggers.
+  Future<void> _openInitialNote() async {
+    final note = widget.initialNote;
+    if (note == null || note == _selected) return;
+    await _openPath(note);
+    widget.onNoteConsumed?.call();
   }
 
   @override
@@ -113,13 +105,18 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
       _controller = null;
       _document?.dispose();
       _document = null;
-      setState(() {
-        _selected = null;
-        _notes = const [];
-        _treeNodes = const [];
-        _expandedDirs = <String>{};
-      });
-      _reloadVault();
+      setState(() => _selected = null);
+    }
+    // The sidebar tree (or a remount) asked for a note: open it, then hand
+    // the token back so the next request re-triggers (ADR-0073). Deferred to
+    // a post-frame callback: didUpdateWidget runs inside build, and an open
+    // with unsaved edits raises the confirm dialog — an overlay insertion is
+    // illegal mid-build.
+    if (widget.initialNote != null &&
+        widget.initialNote != _selected &&
+        widget.initialNote != old.initialNote) {
+      final note = widget.initialNote!;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _openPath(note));
     }
   }
 
@@ -129,106 +126,40 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
     super.dispose();
   }
 
-  Future<void> _reloadVault() async {
-    final root = widget.workspaceRoot;
-    if (root == null) return;
-    final index = await compute(indexWorkspace, root);
-    if (!mounted) return;
-    final mdFiles = [
-      for (final entry in index.entries)
-        if (entry.kind == 'file' &&
-            entry.relative.toLowerCase().endsWith('.md'))
-          entry,
-    ]..sort((a, b) => a.relative.compareTo(b.relative));
-    setState(() {
-      _notes = mdFiles;
-      _treeNodes = _buildTree(mdFiles, index.entries);
-      // Default: expand all directories that contain markdown files.
-      _expandedDirs = {
-        for (final entry in index.entries)
-          if (entry.kind == 'dir') entry.relative,
-      };
-    });
-  }
-
-  /// Builds a hierarchical tree from [mdFiles] (the leaves) and [allEntries]
-  /// (which includes directories). Directories that contain no `.md` files
-  /// (recursively) are omitted — the tree shows only the structure needed to
-  /// reach markdown files.
-  List<_TreeNode> _buildTree(
-    List<FileEntry> mdFiles,
-    List<FileEntry> allEntries,
-  ) {
-    final root = _TreeNode(name: '', relativePath: '', isDir: true);
-
-    for (final file in mdFiles) {
-      final parts = file.relative.split('/');
-      var current = root;
-      var pathSoFar = '';
-      for (var i = 0; i < parts.length - 1; i++) {
-        pathSoFar = pathSoFar.isEmpty ? parts[i] : '$pathSoFar/${parts[i]}';
-        var child = current.children.cast<_TreeNode?>().firstWhere(
-          (c) => c != null && c.name == parts[i] && c.isDir,
-          orElse: () => null,
-        );
-        if (child == null) {
-          child = _TreeNode(
-            name: parts[i],
-            relativePath: pathSoFar,
-            isDir: true,
-          );
-          current.children.add(child);
-        }
-        current = child;
-      }
-      current.children.add(
-        _TreeNode(name: parts.last, relativePath: file.relative, isDir: false),
-      );
-    }
-
-    // Sort: directories first (alphabetical), then files (alphabetical).
-    void sortChildren(_TreeNode node) {
-      node.children.sort((a, b) {
-        if (a.isDir != b.isDir) return a.isDir ? -1 : 1;
-        return a.name.compareTo(b.name);
-      });
-      for (final child in node.children) {
-        if (child.isDir) sortChildren(child);
-      }
-    }
-
-    sortChildren(root);
-    return root.children;
-  }
-
   /// Selects a note, confirming away unsaved edits first — switching notes is
   /// the same cliff as the editor tab's reload: the buffer is the only copy.
-  Future<void> _open(FileEntry note) async {
-    if (note.relative == _selected) return;
+  Future<void> _openPath(String relative) async {
+    if (relative == _selected) return;
     if (_dirty) {
       final discard = await showConfirmDialog(
         context,
         title: context.tr('planDiscardTitle'),
-        description: context.tr('planDiscardDesc', {'path': note.relative}),
+        description: context.tr('planDiscardDesc', {'path': relative}),
         confirmLabel: context.tr('discardChanges'),
       );
       if (!discard) return;
     }
     final root = widget.workspaceRoot;
     if (root == null) return;
-    final text = await File(p.join(root, note.relative)).readAsString();
+    final text = await File(p.join(root, relative)).readAsString();
     if (!mounted) return;
     final old = _controller;
     final oldDocument = _document;
     setState(() {
-      _selected = note.relative;
+      _selected = relative;
       _dirty = false;
       _mode = _PlanNoteMode.edit;
       _controller = CodeLineEditingController.fromText(text);
       _document = PlanBlockDocument.fromMarkdown(text);
     });
-    old?.dispose();
-    oldDocument?.dispose();
+    // Dispose AFTER the frame that swapped the editors: the CodeEditor's
+    // cursor-blink timer belongs to the OLD controller and its last tick can
+    // land inside the swap frame — disposing synchronously here makes the
+    // timer fire on a dead object (the switching test caught it).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      old?.dispose();
+      oldDocument?.dispose();
+    });
   }
 
   Future<void> _save() async {
@@ -274,13 +205,7 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
         message: context.tr('planNoWorkspace'),
       );
     }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _treePane(color),
-        Expanded(child: _notePane(color)),
-      ],
-    );
+    return _notePane(color);
   }
 
   Widget _centered({required IconData icon, required String message}) {
@@ -302,314 +227,6 @@ class _PlanWorkspaceState extends State<PlanWorkspace> {
         ),
       ),
     );
-  }
-
-  // ---- The vault tree ------------------------------------------------------
-
-  Widget _treePane(DswAlias color) => Container(
-    width: 232,
-    decoration: BoxDecoration(
-      color: color.bgLayer1,
-      border: Border(right: BorderSide(color: color.borderL1)),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _treeHeader(color),
-        Expanded(
-          child: _treeNodes.isEmpty
-              ? Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
-                  child: Text(
-                    context.tr('planNoNotes'),
-                    style: DswType.xxs12.copyWith(color: color.labelTertiary),
-                  ),
-                )
-              : ListView(
-                  padding: const EdgeInsets.fromLTRB(6, 0, 6, 8),
-                  children: [
-                    for (final node in _treeNodes)
-                      _renderNode(node, depth: 0, color: color),
-                  ],
-                ),
-        ),
-        if (widget.workspaceRoot != null) _treeFooter(color),
-      ],
-    ),
-  );
-
-  /// The tree header: "Notes" label + new-note / new-folder icon buttons.
-  Widget _treeHeader(DswAlias color) => Padding(
-    padding: const EdgeInsets.fromLTRB(12, 10, 8, 6),
-    child: Row(
-      children: [
-        Expanded(
-          child: Text(
-            context.tr('planNotes'),
-            style: DswType.xxsStrong12.copyWith(color: color.labelSecondary),
-          ),
-        ),
-        _treeHeaderButton(
-          icon: LucideIcons.file_plus,
-          tooltip: context.tr('planNewNote'),
-          onTap: _onCreateNote,
-          color: color,
-        ),
-        const SizedBox(width: 2),
-        _treeHeaderButton(
-          icon: LucideIcons.folder_plus,
-          tooltip: context.tr('planNewFolder'),
-          onTap: _onCreateFolder,
-          color: color,
-        ),
-        if (widget.collections.isNotEmpty) ...[
-          const SizedBox(width: 2),
-          DswMenu(
-            label: context.tr('planOpenCollection'),
-            trigger: (context) => Icon(
-              LucideIcons.layout_grid,
-              size: DswShape.iconTiny,
-              color: color.labelTertiary,
-            ),
-            items: (context) => [
-              for (final collection in widget.collections)
-                DswMenuEntry(
-                  label: collection.name,
-                  icon: LucideIcons.circle,
-                  onTap: () => widget.onOpenCollection?.call(collection.id),
-                ),
-            ],
-          ),
-        ],
-      ],
-    ),
-  );
-
-  Widget _treeHeaderButton({
-    required IconData icon,
-    required String tooltip,
-    required VoidCallback onTap,
-    required DswAlias color,
-  }) {
-    return Tooltip(
-      message: tooltip,
-      child: DswHoverTap(
-        onTap: onTap,
-        builder: (context, hovered, _) => Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: hovered ? color.interactiveBgHover : null,
-            borderRadius: BorderRadius.circular(DswShape.inset),
-          ),
-          child: Icon(icon, size: DswShape.iconSm, color: color.labelSecondary),
-        ),
-      ),
-    );
-  }
-
-  /// The tree footer: current workspace name + optional switch button.
-  Widget _treeFooter(DswAlias color) {
-    final root = widget.workspaceRoot!;
-    final name = p.basename(root);
-    final onPick = widget.onPickWorkspace;
-    return Container(
-      height: 36,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: color.borderL1)),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            LucideIcons.folder,
-            size: DswShape.iconSm,
-            color: color.labelTertiary,
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: DswType.xxxs11.copyWith(color: color.labelTertiary),
-            ),
-          ),
-          if (onPick != null)
-            Tooltip(
-              message: context.tr('planSwitchWorkspace'),
-              child: DswHoverTap(
-                onTap: onPick,
-                semanticLabel: context.tr('planSwitchWorkspace'),
-                excludeSemantics: true,
-                builder: (context, hovered, focused) => Icon(
-                  LucideIcons.switch_camera,
-                  size: DswShape.iconSm,
-                  color: hovered || focused
-                      ? color.labelPrimary
-                      : color.labelTertiary,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  /// Recursively renders a tree node with indentation.
-  Widget _renderNode(
-    _TreeNode node, {
-    required int depth,
-    required DswAlias color,
-  }) {
-    final indent = 6.0 + depth * 12;
-    if (node.isDir) {
-      final expanded = _expandedDirs.contains(node.relativePath);
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _DirRow(
-            name: node.name,
-            expanded: expanded,
-            depth: depth,
-            onToggle: () => _onToggleDir(node.relativePath),
-            color: color,
-          ),
-          if (expanded)
-            for (final child in node.children)
-              _renderNode(child, depth: depth + 1, color: color),
-        ],
-      );
-    }
-    final entry = FileEntry(relative: node.relativePath, kind: 'file');
-    return Padding(
-      padding: EdgeInsets.only(left: indent),
-      child: _NoteRow(
-        entry: entry,
-        selected: node.relativePath == _selected,
-        onTap: () => _open(entry),
-      ),
-    );
-  }
-
-  void _onToggleDir(String path) {
-    setState(() {
-      if (_expandedDirs.contains(path)) {
-        _expandedDirs.remove(path);
-      } else {
-        _expandedDirs.add(path);
-      }
-    });
-  }
-
-  Future<void> _onCreateNote() async {
-    final root = widget.workspaceRoot;
-    if (root == null) return;
-    final name = await _showNameDialog(
-      context.tr('planNewNote'),
-      context.tr('planNewNoteHint'),
-    );
-    if (name == null || name.isEmpty) return;
-    final fileName = name.endsWith('.md') ? name : '$name.md';
-    final relativePath = fileName;
-    final fullPath = p.join(root, relativePath);
-    if (await File(fullPath).exists()) {
-      if (!mounted) return;
-      showFeedback(
-        context,
-        context.tr('planFileNameExists'),
-        destructive: true,
-      );
-      return;
-    }
-    await File(fullPath).writeAsString('');
-    await _reloadVault();
-    if (!mounted) return;
-    final entry = _notes.cast<FileEntry?>().firstWhere(
-      (e) => e != null && e.relative == relativePath,
-      orElse: () => null,
-    );
-    if (entry != null) _open(entry);
-  }
-
-  Future<void> _onCreateFolder() async {
-    final root = widget.workspaceRoot;
-    if (root == null) return;
-    final name = await _showNameDialog(
-      context.tr('planNewFolder'),
-      context.tr('planNewFolderHint'),
-    );
-    if (name == null || name.isEmpty) return;
-    final fullPath = p.join(root, name);
-    if (await Directory(fullPath).exists()) {
-      if (!mounted) return;
-      showFeedback(
-        context,
-        context.tr('planFolderNameExists'),
-        destructive: true,
-      );
-      return;
-    }
-    await Directory(fullPath).create(recursive: true);
-    await _reloadVault();
-  }
-
-  /// The shell is the one ADR-0002 Stage 5b mapped `showDialog`/`AlertDialog`
-  /// onto, shared with `primitives/confirm_dialog.dart`: `ShadDialog` for the
-  /// box, `ShadInput` for the field (Material's `OutlineInputBorder` was the
-  /// last hand-drawn chrome left in this surface), and `ShadButton` for both
-  /// actions — outline for Cancel, filled for Create, so the two are
-  /// distinguishable by weight and not only by text.
-  Future<String?> _showNameDialog(String title, String hint) async {
-    final controller = TextEditingController();
-    final result = await showShadDialog<String>(
-      context: context,
-      builder: (context) => ShadDialog(
-        // The `float` tier, same reason as `primitives/confirm_dialog.dart`
-        // (ADR-0029): shad's one knob carries the control tier, so a dialog has
-        // to name its own.
-        radius: BorderRadius.circular(DswShape.float),
-        title: Text(title, style: DswType.sStrong14),
-        actions: [
-          // One line of chrome each, so the seat rides the text step: measured
-          // 24.0 for a 25.0 label at 1.8x, and shad's `height:` is both the min
-          // and the max of its ConstrainedBox (`button.dart:1130-1143`), so a
-          // nailed 24 cuts the word instead of growing. 24 is what the box is
-          // at 1.0x, so the default step is bit-for-bit unchanged.
-          ShadButton.outline(
-            height: 24 * MediaQuery.textScalerOf(context).scale(1),
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(context.tr('planCancel')),
-          ),
-          ShadButton(
-            height: 24 * MediaQuery.textScalerOf(context).scale(1),
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: Text(context.tr('planCreate')),
-          ),
-        ],
-        child: ShadInput(
-          controller: controller,
-          // The hint is what yields: 'File name (without .md)' wrapped to three
-          // lines inside the field's own box (72.0 wanted, 40.0 given) and cut
-          // itself. The text the user types keeps the line.
-          placeholder: Text(
-            hint,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: DswType.xs13.copyWith(color: context.dsw.labelTertiary),
-          ),
-          style: DswType.s14,
-          autofocus: true,
-          textInputAction: TextInputAction.done,
-          onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
-        ),
-      ),
-    );
-    controller.dispose();
-    return result;
   }
 
   // ---- The note editor -----------------------------------------------------
@@ -844,145 +461,6 @@ class _DocumentBridgeState extends State<_DocumentBridge> {
 }
 
 /// A directory row in the vault tree: chevron + folder icon + name.
-class _DirRow extends StatelessWidget {
-  const _DirRow({
-    required this.name,
-    required this.expanded,
-    required this.depth,
-    required this.onToggle,
-    required this.color,
-  });
-
-  final String name;
-  final bool expanded;
-  final int depth;
-  final VoidCallback onToggle;
-  final DswAlias color;
-
-  @override
-  Widget build(BuildContext context) {
-    final indent = 6.0 + depth * 12;
-    return DswHoverTap(
-      onTap: onToggle,
-      builder: (context, hovered, _) => Container(
-        // One label per row, so the row rides the text step: at 1.8x the folder
-        // name wanted 36.0 and got 28.0.
-        height: 28 * MediaQuery.textScalerOf(context).scale(1),
-        padding: EdgeInsets.only(left: indent, right: 8),
-        decoration: BoxDecoration(
-          color: hovered ? color.interactiveBgHover : null,
-          borderRadius: BorderRadius.circular(DswShape.inner),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              expanded ? LucideIcons.chevron_down : LucideIcons.chevron_right,
-              size: DswShape.iconTiny,
-              color: color.labelTertiary,
-            ),
-            const SizedBox(width: 4),
-            Icon(
-              LucideIcons.folder,
-              size: DswShape.iconSm,
-              color: color.labelTertiary,
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: DswType.xs13.copyWith(color: color.labelSecondary),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// One note in the vault tree: the basename as the row, the folder as the
-/// quieter second line — the composer mention row's shape.
-class _NoteRow extends StatefulWidget {
-  const _NoteRow({
-    required this.entry,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final FileEntry entry;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  State<_NoteRow> createState() => _NoteRowState();
-}
-
-class _NoteRowState extends State<_NoteRow> {
-  @override
-  Widget build(BuildContext context) {
-    final color = context.dsw;
-    final name = p.basename(widget.entry.relative);
-    final directory = p.dirname(widget.entry.relative);
-    return DswHoverTap(
-      onTap: widget.onTap,
-      toggled: widget.selected ? true : null,
-      builder: (context, hovered, _) => Container(
-        // Two label lines per row, so the row is sized by what they need with 34
-        // as the floor rather than a pinned seat: at the system's 1.8x a pinned
-        // pair overflowed its box, and scaling that box still came out 0.2 short
-        // at 2.2x because the scaled line heights round up.
-        constraints: BoxConstraints(
-          minHeight: 34 * MediaQuery.textScalerOf(context).scale(1),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          color: widget.selected || hovered ? color.interactiveBgHover : null,
-          borderRadius: BorderRadius.circular(DswShape.inner),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              LucideIcons.file_text,
-              size: DswShape.iconSm,
-              color: widget.selected ? color.labelPrimary : color.labelTertiary,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: DswType.xs13.copyWith(
-                      color: widget.selected
-                          ? color.labelPrimary
-                          : color.labelSecondary,
-                    ),
-                  ),
-                  if (directory != '.')
-                    Text(
-                      directory,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: DswType.xxxs11.copyWith(
-                        color: color.labelTertiary,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// The rendered note — the transcript's renderer, so a preview and a chat reply
 /// read identically.
 class _NotePreview extends StatelessWidget {
@@ -1040,21 +518,6 @@ class _DirtyBridgeState extends State<_DirtyBridge> {
 
   @override
   Widget build(BuildContext context) => widget.child;
-}
-
-/// One node in the vault tree: a directory (with children) or a leaf file.
-class _TreeNode {
-  _TreeNode({
-    required this.name,
-    required this.relativePath,
-    required this.isDir,
-    List<_TreeNode>? children,
-  }) : children = children ?? <_TreeNode>[];
-
-  final String name;
-  final String relativePath;
-  final bool isDir;
-  final List<_TreeNode> children;
 }
 
 /// The note surface's three faces; Edit is the block editor, Source keeps the

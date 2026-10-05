@@ -118,6 +118,30 @@ class WorkspaceModeController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The note the sidebar's vault tree asked to open (ADR-0073), consumed by
+  /// [PlanWorkspace] on mount/rebuild. Null once consumed.
+  String? get openNotePath => _openNotePath;
+  String? _openNotePath;
+
+  /// Opens a note from the sidebar's vault tree (ADR-0073): the center
+  /// returns to the document view and [PlanWorkspace] picks the path up.
+  void openNote(String relative) {
+    _mode = WorkspaceMode.plan;
+    _extension = PlanExtensionView.none;
+    _openNotePath = relative;
+    notifyListeners();
+  }
+
+  /// The workspace has the note open; clear and notify, so the widget config
+  /// drops the token too. A silent clear would leave `initialNote` stale in
+  /// the tree — a second request for the SAME note (cancel the discard, click
+  /// it again) would then be swallowed by any `!= old.initialNote` guard.
+  void consumeOpenNote() {
+    if (_openNotePath == null) return;
+    _openNotePath = null;
+    notifyListeners();
+  }
+
   /// Opens one plan collection as a data view (and enters 企划 if not there).
   /// Re-selecting the collection that is already up closes the panel — the
   /// extension row is its own toggle, the same affordance starkins's nav rows

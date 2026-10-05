@@ -56,18 +56,16 @@ void main() {
           data: dswShadTheme(Theme.of(context).brightness),
           child: AmplifiedText(step: step, child: child!),
         ),
-        home: Scaffold(body: PlanWorkspace(workspaceRoot: root.path)),
+        home: Scaffold(
+          body: PlanWorkspace(
+            workspaceRoot: root.path,
+            // The tree moved to the sidebar (ADR-0073); the note opens through
+            // the initialNote token now.
+            initialNote: 'readme.md',
+          ),
+        ),
       ),
     );
-    // The vault index runs on a compute isolate: real time, then frames.
-    for (var attempt = 0; attempt < 100; attempt++) {
-      if (find.text('readme.md').evaluate().isNotEmpty) break;
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 10)),
-      );
-      await tester.pump();
-    }
-    await tester.tap(find.text('readme.md'));
     for (var attempt = 0; attempt < 100; attempt++) {
       if (find.byType(PlanBlockEditor).evaluate().isNotEmpty) break;
       await tester.runAsync(

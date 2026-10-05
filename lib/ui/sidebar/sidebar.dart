@@ -25,6 +25,7 @@ import '../../model/workbench_prefs.dart';
 import '../../state/hotkey_service.dart';
 import '../../state/session_index.dart';
 import '../../state/workspace_mode_controller.dart';
+import '../plan/plan_vault_tree.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_shape.dart';
@@ -72,6 +73,8 @@ class Sidebar extends StatefulWidget {
     this.onAddCollection,
     this.onOpenLibrary,
     this.extensionView,
+    this.workspaceRoot,
+    this.onOpenNote,
     required this.onNewSession,
     required this.onToggle,
     required this.onOpenSession,
@@ -170,6 +173,14 @@ class Sidebar extends StatefulWidget {
   /// bin, Gallery).
   final void Function(PlanExtensionView view)? onOpenLibrary;
 
+  /// The vault tree's root (ADR-0073) — the folder the notes section reads.
+  /// Null (or no [onOpenNote]) hides the section.
+  final String? workspaceRoot;
+
+  /// Opens a note from the vault tree; routed through the mode controller so
+  /// the center returns to the document view first.
+  final void Function(String relative)? onOpenNote;
+
   final VoidCallback onNewSession;
   final VoidCallback onToggle;
   final void Function(String id) onOpenSession;
@@ -198,6 +209,10 @@ class _SidebarState extends State<Sidebar> {
 
   /// The open quick-menu's overlay entry, owned by this state (audit F2).
   OverlayEntry? _quickMenu;
+
+  /// Whether the plan vault tree's sidebar section is expanded (ADR-0073).
+  /// Session state, default expanded — Obsidian's explorer is visible too.
+  bool _planNotesExpanded = true;
 
   /// Removes the quick-menu overlay if present, then forgets it. Idempotent:
   /// the menu's own dismissal can re-enter this (ADR-0072), so nulling the
@@ -406,6 +421,66 @@ class _SidebarState extends State<Sidebar> {
   /// The plan collections (ADR-0037; user decision 2026-10-01): a labelled
   /// group of rows, one per collection, each toggling its data view. Only
   /// shown in 企划 mode with a wired toggle.
+  /// The notes section (ADR-0073): a header row that collapses the vault
+  /// tree, and the tree itself when expanded. The header is the button the
+  /// user asked for — one click reveals (or hides) the workspace's notes.
+  Widget _notesSection(DswAlias color, {required bool wide}) {
+    final step = MediaQuery.textScalerOf(context).scale(1);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DswHoverTap(
+          onTap: () => setState(() => _planNotesExpanded = !_planNotesExpanded),
+          semanticLabel: context.tr('planNotes'),
+          builder: (context, hovered, focused) => Container(
+            height: 32 * step,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: hovered ? color.interactiveBgHover : null,
+              borderRadius: BorderRadius.circular(DswShape.inner),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  _planNotesExpanded
+                      ? LucideIcons.chevron_down
+                      : LucideIcons.chevron_right,
+                  size: DswShape.iconTiny,
+                  color: color.labelTertiary,
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  LucideIcons.notebook_text,
+                  size: DswShape.iconSm,
+                  color: color.labelSecondary,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    context.tr('planNotes'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: DswType.s14.copyWith(color: color.labelSecondary),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_planNotesExpanded)
+          SizedBox(
+            height: 320,
+            child: PlanVaultTree(
+              workspaceRoot: widget.workspaceRoot,
+              onPickWorkspace: null,
+              selectedPath: null,
+              onOpenNote: (entry) => widget.onOpenNote!(entry.relative),
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _extensionGroup(DswAlias color, {required bool wide}) {
     final onOpen = widget.onOpenCollection;
     final collections = widget.collections;
@@ -515,6 +590,11 @@ class _SidebarState extends State<Sidebar> {
     final openView = widget.extensionView;
     final step = MediaQuery.textScalerOf(context).scale(1);
     final groups = [
+      // The vault tree section (ADR-0073): persistent across every plan
+      // screen, collapsible to its header row. Wide only — the tree needs
+      // the width, and the collapsed rail shows icons, not trees.
+      if (wide && widget.workspaceRoot != null && widget.onOpenNote != null)
+        _notesSection(color, wide: wide),
       _extensionGroup(color, wide: wide),
       if (onOpen != null) ...[
         const SizedBox(height: DswShape.sm),

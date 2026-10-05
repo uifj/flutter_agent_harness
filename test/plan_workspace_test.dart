@@ -43,27 +43,49 @@ void main() {
     }
   });
 
-  Future<void> pump(WidgetTester tester, {double scale = 1.0}) =>
-      tester.pumpWidget(
-        MaterialApp(
-          theme: dswThemeData(Brightness.light),
-          // The note-switch confirm dialog is a ShadDialog (reads the caller's
-          // ShadTheme) — mount the same ancestor main does. The text step goes
-          // with it, above the Navigator, so the dialog and any menu are laid
-          // out at the step the walk claims to be measuring.
-          builder: (context, child) => ShadTheme(
-            data: dswShadTheme(Theme.of(context).brightness),
-            child: AmplifiedText(step: scale, child: child!),
-          ),
-          home: Scaffold(body: PlanWorkspace(workspaceRoot: root.path)),
+  Future<void> pump(
+    WidgetTester tester, {
+    ValueNotifier<String?>? initialNote,
+    double scale = 1.0,
+  }) => tester.pumpWidget(
+    MaterialApp(
+      theme: dswThemeData(Brightness.light),
+      // The note-switch confirm dialog is a ShadDialog (reads the caller's
+      // ShadTheme) — mount the same ancestor main does. The text step goes
+      // with it, above the Navigator, so the dialog and any menu are laid
+      // out at the step the walk claims to be measuring.
+      builder: (context, child) => ShadTheme(
+        data: dswShadTheme(Theme.of(context).brightness),
+        child: AmplifiedText(step: scale, child: child!),
+      ),
+      home: Scaffold(
+        body: PlanWorkspace(
+          workspaceRoot: root.path,
+          initialNote: initialNote?.value,
+          onNoteConsumed: () => initialNote?.value = null,
         ),
-      );
+      ),
+    ),
+  );
 
   /// Hands the event loop real time until [finder] matches — the vault index is
   /// a compute isolate, which a fake-async pump alone never completes.
   Future<void> pumpUntil(WidgetTester tester, Finder finder) async {
     for (var attempt = 0; attempt < 100; attempt++) {
       if (finder.evaluate().isNotEmpty) return;
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 10)),
+      );
+      await tester.pump();
+    }
+  }
+
+  /// The inverse of [pumpUntil]: hands the loop real time until [finder]
+  /// matches NOTHING — the shape a finished async save needs (the write is real
+  /// IO; reading the file before it flushes sees a truncated file).
+  Future<void> pumpUntilGone(WidgetTester tester, Finder finder) async {
+    for (var attempt = 0; attempt < 100; attempt++) {
+      if (finder.evaluate().isEmpty) return;
       await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 10)),
       );
@@ -104,38 +126,11 @@ void main() {
     }
   }
 
-  testWidgets('lists only the markdown files, folder as the second line', (
+  testWidgets('opens the initial note and saves the edit back to disk', (
     tester,
   ) async {
-    await pump(tester);
-    await pumpUntil(tester, find.text('readme.md'));
-
-    expect(find.text('readme.md'), findsOneWidget);
-    expect(find.text('idea.md'), findsOneWidget);
-    expect(find.text('notes'), findsOneWidget);
-    expect(find.text('data.txt'), findsNothing);
-    await settle(tester);
-  });
-
-  /// The inverse of [pumpUntil]: hands the loop real time until [finder]
-  /// matches NOTHING — the shape a finished async save needs (the write is real
-  /// IO; reading the file before it flushes sees a truncated file).
-  Future<void> pumpUntilGone(WidgetTester tester, Finder finder) async {
-    for (var attempt = 0; attempt < 100; attempt++) {
-      if (finder.evaluate().isEmpty) return;
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 10)),
-      );
-      await tester.pump();
-    }
-  }
-
-  testWidgets('loads a note and saves the edit back to disk', (tester) async {
-    await pump(tester);
-    await pumpUntil(tester, find.text('readme.md'));
-
-    await tester.tap(find.text('readme.md'));
-    // The note's readAsString is real IO — wait for the editor toolbar.
+    final note = ValueNotifier<String?>('readme.md');
+    await pump(tester, initialNote: note);
     await pumpUntil(tester, find.text('Save'));
 
     // The unsaved chip appears only after a real edit; Save is inert until then.
@@ -156,69 +151,61 @@ void main() {
   });
 
   testWidgets('switching notes with unsaved edits asks first', (tester) async {
-    await pump(tester);
-    await pumpUntil(tester, find.text('readme.md'));
-
-    await tester.tap(find.text('readme.md'));
-    // The note's readAsString is real IO — wait for the editor toolbar.
+    final note = ValueNotifier<String?>('readme.md');
+    await pump(tester, initialNote: note);
     await pumpUntil(tester, find.text('Save'));
     await gotoSource(tester);
     await typeInto(tester, 'uncommitted');
     await tester.pump();
     expect(find.text('Unsaved changes'), findsOneWidget);
 
-    // Switch away; the confirm dialog appears, and Cancel keeps the buffer —
-    // the unsaved chip survives, and nothing reaches the disk.
-    await tester.tap(find.text('idea.md'));
-    await tester.pumpAndSettle();
-    expect(find.text('Discard unsaved edits?'), findsOneWidget);
+    // The sidebar tree asks for another note (ADR-0073): the host rebuilds
+    // the workspace with a new initialNote. The confirm dialog appears, and
+    // Cancel keeps the buffer — nothing reaches the disk.
+    note.value = 'notes/idea.md';
+    await pump(tester, initialNote: note);
+    // _openPath reads the note through real IO — wait for the dialog.
+    await pumpUntil(tester, find.text('Discard unsaved edits?'));
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
     expect(find.text('Unsaved changes'), findsOneWidget);
     expect(File('${root.path}/readme.md').readAsStringSync(), '# Readme\n');
 
+    // Unfocus BEFORE the swap: the old editor's blink timer is owned by its
+    // editor state, and firing one after the swap+dispose lands on a dead
+    // object (editor_tab's settle does the same before closing tabs).
+    await settle(tester);
+
+    // The consume handed the token back; the real host rebuilds with null
+    // (consumeOpenNote notifies). Mirror that, or the widget would still hold
+    // 'notes/idea.md' and the SAME second request would be swallowed by the
+    // changed-config guard.
+    note.value = null;
+    await pump(tester, initialNote: note);
+
     // Again, confirming this time: the buffer is replaced (chip gone) and the
     // note on disk never saw the edits.
-    await tester.tap(find.text('idea.md'));
-    await tester.pumpAndSettle();
+    note.value = 'notes/idea.md';
+    await pump(tester, initialNote: note);
+    await pumpUntil(tester, find.text('Discard unsaved edits?'));
     await tester.tap(find.widgetWithText(ShadButton, 'Discard changes'));
     await pumpUntilGone(tester, find.text('Unsaved changes'));
     expect(File('${root.path}/readme.md').readAsStringSync(), '# Readme\n');
     await settle(tester);
   });
 
-  // ADR-0017 S3, on the plan workspace (the other half of ADR-0007's mode
-  // switch). The tree rows and the note toolbar are one-line chrome, so a step
-  // above the designed one either cut a label or wrapped it into the seat. Both
-  // steps, because one certifies only one number: at 2.2x the note row's 34.0
-  // seat scaled to 74.8 and its two lines still came out 0.2 taller.
+  // ADR-0017 S3, now on the editor alone: the tree's own measurements moved
+  // to `plan_vault_tree_test.dart` with the tree (ADR-0073).
   for (final (label, step) in const [
     ('1.8x', amplifiedTextStep),
     ('2.2x', nextTextStep),
   ]) {
-    testWidgets(
-      'the workspace and its editor survive amplified text ($label)',
-      (tester) async {
-        await pump(tester, scale: step);
-        await pumpUntil(tester, find.text('readme.md'));
-        expect(textDefects(tester), isEmpty, reason: 'the note tree');
-
-        await tester.tap(find.text('readme.md'));
-        await pumpUntil(tester, find.text('Save'));
-        expect(textDefects(tester), isEmpty, reason: 'an open note');
-
-        // The name dialog is a route, and it is the surface's one control that
-        // only exists once the tree header is tapped: title, placeholder, the
-        // two actions. Cancel closes it so no route outlives the measurement.
-        await tester.tap(find.byTooltip('New Note'));
-        await pumpUntil(tester, find.text('Create'));
-        expect(find.text('Cancel'), findsOneWidget);
-        expect(textDefects(tester), isEmpty, reason: 'the name dialog');
-        await tester.tap(find.text('Cancel'));
-        await tester.pumpAndSettle();
-        expect(find.text('Create'), findsNothing);
-        await settle(tester);
-      },
-    );
+    testWidgets('the editor survives amplified text ($label)', (tester) async {
+      final note = ValueNotifier<String?>('readme.md');
+      await pump(tester, initialNote: note, scale: step);
+      await pumpUntil(tester, find.text('Save'));
+      expect(textDefects(tester), isEmpty, reason: 'an open note');
+      await settle(tester);
+    });
   }
 }

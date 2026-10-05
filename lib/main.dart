@@ -489,6 +489,11 @@ class _DshAppState extends ConsumerState<DshApp> {
                           onOpenCollection: ref
                               .watch(workspaceModeProvider)
                               .openCollection,
+                          // The sidebar vault tree (ADR-0073): reads the
+                          // workspace the tools are confined to, and opening
+                          // a note routes through the mode controller.
+                          workspaceRoot: doc.workspaceRoot,
+                          onOpenNote: ref.watch(workspaceModeProvider).openNote,
                           onNewSession: scope.newSession,
                           onToggle: ref.read(layoutProvider).toggleSidebar,
                           onOpenSession: scope.openSession,
@@ -594,11 +599,11 @@ class _DshAppState extends ConsumerState<DshApp> {
         PlanExtensionView.none => PlanWorkspace(
           workspaceRoot: doc.workspaceRoot,
           onPickWorkspace: scope.pickFromHero,
-          collections: [
-            for (final collection in planStore.collections)
-              (id: collection.id, name: collection.name),
-          ],
-          onOpenCollection: modes.openCollection,
+          // The sidebar tree's open request rides the mode controller
+          // (ADR-0073): the editor consumes it and hands the token back.
+          initialNote: modes.openNotePath,
+          onNoteConsumed: () =>
+              ref.read(workspaceModeProvider).consumeOpenNote(),
         ),
         PlanExtensionView.collection => PlanDataViewScreen(
           store: planStore,
