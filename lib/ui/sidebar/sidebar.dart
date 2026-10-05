@@ -424,7 +424,7 @@ class _SidebarState extends State<Sidebar> {
   /// The notes section (ADR-0073): a header row that collapses the vault
   /// tree, and the tree itself when expanded. The header is the button the
   /// user asked for — one click reveals (or hides) the workspace's notes.
-  Widget _notesSection(DswAlias color, {required bool wide}) {
+  Widget _notesSection(DswAlias color, {required bool fill}) {
     final step = MediaQuery.textScalerOf(context).scale(1);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -468,17 +468,99 @@ class _SidebarState extends State<Sidebar> {
           ),
         ),
         if (_planNotesExpanded)
-          SizedBox(
-            height: 320,
-            child: PlanVaultTree(
-              workspaceRoot: widget.workspaceRoot,
-              onPickWorkspace: null,
-              selectedPath: null,
-              onOpenNote: (entry) => widget.onOpenNote!(entry.relative),
-            ),
-          ),
+          fill
+              ? Expanded(
+                  child: PlanVaultTree(
+                    workspaceRoot: widget.workspaceRoot,
+                    onPickWorkspace: null,
+                    selectedPath: null,
+                    onOpenNote: (entry) => widget.onOpenNote!(entry.relative),
+                  ),
+                )
+              : SizedBox(
+                  height: 320,
+                  child: PlanVaultTree(
+                    workspaceRoot: widget.workspaceRoot,
+                    onPickWorkspace: null,
+                    selectedPath: null,
+                    onOpenNote: (entry) => widget.onOpenNote!(entry.relative),
+                  ),
+                ),
       ],
     );
+  }
+
+  /// The 库 group's screen rows — everything that follows the 集合 group and
+  /// precedes the notes section. Shared by the wide slivers and the narrow
+  /// column so the rows stay one shape.
+  List<Widget> _libraryGroupWidgets(DswAlias color) {
+    final onOpen = widget.onOpenLibrary;
+    final openView = widget.extensionView;
+    final step = MediaQuery.textScalerOf(context).scale(1);
+    return [
+      const SizedBox(height: DswShape.sm),
+      Padding(
+        padding: const EdgeInsets.only(left: 8, bottom: 4),
+        child: Text(
+          context.tr('planLibrary'),
+          style: DswType.xxxs11.copyWith(color: color.labelTertiary),
+        ),
+      ),
+      for (final view in PlanExtensionView.libraryScreens)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 2),
+          child: _Pressable(
+            onTap: () => onOpen!(view),
+            borderRadius: BorderRadius.circular(DswShape.control),
+            child: Container(
+              height: 32 * step,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: openView == view ? color.interactiveBgHover : null,
+                borderRadius: BorderRadius.circular(DswShape.control),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    switch (view) {
+                      PlanExtensionView.allContent => LucideIcons.list,
+                      PlanExtensionView.widgets => LucideIcons.layout_dashboard,
+                      PlanExtensionView.bin => LucideIcons.trash,
+                      _ => LucideIcons.puzzle,
+                    },
+                    size: DswShape.iconSm, // on the glyph ramp (ADR-0026)
+                    color: openView == view
+                        ? color.labelPrimary
+                        : color.labelSecondary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      switch (view) {
+                        PlanExtensionView.allContent => context.tr(
+                          'planAllContentTitle',
+                        ),
+                        PlanExtensionView.widgets => context.tr(
+                          'planWidgetStrip',
+                        ),
+                        PlanExtensionView.bin => context.tr('planBinTitle'),
+                        _ => context.tr('planGalleryTitle'),
+                      },
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: DswType.s14.copyWith(
+                        color: openView == view
+                            ? color.labelPrimary
+                            : color.labelSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+    ];
   }
 
   Widget _extensionGroup(DswAlias color, {required bool wide}) {
@@ -577,12 +659,25 @@ class _SidebarState extends State<Sidebar> {
   /// are not one collection. Replaces the session list, which belongs to the
   /// 代理 conversation module.
   List<Widget> _librarySlivers(DswAlias color) => [
+    // 集合 + 库 pinned at the top (user decision 2026-10-04: 集合 above 笔记).
     SliverToBoxAdapter(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: _libraryBody(color, wide: true),
+        children: [
+          _extensionGroup(color, wide: true),
+          ..._libraryGroupWidgets(color),
+        ],
       ),
     ),
+    // The notes section fills the REMAINING height (ADR-0073): the
+    // Obsidian explorer shape. Collapsed, it folds back to its header row.
+    if (widget.workspaceRoot != null && widget.onOpenNote != null)
+      _planNotesExpanded
+          ? SliverFillRemaining(
+              hasScrollBody: false,
+              child: _notesSection(color, fill: true),
+            )
+          : SliverToBoxAdapter(child: _notesSection(color, fill: false)),
   ];
 
   List<Widget> _libraryBody(DswAlias color, {required bool wide}) {
@@ -590,11 +685,6 @@ class _SidebarState extends State<Sidebar> {
     final openView = widget.extensionView;
     final step = MediaQuery.textScalerOf(context).scale(1);
     final groups = [
-      // The vault tree section (ADR-0073): persistent across every plan
-      // screen, collapsible to its header row. Wide only — the tree needs
-      // the width, and the collapsed rail shows icons, not trees.
-      if (wide && widget.workspaceRoot != null && widget.onOpenNote != null)
-        _notesSection(color, wide: wide),
       _extensionGroup(color, wide: wide),
       if (onOpen != null) ...[
         const SizedBox(height: DswShape.sm),
@@ -667,6 +757,11 @@ class _SidebarState extends State<Sidebar> {
             ),
           ),
       ],
+      // The vault tree section (ADR-0073): lives BELOW the collections per
+      // user decision 2026-10-04. Narrow keeps the fixed-height seat; wide
+      // pulls it into a SliverFillRemaining (see _librarySlivers).
+      if (widget.workspaceRoot != null && widget.onOpenNote != null)
+        _notesSection(color, fill: false),
     ];
     return groups;
   }
