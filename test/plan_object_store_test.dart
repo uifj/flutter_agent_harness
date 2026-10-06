@@ -22,6 +22,8 @@ import 'package:planstar/model/plan_widget.dart';
 import 'package:planstar/state/plan_object_store.dart';
 
 void main() {
+  _seedI18nGroup();
+
   _legacyGroup();
 
   late Directory root;
@@ -658,6 +660,107 @@ void _legacyGroup() {
       final store = await PlanObjectStore.open(db!, root: root, seed: null);
       expect(store.objects, isEmpty);
       expect(File('${root.path}/plan_space.json').existsSync(), isFalse);
+    });
+  });
+}
+
+void _seedI18nGroup() {
+  // ADR-0074 guards: the localized seed and the untouched-mock re-seed.
+  group('seed localization', () {
+    late Directory root;
+    AppDatabase? db;
+
+    setUp(() async {
+      root = await Directory.systemTemp.createTemp('plan_seed_i18n');
+    });
+
+    tearDown(() async {
+      await db?.close();
+      if (root.existsSync()) await root.delete(recursive: true);
+    });
+
+    PlanSeedNames zhNames() => const PlanSeedNames(
+      deliveryBoard: '交付看板',
+      readingInbox: '阅读收件箱',
+      viewBoard: '看板',
+      relStatus: '状态',
+      optTodo: '待办',
+    );
+
+    test('the localized seed writes localized names', () async {
+      db = AppDatabase.open(File('${root.path}/planstar.db'));
+      final store = await PlanObjectStore.open(
+        db!,
+        root: root,
+        seed: planMockSeed(names: zhNames()),
+      );
+      expect(
+        store.collections.where((c) => c.id == 'set-tasks').first.name,
+        '交付看板',
+      );
+      final status = store.relations
+          .where((r) => r.key == PlanMockKeys.status)
+          .first;
+      expect(status.name, '状态');
+      expect(status.option('todo')!.text, '待办');
+    });
+
+    test(
+      'the untouched English mock is re-seeded in the new language',
+      () async {
+        // Simulate an old install: the English mock, stamped seedVersion 0 (the
+        // column default the pre-ADR-0074 schema wrote).
+        db = AppDatabase.open(File('${root.path}/planstar.db'));
+        await PlanObjectStore.open(db!, root: root, seed: planMockSeed());
+        await db!.customStatement(
+          'UPDATE plan_space_meta SET seed_version = 0 WHERE id = \'space\'',
+        );
+
+        final reopened = await PlanObjectStore.open(
+          db!,
+          root: root,
+          seed: planMockSeed(names: zhNames()),
+        );
+        expect(
+          reopened.collections.where((c) => c.id == 'set-tasks').first.name,
+          '交付看板',
+        );
+        // The localized generation is stamped: a third open is stable.
+        final third = await PlanObjectStore.open(
+          db!,
+          root: root,
+          seed: planMockSeed(),
+        );
+        expect(
+          third.collections.where((c) => c.id == 'set-tasks').first.name,
+          '交付看板',
+        );
+      },
+    );
+
+    test('a renamed collection is never re-seeded', () async {
+      db = AppDatabase.open(File('${root.path}/planstar.db'));
+      final store = await PlanObjectStore.open(
+        db!,
+        root: root,
+        seed: planMockSeed(),
+      );
+      await store.renameCollection('set-tasks', 'My board');
+      // Consume the current generation's stamp, so the reopen faces an
+      // old-generation space whose fingerprint is broken by the rename.
+      await db!.customStatement(
+        'UPDATE plan_space_meta SET seed_version = 0 WHERE id = \'space\'',
+      );
+
+      final reopened = await PlanObjectStore.open(
+        db!,
+        root: root,
+        seed: planMockSeed(names: zhNames()),
+      );
+      expect(
+        reopened.collections.where((c) => c.id == 'set-tasks').first.name,
+        'My board',
+      );
     });
   });
 }

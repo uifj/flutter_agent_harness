@@ -316,4 +316,24 @@ void main() {
     await pump(tester);
     expect(unlabelledIconControls(tester), isEmpty);
   });
+
+  // ADR-0074 guards: the board card's cells are editors writing through to
+  // the store, and the card itself opens the record inspector.
+  group('the board card', () {
+    testWidgets('opens the record inspector on tap', (tester) async {
+      await pump(tester);
+      await tester.tap(find.text('Ship the viewer bar').first);
+      await settled(tester, find.text('Record'));
+    });
+
+    testWidgets('the status pill opens the picker and the pick writes', (
+      tester,
+    ) async {
+      await pump(tester);
+      await tester.tap(find.text('Doing').first);
+      await settled(tester, find.text('Blocked'));
+      await tester.tap(find.text('Blocked').last);
+      await settled(tester, find.text('Blocked'));
+    });
+  });
 }

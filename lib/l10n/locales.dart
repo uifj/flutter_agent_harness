@@ -26,6 +26,8 @@
 
 import 'package:flutter/widgets.dart';
 
+import '../model/plan_mock_content.dart';
+
 /// The two locales this app ships — dsh's own pair.
 enum AppLocaleId { en, zh }
 
@@ -173,6 +175,27 @@ const enStrings = <String, String>{
       'Choose a workspace folder first — the plan vault is the workspace',
   'planNoNoteSelected': 'Pick a markdown file from the tree',
   'planNotes': 'Notes',
+  'seedDeliveryBoard': 'Delivery board',
+  'seedReadingInbox': 'Reading inbox',
+  'seedViewBoard': 'Board',
+  'seedViewAllTasks': 'All tasks',
+  'seedViewOpenOnly': 'Open only',
+  'seedViewCards': 'Cards',
+  'seedViewCalendar': 'Calendar',
+  'seedViewGraph': 'Graph',
+  'seedViewList': 'List',
+  'seedViewTable': 'Table',
+  'seedRelStatus': 'Status',
+  'seedRelTags': 'Tags',
+  'seedRelEffort': 'Effort',
+  'seedRelDue': 'Due',
+  'seedOptTodo': 'Todo',
+  'seedOptDoing': 'Doing',
+  'seedOptBlocked': 'Blocked',
+  'seedOptShipped': 'Shipped',
+  'seedOptUrgent': 'Urgent',
+  'seedOptClient': 'Client',
+  'seedOptInternal': 'Internal',
   'planNoNotes': 'No markdown files in this workspace',
   'planPreview': 'Preview',
   'planSource': 'Source',
@@ -1058,6 +1081,27 @@ const zhStrings = <String, String>{
   'planNoWorkspace': '请先选择工作区文件夹——企划库就是工作区',
   'planNoNoteSelected': '从目录树中选择一个 Markdown 文件',
   'planNotes': '笔记',
+  'seedDeliveryBoard': '交付看板',
+  'seedReadingInbox': '阅读收件箱',
+  'seedViewBoard': '看板',
+  'seedViewAllTasks': '全部任务',
+  'seedViewOpenOnly': '仅打开',
+  'seedViewCards': '卡片',
+  'seedViewCalendar': '日历',
+  'seedViewGraph': '图谱',
+  'seedViewList': '列表',
+  'seedViewTable': '表格',
+  'seedRelStatus': '状态',
+  'seedRelTags': '标签',
+  'seedRelEffort': '工作量',
+  'seedRelDue': '截止',
+  'seedOptTodo': '待办',
+  'seedOptDoing': '进行中',
+  'seedOptBlocked': '受阻',
+  'seedOptShipped': '已发布',
+  'seedOptUrgent': '紧急',
+  'seedOptClient': '客户',
+  'seedOptInternal': '内部',
   'planNoNotes': '此工作区暂无 Markdown 文件',
   'planPreview': '预览',
   'planSource': '源码',
@@ -1794,4 +1838,38 @@ extension AppLocaleTrX on BuildContext {
   /// Translates [key] in the locale this context sits under.
   String tr(String key, [Map<String, Object>? params]) =>
       translate(AppLocaleScope.of(this), key, params);
+}
+
+/// The 企划 demo seed's furniture names, per locale (ADR-0074). The seed is
+/// user data once written, so the strings ride the dictionaries — both sides
+/// are enforced by `l10n_parity_test` like every other key — and `main`
+/// resolves the launch locale before building the seed. Demo record CONTENT
+/// (the 17 sample note titles) deliberately stays English: it is sample data,
+/// not UI copy.
+PlanSeedNames planSeedNamesOf(AppLocaleId id) {
+  String pick(String key) =>
+      (id == AppLocaleId.zh ? zhStrings : enStrings)[key] ?? key;
+  return PlanSeedNames(
+    deliveryBoard: pick('seedDeliveryBoard'),
+    readingInbox: pick('seedReadingInbox'),
+    viewBoard: pick('seedViewBoard'),
+    viewAllTasks: pick('seedViewAllTasks'),
+    viewOpenOnly: pick('seedViewOpenOnly'),
+    viewCards: pick('seedViewCards'),
+    viewCalendar: pick('seedViewCalendar'),
+    viewGraph: pick('seedViewGraph'),
+    viewList: pick('seedViewList'),
+    viewTable: pick('seedViewTable'),
+    relStatus: pick('seedRelStatus'),
+    relTags: pick('seedRelTags'),
+    relEffort: pick('seedRelEffort'),
+    relDue: pick('seedRelDue'),
+    optTodo: pick('seedOptTodo'),
+    optDoing: pick('seedOptDoing'),
+    optBlocked: pick('seedOptBlocked'),
+    optShipped: pick('seedOptShipped'),
+    optUrgent: pick('seedOptUrgent'),
+    optClient: pick('seedOptClient'),
+    optInternal: pick('seedOptInternal'),
+  );
 }

@@ -35,51 +35,113 @@ abstract final class PlanMockKeys {
   static const typeProject = 'custom-project';
 }
 
-PlanSpaceSeed planMockSeed() => PlanSpaceSeed(
-  objects: _records(),
-  collections: _collections(),
-  types: _types(),
-  relations: _relations(),
-  templates: _templates(),
-  widgets: _widgets(),
-  bin: const {'r-archive'},
-);
+/// The demo seed's localized furniture names (ADR-0074). The model cannot
+/// import the dictionaries, so `main` builds this from
+/// `PlanSeedText.of(locale)` and hands it in. Fields default to the original
+/// English literals so existing callers and tests stay valid.
+class PlanSeedNames {
+  const PlanSeedNames({
+    this.deliveryBoard = 'Delivery board',
+    this.readingInbox = 'Reading inbox',
+    this.viewBoard = 'Board',
+    this.viewAllTasks = 'All tasks',
+    this.viewOpenOnly = 'Open only',
+    this.viewCards = 'Cards',
+    this.viewCalendar = 'Calendar',
+    this.viewGraph = 'Graph',
+    this.viewList = 'List',
+    this.viewTable = 'Table',
+    this.relStatus = 'Status',
+    this.relTags = 'Tags',
+    this.relEffort = 'Effort',
+    this.relDue = 'Due',
+    this.optTodo = 'Todo',
+    this.optDoing = 'Doing',
+    this.optBlocked = 'Blocked',
+    this.optShipped = 'Shipped',
+    this.optUrgent = 'Urgent',
+    this.optClient = 'Client',
+    this.optInternal = 'Internal',
+  });
 
-List<PlanRelation> _relations() => const [
+  final String deliveryBoard;
+  final String readingInbox;
+  final String viewBoard;
+  final String viewAllTasks;
+  final String viewOpenOnly;
+  final String viewCards;
+  final String viewCalendar;
+  final String viewGraph;
+  final String viewList;
+  final String viewTable;
+  final String relStatus;
+  final String relTags;
+  final String relEffort;
+  final String relDue;
+  final String optTodo;
+  final String optDoing;
+  final String optBlocked;
+  final String optShipped;
+  final String optUrgent;
+  final String optClient;
+  final String optInternal;
+
+  /// The generation this seed shape writes — bumped when the seed's shape
+  /// or language changes and a one-time re-seed should refresh demo spaces
+  /// that still carry the previous generation untouched.
+  static const int currentVersion = 2;
+}
+
+PlanSpaceSeed planMockSeed({PlanSeedNames names = const PlanSeedNames()}) =>
+    PlanSpaceSeed(
+      objects: _records(),
+      collections: _collections(names),
+      types: _types(),
+      relations: _relations(names),
+      templates: _templates(),
+      widgets: _widgets(),
+      bin: const {'r-archive'},
+    );
+
+List<PlanRelation> _relations(PlanSeedNames names) => [
   PlanRelation(
     id: 'rel-status',
     key: PlanMockKeys.status,
-    name: 'Status',
+    name: names.relStatus,
     format: PlanRelationFormat.status,
     featured: true,
     options: [
-      PlanRelationOption(id: 'todo', text: 'Todo', colorIndex: 1),
-      PlanRelationOption(id: 'doing', text: 'Doing', colorIndex: 7),
-      PlanRelationOption(id: 'blocked', text: 'Blocked', colorIndex: 5),
-      PlanRelationOption(id: 'shipped', text: 'Shipped', colorIndex: 9),
+      PlanRelationOption(id: 'todo', text: names.optTodo, colorIndex: 1),
+      PlanRelationOption(id: 'doing', text: names.optDoing, colorIndex: 7),
+      PlanRelationOption(id: 'blocked', text: names.optBlocked, colorIndex: 5),
+      PlanRelationOption(id: 'shipped', text: names.optShipped, colorIndex: 9),
     ],
   ),
   PlanRelation(
     id: 'rel-tags',
     key: PlanMockKeys.tags,
-    name: 'Tags',
+    name: names.relTags,
     format: PlanRelationFormat.tag,
     options: [
-      PlanRelationOption(id: 'urgent', text: 'Urgent', colorIndex: 4),
-      PlanRelationOption(id: 'client', text: 'Client', colorIndex: 8),
-      PlanRelationOption(id: 'internal', text: 'Internal', colorIndex: 2),
+      PlanRelationOption(id: 'urgent', text: names.optUrgent, colorIndex: 4),
+      PlanRelationOption(id: 'client', text: names.optClient, colorIndex: 8),
+      PlanRelationOption(
+        id: 'internal',
+        text: names.optInternal,
+        colorIndex: 2,
+      ),
     ],
   ),
   PlanRelation(
     id: 'rel-effort',
     key: PlanMockKeys.effort,
-    name: 'Effort',
+    name: names.relEffort,
     format: PlanRelationFormat.number,
   ),
   PlanRelation(
     id: 'rel-due',
     key: PlanMockKeys.dueDate,
-    name: 'Due',
+    name: names.relDue,
     format: PlanRelationFormat.date,
   ),
   PlanRelation(
@@ -166,10 +228,10 @@ List<PlanObjectType> _types() => const [
   ),
 ];
 
-List<PlanCollection> _collections() => const [
+List<PlanCollection> _collections(PlanSeedNames names) => [
   PlanCollection(
     id: PlanMockKeys.taskSet,
-    name: 'Delivery board',
+    name: names.deliveryBoard,
     kind: PlanCollectionKind.set,
     sourceTypeKey: PlanObjectTypeIds.task,
     iconEmoji: '🚧',
@@ -245,7 +307,11 @@ List<PlanCollection> _collections() => const [
           name: 'Calendar',
           kind: PlanViewerKind.calendar,
         ),
-        PlanViewer(id: 'v-graph', name: 'Graph', kind: PlanViewerKind.graph),
+        PlanViewer(
+          id: 'v-graph',
+          name: names.viewGraph,
+          kind: PlanViewerKind.graph,
+        ),
       ],
       activeViewerId: 'v-board',
       groupOrders: {
@@ -255,7 +321,7 @@ List<PlanCollection> _collections() => const [
   ),
   PlanCollection(
     id: PlanMockKeys.inbox,
-    name: 'Reading inbox',
+    name: names.readingInbox,
     kind: PlanCollectionKind.collection,
     members: ['r-note-1', 'r-note-2', 'r-bookmark-1', 'r-image-1'],
     dataView: PlanDataView(

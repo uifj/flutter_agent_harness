@@ -126,10 +126,21 @@ Future<void> main() async {
   // the only place the mock seed is named.
   // One database connection for every domain (ADR-0060/0071).
   final appDatabase = AppDatabase.open(File('${support.path}/planstar.db'));
+  // The seed's furniture names follow the launch locale (ADR-0074): the
+  // user's language choice lives in the settings document, system falls back
+  // to the platform locale — the same switch the scope below applies.
+  final seedLocale = switch (settings.value.locale) {
+    cfg.LocaleMode.en => AppLocaleId.en,
+    cfg.LocaleMode.zh => AppLocaleId.zh,
+    cfg.LocaleMode.system =>
+      Platform.localeName.toLowerCase().startsWith('zh')
+          ? AppLocaleId.zh
+          : AppLocaleId.en,
+  };
   final planSpace = await PlanObjectStore.open(
     appDatabase,
     root: support,
-    seed: planMockSeed(),
+    seed: planMockSeed(names: planSeedNamesOf(seedLocale)),
   );
   // The workspace access a previous launch recorded has to be claimed BEFORE
   // anything reads under the root — the file tree's first listing, the

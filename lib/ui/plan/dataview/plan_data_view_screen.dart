@@ -332,6 +332,9 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
         recordsById: recordsById,
         relationsByKey: relationsByKey,
         groupLabel: (optionId) => _columnTitle(viewer, optionId),
+        onEditCell: (record, key, value) =>
+            _store.amendRecord(record.id, {key: value}),
+        onClearCell: (record, key) => _store.unsetRecord(record.id, [key]),
         onMove: (recordId, optionId, index) => _store.moveWithinBoard(
           collectionId: collection.id,
           viewerId: viewer.id,

@@ -1355,8 +1355,20 @@ class $PlanSpaceMetaRowsTable extends PlanSpaceMetaRows
     requiredDuringInsert: false,
     defaultValue: const Constant('[]'),
   );
+  static const VerificationMeta _seedVersionMeta = const VerificationMeta(
+    'seedVersion',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, revision, bin];
+  late final GeneratedColumn<int> seedVersion = GeneratedColumn<int>(
+    'seed_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, revision, bin, seedVersion];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1388,6 +1400,15 @@ class $PlanSpaceMetaRowsTable extends PlanSpaceMetaRows
         bin.isAcceptableOrUnknown(data['bin']!, _binMeta),
       );
     }
+    if (data.containsKey('seed_version')) {
+      context.handle(
+        _seedVersionMeta,
+        seedVersion.isAcceptableOrUnknown(
+          data['seed_version']!,
+          _seedVersionMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1409,6 +1430,10 @@ class $PlanSpaceMetaRowsTable extends PlanSpaceMetaRows
         DriftSqlType.string,
         data['${effectivePrefix}bin'],
       )!,
+      seedVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}seed_version'],
+      )!,
     );
   }
 
@@ -1423,10 +1448,17 @@ class PlanSpaceMetaRow extends DataClass
   final String id;
   final int revision;
   final String bin;
+
+  /// Which generation of the demo seed this space came from (ADR-0074): 0 =
+  /// pre-seed-version (the original English mock), 2 = the localized seed.
+  /// A one-time re-seed reads it to decide whether the demo furniture should
+  /// be refreshed to the user's language.
+  final int seedVersion;
   const PlanSpaceMetaRow({
     required this.id,
     required this.revision,
     required this.bin,
+    required this.seedVersion,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1434,6 +1466,7 @@ class PlanSpaceMetaRow extends DataClass
     map['id'] = Variable<String>(id);
     map['revision'] = Variable<int>(revision);
     map['bin'] = Variable<String>(bin);
+    map['seed_version'] = Variable<int>(seedVersion);
     return map;
   }
 
@@ -1442,6 +1475,7 @@ class PlanSpaceMetaRow extends DataClass
       id: Value(id),
       revision: Value(revision),
       bin: Value(bin),
+      seedVersion: Value(seedVersion),
     );
   }
 
@@ -1454,6 +1488,7 @@ class PlanSpaceMetaRow extends DataClass
       id: serializer.fromJson<String>(json['id']),
       revision: serializer.fromJson<int>(json['revision']),
       bin: serializer.fromJson<String>(json['bin']),
+      seedVersion: serializer.fromJson<int>(json['seedVersion']),
     );
   }
   @override
@@ -1463,20 +1498,29 @@ class PlanSpaceMetaRow extends DataClass
       'id': serializer.toJson<String>(id),
       'revision': serializer.toJson<int>(revision),
       'bin': serializer.toJson<String>(bin),
+      'seedVersion': serializer.toJson<int>(seedVersion),
     };
   }
 
-  PlanSpaceMetaRow copyWith({String? id, int? revision, String? bin}) =>
-      PlanSpaceMetaRow(
-        id: id ?? this.id,
-        revision: revision ?? this.revision,
-        bin: bin ?? this.bin,
-      );
+  PlanSpaceMetaRow copyWith({
+    String? id,
+    int? revision,
+    String? bin,
+    int? seedVersion,
+  }) => PlanSpaceMetaRow(
+    id: id ?? this.id,
+    revision: revision ?? this.revision,
+    bin: bin ?? this.bin,
+    seedVersion: seedVersion ?? this.seedVersion,
+  );
   PlanSpaceMetaRow copyWithCompanion(PlanSpaceMetaRowsCompanion data) {
     return PlanSpaceMetaRow(
       id: data.id.present ? data.id.value : this.id,
       revision: data.revision.present ? data.revision.value : this.revision,
       bin: data.bin.present ? data.bin.value : this.bin,
+      seedVersion: data.seedVersion.present
+          ? data.seedVersion.value
+          : this.seedVersion,
     );
   }
 
@@ -1485,37 +1529,42 @@ class PlanSpaceMetaRow extends DataClass
     return (StringBuffer('PlanSpaceMetaRow(')
           ..write('id: $id, ')
           ..write('revision: $revision, ')
-          ..write('bin: $bin')
+          ..write('bin: $bin, ')
+          ..write('seedVersion: $seedVersion')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, revision, bin);
+  int get hashCode => Object.hash(id, revision, bin, seedVersion);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is PlanSpaceMetaRow &&
           other.id == this.id &&
           other.revision == this.revision &&
-          other.bin == this.bin);
+          other.bin == this.bin &&
+          other.seedVersion == this.seedVersion);
 }
 
 class PlanSpaceMetaRowsCompanion extends UpdateCompanion<PlanSpaceMetaRow> {
   final Value<String> id;
   final Value<int> revision;
   final Value<String> bin;
+  final Value<int> seedVersion;
   final Value<int> rowid;
   const PlanSpaceMetaRowsCompanion({
     this.id = const Value.absent(),
     this.revision = const Value.absent(),
     this.bin = const Value.absent(),
+    this.seedVersion = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   PlanSpaceMetaRowsCompanion.insert({
     required String id,
     required int revision,
     this.bin = const Value.absent(),
+    this.seedVersion = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        revision = Value(revision);
@@ -1523,12 +1572,14 @@ class PlanSpaceMetaRowsCompanion extends UpdateCompanion<PlanSpaceMetaRow> {
     Expression<String>? id,
     Expression<int>? revision,
     Expression<String>? bin,
+    Expression<int>? seedVersion,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (revision != null) 'revision': revision,
       if (bin != null) 'bin': bin,
+      if (seedVersion != null) 'seed_version': seedVersion,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1537,12 +1588,14 @@ class PlanSpaceMetaRowsCompanion extends UpdateCompanion<PlanSpaceMetaRow> {
     Value<String>? id,
     Value<int>? revision,
     Value<String>? bin,
+    Value<int>? seedVersion,
     Value<int>? rowid,
   }) {
     return PlanSpaceMetaRowsCompanion(
       id: id ?? this.id,
       revision: revision ?? this.revision,
       bin: bin ?? this.bin,
+      seedVersion: seedVersion ?? this.seedVersion,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1559,6 +1612,9 @@ class PlanSpaceMetaRowsCompanion extends UpdateCompanion<PlanSpaceMetaRow> {
     if (bin.present) {
       map['bin'] = Variable<String>(bin.value);
     }
+    if (seedVersion.present) {
+      map['seed_version'] = Variable<int>(seedVersion.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1571,6 +1627,7 @@ class PlanSpaceMetaRowsCompanion extends UpdateCompanion<PlanSpaceMetaRow> {
           ..write('id: $id, ')
           ..write('revision: $revision, ')
           ..write('bin: $bin, ')
+          ..write('seedVersion: $seedVersion, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2579,6 +2636,7 @@ typedef $$PlanSpaceMetaRowsTableCreateCompanionBuilder =
       required String id,
       required int revision,
       Value<String> bin,
+      Value<int> seedVersion,
       Value<int> rowid,
     });
 typedef $$PlanSpaceMetaRowsTableUpdateCompanionBuilder =
@@ -2586,6 +2644,7 @@ typedef $$PlanSpaceMetaRowsTableUpdateCompanionBuilder =
       Value<String> id,
       Value<int> revision,
       Value<String> bin,
+      Value<int> seedVersion,
       Value<int> rowid,
     });
 
@@ -2610,6 +2669,11 @@ class $$PlanSpaceMetaRowsTableFilterComposer
 
   ColumnFilters<String> get bin => $composableBuilder(
     column: $table.bin,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get seedVersion => $composableBuilder(
+    column: $table.seedVersion,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2637,6 +2701,11 @@ class $$PlanSpaceMetaRowsTableOrderingComposer
     column: $table.bin,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get seedVersion => $composableBuilder(
+    column: $table.seedVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$PlanSpaceMetaRowsTableAnnotationComposer
@@ -2656,6 +2725,11 @@ class $$PlanSpaceMetaRowsTableAnnotationComposer
 
   GeneratedColumn<String> get bin =>
       $composableBuilder(column: $table.bin, builder: (column) => column);
+
+  GeneratedColumn<int> get seedVersion => $composableBuilder(
+    column: $table.seedVersion,
+    builder: (column) => column,
+  );
 }
 
 class $$PlanSpaceMetaRowsTableTableManager
@@ -2701,11 +2775,13 @@ class $$PlanSpaceMetaRowsTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<int> revision = const Value.absent(),
                 Value<String> bin = const Value.absent(),
+                Value<int> seedVersion = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PlanSpaceMetaRowsCompanion(
                 id: id,
                 revision: revision,
                 bin: bin,
+                seedVersion: seedVersion,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2713,11 +2789,13 @@ class $$PlanSpaceMetaRowsTableTableManager
                 required String id,
                 required int revision,
                 Value<String> bin = const Value.absent(),
+                Value<int> seedVersion = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PlanSpaceMetaRowsCompanion.insert(
                 id: id,
                 revision: revision,
                 bin: bin,
+                seedVersion: seedVersion,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

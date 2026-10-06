@@ -74,6 +74,12 @@ class PlanSpaceMetaRows extends Table {
   IntColumn get revision => integer()();
   TextColumn get bin => text().withDefault(const Constant('[]'))();
 
+  /// Which generation of the demo seed this space came from (ADR-0074): 0 =
+  /// pre-seed-version (the original English mock), 2 = the localized seed.
+  /// A one-time re-seed reads it to decide whether the demo furniture should
+  /// be refreshed to the user's language.
+  IntColumn get seedVersion => integer().withDefault(const Constant(0))();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -116,7 +122,7 @@ class AppDatabase extends _$AppDatabase {
       );
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -134,6 +140,9 @@ class AppDatabase extends _$AppDatabase {
       if (from < 3) {
         await m.createTable(planSpaceMetaRows);
         await m.createTable(planRecordRows);
+      }
+      if (from < 4) {
+        await m.addColumn(planSpaceMetaRows, planSpaceMetaRows.seedVersion);
       }
     },
   );

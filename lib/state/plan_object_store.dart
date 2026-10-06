@@ -33,6 +33,7 @@ import '../model/plan_filter_engine.dart';
 import '../model/plan_object_type.dart';
 import '../model/plan_relation.dart';
 import '../model/plan_space.dart';
+import '../model/plan_mock_content.dart' show PlanSeedNames;
 import '../model/plan_struct.dart';
 import '../model/plan_template.dart';
 import '../model/plan_widget.dart';
@@ -82,6 +83,7 @@ class PlanViewerStage {
 class PlanObjectStore extends ChangeNotifier {
   PlanObjectStore._({
     required AppDatabase db,
+    this.seedVersion = 0,
     required Map<String, PlanObject> objects,
     required List<PlanCollection> collections,
     required List<PlanObjectType> types,
@@ -142,7 +144,37 @@ class PlanObjectStore extends ChangeNotifier {
     }
     if (metaRow != null) {
       final records = await db.select(db.planRecordRows).get();
-      return PlanObjectStore._fromRows(db: db, meta: metaRow, records: records);
+      final store = await PlanObjectStore._fromRows(
+        db: db,
+        meta: metaRow,
+        records: records,
+      );
+      // One-time demo refresh (ADR-0074): a space that still carries the
+      // previous generation's UNTOUCHED English mock is re-seeded in the
+      // user's language. Anything the user renamed breaks the fingerprint
+      // and keeps their data — the fingerprint is the consent.
+      if (store.seedVersion < PlanSeedNames.currentVersion) {
+        final seedSpace = seed;
+        if (seedSpace != null && _isUntouchedOldMock(store)) {
+          final refreshed = PlanObjectStore._(
+            db: db,
+            seedVersion: PlanSeedNames.currentVersion,
+            objects: {for (final o in seedSpace.objects) o.id: o},
+            collections: [...seedSpace.collections],
+            types: [...seedSpace.types],
+            relations: [...seedSpace.relations],
+            templates: [...seedSpace.templates],
+            widgets: [...seedSpace.widgets],
+            bin: {...seedSpace.bin},
+            revision: 0,
+          );
+          await refreshed._save();
+          return refreshed;
+        }
+        store.seedVersion = PlanSeedNames.currentVersion;
+        await store._save();
+      }
+      return store;
     }
     if (legacyJson != null) {
       // The import must LAND before the file is gone for good: persist the
@@ -157,8 +189,9 @@ class PlanObjectStore extends ChangeNotifier {
       return imported;
     }
     final seedSpace = seed ?? PlanSpaceSeed.empty;
-    return PlanObjectStore._(
+    final seeded = PlanObjectStore._(
       db: db,
+      seedVersion: PlanSeedNames.currentVersion,
       objects: {for (final o in seedSpace.objects) o.id: o},
       collections: [...seedSpace.collections],
       types: [...seedSpace.types],
@@ -168,6 +201,11 @@ class PlanObjectStore extends ChangeNotifier {
       bin: {...seedSpace.bin},
       revision: 0,
     );
+    // Persist the seed NOW, not on the first user write: the space is user
+    // state the moment it exists, and the seedVersion stamp is what the
+    // re-seed and migration paths read back (ADR-0074).
+    await seeded._save();
+    return seeded;
   }
 
   static Future<PlanObjectStore> _fromRows({
@@ -190,6 +228,7 @@ class PlanObjectStore extends ChangeNotifier {
     final objects = of('object', PlanObject.fromJson);
     return PlanObjectStore._(
       db: db,
+      seedVersion: meta.seedVersion,
       objects: {for (final object in objects) object.id: object},
       collections: of('collection', PlanCollection.fromJson),
       types: of('type', PlanObjectType.fromJson),
@@ -225,6 +264,7 @@ class PlanObjectStore extends ChangeNotifier {
     final objects = list('objects', PlanObject.fromJson, const []);
     return PlanObjectStore._(
       db: db,
+      seedVersion: 0,
       objects: {for (final object in objects) object.id: object},
       collections: list('collections', PlanCollection.fromJson, const []),
       types: list('types', PlanObjectType.fromJson, const []),
@@ -240,6 +280,11 @@ class PlanObjectStore extends ChangeNotifier {
   }
 
   final AppDatabase _db;
+
+  /// Which generation of the demo seed this space came from (ADR-0074).
+  /// 0 = the pre-seed-version English mock; 2 = the localized seed. Bumped
+  /// once per re-seed; the setter stamps through to the meta row.
+  int seedVersion;
 
   Map<String, PlanObject> _objects;
   List<PlanCollection> _collections;
@@ -1317,6 +1362,7 @@ class PlanObjectStore extends ChangeNotifier {
             PlanSpaceMetaRowsCompanion(
               revision: Value(revision),
               bin: Value(jsonEncode([..._bin]..sort())),
+              seedVersion: Value(seedVersion),
             ),
           );
       if (updated == 0) {
@@ -1327,10 +1373,40 @@ class PlanObjectStore extends ChangeNotifier {
                 id: 'space',
                 revision: revision,
                 bin: jsonEncode([..._bin]..sort()),
+                seedVersion: seedVersion,
               ),
             );
       }
     });
+  }
+
+  /// The old English mock's fingerprint (ADR-0074): the two collection names
+  /// and every seeded record's name, compared verbatim. A user who renamed or
+  /// deleted anything breaks it — which is the consent the re-seed needs.
+  static bool _isUntouchedOldMock(PlanObjectStore store) {
+    if (store.seedVersion >= 2) return false;
+    const oldCollections = {
+      'set-tasks': 'Delivery board',
+      'col-inbox': 'Reading inbox',
+    };
+    for (final entry in oldCollections.entries) {
+      final collection = store.collections
+          .where((c) => c.id == entry.key)
+          .firstOrNull;
+      if (collection == null || collection.name != entry.value) return false;
+    }
+    const oldRecordNames = <String, String>{
+      'r-task-1': 'Ship the viewer bar',
+      'r-task-2': 'Relation value editors for all eleven formats',
+      'r-task-3': 'Empty column check',
+      'r-task-4': 'Blocked on the design token audit',
+      'r-task-5': 'Kanban gate shipped',
+    };
+    for (final entry in oldRecordNames.entries) {
+      final record = store.byId(entry.key);
+      if (record == null || record.name != entry.value) return false;
+    }
+    return true;
   }
 
   List<String> _asIdList(Object? value) => switch (value) {

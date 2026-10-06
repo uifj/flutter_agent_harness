@@ -21,6 +21,7 @@ import '../../../theme/dsw_theme.dart';
 import '../../primitives/tappable.dart';
 import '../../../theme/dsw_typography.dart';
 import 'plan_cell_value.dart';
+import 'plan_viewer_sheets.dart' show PlanCellEditor;
 import 'plan_viewers.dart';
 
 /// A record on the board. `BoardPanelGroupItem` needs only a unique id; the
@@ -52,6 +53,8 @@ class PlanBoardViewer extends StatefulWidget {
     required this.groupLabel,
     required this.onReorderColumns,
     required this.revision,
+    this.onEditCell,
+    this.onClearCell,
   });
 
   /// The store's revision, so a re-seed happens once per write — not once per
@@ -76,6 +79,12 @@ class PlanBoardViewer extends StatefulWidget {
 
   /// The viewer's `groupOrders` after a column drag.
   final void Function(List<String> optionIds) onReorderColumns;
+
+  /// The card's detail cells become editors when these are set (ADR-0074) —
+  /// the same PlanCellEditor the grid wraps its cells in, writing through to
+  /// the store (and drift). Null keeps the card read-only.
+  final void Function(PlanObject record, String key, Object? value)? onEditCell;
+  final void Function(PlanObject record, String key)? onClearCell;
 
   @override
   State<PlanBoardViewer> createState() => _PlanBoardViewerState();
@@ -192,6 +201,8 @@ class _PlanBoardViewerState extends State<PlanBoardViewer> {
             viewer: widget.viewer,
             relationsByKey: widget.relationsByKey,
             onTap: () => widget.onOpen(record),
+            onEditCell: widget.onEditCell,
+            onClearCell: widget.onClearCell,
           ),
         );
       },
@@ -232,12 +243,16 @@ class _BoardCard extends StatelessWidget {
     required this.viewer,
     required this.relationsByKey,
     required this.onTap,
+    this.onEditCell,
+    this.onClearCell,
   });
 
   final PlanObject record;
   final PlanViewer viewer;
   final Map<String, PlanRelation> relationsByKey;
   final VoidCallback onTap;
+  final void Function(PlanObject record, String key, Object? value)? onEditCell;
+  final void Function(PlanObject record, String key)? onClearCell;
 
   @override
   Widget build(BuildContext context) {
@@ -247,23 +262,35 @@ class _BoardCard extends StatelessWidget {
           (column) => column.isVisible && column.key != PlanRelationKeys.name,
         )
         .toList();
+    final cellEditors = onEditCell != null;
     return DswHoverTap(
-      onTap: onTap,
+      // The card-level open affordance moves to the title when the cells are
+      // editors: tapping a value must not also open the record.
+      onTap: cellEditors ? null : onTap,
       semanticLabel: record.name,
       builder: (context, hovered, focused) => Padding(
         padding: const EdgeInsets.all(DswShape.sm),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              record.name.isEmpty ? context.tr('planUntitled') : record.name,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: DswType.s14.copyWith(
-                color: record.isDone ? color.labelTertiary : color.labelPrimary,
-                decoration: record.isDone
-                    ? TextDecoration.lineThrough
-                    : TextDecoration.none,
+            // The title carries the record's open affordance when the cells
+            // are editors (ADR-0074): a tap on the values must edit, not
+            // navigate, so the name is the part that opens the inspector.
+            DswHoverTap(
+              onTap: cellEditors ? onTap : null,
+              semanticLabel: record.name,
+              builder: (context, hovered, focused) => Text(
+                record.name.isEmpty ? context.tr('planUntitled') : record.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: DswType.s14.copyWith(
+                  color: record.isDone
+                      ? color.labelTertiary
+                      : color.labelPrimary,
+                  decoration: record.isDone
+                      ? TextDecoration.lineThrough
+                      : TextDecoration.none,
+                ),
               ),
             ),
             if (detail.isNotEmpty) ...[
@@ -271,16 +298,70 @@ class _BoardCard extends StatelessWidget {
               for (final column in detail.take(2))
                 Padding(
                   padding: const EdgeInsets.only(top: DswShape.xs),
-                  child: PlanCellValue(
-                    object: record,
-                    relation: relationsByKey[column.key],
-                    viewerRelation: column,
+                  // The same editor the grid wraps its cells in (ADR-0074):
+                  // tapping a value on the card edits it in place and writes
+                  // through to the store; the card's tap (open the record)
+                  // lives on the title and the empty area, not on the values.
+                  child: _CardCell(
+                    record: record,
+                    column: column,
+                    relationsByKey: relationsByKey,
+                    onEditCell: onEditCell,
+                    onClearCell: onClearCell,
                   ),
                 ),
             ],
           ],
         ),
       ),
+    );
+  }
+}
+
+/// One detail value on a card, wrapped in the same editor the grid's cells
+/// use (ADR-0074). The checkbox toggles in place; other formats open their
+/// picker. Both write through [onEditCell] to the store.
+class _CardCell extends StatelessWidget {
+  const _CardCell({
+    required this.record,
+    required this.column,
+    required this.relationsByKey,
+    required this.onEditCell,
+    required this.onClearCell,
+  });
+
+  final PlanObject record;
+  final PlanViewerRelation column;
+  final Map<String, PlanRelation> relationsByKey;
+  final void Function(PlanObject record, String key, Object? value)? onEditCell;
+  final void Function(PlanObject record, String key)? onClearCell;
+
+  @override
+  Widget build(BuildContext context) {
+    final relation = relationsByKey[column.key];
+    final cell = PlanCellValue(
+      object: record,
+      relation: relation,
+      viewerRelation: column,
+      onToggleCheckbox: (relation?.format == PlanRelationFormat.checkbox)
+          ? () => onEditCell!(
+              record,
+              column.key,
+              !(record.relation(column.key) == true),
+            )
+          : null,
+    );
+    if (relation == null ||
+        onEditCell == null ||
+        relation.format == PlanRelationFormat.checkbox) {
+      return cell;
+    }
+    return PlanCellEditor(
+      record: record,
+      relation: relation,
+      onWrite: (value) => onEditCell!(record, column.key, value),
+      onClear: () => onClearCell!(record, column.key),
+      child: cell,
     );
   }
 }
