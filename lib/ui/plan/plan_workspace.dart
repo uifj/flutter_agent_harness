@@ -23,6 +23,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../model/fs_revision.dart';
 import '../../state/plan_block_document.dart';
 import 'blocks/plan_block_editor.dart';
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
@@ -109,6 +110,11 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
   /// dying element.
   bool _disposed = false;
 
+  /// Single-flight for the fsRevision sync (and a requeue for the bumps that
+  /// landed mid-flight — same shape as the persist's rerun flag).
+  bool _syncing = false;
+  bool _syncQueued = false;
+
   /// The trailing debounce (ADR-0075 ①); null = nothing pending.
   Timer? _autosave;
 
@@ -130,8 +136,18 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    fsRevision.addListener(_onFsRevision);
     widget.onRegisterFlush?.call(_flush);
     _openInitialNote();
+  }
+
+  /// The tools bump [fsRevision] after every write (and a rewind after it
+  /// restores): the open note may have changed under us. Coalescing is not
+  /// needed — the check is a stat — only single-flight, which [syncWithDisk]
+  /// owns.
+  void _onFsRevision() {
+    if (_disposed || _selected == null) return;
+    unawaited(_syncWithDisk());
   }
 
   /// Window blur / minimize on desktop lands here as a non-resumed state
@@ -185,6 +201,7 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
     _disposed = true;
     widget.onRegisterFlush?.call(null);
     WidgetsBinding.instance.removeObserver(this);
+    fsRevision.removeListener(_onFsRevision);
     _autosave?.cancel();
     // The widget dies before the write does: the persist carries its own
     // locals, and its setState is _disposed-guarded. The window-close path
@@ -298,8 +315,7 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
       if (stat?.modified != saved?.modified || stat?.size != saved?.size) {
         // The external-change gate: never overwrite bytes we did not write.
         // The agent, git, or another editor may own the file now.
-        _markStuck();
-        if (!quiet && mounted) {
+        if (_markStuck() && !quiet && mounted) {
           showFeedback(
             context,
             context.tr('planExternalChanged'),
@@ -310,13 +326,29 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
       }
       final tmp = File('${file.path}.tmp');
       await tmp.writeAsString(text, flush: true);
+      // The gate is check-then-write and the write took real time — re-stat
+      // before the rename. An external write that landed mid-flight must not
+      // be clobbered: bail before the rename and let the fsRevision sync
+      // surface it. (The rename itself stays a gap no stat can close; the
+      // window is now microseconds, not the whole write.)
+      final latest = file.existsSync() ? file.statSync() : null;
+      if (latest?.modified != saved?.modified || latest?.size != saved?.size) {
+        unawaited(tmp.delete().then((_) {}, onError: (_) {}));
+        if (_markStuck() && !quiet && mounted) {
+          showFeedback(
+            context,
+            context.tr('planExternalChanged'),
+            destructive: true,
+          );
+        }
+        return;
+      }
       await tmp.rename(file.path);
       _savedStat = file.statSync();
       _lastWritten = text;
       _markClean();
     } on FileSystemException {
-      _markStuck();
-      if (!quiet && mounted) {
+      if (_markStuck() && !quiet && mounted) {
         showFeedback(context, context.tr('planSaveFailed'), destructive: true);
       }
     } finally {
@@ -328,17 +360,21 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
       _persistAgain = false;
       await _persist(quiet: quiet);
     }
+    // Same for a revision bump the sync skipped during the write.
+    if (_syncQueued && !_disposed) {
+      _syncQueued = false;
+      await _syncWithDisk();
+    }
   }
 
-  /// Enters the stuck state once; retries (every debounce tick while the user
-  /// keeps typing) must not re-toast (ADR-0075 ④). The setState guard needs
-  /// [_disposed] beside `mounted`: during unmount the element still answers
-  /// `mounted == true` while being defunct, and the fire-and-forget persist
-  /// that dispose starts can reach here after the teardown deleted the file.
-  void _markStuck() {
-    if (_stuck) return;
+  /// Enters the stuck state; answers whether this call was the transition —
+  /// only the edge may toast (ADR-0075 ④: retries while the user keeps
+  /// typing must not re-toast).
+  bool _markStuck() {
+    if (_stuck) return false;
     _stuck = true;
     if (!_disposed && mounted) setState(() {});
+    return true;
   }
 
   /// The write's bookkeeping: the disk has what the buffers hold.
@@ -346,6 +382,92 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
     _dirty = false;
     _stuck = false;
     if (!_disposed && mounted) setState(() {});
+  }
+
+  /// The live half of the external-change story (ADR-0075 ④): the tools bump
+  /// [fsRevision] after every write, so the open note may have changed under
+  /// us — the AppFlowy editor's remote-apply path, localized to one file.
+  /// Clean buffer → reload silently (the editor stays a live view of the
+  /// file); pending edits → straight to stuck, without waiting for the
+  /// debounce; vanished file → close the note instead of resurrecting it on
+  /// the next write.
+  Future<void> _syncWithDisk() async {
+    final root = widget.workspaceRoot;
+    final selected = _selected;
+    if (root == null || selected == null) return;
+    if (_persisting || _syncing) {
+      _syncQueued = true;
+      return;
+    }
+    _syncing = true;
+    try {
+      final file = File(p.join(root, selected));
+      final stat = file.existsSync() ? file.statSync() : null;
+      final saved = _savedStat;
+      if (stat?.modified == saved?.modified && stat?.size == saved?.size) {
+        return;
+      }
+      if (_dirty) {
+        if (_markStuck() && mounted) {
+          showFeedback(
+            context,
+            context.tr('planExternalChanged'),
+            destructive: true,
+          );
+        }
+        return;
+      }
+      if (stat == null) {
+        // Vanished under a clean buffer: close instead of resurrecting the
+        // file on the next write.
+        if (!mounted || _disposed) return;
+        _autosave?.cancel();
+        final old = _controller;
+        final oldDocument = _document;
+        setState(() {
+          _selected = null;
+          _controller = null;
+          _document = null;
+          _dirty = false;
+          _stuck = false;
+          _savedStat = null;
+          _lastWritten = null;
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          old?.dispose();
+          oldDocument?.dispose();
+        });
+        showFeedback(context, context.tr('planNoteVanished'));
+        return;
+      }
+      final text = await file.readAsString();
+      if (_disposed) return;
+      if (text == _lastWritten) {
+        // Touched, not changed: adopt the new stat so the gate stays quiet.
+        _savedStat = stat;
+        return;
+      }
+      // Raced a user edit while reading: the write gate owns the conflict.
+      if (_dirty || !mounted) return;
+      final old = _controller;
+      final oldDocument = _document;
+      setState(() {
+        _controller = CodeLineEditingController.fromText(text);
+        _document = PlanBlockDocument.fromMarkdown(text);
+        _savedStat = stat;
+        _lastWritten = text;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        old?.dispose();
+        oldDocument?.dispose();
+      });
+    } finally {
+      _syncing = false;
+    }
+    if (_syncQueued && !_disposed) {
+      _syncQueued = false;
+      await _syncWithDisk();
+    }
   }
 
   /// The dirty edge from either bridge: shows nothing, just arms the debounce
@@ -683,6 +805,19 @@ class _DirtyBridgeState extends State<_DirtyBridge> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) widget.controller.addListener(_listen);
     });
+  }
+
+  @override
+  void didUpdateWidget(_DirtyBridge old) {
+    super.didUpdateWidget(old);
+    // The fsRevision sync swaps in a fresh controller on reload; the listener
+    // must follow it or Source-mode edits go unsaved after an agent write.
+    if (widget.controller != old.controller) {
+      old.controller.removeListener(_listen);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) widget.controller.addListener(_listen);
+      });
+    }
   }
 
   @override

@@ -1,17 +1,21 @@
 // The one sentence this file holds: the plan workspace is a real vault — it
 // lists only the workspace's markdown files, saves silently (a trailing
-// debounce plus flush points, no save button — ADR-0075), never overwrites a
-// file that changed outside, and asks only when a write could not land.
+// debounce plus flush points, no save button — ADR-0075), follows agent edits
+// to the open note while clean and never overwrites a file that changed
+// outside, and asks only when a write could not land.
 //
 // This is the ADR-0007 S3 guard, reshaped by ADR-0075. The vault's whole
 // premise is "the plan library IS the workspace", so the file system facts
 // (what gets listed, when a write happens, what the external gate refuses to
-// clobber) are the contract — fakes would prove nothing.
+// clobber, what a revision bump reloads) are the contract — fakes would prove
+// nothing.
 
 import 'dart:io';
 
+import 'package:planstar/model/fs_revision.dart';
 import 'package:planstar/theme/dsw_shad_bridge.dart';
 import 'package:planstar/theme/dsw_theme.dart';
+import 'package:planstar/ui/plan/blocks/plan_block_editor.dart';
 import 'package:planstar/ui/plan/plan_workspace.dart';
 import 'amplified_text_probe.dart';
 import 'package:flutter/material.dart';
@@ -307,6 +311,123 @@ void main() {
     expect(
       File('${root.path}/readme.md').readAsStringSync(),
       '# Agent was here\n',
+    );
+    await settle(tester);
+  });
+
+  testWidgets('the editor follows agent edits to the open note', (
+    tester,
+  ) async {
+    final note = ValueNotifier<String?>('readme.md');
+    await pump(tester, initialNote: note);
+    await pumpUntil(tester, find.text('Edit'));
+
+    // The agent rewrites the open note and the tools bump the revision —
+    // AppFlowy's remote-apply, localized: the editor is a live view of the
+    // file while the buffer is clean.
+    await tester.runAsync(() async {
+      File('${root.path}/readme.md').writeAsStringSync('# Agent chapter\n');
+      bumpFsRevision();
+    });
+    await pumpUntil(tester, find.text('Agent chapter'));
+
+    expect(find.text('Changes not written'), findsNothing);
+    expect(
+      File('${root.path}/readme.md').readAsStringSync(),
+      '# Agent chapter\n',
+    );
+    await settle(tester);
+  });
+
+  testWidgets('a touch without a content change does not reload', (
+    tester,
+  ) async {
+    final note = ValueNotifier<String?>('readme.md');
+    await pump(tester, initialNote: note);
+    await pumpUntil(tester, find.text('Edit'));
+    final before = tester
+        .widget<PlanBlockEditor>(find.byType(PlanBlockEditor))
+        .document;
+
+    // Same bytes, new mtime (a git checkout, a touch) — adopting the stat is
+    // enough; rebuilding the document would throw away the undo stack.
+    await tester.runAsync(() async {
+      File('${root.path}/readme.md').writeAsStringSync('# Readme\n');
+      bumpFsRevision();
+    });
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pump();
+    final after = tester
+        .widget<PlanBlockEditor>(find.byType(PlanBlockEditor))
+        .document;
+    expect(identical(before, after), isTrue);
+    await settle(tester);
+  });
+
+  testWidgets('agent edits while dirty go straight to stuck', (tester) async {
+    final note = ValueNotifier<String?>('readme.md');
+    await pump(tester, initialNote: note);
+    await pumpUntil(tester, find.text('Edit'));
+    await cycleMode(tester, 'Edit', 'Source');
+    await typeInto(tester, 'local edits');
+    await tester.pump();
+
+    // No debounce wait: the revision bump itself surfaces the conflict.
+    await tester.runAsync(() async {
+      File('${root.path}/readme.md').writeAsStringSync('# Agent was here\n');
+      bumpFsRevision();
+    });
+    await pumpUntil(
+      tester,
+      find.text('The note changed on disk — autosave paused.'),
+    );
+    expect(find.text('Changes not written'), findsOneWidget);
+    expect(
+      File('${root.path}/readme.md').readAsStringSync(),
+      '# Agent was here\n',
+    );
+    await settle(tester);
+  });
+
+  testWidgets('a vanished note closes instead of resurrecting', (tester) async {
+    final note = ValueNotifier<String?>('readme.md');
+    await pump(tester, initialNote: note);
+    await pumpUntil(tester, find.text('Edit'));
+
+    await tester.runAsync(() async {
+      File('${root.path}/readme.md').deleteSync();
+      bumpFsRevision();
+    });
+    await pumpUntil(tester, find.text('Pick a markdown file from the tree'));
+    expect(find.text('The note was removed on disk — closed.'), findsOneWidget);
+    expect(File('${root.path}/readme.md').existsSync(), isFalse);
+    await settle(tester);
+  });
+
+  testWidgets('a reload rebinds the source bridge — edits still autosave', (
+    tester,
+  ) async {
+    final note = ValueNotifier<String?>('readme.md');
+    await pump(tester, initialNote: note);
+    await pumpUntil(tester, find.text('Edit'));
+    await cycleMode(tester, 'Edit', 'Source');
+    await settle(tester);
+
+    // The agent's write swaps in a fresh controller; the Source face's dirty
+    // bridge must follow it, or every edit after a reload would never save.
+    await tester.runAsync(() async {
+      File('${root.path}/readme.md').writeAsStringSync('# From agent\n');
+      bumpFsRevision();
+    });
+    await pumpUntil(tester, find.text('From agent'));
+    await typeInto(tester, '# After reload\n');
+    await tester.pump(const Duration(milliseconds: 150));
+    await pumpUntilFileContains(
+      tester,
+      '${root.path}/readme.md',
+      '# After reload',
     );
     await settle(tester);
   });

@@ -70,3 +70,13 @@
 - **卸载期 persist 的 setState 守卫**：dispose 启动的 fire-and-forget 写在 unmount 窗口内收尾时，`mounted` 仍回答 true 而 element 已 defunct，`setState` 直接炸。加 `_disposed` 旗（dispose 第一行置位），`_markStuck`/`_markClean` 以它守卫。这不是测试权宜：真机"切扩展视图 + 门恰好拦住"走同一路径必炸。
 - **防抖时长落定 1s**（决策 ①），构造参数 `autosaveDebounce` 注入，测试用 100ms。
 - **测试侧新知**：re_editor 的移动分支（widget 测试默认平台即 android）每次 `startBlink` 排一个**不可取消**的 100ms `value = true` future——编辑器卸载后它仍会打在已 dispose 的 notifier 上。唯一解法是让它在编辑器还活着时烧掉（`settle` 的 360ms 顺带把测试防抖也点了，所以需要"待写"断言的测试在 settle 后重新输入）。
+
+## 追记 #2（能力面补全：远端应用落地，2026-10-07）
+
+对标 appflowy-editor 的核心能力——**编辑器是存储之上的活视图**（远端更新走 `apply(isRemote: true)` 实时进文档，`editor_state.dart:454-456,757-801`；协作示例的 `getUpdatesStream`/`saveUpdate`，`example/lib/pages/collab_editor_offline.dart:114-151`）——首批只做了写侧（门），本批补上读侧：
+
+- **fsRevision 驱动的活重载**：监听 `fsRevision`（`lib/model/fs_revision.dart` 的全局计数，agent 的 write/edit 工具与 rewind 每次落盘都 `bumpFsRevision()`）→ stat 比对开档笔记。**干净缓冲 → 静默重载**（换新 `PlanBlockDocument` + controller，编辑器保持文件的活视图——用户让 agent 改这篇笔记，改完当场可见）；**有未写修改 → 不等防抖、立即进卡住态**（冲突在发生时现身，不是在下次保存时）；**文件消失 → 关闭笔记**而不是在下一次写盘时复活它（vault 树自己没有删除流，笔记消失只可能来自外部，这条补的正是僵尸编辑器）。同内容 touch（git checkout）只采纳新 stat 不重建文档——保住 undo 栈，也省一次重解码。
+- **Source 桥的重绑**：重载会换新 `CodeLineEditingController` 实例，而 `_DirtyBridge` 原本没有 `didUpdateWidget`——重载后 Source 档的每次编辑都永远不会保存。补上换绑（沿 initState 的 postFrame 晚挂形状）。
+- **写前二次 stat 复核**：门是 check-then-write，写本身有真实耗时——tmp 写完、rename 之前再 stat 一次，agent 的写入落在中途就放弃 rename 交给活重载接手。rename 到落盘之间仍有不可关闭的缝（微秒级，任何无锁方案都一样），窗口从"整个写盘耗时"缩到"一次 rename"。
+- **卡住态的反馈边沿化**：首批实现里门/写失败的 toast 在每次重试都会重弹，与 ④"只在进入卡住态的边沿提示一次"不符——`_markStuck()` 改为回答"是否本次转入"，只有边沿弹条。
+- **诚实边界**：fsRevision 只由 agent 工具与 rewind 抬——用户的 git 操作、外部编辑器的改动不在信号里，仍由写盘时的门兜住；重载会丢光标与 undo 栈（干净缓冲下无稿可丢，可接受）；vault 树删除不 bump（它没有删除流）。
