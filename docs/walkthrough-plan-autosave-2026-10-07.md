@@ -117,3 +117,21 @@
 
 **本批教训**：① MockClient 闭包内自增 int 按值传参失效（盒装 List<int>）——测试助手传"计数"要用可变容器；
 ② 裸 const 注入不红是 PATTERN 盲区不是守卫漏洞——负向验证必须用真 UI 形态（Text('…')）。
+
+---
+
+## 走查补批（2026-10-07 第四批）：真机排障——笔记有时无法显示
+
+**症状**：企划模式下点笔记偶尔无反应（笔记内容不显示）。
+**根因**（代码实证，非日志异常——日志里只有两条良性 drift 警告）：open-note 令牌的消费链
+只有 initState 路径归还令牌；**挂载态下点笔记走 didUpdateWidget 路径，打开后从不调
+`onNoteConsumed`**。脏笔记上点另一篇 → 确认框 Cancel → 令牌滞留 → 再次点同一篇笔记，
+`initialNote != old.initialNote` 守卫把请求吞掉——树点击变成死按钮。这正是 ADR-0073 登记行
+自己记录过的陷阱（"Cancel 后再点同笔记真 app 也是坏的"），当年的修复只盖住了 initState 半边。
+**修复**：postFrame 回调在 `_openPath` 收尾（成功或 Cancel 都算）后归还令牌。
+**守卫**：`a cancelled open hands the token back for the next request`——Cancel 后断言令牌自动
+归还、同笔记可再次请求、确认后切换成功。
+**排查过程排除的嫌疑**：drift 双实例警告（usage.db 与 planstar.db 是两个文件，良性）；
+`SliverFillRemaining` 零高度钳制（窗口 1600x990 且仅种子集合，前置内容不足以溢出——
+但该处"笔记节高度取决于上方内容高度且下限为 0"的结构性隐患仍在，溢出时整节连折叠头一起
+消失，留作观察）。

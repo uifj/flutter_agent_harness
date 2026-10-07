@@ -663,6 +663,53 @@ void main() {
     await settle(tester);
   });
 
+  testWidgets('a cancelled open hands the token back for the next request', (
+    tester,
+  ) async {
+    final note = ValueNotifier<String?>('readme.md');
+    await pump(tester, initialNote: note);
+    await pumpUntil(tester, find.text('Edit'));
+    await tester.runAsync(() async {
+      File('${root.path}/readme.md').writeAsStringSync('# Agent was here\n');
+    });
+    await cycleMode(tester, 'Edit', 'Source');
+    await typeInto(tester, 'local edits');
+    await tester.pump(const Duration(milliseconds: 150));
+    await pumpUntil(
+      tester,
+      find.text('The note changed on disk — autosave paused.'),
+    );
+
+    // Ask for another note; the stuck dialog appears; Cancel. The workspace
+    // must hand the token back ITSELF — the real host's consumeOpenNote
+    // clears and notifies, so the harness's mirror (onNoteConsumed) drops
+    // the value. A silent token left the same second request to be
+    // swallowed by the changed-config guard forever (the didUpdateWidget
+    // path never consumed — the ADR-0073 trap, fixed on the initState path
+    // only).
+    note.value = 'notes/idea.md';
+    await pump(tester, initialNote: note);
+    await pumpUntil(tester, find.text('Unwritten changes'));
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(note.value, isNull, reason: 'the token came back on cancel');
+
+    // The consume notifies the real host, which rebuilds with a null token
+    // BEFORE the next click lands — push that frame through, then ask for
+    // the same note again: the guard sees a fresh change and the dialog
+    // reappears. The tree is not a dead button.
+    await pump(tester, initialNote: note);
+    // Burn the source editor's unkillable blink future while it is still
+    // mounted (settle's doc): the confirm below swaps it out.
+    await settle(tester);
+    note.value = 'notes/idea.md';
+    await pump(tester, initialNote: note);
+    await pumpUntil(tester, find.text('Unwritten changes'));
+    await tester.tap(find.text('Discard & leave'));
+    await pumpUntil(tester, find.text('notes/idea.md'));
+    await settle(tester);
+  });
+
   testWidgets('a failed write stays stuck and says so', (tester) async {
     final note = ValueNotifier<String?>('readme.md');
     await pump(tester, initialNote: note);

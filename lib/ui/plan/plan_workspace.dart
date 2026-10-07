@@ -187,12 +187,19 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
     // The sidebar tree (or a remount) asked for a note: open it, then hand
     // the token back so the next request re-triggers (ADR-0073). Deferred to
     // a post-frame callback: didUpdateWidget runs inside build, and opening
-    // is an async swap that must not race the frame.
+    // is an async swap that must not race the frame. The consume runs after
+    // the open settles — INCLUDING a cancelled one. A token left behind on
+    // cancel makes the same note unrequestable forever: the next click sees
+    // `initialNote == old.initialNote` and the guard swallows it. This is
+    // the ADR-0073 trap, which its fix only covered on the initState path.
     if (widget.initialNote != null &&
         widget.initialNote != _selected &&
         widget.initialNote != old.initialNote) {
       final note = widget.initialNote!;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _openPath(note));
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await _openPath(note);
+        widget.onNoteConsumed?.call();
+      });
     }
   }
 
