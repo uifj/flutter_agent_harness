@@ -493,13 +493,10 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
       if (_mode == _PlanNoteMode.edit && next == _PlanNoteMode.source) {
         _controller!.text = _document!.encode();
       } else if (_mode == _PlanNoteMode.preview && next == _PlanNoteMode.edit) {
-        if (_controller!.text == _document!.encode()) {
-          // The buffer is still the document's own encoding — a glance at
-          // the other faces is not an edit. Keep the instance: rebuilding
-          // would throw away the undo stack for nothing.
-        } else {
-          // The Source face changed the text: the document re-derives from
-          // the buffer, and its undo stack resets with it.
+        // A glance at the other faces is not an edit: rebuild only when the
+        // Source face actually changed the text, and the undo stack resets
+        // with it — keeping the instance keeps the undo history.
+        if (_controller!.text != _document!.encode()) {
           final old = _document;
           _document = PlanBlockDocument.fromMarkdown(_controller!.text);
           WidgetsBinding.instance.addPostFrameCallback((_) => old?.dispose());

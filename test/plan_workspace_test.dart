@@ -12,6 +12,7 @@
 
 import 'dart:io';
 
+import 'package:planstar/l10n/locales.dart';
 import 'package:planstar/model/fs_revision.dart';
 import 'package:planstar/theme/dsw_shad_bridge.dart';
 import 'package:planstar/theme/dsw_theme.dart';
@@ -54,21 +55,27 @@ void main() {
     double scale = 1.0,
     Duration autosaveDebounce = const Duration(milliseconds: 100),
     ValueChanged<Future<void> Function()?>? onRegisterFlush,
+    AppLocaleId locale = AppLocaleId.en,
+    bool withoutWorkspace = false,
   }) => tester.pumpWidget(
     MaterialApp(
       theme: dswThemeData(Brightness.light),
       // The stuck-leave confirm dialog is a ShadDialog (reads the caller's
-      // ShadTheme) and the feedback strip is a ShadSonner — mount the same
-      // ancestors main does, so "the user was told" is assertable here.
-      builder: (context, child) => ShadTheme(
-        data: dswShadTheme(Theme.of(context).brightness),
-        child: ShadSonner(
-          child: AmplifiedText(step: scale, child: child!),
+      // ShadTheme), the feedback strip is a ShadSonner, and the copy rides
+      // AppLocaleScope — mount the same ancestors main does, so "the user
+      // was told" and "the user read it in their language" are assertable.
+      builder: (context, child) => AppLocaleScope(
+        locale: locale,
+        child: ShadTheme(
+          data: dswShadTheme(Theme.of(context).brightness),
+          child: ShadSonner(
+            child: AmplifiedText(step: scale, child: child!),
+          ),
         ),
       ),
       home: Scaffold(
         body: PlanWorkspace(
-          workspaceRoot: root.path,
+          workspaceRoot: withoutWorkspace ? null : root.path,
           initialNote: initialNote?.value,
           onNoteConsumed: () => initialNote?.value = null,
           onRegisterFlush: onRegisterFlush,
@@ -80,7 +87,8 @@ void main() {
 
   /// Hands the event loop real time until [finder] matches — the vault index is
   /// a compute isolate, and real-IO futures a fake-async pump alone never
-  /// completes.
+  /// completes. A timeout FAILS: a silent return just relocates the test's
+  /// first failure three lines downstream (this file paid that tuition once).
   Future<void> pumpUntil(WidgetTester tester, Finder finder) async {
     for (var attempt = 0; attempt < 100; attempt++) {
       if (finder.evaluate().isNotEmpty) return;
@@ -89,11 +97,12 @@ void main() {
       );
       await tester.pump();
     }
+    fail('pumpUntil timed out waiting for $finder');
   }
 
   /// The inverse of [pumpUntil]: hands the loop real time until [finder]
   /// matches NOTHING — the shape a finished persist needs when the observable
-  /// is a chip disappearing.
+  /// is a chip disappearing. Times out loudly, same contract as [pumpUntil].
   Future<void> pumpUntilGone(WidgetTester tester, Finder finder) async {
     for (var attempt = 0; attempt < 100; attempt++) {
       if (finder.evaluate().isEmpty) return;
@@ -102,6 +111,7 @@ void main() {
       );
       await tester.pump();
     }
+    fail('pumpUntilGone timed out; $finder never went away');
   }
 
   /// Same as [pumpUntil] but for a file's content: the write is real IO and
@@ -427,14 +437,27 @@ void main() {
     await pumpUntil(tester, find.text('Edit'));
     await cycleMode(tester, 'Edit', 'Source');
     await settle(tester);
-
     // The agent's write swaps in a fresh controller; the Source face's dirty
     // bridge must follow it, or every edit after a reload would never save.
+    // Asserted on the CONTROLLER — find.text cannot see re_editor's
+    // rendering, and the controller is the face's truth anyway.
+    var ctrl = '';
     await tester.runAsync(() async {
       File('${root.path}/readme.md').writeAsStringSync('# From agent\n');
       bumpFsRevision();
     });
-    await pumpUntil(tester, find.text('From agent'));
+    for (var attempt = 0; attempt < 100; attempt++) {
+      ctrl = tester
+          .widget<CodeEditor>(find.byType(CodeEditor))
+          .controller!
+          .text;
+      if (ctrl.contains('From agent')) break;
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 10)),
+      );
+      await tester.pump();
+    }
+    expect(ctrl, contains('From agent'));
     await typeInto(tester, '# After reload\n');
     await tester.pump(const Duration(milliseconds: 150));
     await pumpUntilFileContains(
@@ -549,6 +572,49 @@ void main() {
     });
     await pumpUntil(tester, find.text('Fresh from agent'));
     await settle(tester);
+  });
+
+  testWidgets('zh: the whole stuck chain speaks Chinese', (tester) async {
+    final note = ValueNotifier<String?>('readme.md');
+    await pump(tester, initialNote: note, locale: AppLocaleId.zh);
+    await pumpUntil(tester, find.byType(PlanBlockEditor));
+    await pumpUntil(tester, find.text('编辑'));
+
+    await cycleMode(tester, '编辑', '源码');
+    await typeInto(tester, '本地修改');
+    await tester.pump();
+
+    // The agent rewrites the file mid-edit: feedback, chip and the leave
+    // dialog must all speak the user's language — a raw key or English copy
+    // inside a Chinese frame is exactly what the dictionaries exist to
+    // prevent (and what translate()'s fallback chain hides).
+    await tester.runAsync(() async {
+      File('${root.path}/readme.md').writeAsStringSync('# Agent was here\n');
+      bumpFsRevision();
+    });
+    // Same queued-sync window as the reload test.
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 200)),
+    );
+    await pumpUntil(tester, find.text('笔记在盘上已被外部修改，自动保存已暂停。'));
+    expect(find.text('修改未写入盘'), findsOneWidget);
+
+    note.value = 'notes/idea.md';
+    await pump(tester, initialNote: note, locale: AppLocaleId.zh);
+    await pumpUntil(tester, find.text('存在未写入的修改'));
+    expect(find.text('丢弃并离开'), findsOneWidget);
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+    expect(find.text('readme.md'), findsOneWidget);
+
+    await settle(tester);
+  });
+
+  testWidgets('zh: a vault with no workspace answers with guidance', (
+    tester,
+  ) async {
+    await pump(tester, locale: AppLocaleId.zh, withoutWorkspace: true);
+    expect(find.text('请先选择工作区文件夹——企划库就是工作区'), findsOneWidget);
   });
 
   testWidgets('leaving a stuck note asks before discarding', (tester) async {
