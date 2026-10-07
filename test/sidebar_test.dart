@@ -28,6 +28,7 @@ import 'package:planstar/theme/dsw_shape.dart';
 import 'package:planstar/theme/dsw_theme.dart';
 import 'package:planstar/ui/layout/columns.dart';
 import 'package:planstar/ui/primitives/tappable.dart';
+import 'package:planstar/ui/plan/plan_vault_tree.dart';
 import 'package:planstar/ui/sidebar/sidebar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderParagraph;
@@ -35,6 +36,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:planstar/state/hotkey_service.dart';
+import 'dart:io';
 
 import 'fake_turn_source.dart';
 import 'amplified_text_probe.dart';
@@ -64,6 +66,8 @@ void main() {
     double scale = 1.0,
     WorkspaceMode? mode,
     UserProfile? profile,
+    String? workspaceRoot,
+    ValueChanged<String>? onOpenNote,
   }) => tester.pumpWidget(
     MaterialApp(
       builder: (context, child) => amplifiedAppBuilder(scale, child),
@@ -95,6 +99,8 @@ void main() {
                   onOpenSettings: () {},
                   onToggleDetails: () {},
                   detailsOpen: false,
+                  workspaceRoot: workspaceRoot,
+                  onOpenNote: onOpenNote,
                 ),
               ),
             ),
@@ -552,5 +558,64 @@ void main() {
       await tester.pump();
       expect(toggles, 1, reason: tip);
     }
+  });
+
+  testWidgets('expanding 笔记 never hides the section header', (tester) async {
+    // A short window: the chrome + collections + library above the notes
+    // section exceed the viewport. The expanded section used to be a
+    // SliverFillRemaining whose extent clamps to 0 in that state — the
+    // whole section (collapse header included) collapsed to zero height, so
+    // clicking 笔记 made it disappear with no way back. Now the section
+    // falls back to a fixed-height box the outer scroll can reach.
+    tester.view.physicalSize = const Size(800, 340);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final root = Directory.systemTemp.createTempSync('dsh_side_');
+    addTearDown(() => root.deleteSync(recursive: true));
+    File('${root.path}/a.md').writeAsStringSync('# A\n');
+
+    await pump(
+      tester,
+      collapsed: false,
+      mode: WorkspaceMode.plan,
+      workspaceRoot: root.path,
+      onOpenNote: (_) {},
+    );
+    // The vault index runs in a compute isolate — hand it real time.
+    for (var attempt = 0; attempt < 100; attempt++) {
+      if (find.text('a.md').evaluate().isNotEmpty) break;
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 10)),
+      );
+      await tester.pump();
+    }
+
+    // The section starts expanded, but the content above it outruns the
+    // viewport's build cache — drag until the section materializes. The
+    // bug's shape was a SliverFillRemaining clamped to ZERO extent here:
+    // its child still builds, so find.text sees it, and only geometry
+    // tells the truth.
+    for (var attempt = 0; attempt < 80; attempt++) {
+      if (find.byType(PlanVaultTree).evaluate().isNotEmpty) break;
+      await tester.drag(
+        find.byType(CustomScrollView).first,
+        const Offset(0, -80),
+      );
+      await tester.pump();
+    }
+    expect(
+      tester.getRect(find.byType(PlanVaultTree)).height,
+      greaterThan(200),
+      reason: 'the expanded tree must keep its floor height',
+    );
+
+    // The click round-trip: collapse to the header-only row, expand again —
+    // the header affordance survives both states and stays clickable.
+    await tester.tap(find.text('Notes').first);
+    await tester.pump();
+    expect(find.byType(PlanVaultTree), findsNothing);
+    await tester.tap(find.text('Notes').first);
+    await tester.pump();
+    expect(tester.getRect(find.byType(PlanVaultTree)).height, greaterThan(200));
   });
 }

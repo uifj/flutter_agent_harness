@@ -214,6 +214,11 @@ class _SidebarState extends State<Sidebar> {
   /// Session state, default expanded — Obsidian's explorer is visible too.
   bool _planNotesExpanded = true;
 
+  /// The expanded notes section's floor height — the same fixed seat the
+  /// narrow column gives it. Below this remaining viewport, the section
+  /// stops filling and becomes a fixed box the outer scroll reaches.
+  static const double _notesFloorHeight = 320;
+
   /// Removes the quick-menu overlay if present, then forgets it. Idempotent:
   /// the menu's own dismissal can re-enter this (ADR-0072), so nulling the
   /// field BEFORE the remove is what makes a second call a no-op.
@@ -671,13 +676,35 @@ class _SidebarState extends State<Sidebar> {
     ),
     // The notes section fills the REMAINING height (ADR-0073): the
     // Obsidian explorer shape. Collapsed, it folds back to its header row.
+    // The expanded form must never fall to zero: a SliverFillRemaining whose
+    // extent clamps to 0 (chrome + collections + library taller than the
+    // viewport — a short window or a large text step) hides the header WITH
+    // the tree, so clicking 笔记 makes the whole section disappear with no
+    // way back. Below the floor the section becomes a fixed-height box the
+    // outer scroll can reach instead.
     if (widget.workspaceRoot != null && widget.onOpenNote != null)
-      _planNotesExpanded
-          ? SliverFillRemaining(
-              hasScrollBody: false,
-              child: _notesSection(color, fill: true),
-            )
-          : SliverToBoxAdapter(child: _notesSection(color, fill: false)),
+      if (_planNotesExpanded)
+        SliverLayoutBuilder(
+          builder: (context, constraints) {
+            final remaining =
+                constraints.viewportMainAxisExtent -
+                constraints.precedingScrollExtent;
+            if (remaining >= _notesFloorHeight) {
+              return SliverFillRemaining(
+                hasScrollBody: false,
+                child: _notesSection(color, fill: true),
+              );
+            }
+            return SliverToBoxAdapter(
+              child: SizedBox(
+                height: _notesFloorHeight,
+                child: _notesSection(color, fill: true),
+              ),
+            );
+          },
+        )
+      else
+        SliverToBoxAdapter(child: _notesSection(color, fill: false)),
   ];
 
   List<Widget> _libraryBody(DswAlias color, {required bool wide}) {
