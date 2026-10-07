@@ -1,11 +1,12 @@
 // The one sentence this file holds: the plan workspace is a real vault — it
-// lists only the workspace's markdown files, loads and saves them through the
-// actual disk, and refuses to lose unsaved edits on a note switch without
-// asking first.
+// lists only the workspace's markdown files, saves silently (a trailing
+// debounce plus flush points, no save button — ADR-0075), never overwrites a
+// file that changed outside, and asks only when a write could not land.
 //
-// This is the ADR-0007 S3 guard. The vault's whole premise is "the plan library
-// IS the workspace", so the file system facts (what gets listed, what a save
-// writes, what a discard loses) are the contract — fakes would prove nothing.
+// This is the ADR-0007 S3 guard, reshaped by ADR-0075. The vault's whole
+// premise is "the plan library IS the workspace", so the file system facts
+// (what gets listed, when a write happens, what the external gate refuses to
+// clobber) are the contract — fakes would prove nothing.
 
 import 'dart:io';
 
@@ -17,7 +18,7 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:re_editor/re_editor.dart' show CodeEditor;
-import 'package:shadcn_ui/shadcn_ui.dart' show ShadTheme, ShadButton;
+import 'package:shadcn_ui/shadcn_ui.dart' show ShadSonner, ShadTheme;
 
 void main() {
   late Directory root;
@@ -47,29 +48,35 @@ void main() {
     WidgetTester tester, {
     ValueNotifier<String?>? initialNote,
     double scale = 1.0,
+    Duration autosaveDebounce = const Duration(milliseconds: 100),
+    ValueChanged<Future<void> Function()?>? onRegisterFlush,
   }) => tester.pumpWidget(
     MaterialApp(
       theme: dswThemeData(Brightness.light),
-      // The note-switch confirm dialog is a ShadDialog (reads the caller's
-      // ShadTheme) — mount the same ancestor main does. The text step goes
-      // with it, above the Navigator, so the dialog and any menu are laid
-      // out at the step the walk claims to be measuring.
+      // The stuck-leave confirm dialog is a ShadDialog (reads the caller's
+      // ShadTheme) and the feedback strip is a ShadSonner — mount the same
+      // ancestors main does, so "the user was told" is assertable here.
       builder: (context, child) => ShadTheme(
         data: dswShadTheme(Theme.of(context).brightness),
-        child: AmplifiedText(step: scale, child: child!),
+        child: ShadSonner(
+          child: AmplifiedText(step: scale, child: child!),
+        ),
       ),
       home: Scaffold(
         body: PlanWorkspace(
           workspaceRoot: root.path,
           initialNote: initialNote?.value,
           onNoteConsumed: () => initialNote?.value = null,
+          onRegisterFlush: onRegisterFlush,
+          autosaveDebounce: autosaveDebounce,
         ),
       ),
     ),
   );
 
   /// Hands the event loop real time until [finder] matches — the vault index is
-  /// a compute isolate, which a fake-async pump alone never completes.
+  /// a compute isolate, and real-IO futures a fake-async pump alone never
+  /// completes.
   Future<void> pumpUntil(WidgetTester tester, Finder finder) async {
     for (var attempt = 0; attempt < 100; attempt++) {
       if (finder.evaluate().isNotEmpty) return;
@@ -80,35 +87,39 @@ void main() {
     }
   }
 
-  /// The inverse of [pumpUntil]: hands the loop real time until [finder]
-  /// matches NOTHING — the shape a finished async save needs (the write is real
-  /// IO; reading the file before it flushes sees a truncated file).
-  Future<void> pumpUntilGone(WidgetTester tester, Finder finder) async {
-    for (var attempt = 0; attempt < 100; attempt++) {
-      if (finder.evaluate().isEmpty) return;
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 10)),
-      );
+  /// Same as [pumpUntil] but for a file's content: the write is real IO and
+  /// lands atomically (tmp+rename), so the needle only appears once the rename
+  /// did — reading mid-flight sees the old bytes, never a torn file.
+  Future<void> pumpUntilFileContains(
+    WidgetTester tester,
+    String path,
+    String needle,
+  ) async {
+    for (var attempt = 0; attempt < 200; attempt++) {
+      final content = await tester.runAsync(() => File(path).readAsString());
+      if (content != null && content.contains(needle)) return;
       await tester.pump();
     }
+    fail('"$path" never contained "$needle"');
   }
 
-  /// Switches the note surface to Source mode: the block editor owns Edit,
-  /// and these two tests pin the raw-buffer save contract, which lives on the
-  /// Source face (the block editor's own encode-on-save has its test in
-  /// `plan_blocks_test.dart`).
-  Future<void> gotoSource(WidgetTester tester) async {
-    // The capsule shows the CURRENT face and cycles Edit → Source → Preview;
-    // from the freshly opened note one tap reaches Source.
-    await tester.tap(find.text('Edit'));
-    await tester.pump();
+  /// Taps the mode capsule and waits for the next face's label — the handoff
+  /// awaits its flush, whose real IO only completes while runAsync hands the
+  /// loop over, so the label is the flush's observable.
+  Future<void> cycleMode(
+    WidgetTester tester,
+    String fromLabel,
+    String toLabel,
+  ) async {
+    await tester.tap(find.text(fromLabel));
+    await pumpUntil(tester, find.text(toLabel));
   }
 
   /// Types into the note editor. re_editor is not an `EditableText` — it owns
   /// a `TextInput` delta connection — and pushing values through the test
   /// input service mangles its content; driving the CONTROLLER's text setter
   /// instead is the same edit path the editor itself uses (notify → dirty →
-  /// save) without fighting the input pipeline.
+  /// autosave) without fighting the input pipeline.
   Future<void> typeInto(WidgetTester tester, String text) async {
     final editor = tester.widget<CodeEditor>(find.byType(CodeEditor));
     editor.controller?.text = text;
@@ -118,7 +129,13 @@ void main() {
   /// Retires the editor's cursor-blink timers before the binding checks for
   /// pending ones — same treatment as `editor_tab_test.settle`: unfocus cancels
   /// the periodic blink, and pumping 120ms fires the one-shot while the editor
-  /// is still in the tree.
+  /// is still in the tree. It ALSO matters before structural swaps
+  /// (mode cycle, note switch, unmount): re_editor's mobile branch schedules
+  /// an UNCANCELLABLE 100ms `value = true` future per startBlink, so a swap
+  /// that unmounts a focused editor leaves a timer pointing at a dead
+  /// notifier — letting it burn while the editor is alive is the only remedy.
+  /// The 360ms here fires the 100ms test debounce too, which is why tests
+  /// that need a PENDING write re-type after the settle.
   Future<void> settle(WidgetTester tester) async {
     FocusManager.instance.primaryFocus?.unfocus();
     for (var i = 0; i < 3; i++) {
@@ -126,71 +143,252 @@ void main() {
     }
   }
 
-  testWidgets('opens the initial note and saves the edit back to disk', (
+  testWidgets('edits land on disk after the typing stops — silently', (
     tester,
   ) async {
     final note = ValueNotifier<String?>('readme.md');
     await pump(tester, initialNote: note);
-    await pumpUntil(tester, find.text('Save'));
+    await pumpUntil(tester, find.text('Edit'));
 
-    // The unsaved chip appears only after a real edit; Save is inert until then.
-    expect(find.text('Unsaved changes'), findsNothing);
-    expect(find.text('Save'), findsOneWidget);
+    // No save button anywhere (ADR-0075 ⑥), and an edit in flight shows
+    // nothing: the pending state is internal-only.
+    expect(find.text('Save'), findsNothing);
+    expect(find.text('Changes not written'), findsNothing);
 
-    await gotoSource(tester);
+    await cycleMode(tester, 'Edit', 'Source');
     await typeInto(tester, '# Edited\n');
     await tester.pump();
-    expect(find.text('Unsaved changes'), findsOneWidget);
+    expect(find.text('Changes not written'), findsNothing);
 
-    await tester.tap(find.text('Save'));
-    // The chip clears only after the write finished — that is the file's
-    // "flushed" signal.
-    await pumpUntilGone(tester, find.text('Unsaved changes'));
-    expect(File('${root.path}/readme.md').readAsStringSync(), '# Edited\n');
+    // Stop typing; the debounce fires and the write lands.
+    await tester.pump(const Duration(milliseconds: 150));
+    await pumpUntilFileContains(tester, '${root.path}/readme.md', '# Edited');
+    // Still nothing on screen: silence IS the contract.
+    expect(find.text('Changes not written'), findsNothing);
     await settle(tester);
   });
 
-  testWidgets('switching notes with unsaved edits asks first', (tester) async {
+  testWidgets('switching notes flushes silently — the dialog is gone', (
+    tester,
+  ) async {
     final note = ValueNotifier<String?>('readme.md');
     await pump(tester, initialNote: note);
-    await pumpUntil(tester, find.text('Save'));
-    await gotoSource(tester);
+    await pumpUntil(tester, find.text('Edit'));
+    await cycleMode(tester, 'Edit', 'Source');
+    // Burn the mount's unkillable blink future BEFORE anything re-arms the
+    // debounce, so the write below can only be the switch flush's.
+    await settle(tester);
     await typeInto(tester, 'uncommitted');
     await tester.pump();
-    expect(find.text('Unsaved changes'), findsOneWidget);
 
     // The sidebar tree asks for another note (ADR-0073): the host rebuilds
-    // the workspace with a new initialNote. The confirm dialog appears, and
-    // Cancel keeps the buffer — nothing reaches the disk.
+    // the workspace with a new initialNote. The pending edit flushes on the
+    // way out — no confirm dialog, no discard. pumpUntil advances no fake
+    // time, so the 100ms debounce cannot race the flush here.
     note.value = 'notes/idea.md';
     await pump(tester, initialNote: note);
-    // _openPath reads the note through real IO — wait for the dialog.
-    await pumpUntil(tester, find.text('Discard unsaved edits?'));
+    await pumpUntil(tester, find.text('notes/idea.md'));
+    expect(find.text('Unwritten changes'), findsNothing);
+    await pumpUntilFileContains(
+      tester,
+      '${root.path}/readme.md',
+      'uncommitted',
+    );
+    await settle(tester);
+  });
+
+  testWidgets('the mode capsule hands the truth across faces', (tester) async {
+    final note = ValueNotifier<String?>('readme.md');
+    await pump(tester, initialNote: note);
+    await pumpUntil(tester, find.text('Edit'));
+
+    await cycleMode(tester, 'Edit', 'Source');
+    await typeInto(tester, '# Round trip\n');
+    // Burn each face's unkillable blink future while that face is still
+    // mounted — the swaps below unmount them (see settle's doc).
+    await settle(tester);
+    // Source → Preview → Edit: the block document rebuilds from the buffer
+    // that holds the edit (ADR-0075 ③, preview→edit hop)...
+    await cycleMode(tester, 'Source', 'Preview');
+    await cycleMode(tester, 'Preview', 'Edit');
+    await settle(tester);
+    // ...and Edit → Source re-encodes the document — the edit survived the
+    // full cycle, which is the handoff contract.
+    await cycleMode(tester, 'Edit', 'Source');
+    final editor = tester.widget<CodeEditor>(find.byType(CodeEditor));
+    expect(editor.controller!.text, '# Round trip\n');
+    await settle(tester);
+  });
+
+  testWidgets('the registered flush writes pending edits (close gate)', (
+    tester,
+  ) async {
+    Future<void> Function()? registered;
+    final note = ValueNotifier<String?>('readme.md');
+    await pump(
+      tester,
+      initialNote: note,
+      onRegisterFlush: (fn) {
+        registered = fn;
+      },
+    );
+    await pumpUntil(tester, find.text('Edit'));
+    expect(registered, isNotNull);
+
+    await cycleMode(tester, 'Edit', 'Source');
+    await typeInto(tester, '# Via flush\n');
+    await tester.pump();
+    // No debounce wait: the window-close gate writes immediately.
+    await tester.runAsync(() => registered!());
+    expect(File('${root.path}/readme.md').readAsStringSync(), '# Via flush\n');
+    await settle(tester);
+  });
+
+  testWidgets('window blur flushes the pending edit', (tester) async {
+    final note = ValueNotifier<String?>('readme.md');
+    await pump(tester, initialNote: note);
+    await pumpUntil(tester, find.text('Edit'));
+    await cycleMode(tester, 'Edit', 'Source');
+    await typeInto(tester, '# Blurred\n');
+    await tester.pump();
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await pumpUntilFileContains(tester, '${root.path}/readme.md', '# Blurred');
+    // Back to resumed so the lifecycle is clean for the next test.
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await settle(tester);
+  });
+
+  testWidgets('unmounting flushes the pending edit', (tester) async {
+    final note = ValueNotifier<String?>('readme.md');
+    await pump(tester, initialNote: note);
+    await pumpUntil(tester, find.text('Edit'));
+    await cycleMode(tester, 'Edit', 'Source');
+    await typeInto(tester, '# Orphaned\n');
+    // Burn the mount's blink future; the settle also fires the debounce and
+    // writes the first text, so the second type re-arms a pending write that
+    // only the unmount can deliver.
+    await settle(tester);
+    await typeInto(tester, '# Orphaned second\n');
+    await tester.pump();
+
+    // Entering a plan extension view swaps the center pane — the workspace
+    // unmounts, and the pending edit leaves with it (ADR-0075 ②).
+    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+    await pumpUntilFileContains(
+      tester,
+      '${root.path}/readme.md',
+      '# Orphaned second',
+    );
+  });
+
+  testWidgets('an externally changed file is never overwritten', (
+    tester,
+  ) async {
+    final note = ValueNotifier<String?>('readme.md');
+    await pump(tester, initialNote: note);
+    await pumpUntil(tester, find.text('Edit'));
+
+    // The agent (or git) rewrites the file behind the editor's back — before
+    // any local edit, so the gate baseline is the stale one.
+    await tester.runAsync(() async {
+      File('${root.path}/readme.md').writeAsStringSync('# Agent was here\n');
+    });
+    await cycleMode(tester, 'Edit', 'Source');
+    await typeInto(tester, 'local edits');
+    await tester.pump(const Duration(milliseconds: 150));
+
+    // The gate refuses the write, says so once, and marks the note stuck.
+    await pumpUntil(
+      tester,
+      find.text('The note changed on disk — autosave paused.'),
+    );
+    expect(find.text('Changes not written'), findsOneWidget);
+    expect(
+      File('${root.path}/readme.md').readAsStringSync(),
+      '# Agent was here\n',
+    );
+    await settle(tester);
+  });
+
+  testWidgets('leaving a stuck note asks before discarding', (tester) async {
+    final note = ValueNotifier<String?>('readme.md');
+    await pump(tester, initialNote: note);
+    await pumpUntil(tester, find.text('Edit'));
+    await tester.runAsync(() async {
+      File('${root.path}/readme.md').writeAsStringSync('# Agent was here\n');
+    });
+    await cycleMode(tester, 'Edit', 'Source');
+    await typeInto(tester, 'local edits');
+    await tester.pump(const Duration(milliseconds: 150));
+    await pumpUntil(
+      tester,
+      find.text('The note changed on disk — autosave paused.'),
+    );
+
+    // Cancel: stay on the note, buffer intact.
+    note.value = 'notes/idea.md';
+    await pump(tester, initialNote: note);
+    await pumpUntil(tester, find.text('Unwritten changes'));
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
-    expect(find.text('Unsaved changes'), findsOneWidget);
-    expect(File('${root.path}/readme.md').readAsStringSync(), '# Readme\n');
+    expect(find.text('readme.md'), findsOneWidget);
+    expect(find.text('notes/idea.md'), findsNothing);
 
-    // Unfocus BEFORE the swap: the old editor's blink timer is owned by its
-    // editor state, and firing one after the swap+dispose lands on a dead
-    // object (editor_tab's settle does the same before closing tabs).
     await settle(tester);
 
     // The consume handed the token back; the real host rebuilds with null
-    // (consumeOpenNote notifies). Mirror that, or the widget would still hold
-    // 'notes/idea.md' and the SAME second request would be swallowed by the
-    // changed-config guard.
+    // (consumeOpenNote notifies). Mirror that, or the SAME second request
+    // would be swallowed by the changed-config guard (ADR-0073).
     note.value = null;
     await pump(tester, initialNote: note);
 
-    // Again, confirming this time: the buffer is replaced (chip gone) and the
-    // note on disk never saw the edits.
+    // Again, confirming this time: the note switches and the disk keeps the
+    // external version — the local edits are gone, as the dialog said.
     note.value = 'notes/idea.md';
     await pump(tester, initialNote: note);
-    await pumpUntil(tester, find.text('Discard unsaved edits?'));
-    await tester.tap(find.widgetWithText(ShadButton, 'Discard changes'));
-    await pumpUntilGone(tester, find.text('Unsaved changes'));
+    await pumpUntil(tester, find.text('Unwritten changes'));
+    await tester.tap(find.text('Discard & leave'));
+    await pumpUntil(tester, find.text('notes/idea.md'));
+    expect(
+      File('${root.path}/readme.md').readAsStringSync(),
+      '# Agent was here\n',
+    );
+    await settle(tester);
+  });
+
+  testWidgets('a failed write stays stuck and says so', (tester) async {
+    final note = ValueNotifier<String?>('readme.md');
+    await pump(tester, initialNote: note);
+    await pumpUntil(tester, find.text('Edit'));
+
+    // dart:io has no chmod; a directory squatting on the tmp path makes the
+    // writeAsString throw — a deterministic IO failure with the gate clean.
+    Directory('${root.path}/readme.md.tmp').createSync();
+    await cycleMode(tester, 'Edit', 'Source');
+    await typeInto(tester, '# Doomed\n');
+    await tester.pump(const Duration(milliseconds: 150));
+
+    await pumpUntil(tester, find.text('Saving the note failed.'));
+    expect(find.text('Changes not written'), findsOneWidget);
     expect(File('${root.path}/readme.md').readAsStringSync(), '# Readme\n');
+    await settle(tester);
+  });
+
+  testWidgets('the write is atomic — no tmp residue', (tester) async {
+    final note = ValueNotifier<String?>('readme.md');
+    await pump(tester, initialNote: note);
+    await pumpUntil(tester, find.text('Edit'));
+    await cycleMode(tester, 'Edit', 'Source');
+    await typeInto(tester, '# Atomic\n');
+    await tester.pump(const Duration(milliseconds: 150));
+    await pumpUntilFileContains(tester, '${root.path}/readme.md', '# Atomic');
+
+    final residue = root
+        .listSync()
+        .where((entry) => entry.path.endsWith('.tmp'))
+        .toList();
+    expect(residue, isEmpty);
     await settle(tester);
   });
 
@@ -203,7 +401,7 @@ void main() {
     testWidgets('the editor survives amplified text ($label)', (tester) async {
       final note = ValueNotifier<String?>('readme.md');
       await pump(tester, initialNote: note, scale: step);
-      await pumpUntil(tester, find.text('Save'));
+      await pumpUntil(tester, find.text('Edit'));
       expect(textDefects(tester), isEmpty, reason: 'an open note');
       await settle(tester);
     });

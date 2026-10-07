@@ -154,6 +154,11 @@ Future<void> main() async {
   // drags. A failure here is cosmetic — the default window shows anyway.
   final geometryStore = WindowGeometryStore.open(support);
   await windowManager.setMinimumSize(const Size(960, 640));
+  // The close gate (ADR-0075 ②): intercept close so the plan note's pending
+  // autosave can land first. Paired with _DshAppState.onWindowClose, which is
+  // the only path to destroy() — the pair must never be separated, or the
+  // window becomes unclosable.
+  await windowManager.setPreventClose(true);
   try {
     final display = await retriever.screenRetriever.getPrimaryDisplay();
     final visible = Rect.fromLTWH(
@@ -211,10 +216,16 @@ class DshApp extends ConsumerStatefulWidget {
   ConsumerState<DshApp> createState() => _DshAppState();
 }
 
-class _DshAppState extends ConsumerState<DshApp> {
+class _DshAppState extends ConsumerState<DshApp> with WindowListener {
   /// The settings panel's visibility — the one piece of app-wide state that
   /// is a view concern rather than a controller's.
   bool _settingsOpen = false;
+
+  /// The plan note's flush, registered by the mounted PlanWorkspace and
+  /// awaited by the window-close gate, so a pending autosave lands before the
+  /// window dies (ADR-0075 ②). Tray quit routes through the same intercepted
+  /// close.
+  Future<void> Function()? _planNoteFlush;
 
   /// Whether the auth-restore already ran (ADR-0045 PE): the gate renders
   /// only after the cached session had its chance.
@@ -233,6 +244,9 @@ class _DshAppState extends ConsumerState<DshApp> {
   @override
   void initState() {
     super.initState();
+    // The window already exists (main() finished its manager setup), so the
+    // close gate can listen right away (ADR-0075 ②).
+    windowManager.addListener(this);
     // Nothing works without a key, and the composer's failure message is a
     // worse way to learn that than the panel that fixes it. dsh opens an
     // onboarding dialog on the same condition.
@@ -293,10 +307,20 @@ class _DshAppState extends ConsumerState<DshApp> {
 
   @override
   void dispose() {
+    windowManager.removeListener(this);
     _hotkeys?.dispose();
     _tray?.dispose();
     _windowTitles?.dispose();
     super.dispose();
+  }
+
+  /// The close gate (ADR-0075 ②): the intercepted close awaits the plan
+  /// note's flush, then actually destroys the window. Prevent-close is set in
+  /// main(), so both the native close button and the tray quit land here.
+  @override
+  Future<void> onWindowClose() async {
+    await _planNoteFlush?.call();
+    await windowManager.destroy();
   }
 
   @override
@@ -615,6 +639,8 @@ class _DshAppState extends ConsumerState<DshApp> {
           initialNote: modes.openNotePath,
           onNoteConsumed: () =>
               ref.read(workspaceModeProvider).consumeOpenNote(),
+          // The window-close gate awaits this (ADR-0075 ②).
+          onRegisterFlush: (flush) => _planNoteFlush = flush,
         ),
         PlanExtensionView.collection => PlanDataViewScreen(
           store: planStore,

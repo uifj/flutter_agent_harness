@@ -34,6 +34,10 @@ import 'amplified_text_probe.dart';
 void main() {
   late Directory root;
 
+  // The autosave debounce, shortened so tests don't wait a real second
+  // (ADR-0075 ① — the default lives on PlanWorkspace).
+  const testDebounce = Duration(milliseconds: 100);
+
   setUp(() async {
     root = await Directory.systemTemp.createTemp('plan_blocks');
     File(
@@ -42,7 +46,17 @@ void main() {
   });
 
   tearDown(() async {
-    if (await root.exists()) await root.delete(recursive: true);
+    // The unmount flush's unawaited write can still hold a file here (errno
+    // 32 on Windows) — retry for a moment, then give up: a leftover temp dir
+    // must not fail the test.
+    for (var attempt = 0; attempt < 20; attempt++) {
+      try {
+        if (await root.exists()) await root.delete(recursive: true);
+        return;
+      } on FileSystemException {
+        await Future<void>.delayed(const Duration(milliseconds: 25));
+      }
+    }
   });
 
   Future<void> pump(WidgetTester tester, {double step = 1.0}) async {
@@ -62,6 +76,7 @@ void main() {
             // The tree moved to the sidebar (ADR-0073); the note opens through
             // the initialNote token now.
             initialNote: 'readme.md',
+            autosaveDebounce: testDebounce,
           ),
         ),
       ),
@@ -79,6 +94,19 @@ void main() {
   PlanBlockDocument documentOf(WidgetTester tester) =>
       tester.widget<PlanBlockEditor>(find.byType(PlanBlockEditor)).document;
 
+  /// Hands the event loop real time until the note's file contains [needle] —
+  /// the autosave write is real IO, and the tmp+rename makes the needle appear
+  /// atomically (no torn reads).
+  Future<void> pumpUntilFileContains(WidgetTester tester, String needle) async {
+    final path = '${root.path}/readme.md';
+    for (var attempt = 0; attempt < 200; attempt++) {
+      final content = await tester.runAsync(() => File(path).readAsString());
+      if (content != null && content.contains(needle)) return;
+      await tester.pump();
+    }
+    fail('"readme.md" never contained "$needle"');
+  }
+
   testWidgets('the block editor decodes the note and saves through the codec', (
     tester,
   ) async {
@@ -86,6 +114,8 @@ void main() {
     // The note's two text blocks are two fields: heading and paragraph.
     expect(find.text('readme'), findsOne);
     expect(find.text('hello world'), findsOne);
+    // No save button: the edit lands on disk through the debounce (ADR-0075).
+    expect(find.text('Save'), findsNothing);
 
     // ShadInput wraps an EditableText, not a TextField.
     await tester.enterText(find.byType(EditableText).first, 'readme edited');
@@ -93,18 +123,11 @@ void main() {
     // bridge's build, so it lands on the frame after that.
     await tester.pump();
     await tester.pump();
-    expect(find.text('Unsaved changes'), findsOne);
-
-    await tester.tap(find.text('Save'));
-    for (var attempt = 0; attempt < 100; attempt++) {
-      if (find.text('Unsaved changes').evaluate().isEmpty) break;
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 10)),
-      );
-      await tester.pump();
-    }
+    // Stop typing; the debounce writes the codec's re-encoding — the
+    // untouched paragraph survives the round trip.
+    await tester.pump(testDebounce);
+    await pumpUntilFileContains(tester, 'readme edited');
     final saved = File('${root.path}/readme.md').readAsStringSync();
-    expect(saved, contains('readme edited'));
     // The codec re-encodes the whole tree, so the untouched paragraph
     // survives the round trip.
     expect(saved, contains('hello world'));
@@ -209,15 +232,9 @@ void main() {
       containsAll([PlanMarkType.bold, PlanMarkType.underline]),
     );
 
-    // The marks survive the save — the envelope guarantees the round trip.
-    await tester.tap(find.text('Save'));
-    for (var i = 0; i < 100; i++) {
-      if (find.text('Unsaved changes').evaluate().isEmpty) break;
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 10)),
-      );
-      await tester.pump();
-    }
+    // The marks survive the autosave — the envelope guarantees the round trip.
+    await tester.pump(testDebounce);
+    await pumpUntilFileContains(tester, 'hello marks');
     final saved = File('${root.path}/readme.md').readAsStringSync();
     final reopened = PlanBlockDocument.fromMarkdown(saved);
     final restored = reopened.blocks

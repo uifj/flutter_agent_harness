@@ -44,6 +44,10 @@ repomix-output.*
 # avoids a one-way 88 MB commit. Do not `git add -A` at the repository root.
 /_archive_project/
 
+# Local clones of third-party reference repositories (appflowy-editor etc.),
+# intentionally untracked for source reading only; same policy as _archive_project.
+/_archive/
+
 # Vendored third-party UI reference clone, intentionally untracked.
 # It is not a pubspec dependency and no code imports it; keep provenance and
 # pinned version in the ADR instead of 5.7 MB of upstream history.
