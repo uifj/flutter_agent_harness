@@ -91,6 +91,19 @@ void main() {
     }
   }
 
+  /// The inverse of [pumpUntil]: hands the loop real time until [finder]
+  /// matches NOTHING — the shape a finished persist needs when the observable
+  /// is a chip disappearing.
+  Future<void> pumpUntilGone(WidgetTester tester, Finder finder) async {
+    for (var attempt = 0; attempt < 100; attempt++) {
+      if (finder.evaluate().isEmpty) return;
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 10)),
+      );
+      await tester.pump();
+    }
+  }
+
   /// Same as [pumpUntil] but for a file's content: the write is real IO and
   /// lands atomically (tmp+rename), so the needle only appears once the rename
   /// did — reading mid-flight sees the old bytes, never a torn file.
@@ -429,6 +442,112 @@ void main() {
       '${root.path}/readme.md',
       '# After reload',
     );
+    await settle(tester);
+  });
+
+  testWidgets('a fresh empty note opens ready to type', (tester) async {
+    // The tree's create flow writes an empty file (plan_vault_tree). Anytype
+    // lands every new object on an editable surface, AppFlowy's new page is
+    // click-and-type from the first frame — an empty note must be the same.
+    File('${root.path}/new note.md').writeAsStringSync('');
+    final note = ValueNotifier<String?>('new note.md');
+    await pump(tester, initialNote: note);
+    await pumpUntil(tester, find.byType(PlanBlockEditor));
+    await tester.enterText(find.byType(EditableText).first, 'first words');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 150));
+    await pumpUntilFileContains(
+      tester,
+      '${root.path}/new note.md',
+      'first words',
+    );
+    await settle(tester);
+  });
+
+  testWidgets('a three-face round trip keeps the document — and its undo', (
+    tester,
+  ) async {
+    final note = ValueNotifier<String?>('readme.md');
+    await pump(tester, initialNote: note);
+    await pumpUntil(tester, find.byType(PlanBlockEditor));
+    // Edit in the block editor, then glance at Source and Preview before
+    // coming back. Nothing was changed outside the document, so the document
+    // — and its undo history — must survive the tour (Obsidian's face toggle
+    // never resets undo; a glance is not an edit).
+    await tester.enterText(find.byType(EditableText).first, 'readme edited');
+    await tester.pump();
+    final before = tester
+        .widget<PlanBlockEditor>(find.byType(PlanBlockEditor))
+        .document;
+    await cycleMode(tester, 'Edit', 'Source');
+    await settle(tester);
+    await cycleMode(tester, 'Source', 'Preview');
+    await settle(tester);
+    await cycleMode(tester, 'Preview', 'Edit');
+    final after = tester
+        .widget<PlanBlockEditor>(find.byType(PlanBlockEditor))
+        .document;
+    expect(identical(before, after), isTrue);
+    // The undo stack came around too: one undo reverts the edit. Two pumps —
+    // the undo notify rebuilds the bridge on the first frame and the field's
+    // controller sync lands on the second (plan_blocks_test's two-frame rule).
+    after.undo();
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Readme'), findsOne);
+    await settle(tester);
+  });
+
+  testWidgets('reverting to the saved content clears the stuck state', (
+    tester,
+  ) async {
+    final note = ValueNotifier<String?>('readme.md');
+    await pump(tester, initialNote: note);
+    await pumpUntil(tester, find.text('Edit'));
+    await cycleMode(tester, 'Edit', 'Source');
+    await typeInto(tester, 'local edits');
+    await tester.pump();
+
+    // The agent rewrites the file; the editor goes stuck.
+    await tester.runAsync(() async {
+      File('${root.path}/readme.md').writeAsStringSync('# Agent was here\n');
+      bumpFsRevision();
+    });
+    await pumpUntil(tester, find.text('Changes not written'));
+
+    // The user reverts their own edit (back to the opened text): there is
+    // nothing of ours left to write, so the conflict dissolves — the chip
+    // clears and leaving the note needs no dialog.
+    await typeInto(tester, '# Readme\n');
+    await tester.pump(const Duration(milliseconds: 150));
+    await pumpUntilGone(tester, find.text('Changes not written'));
+
+    note.value = 'notes/idea.md';
+    await pump(tester, initialNote: note);
+    await pumpUntil(tester, find.text('notes/idea.md'));
+    expect(find.text('Unwritten changes'), findsNothing);
+    // The agent's version is still on the disk — untouched.
+    expect(
+      File('${root.path}/readme.md').readAsStringSync(),
+      '# Agent was here\n',
+    );
+    await settle(tester);
+  });
+
+  testWidgets('the preview face follows an agent reload', (tester) async {
+    final note = ValueNotifier<String?>('readme.md');
+    await pump(tester, initialNote: note);
+    await pumpUntil(tester, find.text('Edit'));
+    await cycleMode(tester, 'Edit', 'Source');
+    await settle(tester);
+    await cycleMode(tester, 'Source', 'Preview');
+    await settle(tester);
+
+    await tester.runAsync(() async {
+      File('${root.path}/readme.md').writeAsStringSync('# Fresh from agent\n');
+      bumpFsRevision();
+    });
+    await pumpUntil(tester, find.text('Fresh from agent'));
     await settle(tester);
   });
 

@@ -493,9 +493,17 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
       if (_mode == _PlanNoteMode.edit && next == _PlanNoteMode.source) {
         _controller!.text = _document!.encode();
       } else if (_mode == _PlanNoteMode.preview && next == _PlanNoteMode.edit) {
-        final old = _document;
-        _document = PlanBlockDocument.fromMarkdown(_controller!.text);
-        WidgetsBinding.instance.addPostFrameCallback((_) => old?.dispose());
+        if (_controller!.text == _document!.encode()) {
+          // The buffer is still the document's own encoding — a glance at
+          // the other faces is not an edit. Keep the instance: rebuilding
+          // would throw away the undo stack for nothing.
+        } else {
+          // The Source face changed the text: the document re-derives from
+          // the buffer, and its undo stack resets with it.
+          final old = _document;
+          _document = PlanBlockDocument.fromMarkdown(_controller!.text);
+          WidgetsBinding.instance.addPostFrameCallback((_) => old?.dispose());
+        }
       }
       _mode = next;
     });
@@ -553,16 +561,20 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
         children: [
           _toolbar(color, selected),
           Expanded(
-            child: switch (_mode) {
-              _PlanNoteMode.preview => _NotePreview(text: controller.text),
-              _PlanNoteMode.edit => CallbackShortcuts(
-                bindings: {
-                  const SingleActivator(LogicalKeyboardKey.keyS, meta: true):
-                      _flush,
-                  const SingleActivator(LogicalKeyboardKey.keyS, control: true):
-                      _flush,
-                },
-                child: _DocumentBridge(
+            // The flush shortcut wraps ALL three faces: there is never
+            // anything pending in Preview (the mode hop flushes), but a
+            // shortcut that silently dies on one face is how muscle memory
+            // learns to distrust the keyboard.
+            child: CallbackShortcuts(
+              bindings: {
+                const SingleActivator(LogicalKeyboardKey.keyS, meta: true):
+                    _flush,
+                const SingleActivator(LogicalKeyboardKey.keyS, control: true):
+                    _flush,
+              },
+              child: switch (_mode) {
+                _PlanNoteMode.preview => _NotePreview(text: controller.text),
+                _PlanNoteMode.edit => _DocumentBridge(
                   document: _document!,
                   onDirty: _onBufferEdited,
                   child: PlanBlockEditor(
@@ -595,43 +607,36 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
                     },
                   ),
                 ),
-              ),
-              _PlanNoteMode.source => CallbackShortcuts(
-                bindings: {
-                  const SingleActivator(LogicalKeyboardKey.keyS, meta: true):
-                      _flush,
-                  const SingleActivator(LogicalKeyboardKey.keyS, control: true):
-                      _flush,
-                },
-                // The one-frame-late dirty bridge: re_editor notifies from
-                // inside build on mount, and a plain listener would
-                // false-positive the flag on every open. See
-                // `editor_tab.dart`'s _DirtyBridge doc for the full story.
-                child: _DirtyBridge(
-                  controller: controller,
-                  onDirty: _onBufferEdited,
-                  child: CodeEditor(
+                _PlanNoteMode.source =>
+                  // The one-frame-late dirty bridge: re_editor notifies from
+                  // inside build on mount, and a plain listener would
+                  // false-positive the flag on every open. See
+                  // `editor_tab.dart`'s _DirtyBridge doc for the full story.
+                  _DirtyBridge(
                     controller: controller,
-                    wordWrap: true,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    style: CodeEditorStyle(
-                      fontSize: 13,
-                      fontHeight: 22 / 13,
-                      fontFamily: dswFontFamilyCode,
-                      fontFamilyFallback: dswFontFamilyCodeFallback,
-                      textColor: color.labelPrimary,
-                      backgroundColor: color.bgBase,
-                      selectionColor: color.bubbleHighlight,
-                      cursorColor: color.labelPrimary,
-                      cursorLineColor: color.interactiveBgHover,
+                    onDirty: _onBufferEdited,
+                    child: CodeEditor(
+                      controller: controller,
+                      wordWrap: true,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      style: CodeEditorStyle(
+                        fontSize: 13,
+                        fontHeight: 22 / 13,
+                        fontFamily: dswFontFamilyCode,
+                        fontFamilyFallback: dswFontFamilyCodeFallback,
+                        textColor: color.labelPrimary,
+                        backgroundColor: color.bgBase,
+                        selectionColor: color.bubbleHighlight,
+                        cursorColor: color.labelPrimary,
+                        cursorLineColor: color.interactiveBgHover,
+                      ),
                     ),
                   ),
-                ),
-              ),
-            },
+              },
+            ),
           ),
         ],
       ),

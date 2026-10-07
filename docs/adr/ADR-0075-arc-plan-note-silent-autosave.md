@@ -80,3 +80,14 @@
 - **写前二次 stat 复核**：门是 check-then-write，写本身有真实耗时——tmp 写完、rename 之前再 stat 一次，agent 的写入落在中途就放弃 rename 交给活重载接手。rename 到落盘之间仍有不可关闭的缝（微秒级，任何无锁方案都一样），窗口从"整个写盘耗时"缩到"一次 rename"。
 - **卡住态的反馈边沿化**：首批实现里门/写失败的 toast 在每次重试都会重弹，与 ④"只在进入卡住态的边沿提示一次"不符——`_markStuck()` 改为回答"是否本次转入"，只有边沿弹条。
 - **诚实边界**：fsRevision 只由 agent 工具与 rewind 抬——用户的 git 操作、外部编辑器的改动不在信号里，仍由写盘时的门兜住；重载会丢光标与 undo 栈（干净缓冲下无稿可丢，可接受）；vault 树删除不 bump（它没有删除流）。
+
+## 追记 #3（TDD 全链路走查，2026-10-07）
+
+以终端用户视角逐旅程走查（走查单 `docs/walkthrough-plan-autosave-2026-10-07.md`，每步标注哪一半由测试证过），先写测试后修代码，四个候选断层两个是真、两个转正为守卫：
+
+- **真断层①：三面往返丢 undo**。preview→edit 无条件重建文档——瞥一眼 Source/Preview 回来，undo 栈清零（"看一眼不是编辑"；Obsidian 的面切换从不重置 undo）。修：仅当 buffer 与 `document.encode()` 分歧（真在 Source 面改过字）才重建。
+- **真断层②（反直觉）：Cmd+S 在 Preview 面静默失效**。快捷键原本只绑 Edit/Source 两面；功能上 Preview 永远没有 pending（切面时已 flush），但快捷键不能让肌肉记忆在一个面上失灵。修：CallbackShortcuts 提升为三面通用。
+- **转正守卫①：新建空笔记可立即打字**——树建的是空文件，但解码器对空行补一个空段落（`plan_markdown_codec.dart:89-96`），打开即可打字（Anytype"新对象必落可编辑面"的直觉）。
+- **转正守卫②：撤销回原点自动消解冲突**——卡住后把内容退回已存文本，内容跳写（在门之前）清脏清卡住，切笔记不再弹确认。两个行为都对，此前无测试钉住。
+
+门禁：format 0 / analyze 0 / arch 8 recorded 0 new / `flutter test` **+1444 −1**（唯一败 = app_scope 既有基线）。
