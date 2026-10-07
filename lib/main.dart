@@ -43,6 +43,7 @@ import 'state/hotkey_service.dart';
 import 'model/plan_mock_content.dart';
 import 'state/plan_object_store.dart';
 import 'state/prefs_store.dart';
+import 'state/update_service.dart';
 import 'state/crash_archive.dart';
 import 'state/auth_session.dart';
 import 'state/secret_store.dart';
@@ -60,6 +61,8 @@ import 'ui/conversation/details_panel.dart';
 import 'ui/conversation/hero_workspace_picker.dart';
 import 'ui/plan/dataview/plan_data_view_screen.dart';
 import 'ui/plan/library/plan_all_content_screen.dart';
+import 'ui/primitives/feedback.dart';
+import 'ui/primitives/update_dialog.dart';
 import 'ui/plan/library/plan_bin_screen.dart';
 import 'ui/plan/library/plan_create_collection.dart';
 import 'ui/plan/library/plan_gallery_screen.dart';
@@ -241,6 +244,9 @@ class _DshAppState extends ConsumerState<DshApp> with WindowListener {
   /// The window's own title line, pushed after the frame (ADR-0019).
   WindowTitleService? _windowTitles;
 
+  /// The update check (ADR-0079) — lives on the scope like every store.
+  UpdateService? _updates;
+
   @override
   void initState() {
     super.initState();
@@ -266,10 +272,18 @@ class _DshAppState extends ConsumerState<DshApp> with WindowListener {
       if (mounted) setState(() => _authRestored = true);
     }();
     // Register hotkeys and tray after the frame so window_manager has a handle.
+    _updates = ref.read(appScopeProvider).updates;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initHotkeys();
       _initTray();
       _initWindowTitle();
+      // The automatic update check: daily-throttled, silent unless there is
+      // something to say (ADR-0079 ④). A few seconds in, so it never races
+      // the first frame for the window's attention.
+      Future<void>.delayed(
+        const Duration(seconds: 5),
+        _checkForUpdatesAutomatically,
+      );
     });
   }
 
@@ -293,6 +307,46 @@ class _DshAppState extends ConsumerState<DshApp> with WindowListener {
     _windowTitles = WindowTitleService(sessions: scope.sessions)
       ..setWorkspace(ref.read(settingsDocumentProvider).workspaceRoot)
       ..init();
+  }
+
+  /// The menu's check: bypasses the throttle and the skip — the user asked,
+  /// the check answers, and a failure says so (ADR-0079 ①②).
+  Future<void> _checkForUpdates() async {
+    final updates = _updates;
+    if (updates == null || !mounted) return;
+    final result = await updates.check(userInitiated: true);
+    if (!mounted) return;
+    if (result.error != null) {
+      showFeedback(context, context.tr('updateCheckFailed'), destructive: true);
+      return;
+    }
+    if (result.hasUpdate && result.remote != null) {
+      await showUpdateDialog(
+        context,
+        result,
+        onSkip: (version) => updates.skipVersion(version),
+      );
+      return;
+    }
+    showFeedback(context, context.tr('updateUpToDate'));
+  }
+
+  /// The startup check: respects the daily throttle and the skipped version,
+  /// and never surfaces anything but an update (ADR-0079 ①④).
+  Future<void> _checkForUpdatesAutomatically() async {
+    try {
+      final updates = _updates;
+      if (updates == null || !mounted) return;
+      final result = await updates.check(userInitiated: false);
+      if (!mounted || !result.hasUpdate || result.remote == null) return;
+      await showUpdateDialog(
+        context,
+        result,
+        onSkip: (version) => updates.skipVersion(version),
+      );
+    } catch (_) {
+      // The check must never become a startup failure.
+    }
   }
 
   Future<void> _toggleWindow() async {
@@ -446,6 +500,7 @@ class _DshAppState extends ConsumerState<DshApp> with WindowListener {
                         Uri.parse(url),
                         mode: LaunchMode.externalApplication,
                       ),
+                      onCheckUpdate: _checkForUpdates,
                       onAbout: () => _showAboutDialog(),
                       // The plan-object store is a ChangeNotifier the
                       // providers cannot re-project; the builder re-reads its

@@ -68,6 +68,7 @@ void main() {
   Future<void> pump(
     WidgetTester tester, {
     void Function(String url)? onOpenLink,
+    VoidCallback? onCheckUpdate,
     VoidCallback? onAbout,
     double width = 1400,
     double? scale,
@@ -116,6 +117,7 @@ void main() {
             workbench: workbench,
             bottom: bottom,
             onOpenLink: onOpenLink,
+            onCheckUpdate: onCheckUpdate,
             onAbout: onAbout,
           ),
         ),
@@ -700,9 +702,11 @@ void main() {
     ) async {
       final opened = <String>[];
       var about = 0;
+      var checks = 0;
       await pump(
         tester,
         onOpenLink: opened.add,
+        onCheckUpdate: () => checks++,
         onAbout: () => about++,
         showHeader: true,
       );
@@ -721,6 +725,15 @@ void main() {
 
       await tester.tap(find.text('Product docs'));
       await tester.pumpAndSettle();
+      expect(opened, ['https://docs.planstar.top']);
+
+      // The releases row now runs the check instead of opening the page
+      // (ADR-0079); the page lives on in the update dialog's download button.
+      await tester.tap(find.byKey(const ValueKey('header-app-menu')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Check for updates'));
+      await tester.pumpAndSettle();
+      expect(checks, 1);
       expect(opened, ['https://docs.planstar.top']);
 
       await tester.tap(find.byKey(const ValueKey('header-app-menu')));

@@ -36,6 +36,7 @@ import 'usage_ledger.dart';
 import 'conversation_controller.dart';
 import 'details_selection.dart';
 import 'git_status_store.dart';
+import 'update_service.dart';
 import 'layout_controller.dart';
 import 'model_directory.dart';
 import 'prefs_store.dart';
@@ -71,6 +72,9 @@ class AppScope {
     _instructionCards = InstructionCardStore.open(support);
     _approvals = ApprovalRuleStore.open(support);
     _checkpoints = CheckpointStore.open(support);
+    // The in-app update check (ADR-0079): release channel + per-machine
+    // check state under <support>/update.json.
+    _updates = UpdateService.open(support);
     // Local usage ledger (ADR-0045 PC): one JSONL line per finished model
     // turn, 30-day window. The crash archive rides the same support root.
     _usageLedger = UsageLedger(directory: Directory('${support.path}/usage'));
@@ -277,6 +281,9 @@ class AppScope {
   /// The one git-status cache the workbench's readers share (ADR-0043): the
   /// source-control panel and the file tree ask this, never git directly.
   final _gitStatus = GitStatusStore(runner: runGit);
+
+  /// The update check (ADR-0079) — the 「发现新版本」 menu's engine.
+  late final UpdateService _updates;
   final _sideChat = SideChatController();
 
   /// The composer's model seat — dsh's `ctx.modelDirectories`. Adopted on
@@ -323,6 +330,8 @@ class AppScope {
 
   /// The shared git-status cache.
   GitStatusStore get gitStatus => _gitStatus;
+
+  UpdateService get updates => _updates;
   SideChatController get sideChat => _sideChat;
   ModelDirectory get modelDirectory => _modelDirectory;
   ConversationController get conversation => _conversation;
@@ -349,6 +358,7 @@ class AppScope {
     // and a shell that outlives its window is a leak on the host.
     _terminals.dispose();
     _gitStatus.dispose();
+    _updates.dispose();
     _selection.dispose();
     _layout.dispose();
     _tail.dispose();

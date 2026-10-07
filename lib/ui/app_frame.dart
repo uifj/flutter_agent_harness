@@ -65,6 +65,7 @@ class AppFrame extends StatefulWidget {
     this.onPickWorkspace,
     this.onOpenSettings,
     this.onOpenLink,
+    this.onCheckUpdate,
     this.onAbout,
   });
 
@@ -110,6 +111,9 @@ class AppFrame extends StatefulWidget {
   /// Opens a product link in the system browser (ADR-0072): the header's
   /// app menu hosts the docs/community/issue links.
   final void Function(String url)? onOpenLink;
+
+  /// Runs the update check (ADR-0079) — the 「发现新版本」 row's engine.
+  final VoidCallback? onCheckUpdate;
 
   /// Opens the about dialog; null hides the menu entry.
   final VoidCallback? onAbout;
@@ -246,6 +250,7 @@ class _AppFrameState extends State<AppFrame> {
                             onPickWorkspace: widget.onPickWorkspace,
                             onOpenSettings: widget.onOpenSettings,
                             onOpenLink: widget.onOpenLink,
+                            onCheckUpdate: widget.onCheckUpdate,
                             onAbout: widget.onAbout,
                           ),
                           Expanded(child: ClipRect(child: widget.center)),
@@ -572,6 +577,7 @@ class _CenterToggleStrip extends StatelessWidget {
     this.onPickWorkspace,
     this.onOpenSettings,
     this.onOpenLink,
+    this.onCheckUpdate,
     this.onAbout,
   });
 
@@ -582,6 +588,7 @@ class _CenterToggleStrip extends StatelessWidget {
   final VoidCallback? onPickWorkspace;
   final VoidCallback? onOpenSettings;
   final void Function(String url)? onOpenLink;
+  final VoidCallback? onCheckUpdate;
   final VoidCallback? onAbout;
 
   @override
@@ -623,6 +630,7 @@ class _CenterToggleStrip extends StatelessWidget {
             narrow: narrow,
             step: step,
             onOpenLink: onOpenLink,
+            onCheckUpdate: onCheckUpdate,
             onAbout: onAbout,
           ),
         ],
@@ -720,6 +728,7 @@ class _ToggleCluster extends StatelessWidget {
     required this.narrow,
     required this.step,
     this.onOpenLink,
+    this.onCheckUpdate,
     this.onAbout,
   });
 
@@ -733,6 +742,7 @@ class _ToggleCluster extends StatelessWidget {
   /// The header app menu's hosts (ADR-0072); null hides the button — the same
   /// "a menu that opens onto nothing is a fake door" rule the quick menu runs.
   final void Function(String url)? onOpenLink;
+  final VoidCallback? onCheckUpdate;
   final VoidCallback? onAbout;
 
   @override
@@ -764,11 +774,12 @@ class _ToggleCluster extends StatelessWidget {
               label: menuContext.tr('helpFeatureRequest'),
               onTap: () => onOpenLink!(AppMeta.featureRequestUrl),
             ),
-            DswMenuEntry(
-              icon: LucideIcons.refresh_cw,
-              label: menuContext.tr('helpReleases'),
-              onTap: () => onOpenLink!(AppMeta.releasesUrl),
-            ),
+            if (onCheckUpdate != null)
+              DswMenuEntry(
+                icon: LucideIcons.refresh_cw,
+                label: menuContext.tr('helpReleases'),
+                onTap: onCheckUpdate,
+              ),
             if (onAbout != null)
               DswMenuEntry(
                 icon: LucideIcons.info,

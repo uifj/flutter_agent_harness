@@ -37,4 +37,9 @@ abstract final class AppMeta {
   /// once signing lands (ADR-0045 PD 前置). Today the row opens this page.
   static const String releasesUrl =
       'https://github.com/uifj/flutter_agent_harness/releases';
+
+  /// The machine-readable end of the same channel: the endpoint the update
+  /// check polls (ADR-0079). Must stay the releases page's API twin.
+  static const String releasesApiUrl =
+      'https://api.github.com/repos/uifj/flutter_agent_harness/releases/latest';
 }

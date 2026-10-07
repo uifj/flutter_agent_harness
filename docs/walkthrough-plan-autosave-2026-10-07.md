@@ -99,3 +99,21 @@
 2. **测试基建**：`pumpUntil`/`pumpUntilGone` 改为**超时即 fail**——静默超时把失败点推迟到三行之后，本次排障为此多绕两圈。
 3. **断言真值律**：Source 面的加载断言要用 controller 真值——`find.text` 看不见 re_editor 的渲染（RichText 非默认可寻）。
 4. **多 pump 调用的参数律**：测试助手带状态（locale 等）时，第二次 pump 忘传参数 = 界面静默变回英文——zh 旅程测试抓出。
+
+---
+
+## 走查补批（2026-10-07 第三批）：应用内更新检查 + 文案守卫（ADR-0079/0080）
+
+| 步骤 | 期望 | 验证 |
+| --- | --- | --- |
+| 菜单「发现新版本」 | 触发检查而非打开空网页；无宿主回调时行不显示（假门律） | 已证（app_frame_test 菜单守卫改写：点击后 checks==1 且 opened 无新增） |
+| 手动检查（有更新） | 对话框「发现新版本 {version}」+ 当前/最新 + 跳过本版 + 前往下载 | 已证（update_dialog 原语 + service 测试拼合；对话框自身走真机走查） |
+| 手动检查（已最新） | 反馈条「已是最新版本。」 | 逻辑已证（main 分支）；待真机（走真实 API） |
+| 手动检查（失败） | 反馈条「检查更新失败」——**失败必须说话**，不装"已最新" | 已证（service：失败→error，main 分支读 error 弹条） |
+| 自动检查（同日两次） | 第二次不碰网络 | 已证 `the daily throttle silences a second automatic check` |
+| 跳过本版后自动检查 | 安静；手动检查仍回答 | 已证（跳过两档测试） |
+| 检查状态文件损坏 | 按不存在处理，不崩 | 已证 `a corrupt prefs file reads as absent` |
+| 硬编码中文进 lib/ | 任何 `Text('中文')` 形态在 CI 红 | 已证（hardcoded_copy_test 零容忍 + 注入即红的负向验证） |
+
+**本批教训**：① MockClient 闭包内自增 int 按值传参失效（盒装 List<int>）——测试助手传"计数"要用可变容器；
+② 裸 const 注入不红是 PATTERN 盲区不是守卫漏洞——负向验证必须用真 UI 形态（Text('…')）。
