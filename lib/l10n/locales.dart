@@ -1254,7 +1254,7 @@ const zhStrings = <String, String>{
   'planDateYesterday': '昨天',
   'planDateTomorrow': '明天',
   'planDateNoObjects': '这一天没有对象',
-  'planGalleryTitle': '图库',
+  'planGalleryTitle': '扩展',
   'planGalleryInstall': '安装',
   'planGalleryInstalling': '安装中…',
   'planGalleryDone': '已安装为 {name}',

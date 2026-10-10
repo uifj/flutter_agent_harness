@@ -214,6 +214,11 @@ class _SidebarState extends State<Sidebar> {
   /// Session state, default expanded — Obsidian's explorer is visible too.
   bool _planNotesExpanded = true;
 
+  /// Whether the 集合 group is expanded. Mirrors [_planNotesExpanded]: the
+  /// header caption is a toggle that folds the collection rows away. Wide
+  /// only — the rail has no header to fold and lists one glyph per collection.
+  bool _planCollectionsExpanded = true;
+
   /// The expanded notes section's floor height — the same fixed seat the
   /// narrow column gives it. Below this remaining viewport, the section
   /// stops filling and becomes a fixed box the outer scroll reaches.
@@ -320,7 +325,7 @@ class _SidebarState extends State<Sidebar> {
                 // stayed on screen. Chrome may scroll away, content may not
                 // vanish. The rail has no chrome to spare and its list is a
                 // single glyph, so it keeps the plain column.
-                if (wide)
+                if (wide) ...[
                   Expanded(
                     child: ListenableBuilder(
                       listenable: widget.sessions,
@@ -333,9 +338,10 @@ class _SidebarState extends State<Sidebar> {
                             ),
                           ),
                           // 企划 has no conversation module: the extension
-                          // area (collections + library) takes the sessions'
-                          // scroll body, and New Session disappears with
-                          // them (user decision 2026-10-01).
+                          // area (collections + the notes tree) takes the
+                          // sessions' scroll body, and New Session disappears
+                          // with them (user decision 2026-10-01). The 库 group
+                          // is pinned below (see [_libraryBottom]).
                           if (widget.mode == WorkspaceMode.plan)
                             ..._librarySlivers(color)
                           else
@@ -343,8 +349,16 @@ class _SidebarState extends State<Sidebar> {
                         ],
                       ),
                     ),
-                  )
-                else ...[
+                  ),
+                  // 库 pinned to the column's bottom (user decision
+                  // 2026-10-10): the four library screens become a fixed nav
+                  // strip above the footer — the reference's bottom group — so
+                  // the notes tree owns the middle. Wide 企划 only; the rail
+                  // keeps its single icon scroll.
+                  if (widget.mode == WorkspaceMode.plan &&
+                      widget.onOpenLibrary != null)
+                    _libraryBottom(color),
+                ] else ...[
                   ..._chrome(color, wide: false),
                   Expanded(
                     child: widget.mode == WorkspaceMode.plan
@@ -423,54 +437,73 @@ class _SidebarState extends State<Sidebar> {
     );
   }
 
-  /// The plan collections (ADR-0037; user decision 2026-10-01): a labelled
-  /// group of rows, one per collection, each toggling its data view. Only
-  /// shown in 企划 mode with a wired toggle.
+  /// A collapsible section header shared by 集合 and 笔记 (user decision
+  /// 2026-10-10: the two fold the same way and read at the same type seat).
+  /// The row is the toggle: a chevron that flips with [expanded], a leading
+  /// [icon], and the [label] at [DswType.s14]. It borrows a collection row's
+  /// chrome exactly — [_Pressable] wash, [DswShape.control] radius, a 32*step
+  /// body, horizontal 8 padding and the 2px bottom gap — so the highlight
+  /// spans the full width just like the 交付看板 row beneath it (user decision
+  /// 2026-10-10: the header's padding must match the rows, not read narrower).
+  /// An optional [trailing] (the collections "+") sits inside the row as its
+  /// own hit target, so it keeps its action without shrinking the wash.
+  Widget _sectionHeader(
+    DswAlias color, {
+    required bool expanded,
+    required VoidCallback onTap,
+    required IconData icon,
+    required String label,
+    Widget? trailing,
+  }) {
+    final step = MediaQuery.textScalerOf(context).scale(1);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: _Pressable(
+        onTap: onTap,
+        semanticLabel: label,
+        borderRadius: BorderRadius.circular(DswShape.control),
+        child: Container(
+          height: 32 * step,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            children: [
+              Icon(
+                expanded ? LucideIcons.chevron_down : LucideIcons.chevron_right,
+                size: DswShape.iconTiny,
+                color: color.labelTertiary,
+              ),
+              const SizedBox(width: 4),
+              Icon(icon, size: DswShape.iconSm, color: color.labelSecondary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: DswType.s14.copyWith(color: color.labelSecondary),
+                ),
+              ),
+              ?trailing,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   /// The notes section (ADR-0073): a header row that collapses the vault
   /// tree, and the tree itself when expanded. The header is the button the
   /// user asked for — one click reveals (or hides) the workspace's notes.
   Widget _notesSection(DswAlias color, {required bool fill}) {
-    final step = MediaQuery.textScalerOf(context).scale(1);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        DswHoverTap(
+        _sectionHeader(
+          color,
+          expanded: _planNotesExpanded,
           onTap: () => setState(() => _planNotesExpanded = !_planNotesExpanded),
-          semanticLabel: context.tr('planNotes'),
-          builder: (context, hovered, focused) => Container(
-            height: 32 * step,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              color: hovered ? color.interactiveBgHover : null,
-              borderRadius: BorderRadius.circular(DswShape.inner),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  _planNotesExpanded
-                      ? LucideIcons.chevron_down
-                      : LucideIcons.chevron_right,
-                  size: DswShape.iconTiny,
-                  color: color.labelTertiary,
-                ),
-                const SizedBox(width: 4),
-                Icon(
-                  LucideIcons.notebook_text,
-                  size: DswShape.iconSm,
-                  color: color.labelSecondary,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    context.tr('planNotes'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: DswType.s14.copyWith(color: color.labelSecondary),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          icon: LucideIcons.notebook_text,
+          label: context.tr('planNotes'),
         ),
         if (_planNotesExpanded)
           fill
@@ -568,6 +601,23 @@ class _SidebarState extends State<Sidebar> {
     ];
   }
 
+  /// The 库 group pinned to the bottom of the wide 企划 column (user decision
+  /// 2026-10-10): a fixed nav strip between the scrollable region and the
+  /// footer, so the four library screens stay reachable while the notes tree
+  /// owns the middle. A hairline separates it from the scroll above; the rows
+  /// themselves are the same shape [_libraryGroupWidgets] draws at the top.
+  Widget _libraryBottom(DswAlias color) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Container(height: 1, color: color.borderL1),
+      ..._libraryGroupWidgets(color),
+      const SizedBox(height: DswShape.xs),
+    ],
+  );
+
+  /// The 集合 group (ADR-0037; user decision 2026-10-01): a collapsible header
+  /// (shared [_sectionHeader], same seat as 笔记) over one row per collection,
+  /// each toggling its data view. Only shown in 企划 mode with a wired toggle.
   Widget _extensionGroup(DswAlias color, {required bool wide}) {
     final onOpen = widget.onOpenCollection;
     final collections = widget.collections;
@@ -582,106 +632,108 @@ class _SidebarState extends State<Sidebar> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (wide)
-          Padding(
-            padding: const EdgeInsets.only(left: 8, right: 4, bottom: 4),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    context.tr('planCollections'),
-                    style: DswType.xxxs11.copyWith(color: color.labelTertiary),
-                  ),
-                ),
-                if (widget.onAddCollection != null)
-                  Tooltip(
-                    message: context.tr('planNewCollection'),
-                    child: DswHoverTap(
-                      onTap: widget.onAddCollection,
-                      semanticLabel: context.tr('planNewCollection'),
-                      builder: (context, hovered, focused) => Icon(
-                        LucideIcons.plus,
-                        size: DswShape.iconCaption,
-                        color: color.labelTertiary,
-                      ),
-                    ),
-                  ),
-              ],
+          _sectionHeader(
+            color,
+            expanded: _planCollectionsExpanded,
+            onTap: () => setState(
+              () => _planCollectionsExpanded = !_planCollectionsExpanded,
             ),
-          ),
-        for (final (index, collection) in collections.indexed)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 2),
-            child: _Pressable(
-              onTap: () => onOpen(collection.id),
-              borderRadius: BorderRadius.circular(DswShape.control),
-              child: Container(
-                height: wide ? 32 * step : 36,
-                padding: EdgeInsets.symmetric(horizontal: wide ? 8 : 0),
-                decoration: BoxDecoration(
-                  color: openId == collection.id
-                      ? color.interactiveBgHover
-                      : null,
-                  borderRadius: BorderRadius.circular(DswShape.control),
-                ),
-                child: Row(
-                  mainAxisAlignment: wide
-                      ? MainAxisAlignment.start
-                      : MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      index.isEven ? LucideIcons.kanban : LucideIcons.inbox,
-                      size: wide ? 15 : 18,
-                      color: openId == collection.id
-                          ? color.labelPrimary
-                          : color.labelSecondary,
-                    ),
-                    if (wide) ...[
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          collection.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: DswType.s14.copyWith(
-                            color: openId == collection.id
-                                ? color.labelPrimary
-                                : color.labelSecondary,
+            icon: LucideIcons.layers,
+            label: context.tr('planCollections'),
+            trailing: widget.onAddCollection == null
+                ? null
+                : Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Tooltip(
+                      message: context.tr('planNewCollection'),
+                      child: DswHoverTap(
+                        onTap: widget.onAddCollection,
+                        semanticLabel: context.tr('planNewCollection'),
+                        builder: (context, hovered, focused) => Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 6,
+                          ),
+                          child: Icon(
+                            LucideIcons.plus,
+                            size: DswShape.iconCaption,
+                            color: color.labelTertiary,
                           ),
                         ),
                       ),
+                    ),
+                  ),
+          ),
+        if (!wide || _planCollectionsExpanded)
+          for (final (index, collection) in collections.indexed)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 2),
+              child: _Pressable(
+                onTap: () => onOpen(collection.id),
+                borderRadius: BorderRadius.circular(DswShape.control),
+                child: Container(
+                  height: wide ? 32 * step : 36,
+                  padding: EdgeInsets.symmetric(horizontal: wide ? 8 : 0),
+                  decoration: BoxDecoration(
+                    color: openId == collection.id
+                        ? color.interactiveBgHover
+                        : null,
+                    borderRadius: BorderRadius.circular(DswShape.control),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: wide
+                        ? MainAxisAlignment.start
+                        : MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        index.isEven ? LucideIcons.kanban : LucideIcons.inbox,
+                        size: wide ? 15 : 18,
+                        color: openId == collection.id
+                            ? color.labelPrimary
+                            : color.labelSecondary,
+                      ),
+                      if (wide) ...[
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            collection.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: DswType.s14.copyWith(
+                              color: openId == collection.id
+                                  ? color.labelPrimary
+                                  : color.labelSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
       ],
     );
   }
 
   /// The extension area's scroll body in 企划: the collections group (which
-  /// carries its own "+") followed by the library group — the screens that
-  /// are not one collection. Replaces the session list, which belongs to the
-  /// 代理 conversation module.
+  /// carries its own "+") at the top, then the notes tree filling whatever
+  /// middle height is left. The 库 group is NOT here — it is pinned to the
+  /// column's bottom by [_libraryBottom] (user decision 2026-10-10). Replaces
+  /// the session list, which belongs to the 代理 conversation module.
   List<Widget> _librarySlivers(DswAlias color) => [
-    // 集合 + 库 pinned at the top (user decision 2026-10-04: 集合 above 笔记).
-    SliverToBoxAdapter(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _extensionGroup(color, wide: true),
-          ..._libraryGroupWidgets(color),
-        ],
-      ),
-    ),
+    // 集合 pinned at the top (user decision 2026-10-04: 集合 above 笔记).
+    SliverToBoxAdapter(child: _extensionGroup(color, wide: true)),
     // The notes section fills the REMAINING height (ADR-0073): the
     // Obsidian explorer shape. Collapsed, it folds back to its header row.
-    // The expanded form must never fall to zero: a SliverFillRemaining whose
-    // extent clamps to 0 (chrome + collections + library taller than the
-    // viewport — a short window or a large text step) hides the header WITH
-    // the tree, so clicking 笔记 makes the whole section disappear with no
-    // way back. Below the floor the section becomes a fixed-height box the
-    // outer scroll can reach instead.
+    // The expanded form is a fixed-height box (SliverToBoxAdapter + SizedBox),
+    // NOT a SliverFillRemaining: the latter, returned from a SliverLayoutBuilder,
+    // leaves an onstage child element with a null renderObject — the section
+    // vanished on expand with no way back (ADR-0073 only fixed the opposite
+    // half, the "content above outruns the viewport" fallback). The box is
+    // `max(remaining, floor)` tall: at or above the floor it fills the
+    // viewport exactly; below it, it keeps the floor height so the outer
+    // scroll can still reach the header.
     if (widget.workspaceRoot != null && widget.onOpenNote != null)
       if (_planNotesExpanded)
         SliverLayoutBuilder(
@@ -689,15 +741,11 @@ class _SidebarState extends State<Sidebar> {
             final remaining =
                 constraints.viewportMainAxisExtent -
                 constraints.precedingScrollExtent;
-            if (remaining >= _notesFloorHeight) {
-              return SliverFillRemaining(
-                hasScrollBody: false,
-                child: _notesSection(color, fill: true),
-              );
-            }
             return SliverToBoxAdapter(
               child: SizedBox(
-                height: _notesFloorHeight,
+                height: remaining < _notesFloorHeight
+                    ? _notesFloorHeight
+                    : remaining,
                 child: _notesSection(color, fill: true),
               ),
             );

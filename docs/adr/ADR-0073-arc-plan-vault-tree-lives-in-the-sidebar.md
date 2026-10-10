@@ -29,6 +29,12 @@
 - `test/plan_vault_tree_test.dart`（新）：树渲染/展开/打开回调/新建；`plan_workspace_test` 改为编辑器宿主（initialNote 打开、保存往返）；`sidebar_test` 加折叠节。
 - 四道门禁同口径；真机走查：企划模式切集合/库后侧栏树仍在、点笔记回文档视图。
 
+## 后续修正（Follow-up，2026-10-10）
+
+宽档展开态最初用 `SliverFillRemaining(hasScrollBody: false)` 让笔记树填满剩余视口；一次修复（回落固定高度地板）只处理了「上方内容高出视口」这一半，另一半——**高窗口里 `SliverFillRemaining` 从 `SliverLayoutBuilder` 返回时，会留下一个在台上却 `renderObject` 为 null 的子元素**（`ViewportElement.debugVisitOnstageChildren` 空断言即崩，设备上表现为「点笔记→整节消失」）——一直是坏的，且现有 `sidebar_test` 只钉了矮窗口地板分支（绿），从未覆盖高窗口（坏）。
+
+根因修复：删掉 `SliverFillRemaining` 这条坏分支，展开态两半合并为已被证明安全的 `SliverToBoxAdapter + SizedBox`，高度取 `max(remaining, 地板)`——`remaining ≥ 地板` 时正好填满视口，`< 地板` 时保持地板高度让外层滚动可达。`test/sidebar_test.dart` 补一条高窗口回归（`expanding 笔记 in a tall window keeps the tree`），与矮窗口那条一起守住两半。
+
 ## 关联（Links）
 
 - 代码: `lib/ui/plan/plan_vault_tree.dart`、`lib/ui/plan/plan_workspace.dart`、`lib/ui/sidebar/sidebar.dart`、`lib/state/workspace_mode_controller.dart`、`lib/main.dart`

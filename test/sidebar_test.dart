@@ -560,13 +560,46 @@ void main() {
     }
   });
 
+  testWidgets('集合 header collapses the collection rows', (tester) async {
+    // Mirrors the 笔记 fold: the "Collections" caption is a toggle that folds
+    // the collection rows away and back. The "+" button shares the header row
+    // but not the word, so the toggle is the tappable that OWNS the caption.
+    await pump(
+      tester,
+      collapsed: false,
+      mode: WorkspaceMode.plan,
+      profile: UserProfile(displayName: 'In', email: 'a@b.c'),
+    );
+    await tester.pumpAndSettle();
+    // Expanded by default: both collections show.
+    expect(find.text('Delivery board'), findsOneWidget);
+    expect(find.text('Reading inbox'), findsOneWidget);
+
+    final toggle = find.descendant(
+      of: find.byType(DswHoverTap),
+      matching: find.text('Collections'),
+    );
+    await tester.tap(toggle);
+    await tester.pump();
+    expect(find.text('Delivery board'), findsNothing);
+    expect(find.text('Reading inbox'), findsNothing);
+    // The header affordance survives the fold and stays clickable.
+    expect(toggle, findsOneWidget);
+
+    await tester.tap(toggle);
+    await tester.pump();
+    expect(find.text('Delivery board'), findsOneWidget);
+    expect(find.text('Reading inbox'), findsOneWidget);
+  });
+
   testWidgets('expanding 笔记 never hides the section header', (tester) async {
-    // A short window: the chrome + collections + library above the notes
-    // section exceed the viewport. The expanded section used to be a
-    // SliverFillRemaining whose extent clamps to 0 in that state — the
-    // whole section (collapse header included) collapsed to zero height, so
-    // clicking 笔记 made it disappear with no way back. Now the section
-    // falls back to a fixed-height box the outer scroll can reach.
+    // A short window: the chrome + collections above the notes section (plus
+    // the 库 strip and footer now pinned below the scroll) outrun the viewport.
+    // The expanded section used to be a SliverFillRemaining whose extent
+    // clamps to 0 in that state — the whole section (collapse header included)
+    // collapsed to zero height, so clicking 笔记 made it disappear with no way
+    // back. Now the section falls back to a fixed-height box the outer scroll
+    // can reach.
     tester.view.physicalSize = const Size(800, 340);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -609,13 +642,85 @@ void main() {
       reason: 'the expanded tree must keep its floor height',
     );
 
-    // The click round-trip: collapse to the header-only row, expand again —
-    // the header affordance survives both states and stays clickable.
-    await tester.tap(find.text('Notes').first);
+    // The click round-trip on the collapse toggle. The tree's own header
+    // repeats the word "Notes", so match the tappable that OWNS the label
+    // (the collapse row) rather than a bare text — and pull it on-screen
+    // first, since the pinned 库 strip shrinks the scroll viewport here.
+    final notesToggle = find.descendant(
+      of: find.byType(DswHoverTap),
+      matching: find.text('Notes'),
+    );
+    await tester.ensureVisible(notesToggle);
+    await tester.pump();
+    // Collapse to the header-only row, expand again — the toggle survives both
+    // states and stays clickable.
+    await tester.tap(notesToggle);
     await tester.pump();
     expect(find.byType(PlanVaultTree), findsNothing);
-    await tester.tap(find.text('Notes').first);
+    await tester.ensureVisible(notesToggle);
+    await tester.pump();
+    await tester.tap(notesToggle);
     await tester.pump();
     expect(tester.getRect(find.byType(PlanVaultTree)).height, greaterThan(200));
+  });
+
+  testWidgets('expanding 笔记 in a tall window keeps the tree (ADR-0073)', (
+    WidgetTester tester,
+  ) async {
+    // The other half of the bug the test above does not reach: a TALL window
+    // where the notes section has plenty of remaining height. There the
+    // expanded form used a SliverFillRemaining returned from a
+    // SliverLayoutBuilder, which leaves an onstage child element with a null
+    // renderObject — `find` throws and, on device, the section disappears the
+    // moment it expands. The floor branch (short window) was green while this
+    // one was broken, so both halves need a guard.
+    tester.view.physicalSize = const Size(1000, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final root = Directory.systemTemp.createTempSync('dsh_side_tall_');
+    addTearDown(() => root.deleteSync(recursive: true));
+    File('${root.path}/a.md').writeAsStringSync('# A\n');
+
+    await pump(
+      tester,
+      collapsed: false,
+      mode: WorkspaceMode.plan,
+      workspaceRoot: root.path,
+      onOpenNote: (_) {},
+    );
+    for (var attempt = 0; attempt < 100; attempt++) {
+      if (find.text('a.md').evaluate().isNotEmpty) break;
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 10)),
+      );
+      await tester.pump();
+    }
+
+    // Expanded by default and the tree fills real height (no crash, no zero).
+    expect(find.byType(PlanVaultTree), findsOneWidget);
+    expect(
+      tester.getRect(find.byType(PlanVaultTree)).height,
+      greaterThan(200),
+      reason: 'the tall-window tree must fill, not vanish',
+    );
+
+    // Collapse, then expand again — the round-trip stays reachable. Match the
+    // collapse toggle (the tappable owning the "Notes" label), not the bare
+    // text, so the tree's own "Notes" header cannot be mistaken for it.
+    final notesToggle = find.descendant(
+      of: find.byType(DswHoverTap),
+      matching: find.text('Notes'),
+    );
+    await tester.tap(notesToggle);
+    await tester.pump();
+    expect(find.byType(PlanVaultTree), findsNothing);
+    expect(find.text('Notes'), findsWidgets, reason: 'header after collapse');
+    await tester.tap(notesToggle);
+    await tester.pump();
+    expect(
+      tester.getRect(find.byType(PlanVaultTree)).height,
+      greaterThan(200),
+      reason: 'the tree survives re-expansion',
+    );
   });
 }
