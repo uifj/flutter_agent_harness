@@ -15,6 +15,8 @@ your machine but the API call you make.
 
 ---
 
+> 中文文档见 [README_zh.md](README_zh.md)。
+
 ## Gallery
 
 | Agent mode — chat over a Genkit runtime, workspaces grouped in the sidebar |
