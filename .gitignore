@@ -38,6 +38,11 @@ build/
 .workbuddy/
 dart_sources.md
 repomix-output.*
+# ZCode agent local plan/session state and its own ignore file.
+.zcode/
+.zcodeignore
+# DevTools extension panel state (auto-written by `flutter run`); per-machine.
+devtools_options.yaml
 
 # Local archive of third-party reference sources (~88 MB, untracked by intent).
 # Not a pubspec dependency and no code imports it; keeping it out of the repo
