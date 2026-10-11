@@ -79,6 +79,19 @@ import 'ui/workbench/free_window_layer.dart';
 import 'ui/workbench/workbench.dart';
 import 'ui/workbench/workbench_prefs_scope.dart';
 
+/// Resolves the persisted language choice to the concrete en/zh [Locale] the
+/// app speaks: an explicit choice wins, `system` follows the platform. This is
+/// the ONE place `Platform.localeName` is read for language — the seed in
+/// [main] and the MaterialApp's `locale` seat both go through it (ADR-0082 §5).
+Locale _resolveAppLocale(cfg.LocaleMode mode) => switch (mode) {
+  cfg.LocaleMode.en => const Locale('en'),
+  cfg.LocaleMode.zh => const Locale('zh'),
+  cfg.LocaleMode.system =>
+    Platform.localeName.toLowerCase().startsWith('zh')
+        ? const Locale('zh')
+        : const Locale('en'),
+};
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Local crash archive (ADR-0045 PC): the support root is known only after
@@ -130,21 +143,17 @@ Future<void> main() async {
   // the only place the mock seed is named.
   // One database connection for every domain (ADR-0060/0071).
   final appDatabase = AppDatabase.open(File('${support.path}/planstar.db'));
-  // The seed's furniture names follow the launch locale (ADR-0074): the
-  // user's language choice lives in the settings document, system falls back
-  // to the platform locale — the same switch the scope below applies.
-  final seedLocale = switch (settings.value.locale) {
-    cfg.LocaleMode.en => AppLocaleId.en,
-    cfg.LocaleMode.zh => AppLocaleId.zh,
-    cfg.LocaleMode.system =>
-      Platform.localeName.toLowerCase().startsWith('zh')
-          ? AppLocaleId.zh
-          : AppLocaleId.en,
-  };
+  // The seed's furniture names follow the launch locale (ADR-0074, ADR-0082
+  // §6): resolve the persisted choice once, look the localizations up
+  // synchronously, and read the seed names off the same generated getters the
+  // UI uses.
+  final seedLocale = _resolveAppLocale(settings.value.locale);
   final planSpace = await PlanObjectStore.open(
     appDatabase,
     root: support,
-    seed: planMockSeed(names: planSeedNamesOf(seedLocale)),
+    seed: planMockSeed(
+      names: planSeedNamesOf(lookupAppLocalizations(seedLocale)),
+    ),
   );
   // The workspace access a previous launch recorded has to be claimed BEFORE
   // anything reads under the root — the file tree's first listing, the
@@ -310,25 +319,17 @@ class _DshAppState extends ConsumerState<DshApp> with WindowListener {
       ..init();
   }
 
-  /// The resolved en/zh locale id: an explicit choice wins, `system` follows
-  /// the platform. Both MaterialApp seats in [build] and the imperative
-  /// feedback below read this one value (ADR-0082 §5).
-  AppLocaleId get _localeId =>
-      switch (ref.read(settingsDocumentProvider).locale) {
-        cfg.LocaleMode.en => AppLocaleId.en,
-        cfg.LocaleMode.zh => AppLocaleId.zh,
-        cfg.LocaleMode.system =>
-          Platform.localeName.toLowerCase().startsWith('zh')
-              ? AppLocaleId.zh
-              : AppLocaleId.en,
-      };
+  /// The resolved en/zh [Locale]: an explicit choice wins, `system` follows
+  /// the platform. Both the MaterialApp's `locale` seat in [build] and the
+  /// imperative feedback below read this one value (ADR-0082 §5).
+  Locale get _locale =>
+      _resolveAppLocale(ref.read(settingsDocumentProvider).locale);
 
   /// App copy for the imperative paths (update feedback) whose `context` sits
   /// ABOVE the MaterialApp and so cannot reach `AppLocalizations.of`. Resolved
   /// straight from the settings locale — the same source the delegate seat in
   /// [build] reads — via the synchronous `lookupAppLocalizations`.
-  AppLocalizations get _l10n =>
-      lookupAppLocalizations(Locale(_localeId == AppLocaleId.zh ? 'zh' : 'en'));
+  AppLocalizations get _l10n => lookupAppLocalizations(_locale);
 
   /// The menu's check: bypasses the throttle and the skip — the user asked,
   /// the check answers, and a failure says so (ADR-0079 ①②).
@@ -421,12 +422,12 @@ class _DshAppState extends ConsumerState<DshApp> with WindowListener {
         ? chatContentWidthWide
         : chatContentWidth;
 
-    // The locale, resolved once per document: an explicit choice wins, `system`
-    // follows the platform. BOTH seats read this one value (ADR-0082 §5) — the
-    // MaterialApp's `locale` below (drives the localizations delegate: system
-    // widgets like the text-selection menu and the date picker) and, until the
-    // flip retires it, the AppLocaleScope (app copy via `context.tr`).
-    final localeId = _localeId;
+    // The locale, resolved once per document (ADR-0082 §5). This is the single
+    // seat now: the MaterialApp's `localizationsDelegates` + `locale` below
+    // drive BOTH the localized system widgets (text-selection menu, date
+    // picker) and the app's own copy (`AppLocalizations.of`), and — sitting
+    // above the Navigator — they reach every overlay route too (ADR-0032).
+    final locale = _locale;
 
     return MaterialApp(
       title: AppMeta.productName,
@@ -436,7 +437,7 @@ class _DshAppState extends ConsumerState<DshApp> with WindowListener {
       // resolution callback is needed.
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: Locale(localeId == AppLocaleId.zh ? 'zh' : 'en'),
+      locale: locale,
       theme: dswThemeData(Brightness.light),
       darkTheme: dswThemeData(Brightness.dark),
       // Every shad component asserts a ShadTheme ancestor; this builder sits
@@ -465,20 +466,14 @@ class _DshAppState extends ConsumerState<DshApp> with WindowListener {
               Theme.of(context).brightness,
               textScale: textScale,
             ),
-            // The app-copy locale seat. ADR-0032: it belongs in the builder, not
-            // on `home:`, so overlay routes (menus, dialogs) inherit it too —
-            // mounted on `home:`, every route above it fell back to English
-            // key-by-key (caught in a real window screenshot as `Retry` next to
-            // 中文). Reads the same `localeId` the MaterialApp's `locale` does
-            // (ADR-0082 §5); retired at the flip, when MaterialApp.locale is the
-            // only seat left.
-            child: AppLocaleScope(
-              locale: localeId,
-              // ADR-0020: the feedback strip's host. Above the Navigator, so a
-              // toast raised from a dialog route or from the full-screen settings
-              // still lands on the one strip the bridge colours from `DswAlias`.
-              child: ShadSonner(child: child!),
-            ),
+            // ADR-0020: the feedback strip's host. Above the Navigator, so a
+            // toast raised from a dialog route or from the full-screen settings
+            // still lands on the one strip the bridge colours from `DswAlias`.
+            // The app-copy locale seat that used to wrap this is gone: the
+            // MaterialApp's own `Localizations` delegate — above the Navigator —
+            // is the single seat now, and it reaches overlay routes just the
+            // same (ADR-0032, ADR-0082 §5).
+            child: ShadSonner(child: child!),
           ),
         );
       },

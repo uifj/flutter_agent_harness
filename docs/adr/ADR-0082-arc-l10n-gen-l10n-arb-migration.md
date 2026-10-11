@@ -1,6 +1,6 @@
 # ADR-0082: i18n 从自研字典迁到 flutter_localizations + gen-l10n（ARB），动态键走生成桥接（C-lite）
 
-- **状态**: ACCEPTED（分阶段实施中；各阶段 commit 回填登记表行）
+- **状态**: ACCEPTED（S1–S6 已落码、四门禁绿：S1–S5 @ `19cf7be`、S6 flip @ 本批；余 macOS 真机走查后转 RESOLVED）
 - **分类**: ARC
 - **优先级**: P1
 - **影响维度**: 架构（新增两处依赖 + 生成物入库 + `lib/l10n` 形态换血）· 生产功能（系统控件文案本地化）· 测试面（56 个 widget 测试的 pump 姿势）· 幻觉源（拼错键的降级形态改变）
@@ -64,11 +64,24 @@
 
 分阶段，每阶段过 `dart format --set-exit-if-changed lib test tool spike` → `dart analyze --fatal-infos …` → `flutter test` → `dart tool/check_architecture.dart`：
 
-- S1 脚手架 + S2 全量 ARB：`flutter gen-l10n` 无 warning、生成 ~795 getter、`untranslated.json` 空。
-- S3 桥接 + main 接线：app 起、zh 下右键菜单/日期选择器中文。
-- S4 调用点（逐模块）+ S5 测试（delegate）：`flutter test` 相对基线零新增失败。
-- S6 flip（删 `translate`/`AppLocaleScope`/字典/`context.tr`）：全库无 `context.tr`、无 `AppLocaleScope` 引用；`flutter test` 绿。
-- **待 macOS 真机走查**：①切 zh 系统控件中文 ②所有 app 文案中文 ③overlay 路由不回退英文（ADR-0032）④`untranslated.json` 空 ⑤四档字号下无裁字回归。
+- ✅ S1 脚手架 + S2 全量 ARB：`flutter gen-l10n` 无 warning、生成 795 getter、`untranslated.json` 空。
+- ✅ S3 桥接（`tool/gen_tr_key.dart` → `lib/l10n/tr_key.dart`，795 case + `default: return key` 原样回退）+ main 接线。
+- ✅ S4 调用点（888 处，逐模块过门禁）+ S5 测试（56 个 `MaterialApp` 测试接 delegate，逐模块随 widget 迁移）：S1–S5 一并落 `19cf7be`，`lib` 零 `.tr`/`translate`。
+- ✅ S6 flip（删 `translate`/`AppLocaleScope`/`enStrings`/`zhStrings`/`context.tr`；`editor_tab` 与 `main` 改读 `Locale`；种子名走 `lookupAppLocalizations`；重写两道守卫）：全库无 `context.tr`、无 `AppLocaleScope` 引用。
+- **S6 门禁（本机 macOS / Flutter 3.41.9）**：format 0 changed / analyze `No issues found` / `check_architecture` **8 recorded, 0 new**（rule 5 `riverpod-stays-in-the-assembly-root` 保住——构造注入未给 `lib/ui` 加 riverpod 导入）/ `flutter test` **+1490 −1**，唯一败 = `app_scope_test` 既有 macOS `/var`↔`/private/var` flake（该文件零 i18n 引用，非本次引入）。
+- **待 macOS 真机走查**（签收单 [`walkthrough-i18n-flip-2026-10-11.md`](../walkthrough-i18n-flip-2026-10-11.md)）：①切 zh 系统控件中文 ②所有 app 文案中文 ③overlay 路由不回退英文（ADR-0032）④`untranslated.json` 空 ⑤四档字号下无裁字回归。
+
+## 实施记录（Implementation Notes，2026-10-11 · S1–S6 落码后的四处偏离）
+
+决策正文（§4/§6/§7）在实施中撞到三个正文没预见的约束，按 ponytail「根因修复」就地更正，记在此处（正文保留原样以存决策演进）：
+
+1. **§4 `editor_tab._tr` 改「构造注入 `Locale`」，而非正文的 `getInheritedWidgetOfExactType<Localizations>()` / `didChangeDependencies`。** 正文那条技术上不成立：`Localizations` **不是** `InheritedWidget`（其 scope 是私有 `_LocalizationsScope`），`getInheritedWidgetOfExactType<Localizations>()` 取不到；而 `_load()` 的前三个 `_tr`（`tabHasNoFile`/`noWorkspaceNoFile`/`fileNoLongerExists`）跑在 `initState` 的**同步栈**里（首个 `await` 之前），`didChangeDependencies` 够不着、`dependOnInheritedWidgetOfExactType` 在此非法。**另一条被否决的路**：转 `ConsumerStatefulWidget` 用 `ref` 读 locale——会给 `lib/ui` 加 `import 'package:flutter_riverpod'`，撞**架构 rule 5**（`lib/ui` 零 riverpod 导入、baseline 0 违例），只能靠削弱硬不变量「弄绿」，否。**采纳**：`workbench.dart` 的 tab `descriptor.build(context, …)` 在**构建期**读 `Localizations.localeOf(context)`（合法）经构造参数注入 `EditorTab(locale:)`，`_tr` 用同步的 `lookupAppLocalizations(widget.locale)`——既保 rule 5、又 initState 安全，默认 `Locale('en')` 保测试确定性。
+
+2. **§6 `planSeedNamesOf` 保留（改吃 `AppLocalizations`），而非正文的字面「替代」。** `main` 确实用了同步 `lookupAppLocalizations(seedLocale)`（满足 §6「同步取 seed* getter」的意图），但把 21 个 `seed*` 字段**内联进 `main.dart`** 会违反 AGENTS.md §2「`main.dart` 不做业务决策」——21 字段的 `PlanSeedNames` 组装是一次映射决策，属 l10n 桥而非装配根。故 `locales.dart` 保留 `planSeedNamesOf(AppLocalizations)` 作种子名桥（`main` 调 `planSeedNamesOf(lookupAppLocalizations(seedLocale))`）。它**不能**下沉进 `lib/model`（`AppLocalizations` 是生成的 Flutter 代码，不变量②）。
+
+3. **`locales.dart` 瘦身为 44 行的种子名桥（保留文件名）。** 从 1898 行（两本字典 + `translate` + `AppLocaleScope` + `context.tr` + `planSeedNamesOf`）砍到只剩 `planSeedNamesOf`。保留文件名而非删除，避免 ADR/AGENTS.md/测试注释里 `locales.dart` 引用的改名 churn；header 已重写说明字典迁往 ARB。
+
+4. **§7 新增一道 `untranslated.json` 空守卫，作为退役「键集对齐」的忠实替代。** 正文 §7 说「gen-l10n 下缺译 = 编译错」——**不准确**：zh 缺一个键**不是**编译错，gen-l10n 运行时回退到模板（en）、只把缺口记进 `untranslated.json`。若照正文退役键集对齐而不补守卫，zh 会**静默**退回英文而全套件仍绿。故 `l10n_parity_test` 新增断言 `untranslated.json == {}`（它正是「缺译键集」），忠实接替退役的键集 parity；`trKey ≡ ARB` 守卫（§7 第三条）覆盖动态键路径；加速键值级断言（§7 第四条）保留在本测试。`i18n_overlay_test` 则从 ADR-0032 的「`AppLocaleScope` 落在 builder」结构守卫，改写为「`MaterialApp` delegate 机制」：断言 `main.dart` 里 `AppLocaleScope(` 出现 0 次 + delegate（在 Navigator 之上）能把一条菜单路由渲染成中文（zh `重试`）——gen-l10n 的 `localizationsDelegates` 由框架装在 `MaterialApp` 上、天然在 Navigator 之上，比旧结构守卫更硬地兑现 ADR-0032 的意图。
 
 ## 关联（Links）
 

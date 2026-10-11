@@ -13,7 +13,6 @@
 import 'dart:io';
 
 import 'package:planstar/l10n/app_localizations.dart';
-import 'package:planstar/l10n/locales.dart';
 import 'package:planstar/model/fs_revision.dart';
 import 'package:planstar/theme/dsw_shad_bridge.dart';
 import 'package:planstar/theme/dsw_theme.dart';
@@ -56,25 +55,23 @@ void main() {
     double scale = 1.0,
     Duration autosaveDebounce = const Duration(milliseconds: 100),
     ValueChanged<Future<void> Function()?>? onRegisterFlush,
-    AppLocaleId locale = AppLocaleId.en,
+    Locale locale = const Locale('en'),
     bool withoutWorkspace = false,
   }) => tester.pumpWidget(
     MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: Locale(locale == AppLocaleId.zh ? 'zh' : 'en'),
+      locale: locale,
       theme: dswThemeData(Brightness.light),
       // The stuck-leave confirm dialog is a ShadDialog (reads the caller's
-      // ShadTheme), the feedback strip is a ShadSonner, and the copy rides
-      // AppLocaleScope — mount the same ancestors main does, so "the user
-      // was told" and "the user read it in their language" are assertable.
-      builder: (context, child) => AppLocaleScope(
-        locale: locale,
-        child: ShadTheme(
-          data: dswShadTheme(Theme.of(context).brightness),
-          child: ShadSonner(
-            child: AmplifiedText(step: scale, child: child!),
-          ),
+      // ShadTheme) and the feedback strip is a ShadSonner — mount the same
+      // ancestors main does. The copy rides the MaterialApp's Localizations
+      // delegate (above the Navigator), so "the user was told" and "the user
+      // read it in their language" are both assertable (ADR-0082).
+      builder: (context, child) => ShadTheme(
+        data: dswShadTheme(Theme.of(context).brightness),
+        child: ShadSonner(
+          child: AmplifiedText(step: scale, child: child!),
         ),
       ),
       home: Scaffold(
@@ -587,7 +584,7 @@ void main() {
 
   testWidgets('zh: the whole stuck chain speaks Chinese', (tester) async {
     final note = ValueNotifier<String?>('readme.md');
-    await pump(tester, initialNote: note, locale: AppLocaleId.zh);
+    await pump(tester, initialNote: note, locale: const Locale('zh'));
     await pumpUntil(tester, find.byType(PlanBlockEditor));
     await pumpUntil(tester, find.text('编辑'));
 
@@ -597,8 +594,8 @@ void main() {
 
     // The agent rewrites the file mid-edit: feedback, chip and the leave
     // dialog must all speak the user's language — a raw key or English copy
-    // inside a Chinese frame is exactly what the dictionaries exist to
-    // prevent (and what translate()'s fallback chain hides).
+    // inside a Chinese frame is exactly what the ARB localizations exist to
+    // prevent (ADR-0082).
     await tester.runAsync(() async {
       File('${root.path}/readme.md').writeAsStringSync('# Agent was here\n');
       bumpFsRevision();
@@ -611,7 +608,7 @@ void main() {
     expect(find.text('修改未写入盘'), findsOneWidget);
 
     note.value = 'notes/idea.md';
-    await pump(tester, initialNote: note, locale: AppLocaleId.zh);
+    await pump(tester, initialNote: note, locale: const Locale('zh'));
     await pumpUntil(tester, find.text('存在未写入的修改'));
     expect(find.text('丢弃并离开'), findsOneWidget);
     await tester.tap(find.text('取消'));
@@ -624,7 +621,7 @@ void main() {
   testWidgets('zh: a vault with no workspace answers with guidance', (
     tester,
   ) async {
-    await pump(tester, locale: AppLocaleId.zh, withoutWorkspace: true);
+    await pump(tester, locale: const Locale('zh'), withoutWorkspace: true);
     expect(find.text('请先选择工作区文件夹——企划库就是工作区'), findsOneWidget);
   });
 

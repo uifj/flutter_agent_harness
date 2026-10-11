@@ -11,7 +11,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import 'package:planstar/l10n/app_localizations.dart';
-import 'package:planstar/l10n/locales.dart';
 import 'package:planstar/model/plan_mock_content.dart';
 import 'package:planstar/state/app_database.dart';
 import 'package:planstar/model/plan_dataview.dart' show PlanDateFormat;
@@ -67,7 +66,7 @@ void main() {
         theme: dswThemeData(Brightness.light),
         builder: (context, child) => ShadTheme(
           data: dswShadTheme(Theme.of(context).brightness),
-          child: AppLocaleScope(locale: AppLocaleId.en, child: child!),
+          child: child!,
         ),
         home: Scaffold(
           body: PlanDateScreen(
@@ -95,7 +94,7 @@ void main() {
         theme: dswThemeData(Brightness.light),
         builder: (context, child) => ShadTheme(
           data: dswShadTheme(Theme.of(context).brightness),
-          child: AppLocaleScope(locale: AppLocaleId.en, child: child!),
+          child: child!,
         ),
         home: Scaffold(body: PlanGalleryScreen(store: store)),
       ),
@@ -175,7 +174,7 @@ void main() {
           theme: dswThemeData(Brightness.light),
           builder: (context, child) => ShadTheme(
             data: dswShadTheme(Theme.of(context).brightness),
-            child: AppLocaleScope(locale: AppLocaleId.en, child: child!),
+            child: child!,
           ),
           home: Scaffold(body: PlanBinScreen(store: store)),
         ),

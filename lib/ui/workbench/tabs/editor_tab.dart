@@ -44,7 +44,6 @@ import 'package:re_highlight/styles/atom-one-light.dart';
 
 import '../../../../theme/dsw_shape.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../l10n/locales.dart';
 import '../../../l10n/tr_key.dart';
 import '../../../model/workspace.dart';
 import '../../../theme/dsw_alias.dart';
@@ -96,10 +95,23 @@ const _gutter = TextStyle(
 );
 
 class EditorTab extends StatefulWidget {
-  const EditorTab({super.key, required this.workbench, required this.tab});
+  const EditorTab({
+    super.key,
+    required this.workbench,
+    required this.tab,
+    this.locale = const Locale('en'),
+  });
 
   final WorkbenchController workbench;
   final SidebarTab tab;
+
+  /// The resolved app locale, injected by the workbench (which reads it off the
+  /// tree with `Localizations.localeOf`). [_tr] needs it before the first build
+  /// — `_load` runs in `initState` — where `AppLocalizations.of(context)` is
+  /// illegal and `lib/ui` may not reach for riverpod (architecture rule 5), so
+  /// the parent hands the value down instead. English by default, which keeps a
+  /// bare `EditorTab(...)` in a test deterministic (ADR-0082 §4).
+  final Locale locale;
 
   @override
   State<EditorTab> createState() => _EditorTabState();
@@ -146,19 +158,11 @@ class _EditorTabState extends State<EditorTab> {
   bool _wrap = false;
 
   /// Translation that is safe before the first build. [_load] starts in
-  /// initState, where registering an inherited dependency is not allowed — so
-  /// this reads the locale scope without depending on it. English, as ever,
-  /// when no scope is mounted.
-  String _tr(String key, [Map<String, Object>? params]) {
-    final locale =
-        context.getInheritedWidgetOfExactType<AppLocaleScope>()?.locale ??
-        AppLocaleId.en;
-    return trKey(
-      lookupAppLocalizations(Locale(locale == AppLocaleId.zh ? 'zh' : 'en')),
-      key,
-      params,
-    );
-  }
+  /// initState, where registering an inherited dependency is not allowed, so
+  /// this reads the locale the workbench injected on the widget rather than
+  /// reaching for `AppLocalizations.of(context)` (ADR-0082 §4).
+  String _tr(String key, [Map<String, Object>? params]) =>
+      trKey(lookupAppLocalizations(widget.locale), key, params);
 
   /// Whether this tab's file is markdown, and so can be previewed.
   bool get _isMarkdown {

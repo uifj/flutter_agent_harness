@@ -54,8 +54,15 @@ void _registerBuiltinTabs() {
       type: BuiltinTabType.editor,
       icon: LucideIcons.file_text,
       order: 20,
-      build: (context, workbench, tab) =>
-          EditorTab(workbench: workbench, tab: tab),
+      build: (context, workbench, tab) => EditorTab(
+        workbench: workbench,
+        tab: tab,
+        // The editor's `_tr` runs in initState, before it may depend on an
+        // inherited widget, so the resolved locale is read here — in the
+        // descriptor's build, below the MaterialApp — and handed down
+        // (ADR-0082 §4).
+        locale: Localizations.localeOf(context),
+      ),
     ),
   );
   registerTab(

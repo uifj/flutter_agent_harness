@@ -5,7 +5,6 @@
 // overlay and lets the entry live for the assertions.
 
 import 'package:planstar/l10n/app_localizations.dart';
-import 'package:planstar/l10n/locales.dart';
 import 'package:planstar/model/app_settings.dart';
 import 'package:planstar/theme/dsw_shad_bridge.dart';
 import 'package:planstar/theme/dsw_theme.dart';
@@ -86,7 +85,7 @@ void main() {
           theme: dswThemeData(Brightness.light),
           builder: (context, child) => ShadTheme(
             data: dswShadTheme(Theme.of(context).brightness),
-            child: AppLocaleScope(locale: AppLocaleId.en, child: child!),
+            child: child!,
           ),
           home: Scaffold(
             body: Center(

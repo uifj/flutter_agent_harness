@@ -1,13 +1,14 @@
-// The sentences this file holds: no user-visible Chinese copy may bypass the
-// dictionaries — `Text('确定')` renders identically in every locale and the
-// key-parity guards can never see it, because it has no key (ADR-0080).
+// The sentences this file holds: no user-visible Chinese copy may bypass
+// localization — `Text('确定')` renders identically in every locale and the
+// ARB's compile-time key safety can never see it, because it has no key
+// (ADR-0080).
 //
 // Zero tolerance, by measurement: the whole of lib/ scanned clean on
 // 2026-10-07, so there is no baseline file to negotiate — any hit is a
 // regression. The known blind spots are self-declared, not patched over:
 // the pattern only sees a UI keyword followed by a string literal ON THE SAME
 // LINE. `Text(` split from its literal, custom wrappers (`_header('中文')`),
-// CJK inside an interpolation, and tr() with a dynamic key all pass unseen.
+// CJK inside an interpolation, and trKey() with a dynamic key all pass unseen.
 // A new shape needs the pattern widened first — and if widening trips over
 // existing violations, those get an ADR before the guard goes back on.
 
@@ -53,7 +54,7 @@ void main() {
       hits,
       isEmpty,
       reason:
-          'user-visible copy must go through the dictionaries (context.tr); '
+          'user-visible copy must go through AppLocalizations (the ARB); '
           'these literals render the same in every locale:\n'
           '${hits.join('\n')}',
     );

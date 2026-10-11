@@ -74,7 +74,7 @@ void main() {
     settings.AppSettings? saved;
     await pumpMenu(tester, onChanged: (next) => saved = next);
 
-    // English copy — no AppLocaleScope mounted (the deterministic fallback).
+    // English copy — the pump mounts the en delegate (`locale: en`).
     expect(find.text('Dark'), findsOneWidget);
     await tester.tap(find.text('Dark'));
     await tester.pump();

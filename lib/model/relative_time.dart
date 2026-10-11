@@ -10,7 +10,7 @@
 // here would be a second copy of the copy that `l10n_parity_test` cannot see.
 
 /// A translation key and its `{n}` placeholder, resolved by the surface that
-/// renders it through `context.tr`.
+/// renders it through the `trKey` bridge (ADR-0082).
 class RelativeTime {
   const RelativeTime(this.key, [this.params = const {}]);
 
