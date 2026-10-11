@@ -25,6 +25,14 @@
 //     and are read as found.
 //   * Size is capped per file and in total, because one oversized README would
 //     otherwise eat the context window. A truncation is announced, not hidden.
+//
+// A second, independent thing rides the same injected string: a manifest of the
+// workspace's own `.agents/skills/*/SKILL.md` (ADR-0081). Those are not
+// instruction files but read-on-demand capabilities, and the runtime cannot
+// register them with genkit_middleware's `SkillsPlugin` — its paths are fixed
+// when the agent is built, while the workspace is only a live setter. So they
+// are listed here with the workspace-relative path the `read` tool can reach,
+// and the model pulls a body only when a skill fits the task.
 
 import 'dart:convert';
 import 'dart:io';
@@ -33,6 +41,7 @@ import 'package:path/path.dart' as p;
 
 import '../model/mention_expansion.dart' show workspaceReferenceTag;
 import '../model/instruction_card.dart' show instructionCardsBlock;
+import 'skill_frontmatter.dart' show flattenScalar, splitFrontmatter;
 
 /// Where an instruction file came from.
 enum InstructionOrigin { user, project }
@@ -157,8 +166,8 @@ List<InstructionFile> discoverInstructions({
 const instructionsOpenTag = '<project-instructions>';
 
 /// True for text the runtime put into the user's message on the user's behalf:
-/// the workspace instruction block (ADR-0009), the `@` file references, and
-/// the compression summary (ADR-0061).
+/// the workspace instruction block (ADR-0009), the workspace-skills manifest
+/// (ADR-0081), the `@` file references, and the compression summary (ADR-0061).
 ///
 /// All of them ride the first user message as their own text parts, so
 /// anything that reads that message to describe the conversation to a human —
@@ -168,6 +177,7 @@ const instructionsOpenTag = '<project-instructions>';
 bool isInjectedPart(String text) {
   final head = text.trimLeft();
   return head.startsWith(instructionsOpenTag) ||
+      head.startsWith(workspaceSkillsOpenTag) ||
       head.startsWith(workspaceReferenceTag) ||
       head.startsWith(conversationSummaryOpenTag);
 }
@@ -241,15 +251,166 @@ String? renderInstructions(
   return buffer.toString();
 }
 
-/// The one call the runtime makes: the block for one workspace, or null.
+/// A skill the workspace ships under `.agents/skills/`, listed in the manifest
+/// so the model can `read` it on demand. Not the body — that stays on disk
+/// until asked, keeping the injected block a pointer, not a payload.
+class WorkspaceSkill {
+  const WorkspaceSkill({
+    required this.name,
+    required this.description,
+    required this.relativePath,
+  });
+
+  /// Frontmatter `name`, or the directory name when it has none — the same
+  /// fallback genkit_middleware keys a skill by.
+  final String name;
+
+  /// Frontmatter `description` folded onto one line and clipped; '' when absent.
+  final String description;
+
+  /// The `SKILL.md` path relative to the workspace root, so the model's `read`
+  /// tool — which resolves against the workspace — reaches it.
+  final String relativePath;
+}
+
+/// The skills directory recognised at the workspace root.
+const String workspaceSkillsDir = '.agents/skills';
+
+/// How much of the injected block a workspace's skills may occupy: each
+/// description is clipped and the list is capped, so a repo shipping hundreds
+/// of skills cannot eat the context the way one oversized README could.
+const int workspaceSkillDescriptionCap = 240;
+const int workspaceSkillListCap = 50;
+
+/// Finds the workspace's own `.agents/skills/<name>/SKILL.md` set.
+///
+/// Mirrors genkit_middleware's scan — immediate sub-directories, each needing a
+/// `SKILL.md`, `.`-prefixed ones skipped — but reads them for a manifest rather
+/// than a `use_skill` tool. The middleware's `skillPaths` are fixed when the
+/// agent is built and the workspace is only a live setter, so a folder switch
+/// cannot add a path to a middleware that scanned once; listing the skills here
+/// rides the per-workspace instruction re-queue instead (ADR-0081).
+///
+/// A `SKILL.md` whose canonical target escapes the workspace is skipped, the
+/// rule [discoverInstructions] applies to a symlinked instruction file: a
+/// cloned repo must not pull an unrelated file into the model's context.
+({List<WorkspaceSkill> skills, int omitted}) discoverWorkspaceSkills({
+  required String? workspaceRoot,
+}) {
+  final root = workspaceRoot == null ? null : _canonicalDir(workspaceRoot);
+  if (root == null) return (skills: const <WorkspaceSkill>[], omitted: 0);
+  final skillsRoot = Directory(p.join(root, workspaceSkillsDir));
+  if (!skillsRoot.existsSync()) {
+    return (skills: const <WorkspaceSkill>[], omitted: 0);
+  }
+
+  // Cheap pass first — which sub-directories hold a reachable `SKILL.md` — then
+  // sort and cap, so the manifest is stable across conversations and the
+  // frontmatter reads are bounded to the listed skills, not the whole tree.
+  final candidates = <(String, String)>[];
+  for (final entry in skillsRoot.listSync()) {
+    if (entry is! Directory) continue;
+    final dirName = p.basename(entry.path);
+    if (dirName.startsWith('.')) continue; // mirrors the middleware's skip.
+    final file = File(p.join(entry.path, 'SKILL.md'));
+    if (!file.existsSync()) continue;
+    final canonical = _canonical(file);
+    if (canonical == null || !_isWithin(root, canonical)) continue;
+    candidates.add((dirName, canonical));
+  }
+  candidates.sort((a, b) => a.$1.compareTo(b.$1));
+
+  final omitted = candidates.length > workspaceSkillListCap
+      ? candidates.length - workspaceSkillListCap
+      : 0;
+  final skills = <WorkspaceSkill>[];
+  for (final (dirName, canonical) in candidates.take(workspaceSkillListCap)) {
+    final frontmatter =
+        splitFrontmatter(File(canonical).readAsStringSync())?.$1 ?? '';
+    final name = flattenScalar(frontmatter, 'name');
+    final description = flattenScalar(frontmatter, 'description');
+    skills.add(
+      WorkspaceSkill(
+        name: name.isEmpty ? dirName : name,
+        description: description.length <= workspaceSkillDescriptionCap
+            ? description
+            : '${description.substring(0, workspaceSkillDescriptionCap)}…',
+        relativePath: p
+            .relative(canonical, from: root)
+            .replaceAll(p.separator, '/'),
+      ),
+    );
+  }
+  return (skills: skills, omitted: omitted);
+}
+
+/// The opening tag of the workspace-skills manifest. A constant for the reason
+/// [instructionsOpenTag] is: [isInjectedPart] must recognise it, so a
+/// skills-only injection — no instruction files at all — stays out of a title.
+const workspaceSkillsOpenTag = '<workspace-skills>';
+
+/// The manifest of [found], or null when the workspace ships none.
+///
+/// Lists each skill by name, one-line description and the workspace-relative
+/// path of its `SKILL.md`. Deliberately not the bodies: a skill is read on
+/// demand with the `read` tool, which resolves against the workspace, so the
+/// manifest is the pointer and the model pulls only what it uses.
+String? renderWorkspaceSkills(
+  ({List<WorkspaceSkill> skills, int omitted}) found,
+) {
+  if (found.skills.isEmpty) return null;
+  final buffer = StringBuffer()
+    ..writeln(workspaceSkillsOpenTag)
+    ..writeln(
+      'Skills this workspace ships under `$workspaceSkillsDir/`. Each is a '
+      'directory with a `SKILL.md` of step-by-step guidance for a recurring '
+      'task. They are not loaded into context automatically — when one fits '
+      'what the user asked, `read` its `SKILL.md` at the path shown (relative '
+      'to the workspace root) and follow it.',
+    );
+  for (final skill in found.skills) {
+    final description = skill.description.isEmpty
+        ? ''
+        : ' — ${skill.description}';
+    buffer
+      ..writeln()
+      ..writeln('- ${skill.name}$description (read `${skill.relativePath}`)');
+  }
+  if (found.omitted > 0) {
+    buffer
+      ..writeln()
+      ..writeln(
+        '…and ${found.omitted} more under `$workspaceSkillsDir/`; `glob` '
+        '`$workspaceSkillsDir/*/SKILL.md` to see the rest.',
+      );
+  }
+  buffer.write('</workspace-skills>');
+  return buffer.toString();
+}
+
+/// The one call the runtime makes: the injected block for one workspace, or
+/// null when there is nothing to inject.
+///
+/// Two independent parts ride the one string, because the runtime drains it as
+/// a single text part and re-queues it on every workspace switch: the
+/// instruction files (always-follow) and, when the workspace ships them, the
+/// skills manifest (read-on-demand). Either may be absent.
 String? instructionsForWorkspace({
   required String? workspaceRoot,
   required String? homeRoot,
   List<String>? cardTexts,
-}) => renderInstructions(
-  discoverInstructions(workspaceRoot: workspaceRoot, homeRoot: homeRoot),
-  cardTexts: cardTexts,
-);
+}) {
+  final instructions = renderInstructions(
+    discoverInstructions(workspaceRoot: workspaceRoot, homeRoot: homeRoot),
+    cardTexts: cardTexts,
+  );
+  final skills = renderWorkspaceSkills(
+    discoverWorkspaceSkills(workspaceRoot: workspaceRoot),
+  );
+  if (instructions == null) return skills;
+  if (skills == null) return instructions;
+  return '$instructions\n\n$skills';
+}
 
 class _Clip {
   const _Clip(this.text, this.cut);
