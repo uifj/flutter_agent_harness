@@ -17,7 +17,7 @@
 
 import 'package:flutter/material.dart';
 
-import '../../l10n/locales.dart';
+import '../../l10n/app_localizations.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
@@ -191,9 +191,9 @@ class _TerminalBlockState extends State<TerminalBlock> {
     final status = statusText(widget.exitCode, widget.signal);
     final state = runState(widget.running, widget.exitCode, widget.signal);
     final stateLabel = switch (state.key) {
-      'running' => context.tr('toolRunning'),
-      'failed' => context.tr('toolFailed'),
-      _ => context.tr('toolDone'),
+      'running' => AppLocalizations.of(context).toolRunning,
+      'failed' => AppLocalizations.of(context).toolFailed,
+      _ => AppLocalizations.of(context).toolDone,
     };
     // A multi-line command gets one prompt row per line, so a two-command shell
     // snippet reads as the two commands it is instead of collapsing into one

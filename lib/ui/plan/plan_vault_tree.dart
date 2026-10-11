@@ -18,7 +18,7 @@ import 'package:path/path.dart' as p;
 import 'package:shadcn_ui/shadcn_ui.dart'
     show ShadButton, ShadDialog, ShadInput, showShadDialog;
 
-import '../../l10n/locales.dart';
+import '../../l10n/app_localizations.dart';
 import '../../model/workspace_index.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_shape.dart';
@@ -198,7 +198,7 @@ class _PlanVaultTreeState extends State<PlanVaultTree> {
                       vertical: 4,
                     ),
                     child: Text(
-                      context.tr('planNoNotes'),
+                      AppLocalizations.of(context).planNoNotes,
                       style: DswType.xxs12.copyWith(color: color.labelTertiary),
                     ),
                   )
@@ -223,20 +223,20 @@ class _PlanVaultTreeState extends State<PlanVaultTree> {
       children: [
         Expanded(
           child: Text(
-            context.tr('planNotes'),
+            AppLocalizations.of(context).planNotes,
             style: DswType.xxsStrong12.copyWith(color: color.labelSecondary),
           ),
         ),
         _treeHeaderButton(
           icon: LucideIcons.file_plus,
-          tooltip: context.tr('planNewNote'),
+          tooltip: AppLocalizations.of(context).planNewNote,
           onTap: _onCreateNote,
           color: color,
         ),
         const SizedBox(width: 2),
         _treeHeaderButton(
           icon: LucideIcons.folder_plus,
-          tooltip: context.tr('planNewFolder'),
+          tooltip: AppLocalizations.of(context).planNewFolder,
           onTap: _onCreateFolder,
           color: color,
         ),
@@ -296,10 +296,10 @@ class _PlanVaultTreeState extends State<PlanVaultTree> {
           ),
           if (onPick != null)
             Tooltip(
-              message: context.tr('planSwitchWorkspace'),
+              message: AppLocalizations.of(context).planSwitchWorkspace,
               child: DswHoverTap(
                 onTap: onPick,
-                semanticLabel: context.tr('planSwitchWorkspace'),
+                semanticLabel: AppLocalizations.of(context).planSwitchWorkspace,
                 excludeSemantics: true,
                 builder: (context, hovered, focused) => Icon(
                   LucideIcons.switch_camera,
@@ -365,8 +365,8 @@ class _PlanVaultTreeState extends State<PlanVaultTree> {
     final root = widget.workspaceRoot;
     if (root == null) return;
     final name = await _showNameDialog(
-      context.tr('planNewNote'),
-      context.tr('planNewNoteHint'),
+      AppLocalizations.of(context).planNewNote,
+      AppLocalizations.of(context).planNewNoteHint,
     );
     if (name == null || name.isEmpty) return;
     final fileName = name.endsWith('.md') ? name : '$name.md';
@@ -376,7 +376,7 @@ class _PlanVaultTreeState extends State<PlanVaultTree> {
       if (!mounted) return;
       showFeedback(
         context,
-        context.tr('planFileNameExists'),
+        AppLocalizations.of(context).planFileNameExists,
         destructive: true,
       );
       return;
@@ -403,8 +403,8 @@ class _PlanVaultTreeState extends State<PlanVaultTree> {
     final root = widget.workspaceRoot;
     if (root == null) return;
     final name = await _showNameDialog(
-      context.tr('planNewFolder'),
-      context.tr('planNewFolderHint'),
+      AppLocalizations.of(context).planNewFolder,
+      AppLocalizations.of(context).planNewFolderHint,
     );
     if (name == null || name.isEmpty) return;
     final fullPath = p.join(root, name);
@@ -412,7 +412,7 @@ class _PlanVaultTreeState extends State<PlanVaultTree> {
       if (!mounted) return;
       showFeedback(
         context,
-        context.tr('planFolderNameExists'),
+        AppLocalizations.of(context).planFolderNameExists,
         destructive: true,
       );
       return;
@@ -439,12 +439,12 @@ class _PlanVaultTreeState extends State<PlanVaultTree> {
           ShadButton.outline(
             height: 24 * MediaQuery.textScalerOf(context).scale(1),
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(context.tr('planCancel')),
+            child: Text(AppLocalizations.of(context).planCancel),
           ),
           ShadButton(
             height: 24 * MediaQuery.textScalerOf(context).scale(1),
             onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: Text(context.tr('planCreate')),
+            child: Text(AppLocalizations.of(context).planCreate),
           ),
         ],
         child: ShadInput(

@@ -17,7 +17,7 @@ import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
-import '../../l10n/locales.dart';
+import '../../l10n/app_localizations.dart';
 import '../../model/approval_mode.dart';
 import '../../model/conversation.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
@@ -235,7 +235,7 @@ class _ConversationRootState extends State<ConversationRoot> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            context.tr('dropFilesHint'),
+                            AppLocalizations.of(context).dropFilesHint,
                             style: DswType.base16.copyWith(
                               color: context.dsw.labelSecondary,
                             ),
@@ -301,14 +301,14 @@ class _ConversationRootState extends State<ConversationRoot> {
               Icon(LucideIcons.sparkle, size: 34, color: color.labelPrimary),
               const SizedBox(width: 10),
               Text(
-                context.tr('askAnything'),
+                AppLocalizations.of(context).askAnything,
                 style: DswType.heroTitle26.copyWith(color: color.labelPrimary),
               ),
             ],
           ),
           const SizedBox(height: 6),
           Text(
-            context.tr('heroSubtitle'),
+            AppLocalizations.of(context).heroSubtitle,
             style: DswType.xxs12.copyWith(color: color.labelSecondary),
           ),
         ],
@@ -359,32 +359,21 @@ class _ConversationRootState extends State<ConversationRoot> {
     if (conversation.nodes.any((node) => node is UserMessageNode)) {
       final turns = conversation.nodes.whereType<UserMessageNode>().length;
       final steps = conversation.nodes.whereType<AssistantMessageNode>().length;
-      groups.add(
-        context
-            .tr('statsCounts')
-            .replaceAll('{turns}', '$turns')
-            .replaceAll('{steps}', '$steps'),
-      );
+      groups.add(AppLocalizations.of(context).statsCounts('$turns', '$steps'));
 
       final durations = <String>[];
       if (conversation.llmWallMs > 0) {
         durations.add(
-          context
-              .tr('statsLlm')
-              .replaceAll(
-                '{duration}',
-                formatStatsDuration(conversation.llmWallMs),
-              ),
+          AppLocalizations.of(
+            context,
+          ).statsLlm(formatStatsDuration(conversation.llmWallMs)),
         );
       }
       if (conversation.toolWallMs > 0) {
         durations.add(
-          context
-              .tr('statsTool')
-              .replaceAll(
-                '{duration}',
-                formatStatsDuration(conversation.toolWallMs),
-              ),
+          AppLocalizations.of(
+            context,
+          ).statsTool(formatStatsDuration(conversation.toolWallMs)),
         );
       }
       if (durations.isNotEmpty) groups.add(durations.join(' · '));
@@ -392,18 +381,16 @@ class _ConversationRootState extends State<ConversationRoot> {
       final ttft = conversation.ttftAverageMs;
       if (ttft != null && ttft > 0) {
         groups.add(
-          context
-              .tr('statsTtft')
-              .replaceAll('{duration}', formatStatsDuration(ttft.round())),
+          AppLocalizations.of(
+            context,
+          ).statsTtft(formatStatsDuration(ttft.round())),
         );
       }
 
       final tokens = conversation.totalTokens;
       if (tokens > 0) {
         groups.add(
-          context
-              .tr('statsTokens')
-              .replaceAll('{tokens}', formatTokenCount(tokens)),
+          AppLocalizations.of(context).statsTokens(formatTokenCount(tokens)),
         );
       }
     }
@@ -450,14 +437,20 @@ class _ConversationRootState extends State<ConversationRoot> {
   /// surface that says what happened — the transcript itself just resets.
   Future<void> _compress() async {
     final messenger = context;
-    showFeedback(messenger, context.tr('compressStarted'));
+    showFeedback(messenger, AppLocalizations.of(context).compressStarted);
     try {
       final compressed = await widget.conversation.compressContext();
       if (!mounted) return;
-      if (compressed) showFeedback(context, context.tr('compressDone'));
+      if (compressed) {
+        showFeedback(context, AppLocalizations.of(context).compressDone);
+      }
     } catch (error) {
       if (!mounted) return;
-      showFeedback(context, context.tr('compressFailed'), destructive: true);
+      showFeedback(
+        context,
+        AppLocalizations.of(context).compressFailed,
+        destructive: true,
+      );
     }
   }
 
@@ -570,13 +563,13 @@ class _ConversationRootState extends State<ConversationRoot> {
         // Settled before the send: the send makes the turn busy, but a decline
         // that arrives without a reply would otherwise bring the card back.
         setState(() => _settledPlan = plan);
-        conversation.send(context.tr('planDeclinedMessage'));
+        conversation.send(AppLocalizations.of(context).planDeclinedMessage);
       },
       onApprove: () {
         // Mode first: the plan-mode gate is the thing being approved, and the
         // message rides to the agent through the normal ask-mode path.
         conversation.approvalMode = ApprovalMode.ask;
-        conversation.send(context.tr('planApprovedMessage'));
+        conversation.send(AppLocalizations.of(context).planApprovedMessage);
       },
     );
   }

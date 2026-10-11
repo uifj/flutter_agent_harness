@@ -11,7 +11,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../model/plan_block.dart';
 import '../../../model/plan_dataview.dart';
 import '../../../model/plan_relation.dart';
@@ -58,7 +58,7 @@ class PlanCellValue extends StatelessWidget {
     final value = object.relation(relation?.key ?? '');
     if (value == null || value == '') {
       return Text(
-        context.tr('planCellEmpty'),
+        AppLocalizations.of(context).planCellEmpty,
         style: DswType.xs13.copyWith(color: color.labelTertiary),
       );
     }
@@ -82,7 +82,7 @@ class PlanCellValue extends StatelessWidget {
         final ids = object.options(relation?.key ?? '');
         if (ids.isEmpty) {
           return Text(
-            context.tr('planCellEmpty'),
+            AppLocalizations.of(context).planCellEmpty,
             style: DswType.xs13.copyWith(color: color.labelTertiary),
           );
         }
@@ -216,7 +216,7 @@ class _DateValue extends StatelessWidget {
     final value = date;
     if (value == null) {
       return Text(
-        context.tr('planCellEmpty'),
+        AppLocalizations.of(context).planCellEmpty,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: DswType.xs13.copyWith(color: context.dsw.labelTertiary),
@@ -286,9 +286,9 @@ class _Checkbox extends StatelessWidget {
     return DswHoverTap(
       onTap: onTap,
       toggled: checked,
-      semanticLabel: context.tr(
-        checked ? 'planCellChecked' : 'planCellUnchecked',
-      ),
+      semanticLabel: checked
+          ? AppLocalizations.of(context).planCellChecked
+          : AppLocalizations.of(context).planCellUnchecked,
       builder: (context, hovered, focused) => checked
           ? Container(
               // `check_square` is not in the pinned lucide set; a filled box

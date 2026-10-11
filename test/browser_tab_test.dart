@@ -9,6 +9,7 @@
 
 import 'dart:io';
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/model/sidebar_tab.dart';
 import 'package:planstar/state/workbench_controller.dart';
 import 'package:planstar/state/workbench_store.dart';
@@ -112,6 +113,10 @@ void main() {
     Future<void> pumpTab(WidgetTester tester, {String? path}) =>
         tester.pumpWidget(
           MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+
             theme: dswThemeData(Brightness.light),
             home: Scaffold(
               body: BrowserTab(

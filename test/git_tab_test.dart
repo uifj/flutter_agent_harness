@@ -13,6 +13,7 @@
 
 import 'dart:io';
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/model/sidebar_tab.dart';
 import 'package:planstar/state/workbench_controller.dart';
 import 'package:planstar/state/git_status_store.dart';
@@ -63,6 +64,10 @@ void main() {
   Future<void> pumpTab(WidgetTester tester, {double step = 1.0}) =>
       tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+
           theme: dswThemeData(Brightness.light),
           // Mirrors main's MaterialApp.builder: the confirm dialog is a
           // ShadDialog, which reads ShadTheme off the caller context.

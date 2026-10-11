@@ -13,7 +13,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/tr_key.dart';
 import '../../../model/plan_object_type.dart';
 import '../../../model/plan_struct.dart';
 import '../../../model/plan_widget.dart';
@@ -61,7 +62,10 @@ class PlanWidgetsScreen extends StatelessWidget {
               const SizedBox.shrink()
             else ...[
               Text(
-                context.tr(_sectionCode(section.section)),
+                trKey(
+                  AppLocalizations.of(context),
+                  _sectionCode(section.section),
+                ),
                 style: DswType.xxsStrong12.copyWith(color: color.labelTertiary),
               ),
               const SizedBox(height: DswShape.xs),
@@ -151,10 +155,12 @@ class _WidgetCard extends StatelessWidget {
                         ),
                   ],
                   child: Tooltip(
-                    message: context.tr('planWidgetMenu'),
+                    message: AppLocalizations.of(context).planWidgetMenu,
                     child: DswHoverTap(
                       onTap: null,
-                      semanticLabel: context.tr('planWidgetMenu'),
+                      semanticLabel: AppLocalizations.of(
+                        context,
+                      ).planWidgetMenu,
                       builder: (context, hovered, focused) => Icon(
                         LucideIcons.ellipsis_vertical,
                         size: DswShape.iconTiny,
@@ -180,7 +186,7 @@ class _WidgetCard extends StatelessWidget {
                     ? LucideIcons.circle
                     : LucideIcons.square,
                 label: record.name.isEmpty
-                    ? context.tr('planUntitled')
+                    ? AppLocalizations.of(context).planUntitled
                     : record.name,
                 compact: widget.layout == PlanWidgetLayout.compactList,
                 showDivider: index < rows.length - 1,
@@ -192,7 +198,7 @@ class _WidgetCard extends StatelessWidget {
                 bottom: DswShape.xs * step,
               ),
               child: Text(
-                context.tr('planWidgetEmpty'),
+                AppLocalizations.of(context).planWidgetEmpty,
                 style: DswType.xxxs11.copyWith(color: color.labelTertiary),
               ),
             ),
@@ -243,46 +249,61 @@ class _WidgetCard extends StatelessWidget {
   String _title(BuildContext context) {
     final source = widget.source;
     if (source is PlanWidgetDefaultSource) {
-      return store.byId(source.objectId)?.name ?? context.tr('planUntitled');
+      return store.byId(source.objectId)?.name ??
+          AppLocalizations.of(context).planUntitled;
     }
     if (source is PlanWidgetBundledSource) {
       return switch (source.id) {
-        PlanBundledWidgetSourceIds.favorite => context.tr(
-          'planWidgetFavorites',
-        ),
+        PlanBundledWidgetSourceIds.favorite => AppLocalizations.of(
+          context,
+        ).planWidgetFavorites,
         PlanBundledWidgetSourceIds.recent ||
-        PlanBundledWidgetSourceIds.recentLocal => context.tr(
-          'planWidgetRecent',
-        ),
-        PlanBundledWidgetSourceIds.bin => context.tr('planWidgetBin'),
-        PlanBundledWidgetSourceIds.allObjects => context.tr(
-          'planWidgetAllObjects',
-        ),
+        PlanBundledWidgetSourceIds.recentLocal => AppLocalizations.of(
+          context,
+        ).planWidgetRecent,
+        PlanBundledWidgetSourceIds.bin => AppLocalizations.of(
+          context,
+        ).planWidgetBin,
+        PlanBundledWidgetSourceIds.allObjects => AppLocalizations.of(
+          context,
+        ).planWidgetAllObjects,
         _ => source.id,
       };
     }
     if (widget.id == 'object_types_group') {
-      return context.tr('planWidgetTypes');
+      return AppLocalizations.of(context).planWidgetTypes;
     }
     return widget.id;
   }
 
   String _rowLabel(BuildContext context, PlanObject? record) =>
       record == null || record.name.isEmpty
-      ? context.tr('planUntitled')
+      ? AppLocalizations.of(context).planUntitled
       : record.name;
 
   String _actionLabel(BuildContext context, PlanWidgetAction action) =>
       switch (action) {
-        PlanWidgetAction.changeType => context.tr('planWidgetChangeType'),
-        PlanWidgetAction.removeWidget => context.tr('planWidgetRemove'),
-        PlanWidgetAction.emptyBin => context.tr('planWidgetEmptyBin'),
-        PlanWidgetAction.changeHome => context.tr('planWidgetChangeHome'),
-        PlanWidgetAction.favoriteObject => context.tr('planFeature'),
-        PlanWidgetAction.unfavoriteObject => context.tr('planUnfeature'),
-        PlanWidgetAction.createObjectOfType => context.tr(
-          'planWidgetCreateObject',
-        ),
+        PlanWidgetAction.changeType => AppLocalizations.of(
+          context,
+        ).planWidgetChangeType,
+        PlanWidgetAction.removeWidget => AppLocalizations.of(
+          context,
+        ).planWidgetRemove,
+        PlanWidgetAction.emptyBin => AppLocalizations.of(
+          context,
+        ).planWidgetEmptyBin,
+        PlanWidgetAction.changeHome => AppLocalizations.of(
+          context,
+        ).planWidgetChangeHome,
+        PlanWidgetAction.favoriteObject => AppLocalizations.of(
+          context,
+        ).planFeature,
+        PlanWidgetAction.unfavoriteObject => AppLocalizations.of(
+          context,
+        ).planUnfeature,
+        PlanWidgetAction.createObjectOfType => AppLocalizations.of(
+          context,
+        ).planWidgetCreateObject,
       };
 
   Future<void> _runAction(BuildContext context, PlanWidgetAction action) async {
@@ -290,11 +311,14 @@ class _WidgetCard extends StatelessWidget {
       case PlanWidgetAction.removeWidget:
         await store.removeWidget(widget.id);
         if (!context.mounted) return;
-        showFeedback(context, context.tr('planWidgetRemoved'));
+        showFeedback(context, AppLocalizations.of(context).planWidgetRemoved);
       case PlanWidgetAction.emptyBin:
         await store.emptyBin();
         if (!context.mounted) return;
-        showFeedback(context, context.tr('planWidgetBinEmptied'));
+        showFeedback(
+          context,
+          AppLocalizations.of(context).planWidgetBinEmptied,
+        );
       case PlanWidgetAction.changeType:
         // The two-screen picker's second screen: cycle the five layouts.
         final layouts = PlanWidgetLayout.values;
@@ -408,7 +432,7 @@ class _ViewRows extends StatelessWidget {
                   const SizedBox(height: DswShape.xs),
                   Text(
                     record.name.isEmpty
-                        ? context.tr('planUntitled')
+                        ? AppLocalizations.of(context).planUntitled
                         : record.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

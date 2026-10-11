@@ -43,7 +43,8 @@ import 'package:shadcn_ui/shadcn_ui.dart'
 
 import '../../genkit/models_endpoint.dart';
 
-import '../../l10n/locales.dart';
+import '../../l10n/app_localizations.dart';
+import '../../l10n/tr_key.dart';
 import '../../model/app_settings.dart' hide ThemeMode;
 import '../../model/app_settings.dart' as settings;
 import '../../model/approval_rule.dart';
@@ -423,9 +424,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
   /// its own toString, trimmed to one line.
   String _probeMessage(Object error) => switch (error) {
     HttpException e => e.message,
-    TimeoutException _ => context.tr('probeTimeout'),
+    TimeoutException _ => AppLocalizations.of(context).probeTimeout,
     FormatException e => e.message,
-    SocketException _ => context.tr('connectionFailed'),
+    SocketException _ => AppLocalizations.of(context).connectionFailed,
     _ => error.toString(),
   };
 
@@ -619,74 +620,78 @@ class _SettingsPanelState extends State<SettingsPanel> {
     final items = <_NavItem>[
       _NavItem(
         _Section.general,
-        context.tr('settingsGeneral'),
+        AppLocalizations.of(context).settingsGeneral,
         LucideIcons.settings,
       ),
       _NavItem(
         _Section.appearance,
-        context.tr('settingsAppearance'),
+        AppLocalizations.of(context).settingsAppearance,
         LucideIcons.sparkles,
       ),
       _NavItem(
         _Section.models,
-        context.tr('settingsModels'),
+        AppLocalizations.of(context).settingsModels,
         LucideIcons.network,
       ),
       _NavItem(
         _Section.workspace,
-        context.tr('settingsWorkspace'),
+        AppLocalizations.of(context).settingsWorkspace,
         LucideIcons.folder_open,
       ),
       _NavItem(
         _Section.workbench,
-        context.tr('settingsWorkbench'),
+        AppLocalizations.of(context).settingsWorkbench,
         LucideIcons.columns_2,
       ),
       _NavItem(
         _Section.extensions,
-        context.tr('settingsExtensions'),
+        AppLocalizations.of(context).settingsExtensions,
         LucideIcons.puzzle,
       ),
       _NavItem(
         _Section.shortcuts,
-        context.tr('settingsShortcuts'),
+        AppLocalizations.of(context).settingsShortcuts,
         LucideIcons.keyboard,
       ),
       _NavItem(
         _Section.phrases,
-        context.tr('settingsPhrases'),
+        AppLocalizations.of(context).settingsPhrases,
         LucideIcons.text_cursor_input,
       ),
       _NavItem(
         _Section.environment,
-        context.tr('settingsEnvironment'),
+        AppLocalizations.of(context).settingsEnvironment,
         LucideIcons.variable,
       ),
-      _NavItem(_Section.cards, context.tr('settingsCards'), LucideIcons.layers),
+      _NavItem(
+        _Section.cards,
+        AppLocalizations.of(context).settingsCards,
+        LucideIcons.layers,
+      ),
       _NavItem(
         _Section.tasks,
-        context.tr('settingsTasks'),
+        AppLocalizations.of(context).settingsTasks,
         LucideIcons.alarm_clock,
       ),
       _NavItem(
         _Section.usage,
-        context.tr('settingsUsage'),
+        AppLocalizations.of(context).settingsUsage,
         LucideIcons.chart_column,
       ),
       _NavItem(
         _Section.diagnostics,
-        context.tr('settingsDiagnostics'),
+        AppLocalizations.of(context).settingsDiagnostics,
         LucideIcons.stethoscope,
       ),
       _NavItem(
         _Section.backup,
-        context.tr('settingsBackup'),
+        AppLocalizations.of(context).settingsBackup,
         LucideIcons.database_backup,
       ),
       if (widget.approvals != null)
         _NavItem(
           _Section.approvals,
-          context.tr('approvalsTitle'),
+          AppLocalizations.of(context).approvalsTitle,
           LucideIcons.shield_check,
         ),
     ];
@@ -705,7 +710,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Text(
-                context.tr('settings'),
+                AppLocalizations.of(context).settings,
                 style: DswType.baseStrong16.copyWith(color: color.labelPrimary),
               ),
             ),
@@ -714,7 +719,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: _SearchField(
                 controller: _search,
-                hint: context.tr('searchSettings'),
+                hint: AppLocalizations.of(context).searchSettings,
               ),
             ),
             const SizedBox(height: 10),
@@ -766,7 +771,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                   children: [
                     if (_saved)
                       Text(
-                        context.tr('saved'),
+                        AppLocalizations.of(context).saved,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: DswType.xxs12.copyWith(
@@ -776,7 +781,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     else if (_dirty &&
                         _edited.model.requiresRestart(widget.settings.model))
                       Text(
-                        context.tr('restartWarning'),
+                        AppLocalizations.of(context).restartWarning,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: DswType.xxs12.copyWith(
@@ -787,7 +792,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
                 ),
               ),
               CapsuleButton(
-                label: _saving ? context.tr('saving') : context.tr('save'),
+                label: _saving
+                    ? AppLocalizations.of(context).saving
+                    : AppLocalizations.of(context).save,
                 variant: CapsuleVariant.primary,
                 // Dense: the header's content box is 26px tall, and a 36px
                 // capsule there is an overflow waiting for a long label.
@@ -798,7 +805,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
               const SizedBox(width: 8),
               DswIconButton(
                 icon: LucideIcons.x,
-                tooltip: context.tr('closeSettings'),
+                tooltip: AppLocalizations.of(context).closeSettings,
                 onTap: _close,
                 size: 28,
                 iconSize: DswShape.iconSm,
@@ -857,32 +864,36 @@ class _SettingsPanelState extends State<SettingsPanel> {
   List<Widget> _general(DswAlias color) => [
     _heading(
       color,
-      context.tr('settingsGeneral'),
-      context.tr('settingsGeneralIntro'),
+      AppLocalizations.of(context).settingsGeneral,
+      AppLocalizations.of(context).settingsGeneralIntro,
     ),
     const SizedBox(height: 12),
     SettingsCard(
       dividers: true,
       children: [
         _SettingCellRow(
-          title: context.tr('theme'),
-          description: context.tr('themeDesc'),
+          title: AppLocalizations.of(context).theme,
+          description: AppLocalizations.of(context).themeDesc,
           leading: LucideIcons.palette,
           labels: {
-            settings.ThemeMode.system: context.tr('followSystem'),
-            settings.ThemeMode.light: context.tr('light'),
-            settings.ThemeMode.dark: context.tr('dark'),
+            settings.ThemeMode.system: AppLocalizations.of(
+              context,
+            ).followSystem,
+            settings.ThemeMode.light: AppLocalizations.of(context).light,
+            settings.ThemeMode.dark: AppLocalizations.of(context).dark,
           },
           value: _theme,
           onChanged: (mode) => setState(() => _theme = mode),
           last: true,
         ),
         _SettingCellRow(
-          title: context.tr('language'),
-          description: context.tr('languageDesc'),
+          title: AppLocalizations.of(context).language,
+          description: AppLocalizations.of(context).languageDesc,
           leading: LucideIcons.languages,
           labels: {
-            settings.LocaleMode.system: context.tr('followSystem'),
+            settings.LocaleMode.system: AppLocalizations.of(
+              context,
+            ).followSystem,
             settings.LocaleMode.en: 'English',
             settings.LocaleMode.zh: '中文',
           },
@@ -892,8 +903,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
           child: _SwitchRow(
-            label: context.tr('notificationsOn'),
-            description: context.tr('notificationsOnDesc'),
+            label: AppLocalizations.of(context).notificationsOn,
+            description: AppLocalizations.of(context).notificationsOnDesc,
             value: _notificationsOn,
             onChanged: (value) => setState(() => _notificationsOn = value),
           ),
@@ -910,32 +921,38 @@ class _SettingsPanelState extends State<SettingsPanel> {
   List<Widget> _appearanceSection(DswAlias color) => [
     _heading(
       color,
-      context.tr('settingsAppearance'),
-      context.tr('settingsAppearanceIntro'),
+      AppLocalizations.of(context).settingsAppearance,
+      AppLocalizations.of(context).settingsAppearanceIntro,
     ),
     const SizedBox(height: 12),
     SettingsCard(
       dividers: true,
       children: [
         _SettingCellRow<settings.AppFontSize>(
-          title: context.tr('appearanceTextSize'),
-          description: context.tr('appearanceTextSizeDesc'),
+          title: AppLocalizations.of(context).appearanceTextSize,
+          description: AppLocalizations.of(context).appearanceTextSizeDesc,
           labels: {
-            settings.AppFontSize.small: context.tr('sizeSmall'),
-            settings.AppFontSize.medium: context.tr('sizeMedium'),
-            settings.AppFontSize.large: context.tr('sizeLarge'),
+            settings.AppFontSize.small: AppLocalizations.of(context).sizeSmall,
+            settings.AppFontSize.medium: AppLocalizations.of(
+              context,
+            ).sizeMedium,
+            settings.AppFontSize.large: AppLocalizations.of(context).sizeLarge,
           },
           value: _textSize,
           onChanged: (v) => setState(() => _textSize = v),
           last: true,
         ),
         _SettingCellRow<settings.AppConversationWidth>(
-          title: context.tr('conversationWidth'),
-          description: context.tr('conversationWidthDesc'),
+          title: AppLocalizations.of(context).conversationWidth,
+          description: AppLocalizations.of(context).conversationWidthDesc,
           leading: LucideIcons.move_horizontal,
           labels: {
-            settings.AppConversationWidth.normal: context.tr('widthNormal'),
-            settings.AppConversationWidth.wide: context.tr('widthWide'),
+            settings.AppConversationWidth.normal: AppLocalizations.of(
+              context,
+            ).widthNormal,
+            settings.AppConversationWidth.wide: AppLocalizations.of(
+              context,
+            ).widthWide,
           },
           value: _conversationWidth,
           onChanged: (v) => setState(() => _conversationWidth = v),
@@ -946,8 +963,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 16),
           child: _SwitchRow(
-            label: context.tr('expandToolCalls'),
-            description: context.tr('expandToolCallsDesc'),
+            label: AppLocalizations.of(context).expandToolCalls,
+            description: AppLocalizations.of(context).expandToolCallsDesc,
             value: _expandToolCalls,
             onChanged: (v) => setState(() => _expandToolCalls = v),
           ),
@@ -964,8 +981,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
   List<Widget> _models(DswAlias color) => [
     _heading(
       color,
-      context.tr('settingsModels'),
-      context.tr('settingsModelsIntro'),
+      AppLocalizations.of(context).settingsModels,
+      AppLocalizations.of(context).settingsModelsIntro,
     ),
     // `.rows` carries its own `margin-top: 12` on top of the section gap —
     // dsh calls this "extra air between the title/intro block and the first
@@ -990,10 +1007,10 @@ class _SettingsPanelState extends State<SettingsPanel> {
         dividers: true,
         children: [
           _ActionRow(
-            title: context.tr('providersSaveCurrent'),
-            description: context.tr('providersSaveCurrentDesc'),
+            title: AppLocalizations.of(context).providersSaveCurrent,
+            description: AppLocalizations.of(context).providersSaveCurrentDesc,
             button: CapsuleButton(
-              label: context.tr('providersSaveCurrent'),
+              label: AppLocalizations.of(context).providersSaveCurrent,
               onTap: widget.onSaveCurrentToBook,
             ),
           ),
@@ -1001,7 +1018,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
               child: Text(
-                context.tr('providersBookEmpty'),
+                AppLocalizations.of(context).providersBookEmpty,
                 style: DswType.xs13.copyWith(color: color.labelTertiary),
               ),
             )
@@ -1032,13 +1049,13 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     ),
                     const SizedBox(width: 8),
                     CapsuleButton(
-                      label: context.tr('providersActivate'),
+                      label: AppLocalizations.of(context).providersActivate,
                       onTap: () => widget.onActivateSavedProvider(entry.id!),
                     ),
                     const SizedBox(width: 6),
                     DswIconButton(
                       icon: LucideIcons.trash,
-                      tooltip: context.tr('providersDelete'),
+                      tooltip: AppLocalizations.of(context).providersDelete,
                       onTap: () => widget.onDeleteSavedProvider(entry.id!),
                     ),
                   ],
@@ -1144,13 +1161,13 @@ class _SettingsPanelState extends State<SettingsPanel> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _Field(
-          label: context.tr('apiKey'),
+          label: AppLocalizations.of(context).apiKey,
           controller: _key,
           // The placeholder is the stored-state sentence dsh's editor shows:
           // a saved key needs no retyping, and the field says so instead of
           // sitting blank over a value the panel already holds.
           hint: _savedProvider == provider && _keyOnFile
-              ? context.tr('keyStored')
+              ? AppLocalizations.of(context).keyStored
               : 'sk-…',
           obscured: !_revealed,
           autofocus: true,
@@ -1171,7 +1188,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
               // Named, because the library's own heading style is its
               // `textTheme.list` -- a second type ramp nobody mapped (ADR-0027).
               title: Text(
-                context.tr('customized'),
+                AppLocalizations.of(context).customized,
                 style: DswType.xxsStrong12.copyWith(
                   color: color.labelSecondary,
                 ),
@@ -1181,17 +1198,17 @@ class _SettingsPanelState extends State<SettingsPanel> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _Field(
-                    label: context.tr('baseUrl'),
+                    label: AppLocalizations.of(context).baseUrl,
                     controller: _baseUrl,
                     // Empty means the provider's own endpoint — only the
                     // OpenAI-compatible path has a default worth hinting.
                     hint: provider == LlmProvider.openai
                         ? defaultBaseUrl
-                        : context.tr('providerDefault'),
+                        : AppLocalizations.of(context).providerDefault,
                   ),
                   const SizedBox(height: 12),
                   _Field(
-                    label: context.tr('model'),
+                    label: AppLocalizations.of(context).model,
                     controller: _model,
                     hint: defaultModelFor(provider),
                     // The model id is a wire value, and reads as one.
@@ -1253,7 +1270,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                 count: _probeCount,
               );
               final button = CapsuleButton(
-                label: context.tr('testConnection'),
+                label: AppLocalizations.of(context).testConnection,
                 size: CapsuleSize.sm,
                 enabled: !_modelsLoading,
                 onTap: _testConnection,
@@ -1294,9 +1311,11 @@ class _SettingsPanelState extends State<SettingsPanel> {
       switch (provider) {
         // The OpenAI-compatible path is what a custom baseUrl is for, so the
         // label says what it accepts rather than which vendor it defaults to.
-        LlmProvider.openai => context.tr('providerOpenAiCompatible'),
-        LlmProvider.anthropic => context.tr('providerAnthropic'),
-        LlmProvider.google => context.tr('providerGoogle'),
+        LlmProvider.openai => AppLocalizations.of(
+          context,
+        ).providerOpenAiCompatible,
+        LlmProvider.anthropic => AppLocalizations.of(context).providerAnthropic,
+        LlmProvider.google => AppLocalizations.of(context).providerGoogle,
       };
 
   /// Opens the platform's directory picker and adopts whatever comes back: the
@@ -1338,17 +1357,20 @@ class _SettingsPanelState extends State<SettingsPanel> {
   List<Widget> _workspaceSection(DswAlias color) => [
     _heading(
       color,
-      context.tr('settingsWorkspace'),
-      context.tr('settingsWorkspaceIntro'),
+      AppLocalizations.of(context).settingsWorkspace,
+      AppLocalizations.of(context).settingsWorkspaceIntro,
     ),
     const SizedBox(height: 12),
     _Field(
-      label: context.tr('folder'),
+      label: AppLocalizations.of(context).folder,
       controller: _workspace,
       hint: '~/projects/my-app',
       autofocus: true,
       code: true,
-      trailing: CapsuleButton(label: context.tr('choose'), onTap: _pickFolder),
+      trailing: CapsuleButton(
+        label: AppLocalizations.of(context).choose,
+        onTap: _pickFolder,
+      ),
     ),
     const SizedBox(height: 12),
     _RecentWorkspaces(
@@ -1368,21 +1390,21 @@ class _SettingsPanelState extends State<SettingsPanel> {
     return [
       _heading(
         color,
-        context.tr('terminal'),
-        context.tr('settingsTerminalIntro'),
+        AppLocalizations.of(context).terminal,
+        AppLocalizations.of(context).settingsTerminalIntro,
       ),
       const SizedBox(height: 12),
       _Field(
-        label: context.tr('fontFamily'),
+        label: AppLocalizations.of(context).fontFamily,
         controller: _fontFamily,
-        hint: context.tr('fontFamilyHint'),
+        hint: AppLocalizations.of(context).fontFamilyHint,
         code: true,
         focusNode: _fontFamilyFocus,
         onSubmitted: (_) => _commitFontFamily(),
       ),
       const SizedBox(height: 12),
       _Stepper(
-        label: context.tr('fontSize'),
+        label: AppLocalizations.of(context).fontSize,
         value: prefs.terminalFontSize,
         min: terminalFontSizeMin,
         max: terminalFontSizeMax,
@@ -1391,59 +1413,63 @@ class _SettingsPanelState extends State<SettingsPanel> {
       ),
       const SizedBox(height: 12),
       _SwitchRow(
-        label: context.tr('seedBottomPanel'),
-        description: context.tr('seedBottomPanelDesc'),
+        label: AppLocalizations.of(context).seedBottomPanel,
+        description: AppLocalizations.of(context).seedBottomPanelDesc,
         value: prefs.bottomPanelAutoTerminal,
         onChanged: (value) => widget.onPrefsChange?.call(
           prefs.copyWith(bottomPanelAutoTerminal: value),
         ),
       ),
       const SizedBox(height: 28),
-      _heading(color, context.tr('tabs'), context.tr('settingsTabsIntro')),
+      _heading(
+        color,
+        AppLocalizations.of(context).tabs,
+        AppLocalizations.of(context).settingsTabsIntro,
+      ),
       const SizedBox(height: 12),
       _SwitchRow(
-        label: context.tr('explorer'),
-        description: context.tr('explorerDesc'),
+        label: AppLocalizations.of(context).explorer,
+        description: AppLocalizations.of(context).explorerDesc,
         value: prefs.tabEnabled('explorer'),
         onChanged: (value) =>
             widget.onPrefsChange?.call(prefs.withTabEnabled('explorer', value)),
       ),
       const SizedBox(height: 8),
       _SwitchRow(
-        label: context.tr('terminal'),
-        description: context.tr('terminalDesc'),
+        label: AppLocalizations.of(context).terminal,
+        description: AppLocalizations.of(context).terminalDesc,
         value: prefs.tabEnabled('terminal'),
         onChanged: (value) =>
             widget.onPrefsChange?.call(prefs.withTabEnabled('terminal', value)),
       ),
       const SizedBox(height: 8),
       _SwitchRow(
-        label: context.tr('git'),
-        description: context.tr('gitDesc'),
+        label: AppLocalizations.of(context).git,
+        description: AppLocalizations.of(context).gitDesc,
         value: prefs.tabEnabled('git'),
         onChanged: (value) =>
             widget.onPrefsChange?.call(prefs.withTabEnabled('git', value)),
       ),
       const SizedBox(height: 8),
       _SwitchRow(
-        label: context.tr('subagents'),
-        description: context.tr('subagentsDesc'),
+        label: AppLocalizations.of(context).subagents,
+        description: AppLocalizations.of(context).subagentsDesc,
         value: prefs.tabEnabled('subagent'),
         onChanged: (value) =>
             widget.onPrefsChange?.call(prefs.withTabEnabled('subagent', value)),
       ),
       const SizedBox(height: 8),
       _SwitchRow(
-        label: context.tr('browser'),
-        description: context.tr('browserDesc'),
+        label: AppLocalizations.of(context).browser,
+        description: AppLocalizations.of(context).browserDesc,
         value: prefs.tabEnabled('browser'),
         onChanged: (value) =>
             widget.onPrefsChange?.call(prefs.withTabEnabled('browser', value)),
       ),
       const SizedBox(height: 8),
       _SwitchRow(
-        label: context.tr('sidechat'),
-        description: context.tr('sideChatDesc'),
+        label: AppLocalizations.of(context).sidechat,
+        description: AppLocalizations.of(context).sideChatDesc,
         value: prefs.tabEnabled('sidechat'),
         onChanged: (value) =>
             widget.onPrefsChange?.call(prefs.withTabEnabled('sidechat', value)),
@@ -1454,8 +1480,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
   List<Widget> _extensionsSection(DswAlias color) => [
     _heading(
       color,
-      context.tr('settingsMcpServers'),
-      context.tr('settingsMcpIntro'),
+      AppLocalizations.of(context).settingsMcpServers,
+      AppLocalizations.of(context).settingsMcpIntro,
     ),
     const SizedBox(height: 12),
     for (final draft in List<_ServerDraft>.of(_servers)) ...[
@@ -1464,17 +1490,20 @@ class _SettingsPanelState extends State<SettingsPanel> {
     ],
     Align(
       alignment: Alignment.centerLeft,
-      child: CapsuleButton(label: context.tr('addServer'), onTap: _addServer),
+      child: CapsuleButton(
+        label: AppLocalizations.of(context).addServer,
+        onTap: _addServer,
+      ),
     ),
     const SizedBox(height: 28),
     _heading(
       color,
-      context.tr('settingsSkills'),
-      context.tr('settingsSkillsIntro'),
+      AppLocalizations.of(context).settingsSkills,
+      AppLocalizations.of(context).settingsSkillsIntro,
     ),
     const SizedBox(height: 12),
     _Field(
-      label: context.tr('folder'),
+      label: AppLocalizations.of(context).folder,
       controller: _skills,
       hint: '${widget.supportPath}/skills',
       code: true,
@@ -1491,15 +1520,15 @@ class _SettingsPanelState extends State<SettingsPanel> {
     return [
       _heading(
         color,
-        context.tr('approvalsTitle'),
-        context.tr('approvalsNote'),
+        AppLocalizations.of(context).approvalsTitle,
+        AppLocalizations.of(context).approvalsNote,
       ),
       const SizedBox(height: 12),
       if (rules.isEmpty)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
           child: Text(
-            context.tr('approvalsEmpty'),
+            AppLocalizations.of(context).approvalsEmpty,
             style: DswType.xs13.copyWith(color: color.labelTertiary),
           ),
         )
@@ -1511,18 +1540,18 @@ class _SettingsPanelState extends State<SettingsPanel> {
               _ActionRow(
                 title: rule.display,
                 description: rule.outcome == ApprovalOutcome.allow
-                    ? context.tr('approvalAllowed')
-                    : context.tr('approvalDenied'),
+                    ? AppLocalizations.of(context).approvalAllowed
+                    : AppLocalizations.of(context).approvalDenied,
                 button: CapsuleButton(
-                  label: context.tr('forget'),
+                  label: AppLocalizations.of(context).forget,
                   onTap: () => store.forget(rule),
                 ),
               ),
             _ActionRow(
-              title: context.tr('forgetWorkspaceApprovals'),
-              description: context.tr('approvalsNote'),
+              title: AppLocalizations.of(context).forgetWorkspaceApprovals,
+              description: AppLocalizations.of(context).approvalsNote,
               button: CapsuleButton(
-                label: context.tr('forget'),
+                label: AppLocalizations.of(context).forget,
                 danger: true,
                 onTap: () =>
                     store.forgetWorkspace(widget.settings.workspaceRoot),
@@ -1545,8 +1574,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
     return [
       _heading(
         color,
-        context.tr('settingsShortcuts'),
-        context.tr('settingsShortcutsIntro'),
+        AppLocalizations.of(context).settingsShortcuts,
+        AppLocalizations.of(context).settingsShortcutsIntro,
       ),
       const SizedBox(height: 12),
       SettingsCard(
@@ -1559,7 +1588,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                 children: [
                   Expanded(
                     child: Text(
-                      context.tr(command.labelKey),
+                      trKey(AppLocalizations.of(context), command.labelKey),
                       style: DswType.s14.copyWith(color: color.labelPrimary),
                     ),
                   ),
@@ -1600,31 +1629,31 @@ class _SettingsPanelState extends State<SettingsPanel> {
     return [
       _heading(
         color,
-        context.tr('settingsUsage'),
-        context.tr('settingsUsageIntro'),
+        AppLocalizations.of(context).settingsUsage,
+        AppLocalizations.of(context).settingsUsageIntro,
       ),
       const SizedBox(height: 12),
       SettingsCard(
         dividers: true,
         children: [
           _UsageStatRow(
-            label: context.tr('usageTurns'),
+            label: AppLocalizations.of(context).usageTurns,
             value: '${summary.turns}',
           ),
           _UsageStatRow(
-            label: context.tr('usageTotalTokens'),
+            label: AppLocalizations.of(context).usageTotalTokens,
             value: '${summary.totalTokens}',
           ),
           _UsageStatRow(
-            label: context.tr('usageErrorRate'),
+            label: AppLocalizations.of(context).usageErrorRate,
             value: '${(summary.errorRate * 100).toStringAsFixed(1)}%',
           ),
           if (widget.crashFiles != null)
             _ActionRow(
-              title: context.tr('usageCrashLogTitle'),
-              description: context.tr('usageCrashLogDesc'),
+              title: AppLocalizations.of(context).usageCrashLogTitle,
+              description: AppLocalizations.of(context).usageCrashLogDesc,
               button: CapsuleButton(
-                label: context.tr('usageCrashLogOpen'),
+                label: AppLocalizations.of(context).usageCrashLogOpen,
                 onTap: widget.onOpenCrashLog ?? () {},
               ),
               last: true,
@@ -1642,8 +1671,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
     return [
       _heading(
         color,
-        context.tr('settingsEnvironment'),
-        context.tr('settingsEnvironmentIntro'),
+        AppLocalizations.of(context).settingsEnvironment,
+        AppLocalizations.of(context).settingsEnvironmentIntro,
       ),
       const SizedBox(height: 12),
       SettingsCard(
@@ -1682,7 +1711,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: CapsuleButton(
-              label: context.tr('envAdd'),
+              label: AppLocalizations.of(context).envAdd,
               onTap: () => _addEnvironmentVariable(context, store),
             ),
           ),
@@ -1702,17 +1731,20 @@ class _SettingsPanelState extends State<SettingsPanel> {
       context: context,
       builder: (dialogContext) => ShadDialog(
         radius: BorderRadius.circular(DswShape.float),
-        title: Text(context.tr('envAdd'), style: DswType.sStrong14),
+        title: Text(
+          AppLocalizations.of(context).envAdd,
+          style: DswType.sStrong14,
+        ),
         actions: [
           ShadButton.outline(
             height: 24 * step,
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(context.tr('cancel')),
+            child: Text(AppLocalizations.of(context).cancel),
           ),
           ShadButton(
             height: 24 * step,
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(context.tr('save')),
+            child: Text(AppLocalizations.of(context).save),
           ),
         ],
         child: Column(
@@ -1720,13 +1752,13 @@ class _SettingsPanelState extends State<SettingsPanel> {
           children: [
             ShadInput(
               controller: name,
-              placeholder: Text(context.tr('envNameHint')),
+              placeholder: Text(AppLocalizations.of(context).envNameHint),
               autofocus: true,
             ),
             const SizedBox(height: 8),
             ShadInput(
               controller: value,
-              placeholder: Text(context.tr('envValueHint')),
+              placeholder: Text(AppLocalizations.of(context).envValueHint),
             ),
           ],
         ),
@@ -1753,17 +1785,17 @@ class _SettingsPanelState extends State<SettingsPanel> {
           ShadButton.outline(
             height: 24 * step,
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(context.tr('cancel')),
+            child: Text(AppLocalizations.of(context).cancel),
           ),
           ShadButton(
             height: 24 * step,
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(context.tr('save')),
+            child: Text(AppLocalizations.of(context).save),
           ),
         ],
         child: ShadInput(
           controller: value,
-          placeholder: Text(context.tr('envValueHint')),
+          placeholder: Text(AppLocalizations.of(context).envValueHint),
           autofocus: true,
         ),
       ),
@@ -1781,8 +1813,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
     return [
       _heading(
         color,
-        context.tr('settingsCards'),
-        context.tr('settingsCardsIntro'),
+        AppLocalizations.of(context).settingsCards,
+        AppLocalizations.of(context).settingsCardsIntro,
       ),
       const SizedBox(height: 12),
       SettingsCard(
@@ -1804,7 +1836,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          context.tr('cardsEmpty'),
+                          AppLocalizations.of(context).cardsEmpty,
                           style: DswType.xxs12.copyWith(
                             color: color.labelTertiary,
                           ),
@@ -1849,7 +1881,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: CapsuleButton(
-              label: context.tr('cardAdd'),
+              label: AppLocalizations.of(context).cardAdd,
               enabled: !store.isFull,
               onTap: () => _editCard(null),
             ),
@@ -1867,17 +1899,20 @@ class _SettingsPanelState extends State<SettingsPanel> {
       context: context,
       builder: (dialogContext) => ShadDialog(
         radius: BorderRadius.circular(DswShape.float),
-        title: Text(context.tr('cardAdd'), style: DswType.sStrong14),
+        title: Text(
+          AppLocalizations.of(context).cardAdd,
+          style: DswType.sStrong14,
+        ),
         actions: [
           ShadButton.outline(
             height: 24 * step,
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(context.tr('cancel')),
+            child: Text(AppLocalizations.of(context).cancel),
           ),
           ShadButton(
             height: 24 * step,
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(context.tr('save')),
+            child: Text(AppLocalizations.of(context).save),
           ),
         ],
         child: Column(
@@ -1885,13 +1920,13 @@ class _SettingsPanelState extends State<SettingsPanel> {
           children: [
             ShadInput(
               controller: title,
-              placeholder: Text(context.tr('cardTitleHint')),
+              placeholder: Text(AppLocalizations.of(context).cardTitleHint),
               autofocus: true,
             ),
             const SizedBox(height: 8),
             ShadInput(
               controller: body,
-              placeholder: Text(context.tr('cardTextHint')),
+              placeholder: Text(AppLocalizations.of(context).cardTextHint),
               minLines: 3,
               maxLines: 6,
             ),
@@ -1921,8 +1956,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
     return [
       _heading(
         color,
-        context.tr('settingsTasks'),
-        context.tr('settingsTasksIntro'),
+        AppLocalizations.of(context).settingsTasks,
+        AppLocalizations.of(context).settingsTasksIntro,
       ),
       const SizedBox(height: 12),
       SettingsCard(
@@ -1944,7 +1979,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          context.tr('tasksEmpty'),
+                          AppLocalizations.of(context).tasksEmpty,
                           style: DswType.xxs12.copyWith(
                             color: color.labelTertiary,
                           ),
@@ -1965,7 +2000,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: CapsuleButton(
-              label: context.tr('taskAdd'),
+              label: AppLocalizations.of(context).taskAdd,
               onTap: () => _addTask(context, store),
             ),
           ),
@@ -1987,17 +2022,20 @@ class _SettingsPanelState extends State<SettingsPanel> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setDialogState) => ShadDialog(
           radius: BorderRadius.circular(DswShape.float),
-          title: Text(context.tr('taskAdd'), style: DswType.sStrong14),
+          title: Text(
+            AppLocalizations.of(context).taskAdd,
+            style: DswType.sStrong14,
+          ),
           actions: [
             ShadButton.outline(
               height: 24 * step,
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(context.tr('cancel')),
+              child: Text(AppLocalizations.of(context).cancel),
             ),
             ShadButton(
               height: 24 * step,
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(context.tr('save')),
+              child: Text(AppLocalizations.of(context).save),
             ),
           ],
           child: Column(
@@ -2006,13 +2044,13 @@ class _SettingsPanelState extends State<SettingsPanel> {
             children: [
               ShadInput(
                 controller: name,
-                placeholder: Text(context.tr('taskNameHint')),
+                placeholder: Text(AppLocalizations.of(context).taskNameHint),
                 autofocus: true,
               ),
               const SizedBox(height: 8),
               ShadInput(
                 controller: prompt,
-                placeholder: Text(context.tr('taskPromptHint')),
+                placeholder: Text(AppLocalizations.of(context).taskPromptHint),
                 minLines: 2,
                 maxLines: 4,
               ),
@@ -2023,7 +2061,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     width: 64,
                     child: ShadInput(
                       controller: hour,
-                      placeholder: Text(context.tr('taskHourHint')),
+                      placeholder: Text(
+                        AppLocalizations.of(context).taskHourHint,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -2031,7 +2071,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     width: 64,
                     child: ShadInput(
                       controller: minute,
-                      placeholder: Text(context.tr('taskMinuteHint')),
+                      placeholder: Text(
+                        AppLocalizations.of(context).taskMinuteHint,
+                      ),
                     ),
                   ),
                 ],
@@ -2048,7 +2090,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
                             : weekdays.add(weekday);
                       }),
                       toggled: weekdays.contains(weekday),
-                      semanticLabel: context.tr('taskWeekday', {'n': weekday}),
+                      semanticLabel: AppLocalizations.of(
+                        context,
+                      ).taskWeekday('$weekday'),
                       builder: (context, hovered, focused) => ShadBadge(
                         backgroundColor: weekdays.contains(weekday)
                             ? color.interactiveSelected
@@ -2056,7 +2100,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                             ? color.interactiveBgHover
                             : Colors.transparent,
                         child: Text(
-                          context.tr('taskWeekday', {'n': weekday}),
+                          AppLocalizations.of(context).taskWeekday('$weekday'),
                           style: DswType.xxs12.copyWith(
                             color: weekdays.contains(weekday)
                                 ? color.labelPrimary
@@ -2099,8 +2143,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
     return [
       _heading(
         color,
-        context.tr('settingsPhrases'),
-        context.tr('settingsPhrasesIntro'),
+        AppLocalizations.of(context).settingsPhrases,
+        AppLocalizations.of(context).settingsPhrasesIntro,
       ),
       const SizedBox(height: 12),
       SettingsCard(
@@ -2117,7 +2161,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
             child: Row(
               children: [
                 CapsuleButton(
-                  label: context.tr('quickPhraseAdd'),
+                  label: AppLocalizations.of(context).quickPhraseAdd,
                   enabled: !store.isFull,
                   onTap: () => _editPhrase(null),
                 ),
@@ -2125,7 +2169,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                   const SizedBox(width: 12),
                   Flexible(
                     child: Text(
-                      context.tr('quickPhraseFull'),
+                      AppLocalizations.of(context).quickPhraseFull,
                       style: DswType.xxs12.copyWith(color: color.labelTertiary),
                     ),
                   ),
@@ -2149,19 +2193,21 @@ class _SettingsPanelState extends State<SettingsPanel> {
       builder: (dialogContext) => ShadDialog(
         radius: BorderRadius.circular(DswShape.float),
         title: Text(
-          context.tr(phrase == null ? 'quickPhraseAdd' : 'edit'),
+          phrase == null
+              ? AppLocalizations.of(context).quickPhraseAdd
+              : AppLocalizations.of(context).edit,
           style: DswType.sStrong14,
         ),
         actions: [
           ShadButton.outline(
             height: 24 * step,
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(context.tr('cancel')),
+            child: Text(AppLocalizations.of(context).cancel),
           ),
           ShadButton(
             height: 24 * step,
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(context.tr('save')),
+            child: Text(AppLocalizations.of(context).save),
           ),
         ],
         child: Column(
@@ -2169,13 +2215,17 @@ class _SettingsPanelState extends State<SettingsPanel> {
           children: [
             ShadInput(
               controller: title,
-              placeholder: Text(context.tr('quickPhraseTitleHint')),
+              placeholder: Text(
+                AppLocalizations.of(context).quickPhraseTitleHint,
+              ),
               autofocus: true,
             ),
             const SizedBox(height: 8),
             ShadInput(
               controller: body,
-              placeholder: Text(context.tr('quickPhraseTextHint')),
+              placeholder: Text(
+                AppLocalizations.of(context).quickPhraseTextHint,
+              ),
               minLines: 3,
               maxLines: 5,
             ),
@@ -2200,8 +2250,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
   List<Widget> _diagnosticsSection(DswAlias color) => [
     _heading(
       color,
-      context.tr('settingsDiagnostics'),
-      context.tr('settingsDiagnosticsIntro'),
+      AppLocalizations.of(context).settingsDiagnostics,
+      AppLocalizations.of(context).settingsDiagnosticsIntro,
     ),
     const SizedBox(height: 12),
     SettingsCard(
@@ -2210,8 +2260,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
           child: _SwitchRow(
-            label: context.tr('diagnosticRequestLog'),
-            description: context.tr('diagnosticRequestLogDesc'),
+            label: AppLocalizations.of(context).diagnosticRequestLog,
+            description: AppLocalizations.of(context).diagnosticRequestLogDesc,
             value: _diagnosticRequestLog,
             onChanged: (value) => setState(() => _diagnosticRequestLog = value),
           ),
@@ -2219,18 +2269,18 @@ class _SettingsPanelState extends State<SettingsPanel> {
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
           child: _SwitchRow(
-            label: context.tr('diagnosticContextLog'),
-            description: context.tr('diagnosticContextLogDesc'),
+            label: AppLocalizations.of(context).diagnosticContextLog,
+            description: AppLocalizations.of(context).diagnosticContextLogDesc,
             value: _diagnosticContextLog,
             onChanged: (value) => setState(() => _diagnosticContextLog = value),
           ),
         ),
         if (widget.onOpenDiagnosticsFolder != null)
           _ActionRow(
-            title: context.tr('diagnosticFolderTitle'),
-            description: context.tr('diagnosticFolderDesc'),
+            title: AppLocalizations.of(context).diagnosticFolderTitle,
+            description: AppLocalizations.of(context).diagnosticFolderDesc,
             button: CapsuleButton(
-              label: context.tr('revealInFiles'),
+              label: AppLocalizations.of(context).revealInFiles,
               onTap: widget.onOpenDiagnosticsFolder!,
             ),
             last: true,
@@ -2242,43 +2292,43 @@ class _SettingsPanelState extends State<SettingsPanel> {
   List<Widget> _backupSection(DswAlias color) => [
     _heading(
       color,
-      context.tr('settingsBackup'),
-      context.tr('settingsBackupIntro'),
+      AppLocalizations.of(context).settingsBackup,
+      AppLocalizations.of(context).settingsBackupIntro,
     ),
     const SizedBox(height: 12),
     SettingsCard(
       dividers: true,
       children: [
         _ActionRow(
-          title: context.tr('backupCreate'),
-          description: context.tr('backupCreateDesc'),
+          title: AppLocalizations.of(context).backupCreate,
+          description: AppLocalizations.of(context).backupCreateDesc,
           button: CapsuleButton(
-            label: context.tr('backupExport'),
+            label: AppLocalizations.of(context).backupExport,
             onTap: _createBackup,
           ),
         ),
         _ActionRow(
-          title: context.tr('backupRestore'),
-          description: context.tr('backupRestoreDesc'),
+          title: AppLocalizations.of(context).backupRestore,
+          description: AppLocalizations.of(context).backupRestoreDesc,
           button: CapsuleButton(
-            label: context.tr('backupImport'),
+            label: AppLocalizations.of(context).backupImport,
             onTap: _restoreBackup,
           ),
         ),
         if (widget.onOpenPreRestoreFolder != null)
           _ActionRow(
-            title: context.tr('preRestoreTitle'),
-            description: context.tr('preRestoreDesc'),
+            title: AppLocalizations.of(context).preRestoreTitle,
+            description: AppLocalizations.of(context).preRestoreDesc,
             button: CapsuleButton(
-              label: context.tr('revealInFiles'),
+              label: AppLocalizations.of(context).revealInFiles,
               onTap: widget.onOpenPreRestoreFolder!,
             ),
           ),
         _ActionRow(
-          title: context.tr('settingsReset'),
-          description: context.tr('settingsResetDesc'),
+          title: AppLocalizations.of(context).settingsReset,
+          description: AppLocalizations.of(context).settingsResetDesc,
           button: CapsuleButton(
-            label: context.tr('settingsReset'),
+            label: AppLocalizations.of(context).settingsReset,
             danger: true,
             onTap: _resetSettings,
           ),
@@ -2293,19 +2343,19 @@ class _SettingsPanelState extends State<SettingsPanel> {
   Future<void> _resetSettings() async {
     final confirmed = await showConfirmDialog(
       context,
-      title: context.tr('settingsResetConfirmTitle'),
-      description: context.tr('settingsResetConfirmBody'),
-      confirmLabel: context.tr('settingsReset'),
+      title: AppLocalizations.of(context).settingsResetConfirmTitle,
+      description: AppLocalizations.of(context).settingsResetConfirmBody,
+      confirmLabel: AppLocalizations.of(context).settingsReset,
     );
     if (!confirmed || !mounted) return;
     await widget.onReset();
     if (!mounted) return;
-    showFeedback(context, context.tr('settingsResetDone'));
+    showFeedback(context, AppLocalizations.of(context).settingsResetDone);
   }
 
   Future<void> _createBackup() async {
     final path = await FilePicker.platform.saveFile(
-      dialogTitle: context.tr('backupExport'),
+      dialogTitle: AppLocalizations.of(context).backupExport,
       fileName: BackupService.defaultFileName(),
       type: FileType.custom,
       allowedExtensions: [BackupService.backupExtension],
@@ -2316,13 +2366,13 @@ class _SettingsPanelState extends State<SettingsPanel> {
       if (!mounted) return;
       showFeedback(
         context,
-        context.tr('backupCreated').replaceAll('{count}', '$count'),
+        AppLocalizations.of(context).backupCreated('$count'),
       );
     } catch (e) {
       if (!mounted) return;
       showFeedback(
         context,
-        '${context.tr('backupFailed')}: $e',
+        '${AppLocalizations.of(context).backupFailed}: $e',
         destructive: true,
       );
     }
@@ -2330,7 +2380,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
 
   Future<void> _restoreBackup() async {
     final result = await FilePicker.platform.pickFiles(
-      dialogTitle: context.tr('backupImport'),
+      dialogTitle: AppLocalizations.of(context).backupImport,
       type: FileType.custom,
       allowedExtensions: [BackupService.backupExtension],
     );
@@ -2342,13 +2392,13 @@ class _SettingsPanelState extends State<SettingsPanel> {
       if (!mounted) return;
       showFeedback(
         context,
-        context.tr('backupRestored').replaceAll('{count}', '$count'),
+        AppLocalizations.of(context).backupRestored('$count'),
       );
     } catch (e) {
       if (!mounted) return;
       showFeedback(
         context,
-        '${context.tr('backupFailed')}: $e',
+        '${AppLocalizations.of(context).backupFailed}: $e',
         destructive: true,
       );
     }
@@ -2367,7 +2417,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
           children: [
             Expanded(
               child: _Field(
-                label: context.tr('serverName'),
+                label: AppLocalizations.of(context).serverName,
                 controller: draft.name,
                 hint: 'fs',
                 code: true,
@@ -2376,7 +2426,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
             const SizedBox(width: 12),
             Expanded(
               child: _Field(
-                label: context.tr('arguments'),
+                label: AppLocalizations.of(context).arguments,
                 controller: draft.args,
                 hint: '-y @modelcontextprotocol/server-filesystem',
                 code: true,
@@ -2385,7 +2435,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
             const SizedBox(width: 6),
             DswIconButton.destructive(
               icon: LucideIcons.x,
-              tooltip: context.tr('removeServer'),
+              tooltip: AppLocalizations.of(context).removeServer,
               onTap: () => _removeServer(draft),
               size: 28,
               iconSize: DswShape.iconMd,
@@ -2394,14 +2444,14 @@ class _SettingsPanelState extends State<SettingsPanel> {
         ),
         const SizedBox(height: 12),
         _Field(
-          label: context.tr('commandStdio'),
+          label: AppLocalizations.of(context).commandStdio,
           controller: draft.command,
           hint: 'npx',
           code: true,
         ),
         const SizedBox(height: 12),
         _Field(
-          label: context.tr('urlHttp'),
+          label: AppLocalizations.of(context).urlHttp,
           controller: draft.url,
           hint: 'https://example.test/mcp',
           code: true,
@@ -2622,7 +2672,7 @@ class _RecentWorkspaces extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          context.tr('recent'),
+          AppLocalizations.of(context).recent,
           style: DswType.xxs12.copyWith(color: color.labelSecondary),
         ),
         const SizedBox(height: 6),
@@ -2649,7 +2699,7 @@ class _RecentWorkspaces extends StatelessWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  context.tr('folderNotOnDisk'),
+                  AppLocalizations.of(context).folderNotOnDisk,
                   style: DswType.xxxs11.copyWith(color: color.labelTertiary),
                 ),
               ),
@@ -2735,14 +2785,14 @@ class _RecentRowState extends State<_RecentRow> {
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: Text(
-              context.tr('missing'),
+              AppLocalizations.of(context).missing,
               style: DswType.xxxs11.copyWith(color: color.stateWarnLabel),
             ),
           ),
         if (hovered)
           DswIconButton(
             icon: LucideIcons.x,
-            tooltip: context.tr('forget'),
+            tooltip: AppLocalizations.of(context).forget,
             onTap: widget.onForget,
             size: 20,
             iconSize: DswShape.iconTiny,
@@ -3032,7 +3082,7 @@ class _Stepper extends StatelessWidget {
           children: [
             DswIconButton.outlined(
               icon: LucideIcons.minus,
-              tooltip: context.tr('decrease'),
+              tooltip: AppLocalizations.of(context).decrease,
               onTap: value > min ? () => onChanged(value - 1) : null,
               size: 28,
               iconSize: DswShape.iconSm,
@@ -3056,7 +3106,7 @@ class _Stepper extends StatelessWidget {
             ),
             DswIconButton.outlined(
               icon: LucideIcons.plus,
-              tooltip: context.tr('increase'),
+              tooltip: AppLocalizations.of(context).increase,
               onTap: value < max ? () => onChanged(value + 1) : null,
               size: 28,
               iconSize: DswShape.iconSm,
@@ -3082,7 +3132,9 @@ class _RevealButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return DswIconButton(
       icon: revealed ? LucideIcons.eye_off : LucideIcons.eye,
-      tooltip: revealed ? context.tr('hideKey') : context.tr('showKey'),
+      tooltip: revealed
+          ? AppLocalizations.of(context).hideKey
+          : AppLocalizations.of(context).showKey,
       onTap: onTap,
       size: 28,
       iconSize: DswShape.iconMd,
@@ -3103,8 +3155,8 @@ class _CredentialDot extends StatelessWidget {
     final color = context.dsw;
     return Tooltip(
       message: configured
-          ? context.tr('keyConfigured')
-          : context.tr('keyMissing'),
+          ? AppLocalizations.of(context).keyConfigured
+          : AppLocalizations.of(context).keyMissing,
       child: Container(
         width: 8,
         height: 8,
@@ -3134,7 +3186,9 @@ class _RowEditButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => CapsuleButton(
-    label: expanded ? context.tr('close') : context.tr('edit'),
+    label: expanded
+        ? AppLocalizations.of(context).close
+        : AppLocalizations.of(context).edit,
     onTap: onTap,
     size: CapsuleSize.sm,
   );
@@ -3162,8 +3216,8 @@ class _ModelPickButton extends StatelessWidget {
       },
       enabled: enabled,
       label: enabled
-          ? context.tr('chooseModel')
-          : context.tr('noModelsFetched'),
+          ? AppLocalizations.of(context).chooseModel
+          : AppLocalizations.of(context).noModelsFetched,
       popupMinWidth: 260,
       maxHeight: 320,
       options: (context, close) => [
@@ -3217,7 +3271,7 @@ class _ModelProbeStatus extends StatelessWidget {
     final color = context.dsw;
     if (loading) {
       return Text(
-        context.tr('fetchingModels'),
+        AppLocalizations.of(context).fetchingModels,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: DswType.xxs12.copyWith(color: color.labelTertiary),
@@ -3245,7 +3299,7 @@ class _ModelProbeStatus extends StatelessWidget {
     }
     if (count != null) {
       return Text(
-        context.tr('connectionOk').replaceAll('{n}', '$count'),
+        AppLocalizations.of(context).connectionOk('$count'),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: DswType.xxs12.copyWith(color: color.stateSuccessPrimary),
@@ -3410,7 +3464,7 @@ class _ManualModelsField extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                context.tr('modelsListLabel'),
+                AppLocalizations.of(context).modelsListLabel,
                 style: DswType.xs13.copyWith(color: color.labelSecondary),
               ),
             ),
@@ -3447,7 +3501,7 @@ class _ManualModelsField extends StatelessWidget {
                         if (id == activeModel) ...[
                           const SizedBox(width: 6),
                           Text(
-                            context.tr('modelsActiveTag'),
+                            AppLocalizations.of(context).modelsActiveTag,
                             style: DswType.xs13.copyWith(
                               color: color.labelTertiary,
                             ),
@@ -3460,7 +3514,7 @@ class _ManualModelsField extends StatelessWidget {
                 const SizedBox(width: 6),
                 DswIconButton(
                   icon: LucideIcons.x,
-                  tooltip: context.tr('modelsRemove'),
+                  tooltip: AppLocalizations.of(context).modelsRemove,
                   onTap: () => onRemove(id),
                 ),
               ],
@@ -3471,7 +3525,7 @@ class _ManualModelsField extends StatelessWidget {
           ShadInput(
             controller: controller,
             placeholder: dswInputHint(
-              context.tr('modelsAddHint'),
+              AppLocalizations.of(context).modelsAddHint,
               style: DswType.xs13.copyWith(color: color.labelTertiary),
             ),
             style: DswType.xs13,
@@ -3530,13 +3584,13 @@ class _PhraseRow extends StatelessWidget {
           const SizedBox(width: 8),
           DswIconButton(
             icon: LucideIcons.pencil,
-            tooltip: context.tr('edit'),
+            tooltip: AppLocalizations.of(context).edit,
             onTap: onEdit,
           ),
           const SizedBox(width: 4),
           DswIconButton(
             icon: LucideIcons.trash,
-            tooltip: context.tr('quickPhraseDelete'),
+            tooltip: AppLocalizations.of(context).quickPhraseDelete,
             onTap: onDelete,
           ),
         ],
@@ -3577,13 +3631,13 @@ class _EnvironmentRow extends StatelessWidget {
           const SizedBox(width: 8),
           DswIconButton(
             icon: LucideIcons.pencil,
-            tooltip: context.tr('edit'),
+            tooltip: AppLocalizations.of(context).edit,
             onTap: onEdit,
           ),
           const SizedBox(width: 4),
           DswIconButton(
             icon: LucideIcons.trash,
-            tooltip: context.tr('envDelete'),
+            tooltip: AppLocalizations.of(context).envDelete,
             onTap: onDelete,
           ),
         ],
@@ -3641,13 +3695,13 @@ class _CardRow extends StatelessWidget {
           const SizedBox(width: 8),
           DswIconButton(
             icon: LucideIcons.pencil,
-            tooltip: context.tr('edit'),
+            tooltip: AppLocalizations.of(context).edit,
             onTap: onEdit,
           ),
           const SizedBox(width: 4),
           DswIconButton(
             icon: LucideIcons.trash,
-            tooltip: context.tr('cardDelete'),
+            tooltip: AppLocalizations.of(context).cardDelete,
             onTap: onDelete,
           ),
           const SizedBox(width: 4),
@@ -3702,7 +3756,7 @@ class _TaskRow extends StatelessWidget {
           const SizedBox(width: 8),
           DswIconButton(
             icon: LucideIcons.trash,
-            tooltip: context.tr('taskDelete'),
+            tooltip: AppLocalizations.of(context).taskDelete,
             onTap: onDelete,
           ),
           const SizedBox(width: 4),

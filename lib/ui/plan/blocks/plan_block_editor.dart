@@ -18,7 +18,8 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:shadcn_ui/shadcn_ui.dart'
     show ShadButton, ShadDialog, ShadInput, showShadDialog;
 
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/tr_key.dart';
 import '../../../model/plan_block.dart';
 import '../../../state/plan_block_document.dart';
 import '../../../theme/dsw_shape.dart';
@@ -129,11 +130,14 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
       context: context,
       builder: (dialogContext) => ShadDialog(
         radius: BorderRadius.circular(DswShape.float),
-        title: Text(context.tr('planLinkPrompt'), style: DswType.sStrong14),
+        title: Text(
+          AppLocalizations.of(context).planLinkPrompt,
+          style: DswType.sStrong14,
+        ),
         actions: [
           ShadButton.outline(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(context.tr('planCancel')),
+            child: Text(AppLocalizations.of(context).planCancel),
           ),
         ],
         child: _LinkInput(
@@ -537,7 +541,10 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
       context: context,
       builder: (dialogContext) => ShadDialog(
         radius: BorderRadius.circular(DswShape.float),
-        title: Text(context.tr('planAddBlock'), style: DswType.sStrong14),
+        title: Text(
+          AppLocalizations.of(context).planAddBlock,
+          style: DswType.sStrong14,
+        ),
         child: SizedBox(width: 520, child: _SlashSheet()),
       ),
     );
@@ -587,11 +594,14 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
       context: context,
       builder: (dialogContext) => ShadDialog(
         radius: BorderRadius.circular(DswShape.float),
-        title: Text(context.tr('planBookmarkPrompt'), style: DswType.sStrong14),
+        title: Text(
+          AppLocalizations.of(context).planBookmarkPrompt,
+          style: DswType.sStrong14,
+        ),
         actions: [
           ShadButton.outline(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(context.tr('planCancel')),
+            child: Text(AppLocalizations.of(context).planCancel),
           ),
         ],
         child: _LinkInput(
@@ -614,7 +624,10 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
       context: context,
       builder: (dialogContext) => ShadDialog(
         radius: BorderRadius.circular(DswShape.float),
-        title: Text(context.tr('planCalloutIcon'), style: DswType.sStrong14),
+        title: Text(
+          AppLocalizations.of(context).planCalloutIcon,
+          style: DswType.sStrong14,
+        ),
         child: SizedBox(
           width: 320,
           child: _EmojiGrid(
@@ -819,17 +832,17 @@ class _Toolbar extends StatelessWidget {
         children: [
           DswIconButton(
             icon: LucideIcons.undo_2,
-            tooltip: context.tr('planEditorUndo'),
+            tooltip: AppLocalizations.of(context).planEditorUndo,
             onTap: canUndo ? onUndo : null,
           ),
           DswIconButton(
             icon: LucideIcons.redo_2,
-            tooltip: context.tr('planEditorRedo'),
+            tooltip: AppLocalizations.of(context).planEditorRedo,
             onTap: canRedo ? onRedo : null,
           ),
           DswIconButton(
             icon: LucideIcons.plus,
-            tooltip: context.tr('planAddBlock'),
+            tooltip: AppLocalizations.of(context).planAddBlock,
             onTap: () => onInsert(activeBlockId),
           ),
           if (searching) ...[
@@ -841,7 +854,7 @@ class _Toolbar extends StatelessWidget {
                   controller: searchController,
                   autofocus: true,
                   placeholder: Text(
-                    context.tr('planSearchInDoc'),
+                    AppLocalizations.of(context).planSearchInDoc,
                     style: DswType.xs13.copyWith(color: color.labelTertiary),
                   ),
                   style: DswType.xs13,
@@ -855,23 +868,23 @@ class _Toolbar extends StatelessWidget {
             ),
             DswIconButton(
               icon: LucideIcons.chevron_up,
-              tooltip: context.tr('planSearchPrevious'),
+              tooltip: AppLocalizations.of(context).planSearchPrevious,
               onTap: matchCount > 0 ? onPrevious : null,
             ),
             DswIconButton(
               icon: LucideIcons.chevron_down,
-              tooltip: context.tr('planSearchNext'),
+              tooltip: AppLocalizations.of(context).planSearchNext,
               onTap: matchCount > 0 ? onNext : null,
             ),
             DswIconButton(
               icon: LucideIcons.x,
-              tooltip: context.tr('planSearchCancel'),
+              tooltip: AppLocalizations.of(context).planSearchCancel,
               onTap: onCancel,
             ),
           ] else
             DswIconButton(
               icon: LucideIcons.search,
-              tooltip: context.tr('planSearchInDoc'),
+              tooltip: AppLocalizations.of(context).planSearchInDoc,
               onTap: onSearchToggle,
             ),
           if (!searching && activeBlockId != null && selection != null) ...[
@@ -903,14 +916,14 @@ class _Toolbar extends StatelessWidget {
               hasMark(type)
                   ? DswIconButton(
                       icon: icon,
-                      tooltip: context.tr(tip),
+                      tooltip: trKey(AppLocalizations.of(context), tip),
                       onTap: type == PlanMarkType.link
                           ? onApplyLink
                           : () => onApplyMark(type),
                     )
                   : DswIconButton.outlined(
                       icon: icon,
-                      tooltip: context.tr(tip),
+                      tooltip: trKey(AppLocalizations.of(context), tip),
                       onTap: type == PlanMarkType.link
                           ? onApplyLink
                           : () => onApplyMark(type),
@@ -923,7 +936,7 @@ class _Toolbar extends StatelessWidget {
               linkUrl != null)
             DswHoverTap(
               onTap: () => onOpenLink!(linkUrl!),
-              semanticLabel: context.tr('planLinkOpen'),
+              semanticLabel: AppLocalizations.of(context).planLinkOpen,
               builder: (context, hovered, focused) => Container(
                 height: DswShape.controlMd,
                 padding: const EdgeInsets.symmetric(horizontal: DswShape.sm),
@@ -943,7 +956,7 @@ class _Toolbar extends StatelessWidget {
                     ),
                     const SizedBox(width: DswShape.xs),
                     Text(
-                      context.tr('planLinkOpen'),
+                      AppLocalizations.of(context).planLinkOpen,
                       style: DswType.xs13.copyWith(color: color.labelSecondary),
                     ),
                   ],
@@ -967,7 +980,7 @@ class _Toolbar extends StatelessWidget {
               child: dswEnsureShadTheme(
                 context,
                 _ColorSelect(
-                  label: context.tr('planColourLabel'),
+                  label: AppLocalizations.of(context).planColourLabel,
                   onPick: onTextColor,
                 ),
               ),
@@ -977,7 +990,7 @@ class _Toolbar extends StatelessWidget {
               child: dswEnsureShadTheme(
                 context,
                 _ColorSelect(
-                  label: context.tr('planColourBackground'),
+                  label: AppLocalizations.of(context).planColourBackground,
                   onPick: onBackground,
                 ),
               ),
@@ -1001,7 +1014,7 @@ class _Toolbar extends StatelessWidget {
             ])
               DswIconButton(
                 icon: icon,
-                tooltip: context.tr(label),
+                tooltip: trKey(AppLocalizations.of(context), label),
                 onTap: () => onAlign(align),
               ),
           ],
@@ -1029,7 +1042,7 @@ class _StyleSelect extends StatelessWidget {
         for (final style in PlanTextStyle.insertable)
           DswMenuEntry(label: style.code, onTap: () => onTurnInto(style)),
       ],
-      child: _ToolbarChip(label: context.tr('planStyleLabel')),
+      child: _ToolbarChip(label: AppLocalizations.of(context).planStyleLabel),
     );
   }
 }
@@ -1045,7 +1058,7 @@ class _ColorSelect extends StatelessWidget {
     return DswContextMenu(
       items: (_) => [
         DswMenuEntry(
-          label: context.tr('planLayoutNone'),
+          label: AppLocalizations.of(context).planLayoutNone,
           onTap: () => onPick(null),
         ),
         for (final name in PlanThemeColors.names)
@@ -1090,25 +1103,29 @@ class _ToolbarChip extends StatelessWidget {
 /// The upstream label for each item (`SlashConst.kt`), through the
 /// dictionaries like every other user-facing string.
 String slashLabel(BuildContext context, PlanSlashItem item) => switch (item) {
-  PlanSlashItem.styleText => context.tr('planSlashText'),
-  PlanSlashItem.styleTitle => context.tr('planSlashTitle'),
-  PlanSlashItem.styleHeading => context.tr('planSlashHeading'),
-  PlanSlashItem.styleSubheading => context.tr('planSlashSubheading'),
-  PlanSlashItem.styleHighlighted => context.tr('planSlashHighlighted'),
-  PlanSlashItem.styleCallout => context.tr('planSlashCallout'),
-  PlanSlashItem.styleCheckbox => context.tr('planSlashCheckbox'),
-  PlanSlashItem.styleBulleted => context.tr('planSlashBulleted'),
-  PlanSlashItem.styleNumbered => context.tr('planSlashNumbered'),
-  PlanSlashItem.styleToggle => context.tr('planSlashToggle'),
-  PlanSlashItem.file => context.tr('planSlashFile'),
-  PlanSlashItem.picture => context.tr('planSlashPicture'),
-  PlanSlashItem.video => context.tr('planSlashVideo'),
-  PlanSlashItem.bookmark => context.tr('planSlashBookmark'),
-  PlanSlashItem.code => context.tr('planSlashCode'),
-  PlanSlashItem.line => context.tr('planSlashLine'),
-  PlanSlashItem.dots => context.tr('planSlashDots'),
-  PlanSlashItem.tableOfContents => context.tr('planSlashToc'),
-  PlanSlashItem.table => context.tr('planSlashTable'),
+  PlanSlashItem.styleText => AppLocalizations.of(context).planSlashText,
+  PlanSlashItem.styleTitle => AppLocalizations.of(context).planSlashTitle,
+  PlanSlashItem.styleHeading => AppLocalizations.of(context).planSlashHeading,
+  PlanSlashItem.styleSubheading => AppLocalizations.of(
+    context,
+  ).planSlashSubheading,
+  PlanSlashItem.styleHighlighted => AppLocalizations.of(
+    context,
+  ).planSlashHighlighted,
+  PlanSlashItem.styleCallout => AppLocalizations.of(context).planSlashCallout,
+  PlanSlashItem.styleCheckbox => AppLocalizations.of(context).planSlashCheckbox,
+  PlanSlashItem.styleBulleted => AppLocalizations.of(context).planSlashBulleted,
+  PlanSlashItem.styleNumbered => AppLocalizations.of(context).planSlashNumbered,
+  PlanSlashItem.styleToggle => AppLocalizations.of(context).planSlashToggle,
+  PlanSlashItem.file => AppLocalizations.of(context).planSlashFile,
+  PlanSlashItem.picture => AppLocalizations.of(context).planSlashPicture,
+  PlanSlashItem.video => AppLocalizations.of(context).planSlashVideo,
+  PlanSlashItem.bookmark => AppLocalizations.of(context).planSlashBookmark,
+  PlanSlashItem.code => AppLocalizations.of(context).planSlashCode,
+  PlanSlashItem.line => AppLocalizations.of(context).planSlashLine,
+  PlanSlashItem.dots => AppLocalizations.of(context).planSlashDots,
+  PlanSlashItem.tableOfContents => AppLocalizations.of(context).planSlashToc,
+  PlanSlashItem.table => AppLocalizations.of(context).planSlashTable,
   _ => item.name,
 };
 
@@ -1177,9 +1194,9 @@ class _SlashSheetState extends State<_SlashSheet> {
   Widget build(BuildContext context) {
     final color = context.dsw;
     final sections = <(String, List<PlanSlashItem>)>[
-      (context.tr('planSlashStyle'), PlanSlashItem.styleSection),
-      (context.tr('planSlashMedia'), PlanSlashItem.mediaSection),
-      (context.tr('planSlashOther'), PlanSlashItem.otherSection),
+      (AppLocalizations.of(context).planSlashStyle, PlanSlashItem.styleSection),
+      (AppLocalizations.of(context).planSlashMedia, PlanSlashItem.mediaSection),
+      (AppLocalizations.of(context).planSlashOther, PlanSlashItem.otherSection),
     ];
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -1191,7 +1208,7 @@ class _SlashSheetState extends State<_SlashSheet> {
             controller: _filterController,
             autofocus: true,
             placeholder: dswInputHint(
-              context.tr('planSlashPlaceholder'),
+              AppLocalizations.of(context).planSlashPlaceholder,
               style: DswType.xs13.copyWith(color: color.labelTertiary),
             ),
             style: DswType.s14,
@@ -1208,7 +1225,7 @@ class _SlashSheetState extends State<_SlashSheet> {
               children: [
                 DswHoverTap(
                   onTap: () => Navigator.of(context).pop(_query.trim()),
-                  semanticLabel: context.tr('planSlashTable'),
+                  semanticLabel: AppLocalizations.of(context).planSlashTable,
                   builder: (context, hovered, focused) => Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: DswShape.sm,
@@ -1276,12 +1293,12 @@ class _SlashSheetState extends State<_SlashSheet> {
         ],
         if (_query.isEmpty) ...[
           Text(
-            context.tr('planSlashObjectsEmpty'),
+            AppLocalizations.of(context).planSlashObjectsEmpty,
             style: DswType.xs13.copyWith(color: color.labelTertiary),
           ),
           const SizedBox(height: DswShape.xs),
           Text(
-            context.tr('planSlashPropertiesEmpty'),
+            AppLocalizations.of(context).planSlashPropertiesEmpty,
             style: DswType.xs13.copyWith(color: color.labelTertiary),
           ),
         ],
@@ -1321,7 +1338,7 @@ class _LinkInput extends StatelessWidget {
           const SizedBox(height: DswShape.sm),
           ShadButton(
             onPressed: () => onSubmitted(controller.text.trim()),
-            child: Text(context.tr('planSave')),
+            child: Text(AppLocalizations.of(context).planSave),
           ),
         ],
       ),

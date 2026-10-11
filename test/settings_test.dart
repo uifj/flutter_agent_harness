@@ -10,6 +10,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'amplified_text_probe.dart';
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/model/app_settings.dart';
 import 'package:planstar/state/quick_phrase_store.dart';
 import 'package:planstar/state/instruction_card_store.dart';
@@ -228,6 +229,10 @@ void main() {
       double scale = 1.0,
     }) => tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         theme: dswThemeData(Brightness.light),
         // The panel's fields are ShadInputs, which read ShadTheme — mount the
         // same ancestor main does, via MaterialApp.builder.

@@ -23,7 +23,8 @@ import 'package:pasteboard/pasteboard.dart';
 import 'package:shadcn_ui/shadcn_ui.dart'
     show ShadBorder, ShadButton, ShadDecoration, ShadInput, ShadOption;
 
-import '../../l10n/locales.dart';
+import '../../l10n/app_localizations.dart';
+import '../../l10n/tr_key.dart';
 import '../../model/approval_mode.dart';
 import '../../model/attached_image.dart';
 import '../../model/file_search_rank.dart';
@@ -540,9 +541,9 @@ class ComposerState extends State<Composer> {
     }
     showFeedback(
       context,
-      context.tr('imagesUnsupportedByModel', {
-        'model': directory.selectedModel,
-      }),
+      AppLocalizations.of(
+        context,
+      ).imagesUnsupportedByModel(directory.selectedModel),
       destructive: true,
     );
   }
@@ -787,7 +788,7 @@ class ComposerState extends State<Composer> {
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 2),
             child: Text(
-              context.tr('commands'),
+              AppLocalizations.of(context).commands,
               style: DswType.xxxsStrong11.copyWith(color: color.labelTertiary),
             ),
           ),
@@ -819,7 +820,7 @@ class ComposerState extends State<Composer> {
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 2),
             child: Text(
-              context.tr('files'),
+              AppLocalizations.of(context).files,
               style: DswType.xxxsStrong11.copyWith(color: color.labelTertiary),
             ),
           ),
@@ -827,7 +828,7 @@ class ComposerState extends State<Composer> {
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
               child: Text(
-                context.tr('searchingFiles'),
+                AppLocalizations.of(context).searchingFiles,
                 style: DswType.xxxs11.copyWith(color: color.labelTertiary),
               ),
             )
@@ -922,8 +923,8 @@ class ComposerState extends State<Composer> {
         // "ask anything", would be describing a different state.
         placeholder: dswInputHint(
           widget.busy
-              ? context.tr('queueDraftHint')
-              : context.tr('askAnythingHint'),
+              ? AppLocalizations.of(context).queueDraftHint
+              : AppLocalizations.of(context).askAnythingHint,
         ),
         placeholderStyle: DswType.base16.copyWith(color: color.labelCaption),
       ),
@@ -1080,13 +1081,13 @@ class ComposerState extends State<Composer> {
     final enabled = stop || _hasPayload;
     return Tooltip(
       message: stop
-          ? context.tr('stop')
+          ? AppLocalizations.of(context).stop
           : widget.busy
           // While a turn runs this button queues — the same destination Enter
           // has, said in the tooltip so the two do not look like different
           // doors.
-          ? context.tr('deliveryQueue')
-          : context.tr('send'),
+          ? AppLocalizations.of(context).deliveryQueue
+          : AppLocalizations.of(context).send,
       child: _PrimaryButton(
         color: color,
         enabled: enabled,
@@ -1121,8 +1122,8 @@ class ComposerState extends State<Composer> {
         _DeliverChip(
           color: color,
           icon: LucideIcons.list_end,
-          label: context.tr('queueInput'),
-          tip: context.tr('deliveryQueue'),
+          label: AppLocalizations.of(context).queueInput,
+          tip: AppLocalizations.of(context).deliveryQueue,
           tight: tight,
           onTap: () => _submit(delivery: InputDelivery.queue),
         ),
@@ -1130,8 +1131,8 @@ class ComposerState extends State<Composer> {
         _DeliverChip(
           color: color,
           icon: LucideIcons.route,
-          label: context.tr('guideNow'),
-          tip: context.tr('deliveryGuide'),
+          label: AppLocalizations.of(context).guideNow,
+          tip: AppLocalizations.of(context).deliveryGuide,
           tight: tight,
           onTap: () => _submit(delivery: InputDelivery.guide),
         ),
@@ -1157,7 +1158,7 @@ class ComposerState extends State<Composer> {
       padding: const EdgeInsets.only(top: 6),
       child: DswHoverTap(
         onTap: widget.onPickWorkspace,
-        semanticLabel: context.tr('workspaceStatusBar'),
+        semanticLabel: AppLocalizations.of(context).workspaceStatusBar,
         builder: (context, hovered, _) => Container(
           height: 28,
           padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -1191,7 +1192,7 @@ class ComposerState extends State<Composer> {
               // local repos from remote ones. This app only has local, so it
               // is always shown when a workspace is picked.
               Text(
-                context.tr('localRepo'),
+                AppLocalizations.of(context).localRepo,
                 style: DswType.xxs12.copyWith(color: color.labelTertiary),
               ),
               if (branch != null) ...[
@@ -1366,7 +1367,7 @@ class _CommandRowState extends State<_CommandRow> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  context.tr(widget.entry.label),
+                  trKey(AppLocalizations.of(context), widget.entry.label),
                   overflow: TextOverflow.ellipsis,
                   style: DswType.xxs12.copyWith(color: color.labelSecondary),
                 ),
@@ -1409,10 +1410,10 @@ class _ImageChip extends StatelessWidget {
           top: -6,
           child: DswHoverTap(
             onTap: onRemove,
-            semanticLabel: context.tr('removeAttachment'),
+            semanticLabel: AppLocalizations.of(context).removeAttachment,
             excludeSemantics: true,
             builder: (context, _, _) => Tooltip(
-              message: context.tr('removeAttachment'),
+              message: AppLocalizations.of(context).removeAttachment,
               child: Container(
                 width: 18,
                 height: 18,
@@ -1451,22 +1452,22 @@ class _AttachButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = context.dsw;
     return DswMenu(
-      label: context.tr('attach'),
+      label: AppLocalizations.of(context).attach,
       minWidth: 220,
       items: (context) => [
         DswMenuEntry(
           icon: LucideIcons.image_up,
-          label: context.tr('chooseImages'),
+          label: AppLocalizations.of(context).chooseImages,
           onTap: onPick,
         ),
         DswMenuEntry(
           icon: LucideIcons.file_text,
-          label: context.tr('chooseDocuments'),
+          label: AppLocalizations.of(context).chooseDocuments,
           onTap: onPickDocuments,
         ),
         DswMenuEntry(
           icon: LucideIcons.clipboard,
-          label: context.tr('pasteImage'),
+          label: AppLocalizations.of(context).pasteImage,
           onTap: onPaste,
         ),
       ],
@@ -1497,7 +1498,7 @@ class _QuickPhrasesButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = context.dsw;
     return DswMenu(
-      label: context.tr('quickPhrases'),
+      label: AppLocalizations.of(context).quickPhrases,
       minWidth: 220,
       items: (context) => [
         for (final phrase in phrases)
@@ -1553,7 +1554,7 @@ class _ModelChip extends StatelessWidget {
           onSelect?.call(id);
         },
         enabled: onSelect != null,
-        label: context.tr('model'),
+        label: AppLocalizations.of(context).model,
         popupMinWidth: 320,
         maxHeight: 420,
         options: (context, close) => [
@@ -1594,7 +1595,7 @@ class _ModelChip extends StatelessWidget {
           DswMenuRow(
             entry: DswMenuEntry(
               icon: LucideIcons.settings,
-              label: context.tr('modelManagement'),
+              label: AppLocalizations.of(context).modelManagement,
               onTap: onOpenSettings == null
                   ? null
                   : () {
@@ -1632,7 +1633,8 @@ class _ModelChip extends StatelessWidget {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    directory.loadError ?? context.tr('refreshModels'),
+                    directory.loadError ??
+                        AppLocalizations.of(context).refreshModels,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: DswType.xxxs11.copyWith(
@@ -1646,7 +1648,7 @@ class _ModelChip extends StatelessWidget {
                   DswHoverTap(
                     onTap: directory.refresh,
                     builder: (context, _, _) => Text(
-                      context.tr('retry'),
+                      AppLocalizations.of(context).retry,
                       style: DswType.xxxs11.copyWith(
                         color: color.stateBusinessPrimary,
                       ),
@@ -1745,7 +1747,7 @@ class _ModeChip extends StatelessWidget {
               if (picked != null) onSelect!(picked);
             },
       enabled: onSelect != null,
-      label: context.tr('approvalMode'),
+      label: AppLocalizations.of(context).approvalMode,
       popupMinWidth: 260,
       options: (context, close) => [
         for (final entry in const [
@@ -1781,9 +1783,9 @@ class _ModeChip extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(context.tr(entry.$3)),
+                      Text(trKey(AppLocalizations.of(context), entry.$3)),
                       Text(
-                        context.tr(entry.$4),
+                        trKey(AppLocalizations.of(context), entry.$4),
                         style: DswType.xxxs11.copyWith(
                           color: color.labelTertiary,
                         ),
@@ -1823,7 +1825,7 @@ class _ModeChip extends StatelessWidget {
                   const SizedBox(width: 5),
                   Flexible(
                     child: Text(
-                      context.tr(label),
+                      trKey(AppLocalizations.of(context), label),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
                       style: DswType.xxxs11.copyWith(
@@ -2021,7 +2023,7 @@ class _DocumentChip extends StatelessWidget {
           const SizedBox(width: 4),
           DswHoverTap(
             onTap: onRemove,
-            semanticLabel: context.tr('removeAttachment'),
+            semanticLabel: AppLocalizations.of(context).removeAttachment,
             excludeSemantics: true,
             builder: (context, hovered, focused) => Icon(
               LucideIcons.x,

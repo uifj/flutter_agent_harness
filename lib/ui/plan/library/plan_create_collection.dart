@@ -9,7 +9,8 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:shadcn_ui/shadcn_ui.dart'
     show ShadButton, ShadDialog, ShadInput, showShadDialog;
 
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/tr_key.dart';
 import '../../../model/plan_dataview.dart';
 import '../../../model/plan_object_type.dart';
 import '../../../state/plan_object_store.dart';
@@ -94,7 +95,7 @@ class _CreateCollectionDialogState extends State<_CreateCollectionDialog> {
     );
     if (!mounted) return;
     Navigator.of(context).pop(collection.id);
-    showFeedback(context, context.tr('planCollectionCreated'));
+    showFeedback(context, AppLocalizations.of(context).planCollectionCreated);
   }
 
   @override
@@ -106,15 +107,18 @@ class _CreateCollectionDialogState extends State<_CreateCollectionDialog> {
     ];
     return ShadDialog(
       radius: BorderRadius.circular(DswShape.float),
-      title: Text(context.tr('planNewCollection'), style: DswType.sStrong14),
+      title: Text(
+        AppLocalizations.of(context).planNewCollection,
+        style: DswType.sStrong14,
+      ),
       actions: [
         ShadButton.outline(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(context.tr('planCancel')),
+          child: Text(AppLocalizations.of(context).planCancel),
         ),
         ShadButton(
           onPressed: _nameController.text.trim().isEmpty ? null : _create,
-          child: Text(context.tr('planSave')),
+          child: Text(AppLocalizations.of(context).planSave),
         ),
       ],
       child: SizedBox(
@@ -131,12 +135,12 @@ class _CreateCollectionDialogState extends State<_CreateCollectionDialog> {
                   (PlanCollectionKind.set, 'planKindSet'),
                 ])
                   Tooltip(
-                    message: context.tr(label),
+                    message: trKey(AppLocalizations.of(context), label),
                     child: DswHoverTap(
                       onTap: widget.kind == null
                           ? () => setState(() => _kind = candidate)
                           : null,
-                      semanticLabel: context.tr(label),
+                      semanticLabel: trKey(AppLocalizations.of(context), label),
                       builder: (context, hovered, focused) => Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: DswShape.sm,
@@ -152,7 +156,7 @@ class _CreateCollectionDialogState extends State<_CreateCollectionDialog> {
                           border: Border.all(color: color.borderL2),
                         ),
                         child: Text(
-                          context.tr(label),
+                          trKey(AppLocalizations.of(context), label),
                           style: DswType.xs13.copyWith(
                             color: color.labelPrimary,
                             fontWeight: _kind == candidate
@@ -172,7 +176,7 @@ class _CreateCollectionDialogState extends State<_CreateCollectionDialog> {
                 controller: _nameController,
                 autofocus: true,
                 placeholder: dswInputHint(
-                  context.tr('planUntitled'),
+                  AppLocalizations.of(context).planUntitled,
                   style: DswType.xs13.copyWith(color: color.labelTertiary),
                 ),
                 style: DswType.s14,
@@ -183,7 +187,7 @@ class _CreateCollectionDialogState extends State<_CreateCollectionDialog> {
             if (_kind == PlanCollectionKind.set) ...[
               const SizedBox(height: DswShape.sm),
               Text(
-                context.tr('planKindSetSource'),
+                AppLocalizations.of(context).planKindSetSource,
                 style: DswType.xxsStrong12.copyWith(color: color.labelTertiary),
               ),
               ConstrainedBox(

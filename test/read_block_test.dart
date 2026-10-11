@@ -8,6 +8,7 @@
 // without the gutter, because the numbers are the card's chrome, not the file's
 // content.
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/theme/dsw_theme.dart';
 import 'package:planstar/ui/primitives/read_block.dart';
 import 'package:flutter/material.dart';
@@ -26,6 +27,10 @@ void main() {
     int maxLines = defaultReadMaxLines,
   }) => tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+
       theme: dswThemeData(Brightness.light),
       home: Scaffold(
         body: SizedBox(

@@ -16,7 +16,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
-import '../../l10n/locales.dart';
+import '../../l10n/app_localizations.dart';
 import '../../model/conversation.dart';
 import '../../state/checkpoint_store.dart';
 import '../../state/details_selection.dart';
@@ -182,7 +182,7 @@ class _ToolCardState extends State<ToolCard> {
           _QuietPill(
             revealed: _hovered,
             icon: LucideIcons.undo_2,
-            label: context.tr('rewindPill'),
+            label: AppLocalizations.of(context).rewindPill,
             onTap: () => _rewind(checkpoint),
           ),
       ],
@@ -200,12 +200,12 @@ class _ToolCardState extends State<ToolCard> {
     if (service == null) return;
     final files = service.preview(checkpointId);
     if (files.isEmpty) {
-      _report(context.tr('rewindNothing'));
+      _report(AppLocalizations.of(context).rewindNothing);
       return;
     }
     final confirmed = await showConfirmDialog(
       context,
-      title: context.tr('rewindTitle'),
+      title: AppLocalizations.of(context).rewindTitle,
       description: _describe(
         restored: [
           for (final file in files)
@@ -220,12 +220,12 @@ class _ToolCardState extends State<ToolCard> {
             if (file.blocked) '${file.path} · ${_reason(file.blockedBy!)}',
         ],
       ),
-      confirmLabel: context.tr('rewindConfirm'),
+      confirmLabel: AppLocalizations.of(context).rewindConfirm,
     );
     if (!confirmed || !mounted) return;
     final report = service.rewind(checkpointId);
     if (report.didNothing) {
-      _report(context.tr('rewindNothing'));
+      _report(AppLocalizations.of(context).rewindNothing);
       return;
     }
     _report(
@@ -246,9 +246,9 @@ class _ToolCardState extends State<ToolCard> {
     required List<String> skipped,
   }) => [
     for (final group in <(String, List<String>)>[
-      (context.tr('rewindRestores'), restored),
-      (context.tr('rewindDeletes'), deleted),
-      (context.tr('rewindSkips'), skipped),
+      (AppLocalizations.of(context).rewindRestores, restored),
+      (AppLocalizations.of(context).rewindDeletes, deleted),
+      (AppLocalizations.of(context).rewindSkips, skipped),
     ])
       if (group.$2.isNotEmpty) '${group.$1} ${_names(group.$2)}',
   ].join('\n');
@@ -260,8 +260,12 @@ class _ToolCardState extends State<ToolCard> {
       : '${names.take(_rewindListCap).join(', ')} +${names.length - _rewindListCap}';
 
   String _reason(RewindSkipReason reason) => switch (reason) {
-    RewindSkipReason.changedOutsideAgent => context.tr('rewindWhyChanged'),
-    RewindSkipReason.imageUnavailable => context.tr('rewindWhyNoImage'),
+    RewindSkipReason.changedOutsideAgent => AppLocalizations.of(
+      context,
+    ).rewindWhyChanged,
+    RewindSkipReason.imageUnavailable => AppLocalizations.of(
+      context,
+    ).rewindWhyNoImage,
   };
 
   void _report(String message) => showFeedback(context, message);

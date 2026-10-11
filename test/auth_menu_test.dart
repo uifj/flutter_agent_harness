@@ -4,6 +4,7 @@
 // into the root overlay, so the host mounts the show call inside a real
 // overlay and lets the entry live for the assertions.
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/l10n/locales.dart';
 import 'package:planstar/model/app_settings.dart';
 import 'package:planstar/theme/dsw_shad_bridge.dart';
@@ -78,6 +79,10 @@ void main() {
       UncontrolledProviderScope(
         container: ProviderContainer(),
         child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+
           theme: dswThemeData(Brightness.light),
           builder: (context, child) => ShadTheme(
             data: dswShadTheme(Theme.of(context).brightness),

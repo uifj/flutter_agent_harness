@@ -11,7 +11,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:shadcn_ui/shadcn_ui.dart'
     show ShadButton, ShadDialog, ShadInput, showShadDialog;
 
-import '../l10n/locales.dart';
+import '../l10n/app_localizations.dart';
 import '../model/conversation.dart';
 import '../state/session_index.dart';
 import '../theme/dsw_shape.dart';
@@ -35,7 +35,9 @@ List<DswMenuEntry> sessionMenuEntries(
   VoidCallback? onOpenSettings,
 }) => [
   DswMenuEntry(
-    label: context.tr(session.pinnedAt == null ? 'pinSession' : 'unpinSession'),
+    label: session.pinnedAt == null
+        ? AppLocalizations.of(context).pinSession
+        : AppLocalizations.of(context).unpinSession,
     icon: LucideIcons.pin,
     onTap: () {
       sessions.setPinned(session.id, session.pinnedAt == null);
@@ -43,19 +45,19 @@ List<DswMenuEntry> sessionMenuEntries(
     },
   ),
   DswMenuEntry(
-    label: context.tr('renameSession'),
+    label: AppLocalizations.of(context).renameSession,
     icon: LucideIcons.pencil,
     onTap: () => renameSession(context, sessions, session),
   ),
   const DswMenuEntry.divider(),
   DswMenuEntry(
-    label: context.tr('copySessionId'),
+    label: AppLocalizations.of(context).copySessionId,
     icon: LucideIcons.copy,
     onTap: () => Clipboard.setData(ClipboardData(text: session.id)),
   ),
   if (session.workspaceRoot != null) ...[
     DswMenuEntry(
-      label: context.tr('copyWorkspacePath'),
+      label: AppLocalizations.of(context).copyWorkspacePath,
       icon: LucideIcons.copy,
       onTap: () =>
           Clipboard.setData(ClipboardData(text: session.workspaceRoot!)),
@@ -65,20 +67,20 @@ List<DswMenuEntry> sessionMenuEntries(
     // is usually "where did this conversation's files go", which is about the
     // conversation, not about a folder header.
     DswMenuEntry(
-      label: context.tr('revealInFiles'),
+      label: AppLocalizations.of(context).revealInFiles,
       icon: LucideIcons.external_link,
       onTap: () => revealInFilesOrReport(context, session.workspaceRoot!),
     ),
   ],
   if (onOpenSettings != null)
     DswMenuEntry(
-      label: context.tr('settings'),
+      label: AppLocalizations.of(context).settings,
       icon: LucideIcons.settings,
       onTap: onOpenSettings,
     ),
   if (withDelete)
     DswMenuEntry(
-      label: context.tr('deleteSession'),
+      label: AppLocalizations.of(context).deleteSession,
       icon: LucideIcons.trash,
       destructive: true,
       onTap: () => deleteSession(context, sessions, session),
@@ -94,7 +96,7 @@ Future<void> renameSession(
 ) async {
   final next = await _promptForText(
     context,
-    title: context.tr('renameSessionTitle'),
+    title: AppLocalizations.of(context).renameSessionTitle,
     initial: session.title ?? '',
   );
   if (next == null || next.isEmpty) return;
@@ -112,15 +114,15 @@ Future<void> deleteSession(
 ) async {
   final confirmed = await showConfirmDialog(
     context,
-    title: context.tr('deleteSessionTitle'),
-    description: context.tr('deleteSessionBody'),
-    confirmLabel: context.tr('deleteSession'),
+    title: AppLocalizations.of(context).deleteSessionTitle,
+    description: AppLocalizations.of(context).deleteSessionBody,
+    confirmLabel: AppLocalizations.of(context).deleteSession,
   );
   if (!confirmed || !context.mounted) return;
   sessions.remove(session.id);
   if (warnIfHistoryNotSaved(context, sessions)) return;
   if (!context.mounted) return;
-  showFeedback(context, context.tr('sessionDeleted'));
+  showFeedback(context, AppLocalizations.of(context).sessionDeleted);
 }
 
 /// The sidecar write is the one thing these rows can lose without the screen
@@ -128,7 +130,11 @@ Future<void> deleteSession(
 /// surface is the action that just failed. Returns whether it failed.
 bool warnIfHistoryNotSaved(BuildContext context, SessionIndex sessions) {
   if (sessions.metadataError == null) return false;
-  showFeedback(context, context.tr('historyNotSaved'), destructive: true);
+  showFeedback(
+    context,
+    AppLocalizations.of(context).historyNotSaved,
+    destructive: true,
+  );
   return true;
 }
 
@@ -148,12 +154,12 @@ Future<String?> _promptForText(
         ShadButton.outline(
           height: 24 * step,
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(context.tr('planCancel')),
+          child: Text(AppLocalizations.of(context).planCancel),
         ),
         ShadButton(
           height: 24 * step,
           onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-          child: Text(context.tr('renameSession')),
+          child: Text(AppLocalizations.of(context).renameSession),
         ),
       ],
       child: ShadInput(

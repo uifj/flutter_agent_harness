@@ -12,6 +12,7 @@
 // guard. The same mistake overflowed the composer's workspace bar by 487 pixels
 // and would have overflowed every tool card whose path is long enough.
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/theme/dsw_theme.dart';
 import 'package:planstar/ui/primitives/disclosure_row.dart';
 import 'package:flutter/material.dart';
@@ -28,6 +29,10 @@ void main() {
     Widget? collapsed,
   }) => tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+
       theme: dswThemeData(Brightness.light),
       home: Scaffold(
         body: Center(

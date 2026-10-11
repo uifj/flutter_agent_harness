@@ -7,6 +7,7 @@
 
 import 'dart:io';
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/model/sidebar_tab.dart';
 import 'package:planstar/state/workbench_controller.dart';
 import 'package:planstar/state/workbench_store.dart';
@@ -58,6 +59,10 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         builder: (context, child) => amplifiedAppBuilder(step, child),
         theme: dswThemeData(Brightness.light),
         home: Scaffold(

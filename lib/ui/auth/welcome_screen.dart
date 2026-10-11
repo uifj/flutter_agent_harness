@@ -10,7 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadInput;
 
-import '../../l10n/locales.dart';
+import '../../l10n/app_localizations.dart';
 import '../../model/zcode_compat/zcode_compat.dart';
 import '../../state/auth_session.dart';
 import '../../theme/dsw_alias.dart';
@@ -89,7 +89,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     }
     setState(() {
       _face = _WelcomeFace.providers;
-      _error = context.tr('welcomeFlowFailed');
+      _error = AppLocalizations.of(context).welcomeFlowFailed;
     });
   }
 
@@ -114,17 +114,15 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               _mark(color),
               const SizedBox(height: DswShape.lg),
               Text(
-                context.tr('welcomeTitle'),
+                AppLocalizations.of(context).welcomeTitle,
                 textAlign: TextAlign.center,
                 style: DswType.heroTitle26.copyWith(color: color.labelPrimary),
               ),
               const SizedBox(height: DswShape.xs),
               Text(
-                context.tr(
-                  _face == _WelcomeFace.apiKey
-                      ? 'welcomeApiKeyIntro'
-                      : 'welcomeIntro',
-                ),
+                _face == _WelcomeFace.apiKey
+                    ? AppLocalizations.of(context).welcomeApiKeyIntro
+                    : AppLocalizations.of(context).welcomeIntro,
                 textAlign: TextAlign.center,
                 style: DswType.s14.copyWith(color: color.labelSecondary),
               ),
@@ -165,32 +163,32 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           _providerButton(
             color,
             provider: ZcodeOAuth.providerZai,
-            label: context.tr('welcomeProviderZai'),
-            region: context.tr('welcomeRegionGlobal'),
+            label: AppLocalizations.of(context).welcomeProviderZai,
+            region: AppLocalizations.of(context).welcomeRegionGlobal,
           ),
           const SizedBox(height: DswShape.sm),
           _providerButton(
             color,
             provider: ZcodeOAuth.providerBigmodel,
-            label: context.tr('welcomeProviderBigmodel'),
-            region: context.tr('welcomeRegionCn'),
+            label: AppLocalizations.of(context).welcomeProviderBigmodel,
+            region: AppLocalizations.of(context).welcomeRegionCn,
           ),
         ] else
-          _note(color, context.tr('welcomeFlowUnavailable')),
+          _note(color, AppLocalizations.of(context).welcomeFlowUnavailable),
         if (_error != null) ...[
           const SizedBox(height: DswShape.sm),
           _note(color, _error!, warning: true),
         ],
         const SizedBox(height: DswShape.md),
         CapsuleButton(
-          label: context.tr('welcomeUseApiKey'),
+          label: AppLocalizations.of(context).welcomeUseApiKey,
           onTap: () => setState(() => _face = _WelcomeFace.apiKey),
         ),
         const SizedBox(height: DswShape.sm),
         if (widget.onOpenRegister != null && widget.origin.trim().isNotEmpty)
           _textLink(
             color,
-            context.tr('welcomeRegister'),
+            AppLocalizations.of(context).welcomeRegister,
             () => widget.onOpenRegister!(
               ZcodeAuthEndpoints.registerUrl(widget.origin),
             ),
@@ -198,7 +196,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         if (widget.reason == WelcomeReason.manualLogin)
           _textLink(
             color,
-            context.tr('welcomeLater'),
+            AppLocalizations.of(context).welcomeLater,
             () => widget.onComplete('skip'),
           ),
       ],
@@ -271,7 +269,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             ),
             const SizedBox(height: DswShape.sm),
             Text(
-              context.tr('welcomeWaiting'),
+              AppLocalizations.of(context).welcomeWaiting,
               textAlign: TextAlign.center,
               style: DswType.s14.copyWith(color: color.labelSecondary),
             ),
@@ -280,7 +278,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       ),
       const SizedBox(height: DswShape.md),
       CapsuleButton(
-        label: context.tr('welcomeCancelWait'),
+        label: AppLocalizations.of(context).welcomeCancelWait,
         onTap: () => setState(() {
           _face = _WelcomeFace.providers;
         }),
@@ -297,7 +295,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           controller: _apiKeyController,
           obscureText: _apiKeyObscured,
           placeholder: dswInputHint(
-            context.tr('welcomeApiKeyHint'),
+            AppLocalizations.of(context).welcomeApiKeyHint,
             style: DswType.xs13.copyWith(color: color.labelTertiary),
           ),
           style: DswType.s14,
@@ -309,14 +307,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         children: [
           Expanded(
             child: CapsuleButton(
-              label: context.tr('welcomeApiKeySave'),
+              label: AppLocalizations.of(context).welcomeApiKeySave,
               onTap: _submitApiKey,
             ),
           ),
           const SizedBox(width: DswShape.sm),
           Expanded(
             child: CapsuleButton(
-              label: context.tr('welcomeSkip'),
+              label: AppLocalizations.of(context).welcomeSkip,
               onTap: () {
                 widget.auth?.ackWelcome();
                 widget.onComplete('skip');
@@ -328,7 +326,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       const SizedBox(height: DswShape.sm),
       _textLink(
         color,
-        context.tr('welcomeBackToProviders'),
+        AppLocalizations.of(context).welcomeBackToProviders,
         () => setState(() => _face = _WelcomeFace.providers),
       ),
     ],

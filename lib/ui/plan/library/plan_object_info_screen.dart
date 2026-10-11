@@ -13,7 +13,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/tr_key.dart';
 import '../../../model/plan_dataview.dart' show PlanViewerRelation;
 import '../../../model/plan_relation.dart';
 import '../../../model/plan_struct.dart';
@@ -45,7 +46,7 @@ class PlanObjectInfoScreen extends StatelessWidget {
     if (record == null) {
       return Center(
         child: Text(
-          context.tr('planCollectionMissing'),
+          AppLocalizations.of(context).planCollectionMissing,
           style: DswType.xs13.copyWith(color: color.labelTertiary),
         ),
       );
@@ -74,7 +75,7 @@ class PlanObjectInfoScreen extends StatelessWidget {
               Expanded(
                 child: Text(
                   record.name.isEmpty
-                      ? context.tr('planUntitled')
+                      ? AppLocalizations.of(context).planUntitled
                       : record.name,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -89,7 +90,7 @@ class PlanObjectInfoScreen extends StatelessWidget {
             ] else ...[
               const SizedBox(height: DswShape.md),
               Text(
-                context.tr(titleCode),
+                trKey(AppLocalizations.of(context), titleCode),
                 style: DswType.xxsStrong12.copyWith(color: color.labelTertiary),
               ),
               for (final relation in rows)
@@ -200,9 +201,9 @@ class _RelationRow extends StatelessWidget {
             DswContextMenu(
               items: (menuContext) => [
                 DswMenuEntry(
-                  label: context.tr(
-                    relation.featured ? 'planUnfeature' : 'planFeature',
-                  ),
+                  label: relation.featured
+                      ? AppLocalizations.of(context).planUnfeature
+                      : AppLocalizations.of(context).planFeature,
                   icon: LucideIcons.star,
                   onTap: () => store.setRelationFeatured(
                     relation.key,
@@ -210,9 +211,9 @@ class _RelationRow extends StatelessWidget {
                   ),
                 ),
                 DswMenuEntry(
-                  label: context.tr(
-                    relation.hidden ? 'planUnhide' : 'planHide',
-                  ),
+                  label: relation.hidden
+                      ? AppLocalizations.of(context).planUnhide
+                      : AppLocalizations.of(context).planHide,
                   icon: LucideIcons.eye_off,
                   onTap: () => store.setRelationHidden(
                     relation.key,
@@ -220,31 +221,35 @@ class _RelationRow extends StatelessWidget {
                   ),
                 ),
                 DswMenuEntry(
-                  label: context.tr('planRemoveRelation'),
+                  label: AppLocalizations.of(context).planRemoveRelation,
                   icon: LucideIcons.trash,
                   destructive: true,
                   onTap: () async {
                     final confirmed = await showConfirmDialog(
                       context,
-                      title: context.tr('planRemoveRelation'),
+                      title: AppLocalizations.of(context).planRemoveRelation,
                       description: relation.name,
-                      confirmLabel: context.tr('planActionDelete'),
+                      confirmLabel: AppLocalizations.of(
+                        context,
+                      ).planActionDelete,
                     );
                     if (!confirmed) return;
                     await store.unsetRecord(recordId, [relation.key]);
                     if (!menuContext.mounted) return;
                     showFeedback(
                       menuContext,
-                      context.tr('planRelationRemoved'),
+                      AppLocalizations.of(context).planRelationRemoved,
                     );
                   },
                 ),
               ],
               child: Tooltip(
-                message: context.tr('planRelationActions'),
+                message: AppLocalizations.of(context).planRelationActions,
                 child: DswHoverTap(
                   onTap: null,
-                  semanticLabel: context.tr('planRelationActions'),
+                  semanticLabel: AppLocalizations.of(
+                    context,
+                  ).planRelationActions,
                   builder: (context, hovered, focused) => Padding(
                     padding: const EdgeInsets.only(left: DswShape.xs),
                     child: Icon(
@@ -304,7 +309,7 @@ class _AddRelationRow extends StatelessWidget {
       ],
       child: DswHoverTap(
         onTap: null,
-        semanticLabel: context.tr('planAddRelation'),
+        semanticLabel: AppLocalizations.of(context).planAddRelation,
         builder: (context, hovered, focused) => Padding(
           padding: const EdgeInsets.only(top: DswShape.sm),
           child: Row(
@@ -317,7 +322,7 @@ class _AddRelationRow extends StatelessWidget {
               ),
               const SizedBox(width: DswShape.xs),
               Text(
-                context.tr('planAddRelation'),
+                AppLocalizations.of(context).planAddRelation,
                 style: DswType.xs13.copyWith(color: color.labelTertiary),
               ),
             ],

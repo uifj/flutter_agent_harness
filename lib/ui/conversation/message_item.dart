@@ -12,7 +12,7 @@ import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
-import '../../l10n/locales.dart';
+import '../../l10n/app_localizations.dart';
 import '../../state/backup_service.dart' show writeMessageExport;
 import '../primitives/menu.dart';
 import '../primitives/state_dot.dart';
@@ -52,19 +52,19 @@ class MessageItem extends StatelessWidget {
         items: (menuContext) => [
           DswMenuEntry(
             icon: LucideIcons.copy,
-            label: menuContext.tr('messageCopyText'),
+            label: AppLocalizations.of(menuContext).messageCopyText,
             onTap: () async {
               await Clipboard.setData(ClipboardData(text: text));
             },
           ),
           DswMenuEntry(
             icon: LucideIcons.file_output,
-            label: menuContext.tr('messageExportMd'),
+            label: AppLocalizations.of(menuContext).messageExportMd,
             onTap: () => _exportMessage(menuContext, text, 'md'),
           ),
           DswMenuEntry(
             icon: LucideIcons.download,
-            label: menuContext.tr('messageExportTxt'),
+            label: AppLocalizations.of(menuContext).messageExportTxt,
             onTap: () => _exportMessage(menuContext, text, 'txt'),
           ),
         ],
@@ -77,7 +77,7 @@ class MessageItem extends StatelessWidget {
     String extension,
   ) async {
     final path = await FilePicker.platform.saveFile(
-      dialogTitle: context.tr('messageExportMd'),
+      dialogTitle: AppLocalizations.of(context).messageExportMd,
       fileName: _exportFileName(extension),
       type: FileType.custom,
       allowedExtensions: [extension],

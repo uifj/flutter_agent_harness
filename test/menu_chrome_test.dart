@@ -20,6 +20,7 @@
 // That the *count* of Material menus is zero is `test/shad_menu_adoption_test.dart`'s
 // job; this file is about what the surfaces that remain are painted with.
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/theme/dsw_alias.dart';
 import 'package:planstar/theme/dsw_shape.dart';
 import 'package:planstar/theme/dsw_shad_bridge.dart';
@@ -102,6 +103,10 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         theme: dswThemeData(Brightness.dark),
         home: Scaffold(
           body: DswMenu(
@@ -138,6 +143,10 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         theme: dswThemeData(Brightness.dark),
         home: Scaffold(
           body: DswMenu(

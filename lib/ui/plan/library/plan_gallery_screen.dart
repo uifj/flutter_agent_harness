@@ -9,7 +9,7 @@
 
 import 'package:flutter/material.dart';
 
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../model/plan_object_type.dart';
 import '../../../state/plan_object_store.dart';
 import '../../../theme/dsw_shape.dart';
@@ -79,7 +79,10 @@ class _PlanGalleryScreenState extends State<PlanGalleryScreen> {
     if (!mounted) return;
     if (collection == null) {
       setState(() => _state = PlanGalleryInstallState.idle);
-      showFeedback(context, context.tr('planGalleryUnsupported'));
+      showFeedback(
+        context,
+        AppLocalizations.of(context).planGalleryUnsupported,
+      );
       return;
     }
     await widget.store.createRecord(
@@ -92,7 +95,7 @@ class _PlanGalleryScreenState extends State<PlanGalleryScreen> {
       _state = PlanGalleryInstallState.done;
       _installedName = collection.name;
     });
-    showFeedback(context, context.tr('planGalleryInstalled'));
+    showFeedback(context, AppLocalizations.of(context).planGalleryInstalled);
   }
 
   @override
@@ -104,7 +107,7 @@ class _PlanGalleryScreenState extends State<PlanGalleryScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            context.tr('planGalleryTitle'),
+            AppLocalizations.of(context).planGalleryTitle,
             style: DswType.l20.copyWith(color: color.labelPrimary),
           ),
           const SizedBox(height: DswShape.sm),
@@ -120,7 +123,7 @@ class _PlanGalleryScreenState extends State<PlanGalleryScreen> {
                   ),
                   const SizedBox(width: DswShape.sm),
                   Text(
-                    context.tr('planGalleryInstalling'),
+                    AppLocalizations.of(context).planGalleryInstalling,
                     style: DswType.xs13.copyWith(color: color.labelTertiary),
                   ),
                 ],
@@ -130,7 +133,9 @@ class _PlanGalleryScreenState extends State<PlanGalleryScreen> {
             Padding(
               padding: const EdgeInsets.only(bottom: DswShape.sm),
               child: Text(
-                context.tr('planGalleryDone', {'name': _installedName ?? ''}),
+                AppLocalizations.of(
+                  context,
+                ).planGalleryDone(_installedName ?? ''),
                 style: DswType.xs13.copyWith(color: color.stateSuccessPrimary),
               ),
             ),
@@ -168,7 +173,9 @@ class _PlanGalleryScreenState extends State<PlanGalleryScreen> {
                     onTap: _state == PlanGalleryInstallState.loading
                         ? null
                         : () => _install(pack),
-                    semanticLabel: context.tr('planGalleryInstall'),
+                    semanticLabel: AppLocalizations.of(
+                      context,
+                    ).planGalleryInstall,
                     builder: (context, hovered, focused) => Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: DswShape.sm,
@@ -180,7 +187,7 @@ class _PlanGalleryScreenState extends State<PlanGalleryScreen> {
                         border: Border.all(color: color.borderL2),
                       ),
                       child: Text(
-                        context.tr('planGalleryInstall'),
+                        AppLocalizations.of(context).planGalleryInstall,
                         style: DswType.xs13.copyWith(color: color.labelPrimary),
                       ),
                     ),

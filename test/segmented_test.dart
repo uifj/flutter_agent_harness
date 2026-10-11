@@ -19,6 +19,7 @@
 // reason a bare tap layer under it would be a second answer to the same
 // question.
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/theme/dsw_theme.dart';
 import 'package:planstar/ui/primitives/segmented.dart';
 import 'package:planstar/ui/primitives/tappable.dart';
@@ -55,6 +56,10 @@ Future<List<_Mode>> _pumpTrack(
   final picked = <_Mode>[];
   await tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+
       theme: dswThemeData(Brightness.dark),
       builder: (context, child) => amplifiedAppBuilder(step, child),
       home: Scaffold(

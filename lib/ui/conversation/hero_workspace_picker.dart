@@ -18,7 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadOption;
 
-import '../../l10n/locales.dart';
+import '../../l10n/app_localizations.dart';
 import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
@@ -85,7 +85,7 @@ class HeroWorkspacePicker extends StatelessWidget {
     // Nothing adopted and nothing to offer: the call to pick is the whole row.
     if (scope.workspaceRoot == null && scope.recent.isEmpty) {
       return CapsuleButton(
-        label: context.tr('chooseWorkspaceFolder'),
+        label: AppLocalizations.of(context).chooseWorkspaceFolder,
         icon: LucideIcons.folder_open,
         onTap: scope.onPick,
       );
@@ -122,7 +122,7 @@ class HeroWorkspacePicker extends StatelessWidget {
             Flexible(
               child: Text(
                 value == null
-                    ? context.tr('chooseWorkspaceFolder')
+                    ? AppLocalizations.of(context).chooseWorkspaceFolder
                     : value.split('/').last,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -149,7 +149,7 @@ class HeroWorkspacePicker extends StatelessWidget {
         DswMenuRow(
           entry: DswMenuEntry(
             icon: LucideIcons.plus,
-            label: context.tr('chooseAFolder'),
+            label: AppLocalizations.of(context).chooseAFolder,
             onTap: () {
               close();
               scope.onPick();

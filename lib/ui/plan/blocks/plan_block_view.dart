@@ -21,7 +21,7 @@ import 'package:shadcn_ui/shadcn_ui.dart' show ShadInput;
 
 import 'package:plan_editor/plan_editor.dart';
 
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../model/plan_block.dart';
 
 import '../../../state/plan_block_document.dart';
@@ -428,13 +428,13 @@ class _BlockBody extends StatelessWidget {
       case PlanRelationBlock(:final key):
         return _ChipBlock(
           icon: LucideIcons.link,
-          label: context.tr('planBlockRelation'),
+          label: AppLocalizations.of(context).planBlockRelation,
           detail: key ?? '',
         );
       case PlanFeaturedRelations():
         return _ChipBlock(
           icon: LucideIcons.list,
-          label: context.tr('planBlockFeatured'),
+          label: AppLocalizations.of(context).planBlockFeatured,
           detail: '',
         );
       case PlanTableOfContents():
@@ -448,13 +448,13 @@ class _BlockBody extends StatelessWidget {
       case PlanWidgetBlock(:final layout):
         return _ChipBlock(
           icon: LucideIcons.layout_dashboard,
-          label: context.tr('planBlockWidget'),
+          label: AppLocalizations.of(context).planBlockWidget,
           detail: layout.name,
         );
       case PlanUnsupported(:final reason):
         return _ChipBlock(
           icon: LucideIcons.circle_alert,
-          label: context.tr('planBlockUnsupported'),
+          label: AppLocalizations.of(context).planBlockUnsupported,
           detail: reason,
         );
       case PlanRawLine(:final source):
@@ -564,7 +564,7 @@ class _TextBlock extends StatelessWidget {
     } else if (effectiveStyle == PlanTextStyle.toggle) {
       prefix = DswHoverTap(
         onTap: () => onToggleCollapse?.call(block.id),
-        semanticLabel: context.tr('planBlockToggle'),
+        semanticLabel: AppLocalizations.of(context).planBlockToggle,
         builder: (context, hovered, focused) => Padding(
           padding: const EdgeInsets.only(top: 3, right: DswShape.xs),
           child: Icon(
@@ -601,7 +601,7 @@ class _TextBlock extends StatelessWidget {
         child: _FieldRow(
           prefix: DswHoverTap(
             onTap: () => onPickCalloutIcon?.call(block.id),
-            semanticLabel: context.tr('planCalloutIcon'),
+            semanticLabel: AppLocalizations.of(context).planCalloutIcon,
             builder: (context, hovered, focused) => Padding(
               padding: const EdgeInsets.only(right: DswShape.sm),
               child: SizedBox(
@@ -692,7 +692,7 @@ class _BlockChromeState extends State<_BlockChrome> {
                   planBlockActions(menuContext, widget.document, widget.block),
               child: DswHoverTap(
                 onTap: null,
-                semanticLabel: context.tr('planBlockMenu'),
+                semanticLabel: AppLocalizations.of(context).planBlockMenu,
                 builder: (context, hovered, focused) => Padding(
                   padding: const EdgeInsets.only(left: DswShape.xs),
                   child: Icon(
@@ -1250,9 +1250,9 @@ class _FileBlock extends StatelessWidget {
       _ => LucideIcons.file,
     };
     final label = switch (state) {
-      PlanFileState.uploading => context.tr('planFileUploading'),
-      PlanFileState.error => context.tr('planFileError'),
-      _ => name ?? context.tr('planFileEmpty'),
+      PlanFileState.uploading => AppLocalizations.of(context).planFileUploading,
+      PlanFileState.error => AppLocalizations.of(context).planFileError,
+      _ => name ?? AppLocalizations.of(context).planFileEmpty,
     };
     return Container(
       margin: const EdgeInsets.symmetric(vertical: DswShape.xs),
@@ -1301,14 +1301,16 @@ class _BookmarkBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = context.dsw;
     final label = switch (state) {
-      PlanBookmarkState.fetching => context.tr('planBookmarkFetching'),
+      PlanBookmarkState.fetching => AppLocalizations.of(
+        context,
+      ).planBookmarkFetching,
       PlanBookmarkState.done => url ?? '',
-      PlanBookmarkState.error => context.tr('planBookmarkError'),
-      _ => context.tr('planBookmarkEmpty'),
+      PlanBookmarkState.error => AppLocalizations.of(context).planBookmarkError,
+      _ => AppLocalizations.of(context).planBookmarkEmpty,
     };
     return DswHoverTap(
       onTap: onTap,
-      semanticLabel: context.tr('planBookmarkPrompt'),
+      semanticLabel: AppLocalizations.of(context).planBookmarkPrompt,
       builder: (context, hovered, focused) => Container(
         margin: const EdgeInsets.symmetric(vertical: DswShape.xs),
         padding: const EdgeInsets.all(DswShape.sm),
@@ -1450,7 +1452,7 @@ class _EmbedBlock extends StatelessWidget {
           const SizedBox(width: DswShape.sm),
           Flexible(
             child: Text(
-              '${processor.name}${openable ? ' · ${context.tr('planEmbedOpen')}' : ' · ${context.tr('planEmbedUnavailable')}'}',
+              '${processor.name}${openable ? ' · ${AppLocalizations.of(context).planEmbedOpen}' : ' · ${AppLocalizations.of(context).planEmbedUnavailable}'}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: DswType.xs13.copyWith(color: color.labelSecondary),
@@ -1518,7 +1520,7 @@ class _TocBlock extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            context.tr('planBlockToc'),
+            AppLocalizations.of(context).planBlockToc,
             style: DswType.xxsStrong12.copyWith(color: color.labelTertiary),
           ),
           for (final heading in headings)
@@ -1597,7 +1599,9 @@ class _TableRowBlock extends StatelessWidget {
                           if (isHeader)
                             Builder(
                               builder: (menuContext) => PlanMenuTrigger(
-                                semanticLabel: context.tr('planColumnMenu'),
+                                semanticLabel: AppLocalizations.of(
+                                  context,
+                                ).planColumnMenu,
                                 items: planTableColumnActions(
                                   menuContext,
                                   document,
@@ -1613,7 +1617,7 @@ class _TableRowBlock extends StatelessWidget {
           if (!readOnly)
             Builder(
               builder: (menuContext) => PlanMenuTrigger(
-                semanticLabel: context.tr('planTableActions'),
+                semanticLabel: AppLocalizations.of(context).planTableActions,
                 items: planTableRowActions(menuContext, document, block.id),
               ),
             ),
@@ -1688,7 +1692,7 @@ class _AddBlockRow extends StatelessWidget {
     final color = context.dsw;
     return DswHoverTap(
       onTap: onTap,
-      semanticLabel: context.tr('planAddBlock'),
+      semanticLabel: AppLocalizations.of(context).planAddBlock,
       builder: (context, hovered, focused) => Padding(
         padding: const EdgeInsets.symmetric(vertical: DswShape.sm),
         child: Row(
@@ -1700,7 +1704,7 @@ class _AddBlockRow extends StatelessWidget {
             ),
             const SizedBox(width: DswShape.xs),
             Text(
-              context.tr('planAddBlock'),
+              AppLocalizations.of(context).planAddBlock,
               style: DswType.xs13.copyWith(color: color.labelTertiary),
             ),
           ],

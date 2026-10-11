@@ -26,7 +26,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadInput;
 import 'package:flutter_lucide/flutter_lucide.dart';
 
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/dsw_shad_bridge.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
@@ -151,9 +151,13 @@ class _BrowserTabState extends State<BrowserTab> {
       return;
     }
     final hint = switch (result.verdict) {
-      BrowserUrlVerdict.invalid => context.tr('browserInvalid'),
-      BrowserUrlVerdict.blockedScheme => context.tr('browserBlockedScheme'),
-      BrowserUrlVerdict.blockedLoopback => context.tr('browserBlockedLoopback'),
+      BrowserUrlVerdict.invalid => AppLocalizations.of(context).browserInvalid,
+      BrowserUrlVerdict.blockedScheme => AppLocalizations.of(
+        context,
+      ).browserBlockedScheme,
+      BrowserUrlVerdict.blockedLoopback => AppLocalizations.of(
+        context,
+      ).browserBlockedLoopback,
       BrowserUrlVerdict.ok => '',
     };
     setState(() => _message = hint);
@@ -236,19 +240,19 @@ class _BrowserTabState extends State<BrowserTab> {
         children: [
           DswIconButton(
             icon: LucideIcons.chevron_left,
-            tooltip: context.tr('browserBack'),
+            tooltip: AppLocalizations.of(context).browserBack,
             onTap: _cursor > 0 ? _back : null,
             size: 24,
           ),
           DswIconButton(
             icon: LucideIcons.chevron_right,
-            tooltip: context.tr('browserForward'),
+            tooltip: AppLocalizations.of(context).browserForward,
             onTap: _cursor < _history.length - 1 ? _forward : null,
             size: 24,
           ),
           DswIconButton(
             icon: LucideIcons.refresh_cw,
-            tooltip: context.tr('refresh'),
+            tooltip: AppLocalizations.of(context).refresh,
             // A fresh tab has nothing to remount.
             onTap: _fresh ? null : () => setState(() => _reloadKey++),
             size: 24,
@@ -265,7 +269,9 @@ class _BrowserTabState extends State<BrowserTab> {
                 padding: const EdgeInsets.symmetric(
                   vertical: 4,
                 ), // 8 overflows the 33 the toolbar gives
-                placeholder: dswInputHint(context.tr('browserPlaceholder')),
+                placeholder: dswInputHint(
+                  AppLocalizations.of(context).browserPlaceholder,
+                ),
                 placeholderStyle: DswType.xs13.copyWith(
                   color: color.labelTertiary,
                 ),
@@ -275,13 +281,13 @@ class _BrowserTabState extends State<BrowserTab> {
           ),
           DswIconButton(
             icon: LucideIcons.arrow_right,
-            tooltip: context.tr('browserGo'),
+            tooltip: AppLocalizations.of(context).browserGo,
             onTap: _navigate,
             size: 24,
           ),
           DswIconButton(
             icon: LucideIcons.external_link,
-            tooltip: context.tr('browserOpenExternal'),
+            tooltip: AppLocalizations.of(context).browserOpenExternal,
             onTap: _fresh ? null : _openExternal,
             size: 24,
           ),
@@ -311,7 +317,7 @@ class _BrowserTabState extends State<BrowserTab> {
     if (_fresh) {
       return Center(
         child: Text(
-          context.tr('browserStart'),
+          AppLocalizations.of(context).browserStart,
           textAlign: TextAlign.center,
           style: DswType.xs13.copyWith(color: color.labelTertiary),
         ),
@@ -323,7 +329,7 @@ class _BrowserTabState extends State<BrowserTab> {
     if (!Platform.isMacOS) {
       return Center(
         child: Text(
-          context.tr('browserUnsupported'),
+          AppLocalizations.of(context).browserUnsupported,
           textAlign: TextAlign.center,
           style: DswType.xs13.copyWith(color: color.labelTertiary),
         ),

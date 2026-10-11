@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/theme/dsw_shape.dart';
 import 'package:planstar/theme/dsw_theme.dart';
 import 'package:planstar/ui/conversation/assistant_markdown.dart';
@@ -32,6 +33,10 @@ $$x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$$
 ''';
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         theme: dswThemeData(Brightness.light),
         home: const Scaffold(
           body: SingleChildScrollView(child: AssistantMarkdown(latex)),
@@ -53,6 +58,10 @@ graph TD
 ''';
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         theme: dswThemeData(Brightness.light),
         home: const Scaffold(
           body: SingleChildScrollView(child: AssistantMarkdown(mermaid)),
@@ -81,6 +90,10 @@ C paragraph.
 ''';
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         theme: dswThemeData(Brightness.light),
         home: Scaffold(
           body: Align(

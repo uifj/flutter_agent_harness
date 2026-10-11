@@ -18,7 +18,7 @@ import 'package:board_panel/board_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../model/plan_dataview.dart';
 import '../../../model/plan_object_type.dart';
 import '../../../model/plan_relation.dart';
@@ -153,9 +153,9 @@ class _PlanCalendarViewerState extends State<PlanCalendarViewer> {
                 const SizedBox(width: DswShape.xs),
                 Flexible(
                   child: Text(
-                    context.tr('planCalendarUndated', {
-                      'count': '$_undatedCount',
-                    }),
+                    AppLocalizations.of(
+                      context,
+                    ).planCalendarUndated('$_undatedCount'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: DswType.xxxs11.copyWith(color: color.labelTertiary),
@@ -249,7 +249,7 @@ class _DayCell extends StatelessWidget {
                     Expanded(
                       child: Text(
                         event.title.isEmpty
-                            ? context.tr('planUntitled')
+                            ? AppLocalizations.of(context).planUntitled
                             : event.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,

@@ -33,6 +33,7 @@ import 'genkit/models_endpoint.dart';
 import 'host/project_folder_ops.dart';
 import 'host/reveal.dart';
 import 'host/support_directory.dart';
+import 'l10n/app_localizations.dart';
 import 'l10n/locales.dart';
 import 'model/app_settings.dart' as cfg;
 import 'state/app_database.dart';
@@ -309,6 +310,26 @@ class _DshAppState extends ConsumerState<DshApp> with WindowListener {
       ..init();
   }
 
+  /// The resolved en/zh locale id: an explicit choice wins, `system` follows
+  /// the platform. Both MaterialApp seats in [build] and the imperative
+  /// feedback below read this one value (ADR-0082 §5).
+  AppLocaleId get _localeId =>
+      switch (ref.read(settingsDocumentProvider).locale) {
+        cfg.LocaleMode.en => AppLocaleId.en,
+        cfg.LocaleMode.zh => AppLocaleId.zh,
+        cfg.LocaleMode.system =>
+          Platform.localeName.toLowerCase().startsWith('zh')
+              ? AppLocaleId.zh
+              : AppLocaleId.en,
+      };
+
+  /// App copy for the imperative paths (update feedback) whose `context` sits
+  /// ABOVE the MaterialApp and so cannot reach `AppLocalizations.of`. Resolved
+  /// straight from the settings locale — the same source the delegate seat in
+  /// [build] reads — via the synchronous `lookupAppLocalizations`.
+  AppLocalizations get _l10n =>
+      lookupAppLocalizations(Locale(_localeId == AppLocaleId.zh ? 'zh' : 'en'));
+
   /// The menu's check: bypasses the throttle and the skip — the user asked,
   /// the check answers, and a failure says so (ADR-0079 ①②).
   Future<void> _checkForUpdates() async {
@@ -317,7 +338,7 @@ class _DshAppState extends ConsumerState<DshApp> with WindowListener {
     final result = await updates.check(userInitiated: true);
     if (!mounted) return;
     if (result.error != null) {
-      showFeedback(context, context.tr('updateCheckFailed'), destructive: true);
+      showFeedback(context, _l10n.updateCheckFailed, destructive: true);
       return;
     }
     if (result.hasUpdate && result.remote != null) {
@@ -328,7 +349,7 @@ class _DshAppState extends ConsumerState<DshApp> with WindowListener {
       );
       return;
     }
-    showFeedback(context, context.tr('updateUpToDate'));
+    showFeedback(context, _l10n.updateUpToDate);
   }
 
   /// The startup check: respects the daily throttle and the skipped version,
@@ -400,9 +421,22 @@ class _DshAppState extends ConsumerState<DshApp> with WindowListener {
         ? chatContentWidthWide
         : chatContentWidth;
 
+    // The locale, resolved once per document: an explicit choice wins, `system`
+    // follows the platform. BOTH seats read this one value (ADR-0082 §5) — the
+    // MaterialApp's `locale` below (drives the localizations delegate: system
+    // widgets like the text-selection menu and the date picker) and, until the
+    // flip retires it, the AppLocaleScope (app copy via `context.tr`).
+    final localeId = _localeId;
+
     return MaterialApp(
       title: AppMeta.productName,
       debugShowCheckedModeBanner: false,
+      // Localized system widgets + the app's own copy (ADR-0082). `locale` is
+      // forced to the resolved en/zh — both listed in `supportedLocales` — so no
+      // resolution callback is needed.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: Locale(localeId == AppLocaleId.zh ? 'zh' : 'en'),
       theme: dswThemeData(Brightness.light),
       darkTheme: dswThemeData(Brightness.dark),
       // Every shad component asserts a ShadTheme ancestor; this builder sits
@@ -431,21 +465,15 @@ class _DshAppState extends ConsumerState<DshApp> with WindowListener {
               Theme.of(context).brightness,
               textScale: textScale,
             ),
-            // The locale seat, resolved once per document: an explicit choice
-            // wins, `system` follows the platform. It belongs here rather than on
-            // `home:` because an overlay route is not under `home:` — mounted
-            // there, every menu and dialog silently fell back to English
-            // key-by-key (ADR-0032, caught in a real window screenshot as
-            // `Retry` next to 中文). Same seam ADR-0017 learned for `MediaQuery`.
+            // The app-copy locale seat. ADR-0032: it belongs in the builder, not
+            // on `home:`, so overlay routes (menus, dialogs) inherit it too —
+            // mounted on `home:`, every route above it fell back to English
+            // key-by-key (caught in a real window screenshot as `Retry` next to
+            // 中文). Reads the same `localeId` the MaterialApp's `locale` does
+            // (ADR-0082 §5); retired at the flip, when MaterialApp.locale is the
+            // only seat left.
             child: AppLocaleScope(
-              locale: switch (doc.locale) {
-                cfg.LocaleMode.en => AppLocaleId.en,
-                cfg.LocaleMode.zh => AppLocaleId.zh,
-                cfg.LocaleMode.system =>
-                  Platform.localeName.toLowerCase().startsWith('zh')
-                      ? AppLocaleId.zh
-                      : AppLocaleId.en,
-              },
+              locale: localeId,
               // ADR-0020: the feedback strip's host. Above the Navigator, so a
               // toast raised from a dialog route or from the full-screen settings
               // still lands on the one strip the bridge colours from `DswAlias`.
@@ -780,20 +808,20 @@ class _DshAppState extends ConsumerState<DshApp> with WindowListener {
             const SizedBox(width: DswShape.sm),
             Expanded(
               child: Text(
-                context.tr('helpAboutTitle'),
+                AppLocalizations.of(dialogContext).helpAboutTitle,
                 style: DswType.sStrong14,
               ),
             ),
           ],
         ),
         description: Text(
-          context.tr('helpAboutBody').replaceAll('{version}', AppMeta.version),
+          AppLocalizations.of(dialogContext).helpAboutBody(AppMeta.version),
           style: DswType.xs13,
         ),
         actions: [
           ShadButton.outline(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(context.tr('planCancel')),
+            child: Text(AppLocalizations.of(dialogContext).planCancel),
           ),
         ],
       ),

@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/model/approval_mode.dart';
 import 'package:planstar/model/quick_phrase.dart';
 import 'package:planstar/state/quick_phrase_store.dart';
@@ -100,6 +101,10 @@ void main() {
       double width = 800,
     }) => tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         builder: (context, child) => ShadTheme(
           data: dswShadTheme(Brightness.light),
           child: ShadSonner(child: child!),

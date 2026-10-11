@@ -6,6 +6,7 @@
 // the scope. The adopting itself is the app's to do — here it is only asserted
 // that the right callback leaves with the right path.
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/theme/dsw_theme.dart';
 import 'package:planstar/ui/conversation/hero_workspace_picker.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +21,10 @@ void main() {
     Future<void> Function(String path)? onAdopt,
   }) => tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+
       theme: dswThemeData(Brightness.light),
       home: Scaffold(
         body: Center(
@@ -38,6 +43,10 @@ void main() {
   testWidgets('without a scope the picker hides itself', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         theme: dswThemeData(Brightness.light),
         home: const Scaffold(body: Center(child: HeroWorkspacePicker())),
       ),

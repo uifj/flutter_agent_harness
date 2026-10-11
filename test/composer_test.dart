@@ -17,6 +17,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/model/approval_mode.dart';
 import 'package:planstar/model/attached_image.dart';
 import 'package:planstar/model/model_settings.dart';
@@ -175,6 +176,10 @@ void main() {
     String? draftScope,
   }) => tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+
       // The app's own composition (ADR-0017 S3 then ADR-0020): the step above
       // `ShadSonner`, so the refusal toast the attach gate raises is measured
       // at the same step as the card that raised it.

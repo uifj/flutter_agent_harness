@@ -22,7 +22,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
-import '../../l10n/locales.dart';
+import '../../l10n/app_localizations.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_shape.dart';
@@ -251,8 +251,8 @@ class _Welcome extends StatelessWidget {
                 children: [
                   Text(
                     focused
-                        ? context.tr('filesOpenHere')
-                        : context.tr('clickToOpenFiles'),
+                        ? AppLocalizations.of(context).filesOpenHere
+                        : AppLocalizations.of(context).clickToOpenFiles,
                     textAlign: TextAlign.center,
                     style: DswType.xs13.copyWith(color: color.labelTertiary),
                   ),
@@ -264,7 +264,7 @@ class _Welcome extends StatelessWidget {
                     children: [
                       if (prefs.tabEnabled(BuiltinTabType.explorer))
                         _WelcomeAction(
-                          label: context.tr('explorer'),
+                          label: AppLocalizations.of(context).explorer,
                           icon: LucideIcons.folder_open,
                           // Disabled rather than hidden when there is no workspace:
                           // the action is the thing that explains what is missing.
@@ -279,7 +279,7 @@ class _Welcome extends StatelessWidget {
                         ),
                       if (prefs.tabEnabled(BuiltinTabType.terminal))
                         _WelcomeAction(
-                          label: context.tr('terminal'),
+                          label: AppLocalizations.of(context).terminal,
                           icon: LucideIcons.terminal,
                           onTap: () {
                             workbench.focusPane(paneId);
@@ -288,7 +288,7 @@ class _Welcome extends StatelessWidget {
                         ),
                       if (prefs.tabEnabled(BuiltinTabType.git))
                         _WelcomeAction(
-                          label: context.tr('git'),
+                          label: AppLocalizations.of(context).git,
                           icon: LucideIcons.git_branch,
                           onTap: () {
                             workbench.focusPane(paneId);
@@ -297,7 +297,7 @@ class _Welcome extends StatelessWidget {
                         ),
                       if (prefs.tabEnabled(BuiltinTabType.browser))
                         _WelcomeAction(
-                          label: context.tr('browser'),
+                          label: AppLocalizations.of(context).browser,
                           icon: LucideIcons.globe,
                           onTap: () {
                             workbench.focusPane(paneId);
@@ -306,7 +306,7 @@ class _Welcome extends StatelessWidget {
                         ),
                       if (prefs.tabEnabled(BuiltinTabType.sidechat))
                         _WelcomeAction(
-                          label: context.tr('sidechat'),
+                          label: AppLocalizations.of(context).sidechat,
                           icon: LucideIcons.message_square_plus,
                           onTap: () {
                             workbench.focusPane(paneId);
@@ -395,7 +395,7 @@ class _Unknown extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Text(
-          context.tr('unknownTabType', {'type': type}),
+          AppLocalizations.of(context).unknownTabType(type),
           textAlign: TextAlign.center,
           style: DswType.xs13.copyWith(color: color.labelTertiary),
         ),

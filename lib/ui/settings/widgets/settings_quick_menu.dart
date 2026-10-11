@@ -29,7 +29,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadSeparator;
 
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../model/app_settings.dart' as settings;
 import '../../../theme/dsw_shad_bridge.dart';
 import '../../../theme/dsw_shape.dart';
@@ -269,19 +269,23 @@ class _QuickMenuState extends State<_QuickMenu> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _Group<settings.ThemeMode>(
-          label: context.tr('theme'),
+          label: AppLocalizations.of(context).theme,
           options: {
-            settings.ThemeMode.system: context.tr('followSystem'),
-            settings.ThemeMode.light: context.tr('light'),
-            settings.ThemeMode.dark: context.tr('dark'),
+            settings.ThemeMode.system: AppLocalizations.of(
+              context,
+            ).followSystem,
+            settings.ThemeMode.light: AppLocalizations.of(context).light,
+            settings.ThemeMode.dark: AppLocalizations.of(context).dark,
           },
           value: _settings.theme,
           onChanged: (v) => _apply(_settings.copyWith(theme: v)),
         ),
         _Group<settings.LocaleMode>(
-          label: context.tr('language'),
+          label: AppLocalizations.of(context).language,
           options: {
-            settings.LocaleMode.system: context.tr('followSystem'),
+            settings.LocaleMode.system: AppLocalizations.of(
+              context,
+            ).followSystem,
             settings.LocaleMode.en: 'English',
             settings.LocaleMode.zh: '中文',
           },
@@ -289,20 +293,26 @@ class _QuickMenuState extends State<_QuickMenu> {
           onChanged: (v) => _apply(_settings.copyWith(locale: v)),
         ),
         _Group<settings.AppConversationWidth>(
-          label: context.tr('conversationWidth'),
+          label: AppLocalizations.of(context).conversationWidth,
           options: {
-            settings.AppConversationWidth.normal: context.tr('widthNormal'),
-            settings.AppConversationWidth.wide: context.tr('widthWide'),
+            settings.AppConversationWidth.normal: AppLocalizations.of(
+              context,
+            ).widthNormal,
+            settings.AppConversationWidth.wide: AppLocalizations.of(
+              context,
+            ).widthWide,
           },
           value: _settings.conversationWidth,
           onChanged: (v) => _apply(_settings.copyWith(conversationWidth: v)),
         ),
         _Group<settings.AppFontSize>(
-          label: context.tr('appearanceTextSize'),
+          label: AppLocalizations.of(context).appearanceTextSize,
           options: {
-            settings.AppFontSize.small: context.tr('sizeSmall'),
-            settings.AppFontSize.medium: context.tr('sizeMedium'),
-            settings.AppFontSize.large: context.tr('sizeLarge'),
+            settings.AppFontSize.small: AppLocalizations.of(context).sizeSmall,
+            settings.AppFontSize.medium: AppLocalizations.of(
+              context,
+            ).sizeMedium,
+            settings.AppFontSize.large: AppLocalizations.of(context).sizeLarge,
           },
           value: _settings.fontSize,
           onChanged: (v) => _apply(_settings.copyWith(fontSize: v)),
@@ -317,15 +327,15 @@ class _QuickMenuState extends State<_QuickMenu> {
         _OpenSettingsRow(onTap: widget.onOpenSettings),
         if (widget.onLogin != null)
           _AuthRow(
-            label: context.tr('welcomeTitle').isEmpty
+            label: AppLocalizations.of(context).welcomeTitle.isEmpty
                 ? 'Sign in'
-                : context.tr('authSignIn'),
+                : AppLocalizations.of(context).authSignIn,
             icon: LucideIcons.log_in,
             onTap: widget.onLogin!,
           ),
         if (widget.signedIn && widget.onLogout != null)
           _AuthRow(
-            label: context.tr('authSignOut'),
+            label: AppLocalizations.of(context).authSignOut,
             icon: LucideIcons.log_out,
             onTap: widget.onLogout!,
           ),
@@ -488,7 +498,7 @@ class _OpenSettingsRow extends StatelessWidget {
           color: hovered ? color.interactiveBgHover : null,
         ),
         child: Text(
-          context.tr('openSettings'),
+          AppLocalizations.of(context).openSettings,
           style: DswType.s14.copyWith(color: color.labelPrimary),
         ),
       ),

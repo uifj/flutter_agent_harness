@@ -9,7 +9,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../model/plan_object_type.dart';
 import '../../../model/plan_struct.dart';
 import '../../../state/plan_object_store.dart';
@@ -45,12 +45,12 @@ class PlanBinScreen extends StatelessWidget {
               const SizedBox(width: DswShape.sm),
               Expanded(
                 child: Text(
-                  context.tr('planBinTitle'),
+                  AppLocalizations.of(context).planBinTitle,
                   style: DswType.l20.copyWith(color: color.labelPrimary),
                 ),
               ),
               Text(
-                context.tr('planRecordCount'),
+                AppLocalizations.of(context).planRecordCount,
                 style: DswType.xxxs11.copyWith(color: color.labelTertiary),
               ),
               const SizedBox(width: DswShape.xs),
@@ -61,7 +61,7 @@ class PlanBinScreen extends StatelessWidget {
               DswContextMenu(
                 items: (menuContext) => [
                   DswMenuEntry(
-                    label: context.tr('planWidgetEmptyBin'),
+                    label: AppLocalizations.of(context).planWidgetEmptyBin,
                     icon: LucideIcons.trash,
                     destructive: true,
                     onTap: records.isEmpty
@@ -69,25 +69,31 @@ class PlanBinScreen extends StatelessWidget {
                         : () async {
                             final confirmed = await showConfirmDialog(
                               menuContext,
-                              title: context.tr('planWidgetEmptyBin'),
-                              description: context.tr('planBinEmptyBody'),
-                              confirmLabel: context.tr('planActionDelete'),
+                              title: AppLocalizations.of(
+                                context,
+                              ).planWidgetEmptyBin,
+                              description: AppLocalizations.of(
+                                context,
+                              ).planBinEmptyBody,
+                              confirmLabel: AppLocalizations.of(
+                                context,
+                              ).planActionDelete,
                             );
                             if (!confirmed) return;
                             await store.emptyBin();
                             if (!menuContext.mounted) return;
                             showFeedback(
                               menuContext,
-                              context.tr('planWidgetBinEmptied'),
+                              AppLocalizations.of(context).planWidgetBinEmptied,
                             );
                           },
                   ),
                 ],
                 child: Tooltip(
-                  message: context.tr('planBinActions'),
+                  message: AppLocalizations.of(context).planBinActions,
                   child: DswHoverTap(
                     onTap: null,
-                    semanticLabel: context.tr('planBinActions'),
+                    semanticLabel: AppLocalizations.of(context).planBinActions,
                     builder: (context, hovered, focused) => Padding(
                       padding: const EdgeInsets.only(left: DswShape.sm),
                       child: Icon(
@@ -107,7 +113,7 @@ class PlanBinScreen extends StatelessWidget {
               ? Padding(
                   padding: const EdgeInsets.all(DswShape.lg),
                   child: Text(
-                    context.tr('planBinEmpty'),
+                    AppLocalizations.of(context).planBinEmpty,
                     style: DswType.xs13.copyWith(color: color.labelTertiary),
                   ),
                 )
@@ -136,12 +142,15 @@ class _BinRow extends StatelessWidget {
     return DswContextMenu(
       items: (menuContext) => [
         DswMenuEntry(
-          label: context.tr('planRestore'),
+          label: AppLocalizations.of(context).planRestore,
           icon: LucideIcons.undo_2,
           onTap: () async {
             await store.restoreRecords([record.id]);
             if (!menuContext.mounted) return;
-            showFeedback(menuContext, context.tr('planRestored'));
+            showFeedback(
+              menuContext,
+              AppLocalizations.of(context).planRestored,
+            );
           },
         ),
       ],
@@ -170,7 +179,7 @@ class _BinRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   record.name.isEmpty
-                      ? context.tr('planUntitled')
+                      ? AppLocalizations.of(context).planUntitled
                       : record.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -181,7 +190,7 @@ class _BinRow extends StatelessWidget {
                 ),
               ),
               Text(
-                context.tr('planBinned'),
+                AppLocalizations.of(context).planBinned,
                 style: DswType.xxxs11.copyWith(color: color.labelTertiary),
               ),
             ],

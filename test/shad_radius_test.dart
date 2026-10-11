@@ -15,6 +15,7 @@
 
 import 'dart:io';
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/theme/dsw_alias.dart';
 import 'package:planstar/theme/dsw_shape.dart';
 import 'package:planstar/theme/dsw_shad_bridge.dart';
@@ -67,6 +68,10 @@ void main() {
       ShadTheme(
         data: dswShadTheme(Brightness.light),
         child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+
           home: Builder(
             builder: (context) => Scaffold(
               body: Center(

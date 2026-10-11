@@ -35,7 +35,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../model/conversation.dart';
 import '../../../state/conversation_controller.dart';
 import '../../../theme/dsw_shape.dart';
@@ -748,7 +748,7 @@ class _KillButtonState extends State<_KillButton> {
     // Un-armed: a stop-square glyph; named for assistive tech.
     return DswHoverTap(
       onTap: widget.onTap,
-      semanticLabel: context.tr('stop'),
+      semanticLabel: AppLocalizations.of(context).stop,
       excludeSemantics: true,
       builder: (context, hovered, _) => Container(
         width: 22,
@@ -928,7 +928,7 @@ class _DockCloseButtonState extends State<_DockCloseButton> {
     final color = context.dsw;
     return DswHoverTap(
       onTap: widget.onTap,
-      semanticLabel: context.tr('close'),
+      semanticLabel: AppLocalizations.of(context).close,
       excludeSemantics: true,
       builder: (context, hovered, _) => Container(
         width: 20,

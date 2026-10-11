@@ -10,7 +10,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../model/plan_dataview.dart';
 import '../../../theme/dsw_shape.dart';
 import '../../../theme/dsw_theme.dart';
@@ -64,28 +64,28 @@ class PlanViewerBar extends StatelessWidget {
 
     List<DswMenuEntry> menuFor(String viewerId) => [
       DswMenuEntry(
-        label: context.tr('planViewRename'),
+        label: AppLocalizations.of(context).planViewRename,
         icon: LucideIcons.pencil,
         onTap: () => onMenu(PlanViewerMenuAction.rename, viewerId),
       ),
       DswMenuEntry(
-        label: context.tr('planViewDuplicate'),
+        label: AppLocalizations.of(context).planViewDuplicate,
         icon: LucideIcons.copy,
         onTap: () => onMenu(PlanViewerMenuAction.duplicate, viewerId),
       ),
       DswMenuEntry(
-        label: context.tr('planViewMoveLeft'),
+        label: AppLocalizations.of(context).planViewMoveLeft,
         icon: LucideIcons.chevron_left,
         onTap: () => onMenu(PlanViewerMenuAction.moveLeft, viewerId),
       ),
       DswMenuEntry(
-        label: context.tr('planViewMoveRight'),
+        label: AppLocalizations.of(context).planViewMoveRight,
         icon: LucideIcons.chevron_right,
         onTap: () => onMenu(PlanViewerMenuAction.moveRight, viewerId),
       ),
       const DswMenuEntry.divider(),
       DswMenuEntry(
-        label: context.tr('planViewDelete'),
+        label: AppLocalizations.of(context).planViewDelete,
         icon: LucideIcons.x,
         destructive: true,
         onTap: () => onMenu(PlanViewerMenuAction.delete, viewerId),
@@ -162,7 +162,7 @@ class PlanViewerBar extends StatelessWidget {
             ),
           ),
           DswMenu(
-            label: context.tr('planAllViews'),
+            label: AppLocalizations.of(context).planAllViews,
             trigger: (context) => Icon(
               LucideIcons.chevrons_up_down,
               size: DswShape.iconSm,
@@ -186,7 +186,7 @@ class PlanViewerBar extends StatelessWidget {
           ),
           if (canManage)
             DswMenu(
-              label: context.tr('planAddView'),
+              label: AppLocalizations.of(context).planAddView,
               trigger: (context) => Icon(
                 LucideIcons.plus,
                 size: DswShape.iconSm,
@@ -200,7 +200,7 @@ class PlanViewerBar extends StatelessWidget {
                     trailing: kind.renderedByClient
                         ? null
                         : Text(
-                            context.tr('planViewSoonTag'),
+                            AppLocalizations.of(context).planViewSoonTag,
                             style: DswType.xxxs11.copyWith(
                               color: color.labelTertiary,
                             ),
@@ -212,14 +212,14 @@ class PlanViewerBar extends StatelessWidget {
           const SizedBox(width: DswShape.xs),
           DswIconButton(
             icon: LucideIcons.sliders_horizontal,
-            tooltip: context.tr('planViewSettings'),
+            tooltip: AppLocalizations.of(context).planViewSettings,
             onTap: onOpenSettings,
             size: DswShape.controlMd,
           ),
           const SizedBox(width: DswShape.xs),
           DswIconButton(
             icon: LucideIcons.panel_top,
-            tooltip: context.tr('planToggleHeader'),
+            tooltip: AppLocalizations.of(context).planToggleHeader,
             onTap: onToggleHeader,
             size: DswShape.controlMd,
           ),

@@ -10,7 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadInput;
 
-import '../../l10n/locales.dart';
+import '../../l10n/app_localizations.dart';
 import '../../model/ask_user.dart';
 import '../../model/conversation.dart';
 import '../../theme/dsw_alias.dart';
@@ -175,7 +175,7 @@ class _AskUserPanelState extends State<AskUserPanel> {
         ),
         const SizedBox(width: 8),
         Text(
-          context.tr('askUserStrip'),
+          AppLocalizations.of(context).askUserStrip,
           style: DswType.xs13.copyWith(
             // 13/18 here, not the token's 13/20: the strip is a band, not
             // prose — the same metrics the approval strip runs.
@@ -233,7 +233,7 @@ class _AskUserPanelState extends State<AskUserPanel> {
             Padding(
               padding: const EdgeInsets.only(top: 6),
               child: Text(
-                context.tr('askUserOther'),
+                AppLocalizations.of(context).askUserOther,
                 style: DswType.xxsStrong12.copyWith(color: color.labelTertiary),
               ),
             ),
@@ -241,7 +241,7 @@ class _AskUserPanelState extends State<AskUserPanel> {
             padding: const EdgeInsets.only(top: 4),
             child: ShadInput(
               controller: _custom[index],
-              placeholder: Text(context.tr('askUserOpenHint')),
+              placeholder: Text(AppLocalizations.of(context).askUserOpenHint),
             ),
           ),
         ],
@@ -252,8 +252,8 @@ class _AskUserPanelState extends State<AskUserPanel> {
   Widget _skipChip(int index, DswAlias color) => DswHoverTap(
     onTap: () => setState(() => _skipped[index] = !_skipped[index]),
     semanticLabel: _skipped[index]
-        ? context.tr('askUserSkipped')
-        : context.tr('askUserSkip'),
+        ? AppLocalizations.of(context).askUserSkipped
+        : AppLocalizations.of(context).askUserSkip,
     builder: (context, hovered, focused) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -266,8 +266,8 @@ class _AskUserPanelState extends State<AskUserPanel> {
         ),
         child: Text(
           _skipped[index]
-              ? context.tr('askUserSkipped')
-              : context.tr('askUserSkip'),
+              ? AppLocalizations.of(context).askUserSkipped
+              : AppLocalizations.of(context).askUserSkip,
           style: DswType.xxs12.copyWith(color: color.labelSecondary),
         ),
       );
@@ -318,7 +318,7 @@ class _AskUserPanelState extends State<AskUserPanel> {
       runSpacing: 8,
       children: [
         CapsuleButton(
-          label: context.tr('askUserSubmit'),
+          label: AppLocalizations.of(context).askUserSubmit,
           enabled: _complete && !_submitted,
           variant: CapsuleVariant.primary,
           onTap: _submit,

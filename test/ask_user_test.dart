@@ -7,6 +7,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/genkit/tools.dart';
 import 'package:planstar/model/ask_user.dart';
 import 'package:planstar/model/conversation.dart';
@@ -199,6 +200,10 @@ void main() {
       // The free-text field is a ShadInput, which reads ShadTheme — mount the
       // bridge the same way the settings tests do.
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         theme: dswThemeData(Brightness.light),
         builder: (context, child) => ShadTheme(
           data: dswShadTheme(Theme.of(context).brightness),

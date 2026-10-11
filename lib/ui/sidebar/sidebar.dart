@@ -15,7 +15,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
-import '../../l10n/locales.dart';
+import '../../l10n/app_localizations.dart';
+import '../../l10n/tr_key.dart';
 import '../../model/app_settings.dart' as appcfg;
 import '../../model/conversation.dart';
 import '../../model/relative_time.dart';
@@ -408,8 +409,8 @@ class _SidebarState extends State<Sidebar> {
         onTap: () => onSelect(other),
         wide: false,
         tooltip: other == WorkspaceMode.plan
-            ? context.tr('planMode')
-            : context.tr('agentMode'),
+            ? AppLocalizations.of(context).planMode
+            : AppLocalizations.of(context).agentMode,
         builder: (_) => Icon(
           mode == WorkspaceMode.agent
               ? LucideIcons.book_open
@@ -426,12 +427,12 @@ class _SidebarState extends State<Sidebar> {
         DswSegment(
           value: WorkspaceMode.plan,
           icon: LucideIcons.book_open,
-          label: context.tr('planMode'),
+          label: AppLocalizations.of(context).planMode,
         ),
         DswSegment(
           value: WorkspaceMode.agent,
           icon: LucideIcons.message_square,
-          label: context.tr('agentMode'),
+          label: AppLocalizations.of(context).agentMode,
         ),
       ],
     );
@@ -503,7 +504,7 @@ class _SidebarState extends State<Sidebar> {
           expanded: _planNotesExpanded,
           onTap: () => setState(() => _planNotesExpanded = !_planNotesExpanded),
           icon: LucideIcons.notebook_text,
-          label: context.tr('planNotes'),
+          label: AppLocalizations.of(context).planNotes,
         ),
         if (_planNotesExpanded)
           fill
@@ -540,7 +541,7 @@ class _SidebarState extends State<Sidebar> {
       Padding(
         padding: const EdgeInsets.only(left: 8, bottom: 4),
         child: Text(
-          context.tr('planLibrary'),
+          AppLocalizations.of(context).planLibrary,
           style: DswType.xxxs11.copyWith(color: color.labelTertiary),
         ),
       ),
@@ -575,14 +576,16 @@ class _SidebarState extends State<Sidebar> {
                   Expanded(
                     child: Text(
                       switch (view) {
-                        PlanExtensionView.allContent => context.tr(
-                          'planAllContentTitle',
-                        ),
-                        PlanExtensionView.widgets => context.tr(
-                          'planWidgetStrip',
-                        ),
-                        PlanExtensionView.bin => context.tr('planBinTitle'),
-                        _ => context.tr('planGalleryTitle'),
+                        PlanExtensionView.allContent => AppLocalizations.of(
+                          context,
+                        ).planAllContentTitle,
+                        PlanExtensionView.widgets => AppLocalizations.of(
+                          context,
+                        ).planWidgetStrip,
+                        PlanExtensionView.bin => AppLocalizations.of(
+                          context,
+                        ).planBinTitle,
+                        _ => AppLocalizations.of(context).planGalleryTitle,
                       },
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -639,16 +642,18 @@ class _SidebarState extends State<Sidebar> {
               () => _planCollectionsExpanded = !_planCollectionsExpanded,
             ),
             icon: LucideIcons.layers,
-            label: context.tr('planCollections'),
+            label: AppLocalizations.of(context).planCollections,
             trailing: widget.onAddCollection == null
                 ? null
                 : Padding(
                     padding: const EdgeInsets.only(right: 4),
                     child: Tooltip(
-                      message: context.tr('planNewCollection'),
+                      message: AppLocalizations.of(context).planNewCollection,
                       child: DswHoverTap(
                         onTap: widget.onAddCollection,
-                        semanticLabel: context.tr('planNewCollection'),
+                        semanticLabel: AppLocalizations.of(
+                          context,
+                        ).planNewCollection,
                         builder: (context, hovered, focused) => Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 4,
@@ -767,7 +772,7 @@ class _SidebarState extends State<Sidebar> {
           Padding(
             padding: const EdgeInsets.only(left: 8, bottom: 4),
             child: Text(
-              context.tr('planLibrary'),
+              AppLocalizations.of(context).planLibrary,
               style: DswType.xxxs11.copyWith(color: color.labelTertiary),
             ),
           ),
@@ -807,14 +812,16 @@ class _SidebarState extends State<Sidebar> {
                       Flexible(
                         child: Text(
                           switch (view) {
-                            PlanExtensionView.allContent => context.tr(
-                              'planAllContentTitle',
-                            ),
-                            PlanExtensionView.widgets => context.tr(
-                              'planWidgetStrip',
-                            ),
-                            PlanExtensionView.bin => context.tr('planBinTitle'),
-                            _ => context.tr('planGalleryTitle'),
+                            PlanExtensionView.allContent => AppLocalizations.of(
+                              context,
+                            ).planAllContentTitle,
+                            PlanExtensionView.widgets => AppLocalizations.of(
+                              context,
+                            ).planWidgetStrip,
+                            PlanExtensionView.bin => AppLocalizations.of(
+                              context,
+                            ).planBinTitle,
+                            _ => AppLocalizations.of(context).planGalleryTitle,
                           },
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -868,7 +875,7 @@ class _SidebarState extends State<Sidebar> {
                   const SizedBox(width: DswShape.sm),
                   Flexible(
                     child: Text(
-                      context.tr('appName'),
+                      AppLocalizations.of(context).appName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       // 18px/24px, weight 600, letter-spacing 0.04em — the one
@@ -888,10 +895,13 @@ class _SidebarState extends State<Sidebar> {
           wide: wide,
           // The accelerator is spelled by whoever registers it, so the tooltip
           // and the key cannot drift apart.
-          tooltip: context.tr(
-            widget.collapsed ? 'openSidebar' : 'collapseSidebar',
-            {'accel': HotkeyService.sidebarAccelerator},
-          ),
+          tooltip: widget.collapsed
+              ? AppLocalizations.of(
+                  context,
+                ).openSidebar(HotkeyService.sidebarAccelerator)
+              : AppLocalizations.of(
+                  context,
+                ).collapseSidebar(HotkeyService.sidebarAccelerator),
           // On the rail the toggle rests as the brand mark and reveals the
           // panel icon on hover — that swap *is* the expand affordance.
           builder: (hovered) => wide || hovered
@@ -918,7 +928,7 @@ class _SidebarState extends State<Sidebar> {
         onTap: widget.onNewSession,
         // The rail's form sheds the words, so it has to keep the name: without
         // this the only thing a screen reader got was an unlabelled button.
-        semanticLabel: wide ? null : context.tr('newSession'),
+        semanticLabel: wide ? null : AppLocalizations.of(context).newSession,
         hoverColor: wide ? color.buttonFloatingHover : color.interactiveBgHover,
         borderRadius: _barRadius(wide),
         // Deliberately not animated. The two forms differ in width, and the wide
@@ -959,7 +969,7 @@ class _SidebarState extends State<Sidebar> {
                 // this label wanted 299.9px in a 222px bar and spilled 78px.
                 Flexible(
                   child: Text(
-                    context.tr('newSession'),
+                    AppLocalizations.of(context).newSession,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: DswType.sStrong14.copyWith(
@@ -983,7 +993,7 @@ class _SidebarState extends State<Sidebar> {
     child: _IconButton(
       onTap: widget.onToggle,
       wide: false,
-      tooltip: context.tr('sessions'),
+      tooltip: AppLocalizations.of(context).sessions,
       builder: (_) => Icon(
         LucideIcons.message_square,
         size: DswShape.iconLg,
@@ -1038,8 +1048,8 @@ class _SidebarState extends State<Sidebar> {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Text(
               widget.sessions.isLoading
-                  ? context.tr('loading')
-                  : context.tr('noSessionsYet'),
+                  ? AppLocalizations.of(context).loading
+                  : AppLocalizations.of(context).noSessionsYet,
               style: DswType.xxs12.copyWith(color: color.labelTertiary),
             ),
           ),
@@ -1112,25 +1122,25 @@ class _SidebarState extends State<Sidebar> {
     if (root == null) return const [];
     return [
       DswMenuEntry(
-        label: context.tr('showFileTree'),
+        label: AppLocalizations.of(context).showFileTree,
         icon: LucideIcons.folder_tree,
         onTap: widget.onOpenWorkspaceTree == null
             ? null
             : () => widget.onOpenWorkspaceTree!(root),
       ),
       DswMenuEntry(
-        label: context.tr('copyWorkspacePath'),
+        label: AppLocalizations.of(context).copyWorkspacePath,
         icon: LucideIcons.copy,
         onTap: () => Clipboard.setData(ClipboardData(text: root)),
       ),
       DswMenuEntry(
-        label: context.tr('revealInFiles'),
+        label: AppLocalizations.of(context).revealInFiles,
         icon: LucideIcons.external_link,
         onTap: () => revealInFilesOrReport(context, root),
       ),
       const DswMenuEntry.divider(),
       DswMenuEntry(
-        label: context.tr('removeWorkspace'),
+        label: AppLocalizations.of(context).removeWorkspace,
         icon: LucideIcons.circle_minus,
         onTap: widget.onRemoveWorkspace == null
             ? null
@@ -1154,7 +1164,7 @@ class _SidebarState extends State<Sidebar> {
                 link: _menuLink,
                 child: DswHoverTap(
                   onTap: _canMenu ? _openQuickMenu : null,
-                  semanticLabel: context.tr('quickPreferences'),
+                  semanticLabel: AppLocalizations.of(context).quickPreferences,
                   builder: (context, hovered, _) => Container(
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
@@ -1175,7 +1185,7 @@ class _SidebarState extends State<Sidebar> {
               _IconButton(
                 onTap: _openSettingsSafe,
                 wide: false,
-                tooltip: context.tr('settings'),
+                tooltip: AppLocalizations.of(context).settings,
                 builder: (_) => Icon(
                   LucideIcons.settings,
                   size: DswShape.iconLg,
@@ -1206,7 +1216,7 @@ class _SidebarState extends State<Sidebar> {
             link: _menuLink,
             child: DswHoverTap(
               onTap: canMenu ? _openQuickMenu : null,
-              semanticLabel: context.tr('quickPreferences'),
+              semanticLabel: AppLocalizations.of(context).quickPreferences,
               builder: (context, hovered, _) => Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 decoration: BoxDecoration(
@@ -1251,7 +1261,7 @@ class _SidebarState extends State<Sidebar> {
           onTap: _openSettingsSafe,
           // Same gap in the wide footer's gear — icon-only, no label, no
           // tooltip, so the audit could only name it by codepoint.
-          semanticLabel: context.tr('settings'),
+          semanticLabel: AppLocalizations.of(context).settings,
           borderRadius: BorderRadius.circular(DswShape.control),
           child: Container(
             height: 28,
@@ -1314,8 +1324,8 @@ class _SidebarState extends State<Sidebar> {
     onTap: widget.onToggleDetails,
     wide: wide,
     tooltip: widget.detailsOpen
-        ? context.tr('closeDetailsPanel')
-        : context.tr('openDetailsPanel'),
+        ? AppLocalizations.of(context).closeDetailsPanel
+        : AppLocalizations.of(context).openDetailsPanel,
     builder: (_) => Transform.flip(
       flipX: true,
       child: Icon(
@@ -1348,7 +1358,7 @@ class _SessionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    final title = session.title ?? context.tr('untitled');
+    final title = session.title ?? AppLocalizations.of(context).untitled;
     // A one-line seat rides the text step (ADR-0017 S3). Pinned at 36 this row is
     // exactly one line at 1.8x and one clipped line at the next step up: at 2.2x
     // both the title and the time label wanted 44.0 of the 36.0 they were handed.
@@ -1432,7 +1442,11 @@ class _SessionRow extends StatelessWidget {
                       session.updatedAt,
                       DateTime.now(),
                     );
-                    return context.tr(when.key, when.params);
+                    return trKey(
+                      AppLocalizations.of(context),
+                      when.key,
+                      when.params,
+                    );
                   }(),
                   style: DswType.xxs12.copyWith(
                     height: 20 / 12,
@@ -1487,7 +1501,7 @@ class _WorkspaceGroupRow extends StatelessWidget {
     final color = context.dsw;
     final step = MediaQuery.textScalerOf(context).scale(1);
     final label = group.isUnassigned
-        ? context.tr('unassignedWorkspace')
+        ? AppLocalizations.of(context).unassignedWorkspace
         : group.displayName;
     return Semantics(
       // The fold state has to be sayable, not only drawn: a chevron that flips
@@ -1559,14 +1573,14 @@ class _WorkspaceGroupRow extends StatelessWidget {
           if (onNewSession != null)
             DswIconButton(
               icon: LucideIcons.plus,
-              tooltip: context.tr('newSessionHere'),
+              tooltip: AppLocalizations.of(context).newSessionHere,
               onTap: onNewSession,
               size: 24 * step,
               iconSize: DswShape.iconTiny,
             ),
           if (menu.isNotEmpty)
             DswMenu(
-              label: context.tr('workspaceActions'),
+              label: AppLocalizations.of(context).workspaceActions,
               items: (_) => menu,
               trigger: (context) => Icon(
                 LucideIcons.ellipsis,
@@ -1645,7 +1659,7 @@ class _HistorySectionRow extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Text(
-                context.tr('workspaces'),
+                AppLocalizations.of(context).workspaces,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: DswType.xxs12.copyWith(
@@ -1661,10 +1675,10 @@ class _HistorySectionRow extends StatelessWidget {
           // where it can be seen.
           if (onOrganizeChanged != null)
             DswMenu(
-              label: context.tr('historyView'),
+              label: AppLocalizations.of(context).historyView,
               items: (context) => [
                 DswMenuEntry(
-                  label: context.tr('groupByWorkspace'),
+                  label: AppLocalizations.of(context).groupByWorkspace,
                   icon: LucideIcons.folder_tree,
                   trailing: organize == HistoryOrganize.project
                       ? Icon(
@@ -1676,7 +1690,7 @@ class _HistorySectionRow extends StatelessWidget {
                   onTap: () => onOrganizeChanged!(HistoryOrganize.project),
                 ),
                 DswMenuEntry(
-                  label: context.tr('flatList'),
+                  label: AppLocalizations.of(context).flatList,
                   icon: LucideIcons.list,
                   trailing: organize == HistoryOrganize.flat
                       ? Icon(
@@ -1700,7 +1714,9 @@ class _HistorySectionRow extends StatelessWidget {
           if (showsFoldGlyph)
             DswIconButton(
               icon: allFolded ? LucideIcons.maximize_2 : LucideIcons.minimize_2,
-              tooltip: context.tr(allFolded ? 'expandAll' : 'collapseAll'),
+              tooltip: allFolded
+                  ? AppLocalizations.of(context).expandAll
+                  : AppLocalizations.of(context).collapseAll,
               onTap: canFold
                   ? () =>
                         onCollapseAll!(allFolded ? const {} : groupKeys.toSet())
@@ -1711,7 +1727,7 @@ class _HistorySectionRow extends StatelessWidget {
           if (onAddWorkspace != null)
             DswIconButton(
               icon: LucideIcons.plus,
-              tooltip: context.tr('addWorkspace'),
+              tooltip: AppLocalizations.of(context).addWorkspace,
               onTap: onAddWorkspace,
               size: 24 * step,
               iconSize: DswShape.iconTiny,

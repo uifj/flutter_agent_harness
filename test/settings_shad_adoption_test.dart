@@ -18,6 +18,7 @@
 
 import 'dart:io';
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/theme/dsw_alias.dart';
 import 'package:planstar/theme/dsw_shad_bridge.dart';
 import 'package:planstar/theme/dsw_theme.dart';
@@ -109,6 +110,10 @@ void main() {
       addTearDown(controller.dispose);
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+
           theme: dswThemeData(Brightness.light),
           home: Scaffold(
             body: Center(

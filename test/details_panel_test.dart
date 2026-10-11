@@ -8,6 +8,7 @@
 
 import 'dart:async';
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/model/conversation.dart';
 import 'package:planstar/model/turn_event.dart';
 import 'package:planstar/state/conversation_controller.dart';
@@ -56,6 +57,10 @@ void main() {
   Future<void> pumpPanel(WidgetTester tester, {double step = 1.0}) =>
       tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+
           builder: (context, child) => amplifiedAppBuilder(step, child),
           theme: dswThemeData(Brightness.light),
           home: Scaffold(
@@ -278,6 +283,10 @@ void main() {
     Future<ToolCallNode> pumpCard(WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+
           theme: dswThemeData(Brightness.light),
           home: Scaffold(
             body: DetailsSelectionScope(

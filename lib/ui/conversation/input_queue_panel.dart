@@ -14,7 +14,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
-import '../../l10n/locales.dart';
+import '../../l10n/app_localizations.dart';
 import '../../model/queued_input.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_shape.dart';
@@ -85,7 +85,7 @@ class InputQueuePanel extends StatelessWidget {
       ),
       const SizedBox(width: 6),
       Text(
-        context.tr('inputQueue'),
+        AppLocalizations.of(context).inputQueue,
         style: DswType.xxxs11.copyWith(color: color.labelSecondary),
       ),
       const Spacer(),
@@ -146,7 +146,7 @@ class _QueueRow extends StatelessWidget {
           ReorderableDragStartListener(
             index: index,
             child: Tooltip(
-              message: context.tr('dragToReorder'),
+              message: AppLocalizations.of(context).dragToReorder,
               child: Icon(
                 LucideIcons.grip_vertical,
                 size: DswShape.iconSm,
@@ -165,7 +165,9 @@ class _QueueRow extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           CapsuleButton(
-            label: context.tr(guiding ? 'deliveryGuide' : 'deliveryQueue'),
+            label: guiding
+                ? AppLocalizations.of(context).deliveryGuide
+                : AppLocalizations.of(context).deliveryQueue,
             size: CapsuleSize.sm,
             variant: CapsuleVariant.ghost,
             icon: guiding ? LucideIcons.route : LucideIcons.list_end,
@@ -185,7 +187,7 @@ class _QueueRow extends StatelessWidget {
             icon: LucideIcons.x,
             iconSize: DswShape.iconTiny,
             size: 28 * MediaQuery.textScalerOf(context).scale(1),
-            tooltip: context.tr('removeAttachment'),
+            tooltip: AppLocalizations.of(context).removeAttachment,
             onTap: () => onRemove(item.id),
           ),
         ],

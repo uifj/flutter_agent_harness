@@ -16,7 +16,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
-import '../../l10n/locales.dart';
+import '../../l10n/app_localizations.dart';
 import '../../model/conversation.dart';
 import '../../state/conversation_controller.dart';
 import '../../state/details_selection.dart';
@@ -108,7 +108,7 @@ class _DetailsPanelState extends State<DetailsPanel> {
             // written by code that does not know the name. Here only the tool row
             // writes it, and the row knows its own display title, so the
             // selection is the single source and the two can never disagree.
-            widget.selection.toolName ?? context.tr('details'),
+            widget.selection.toolName ?? AppLocalizations.of(context).details,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: DswType.s14.copyWith(
@@ -128,12 +128,16 @@ class _DetailsPanelState extends State<DetailsPanel> {
   Widget _body(DswAlias color) {
     final callId = widget.selection.callId;
     if (callId == null) {
-      return _padded(_message(color, context.tr('detailsEmpty')));
+      return _padded(
+        _message(color, AppLocalizations.of(context).detailsEmpty),
+      );
     }
 
     final node = _find(callId);
     if (node == null) {
-      return _padded(_message(color, context.tr('detailsNotInWindow')));
+      return _padded(
+        _message(color, AppLocalizations.of(context).detailsNotInWindow),
+      );
     }
 
     return _padded(
@@ -148,7 +152,7 @@ class _DetailsPanelState extends State<DetailsPanel> {
           children: [
             // `argsRaw !== null`: a call always has an args blob, so this section
             // is always here — an empty one shows `{}`, as it does in dsh.
-            _sectionLabel(color, context.tr('input')),
+            _sectionLabel(color, AppLocalizations.of(context).input),
             // 16, not the label's own 6: dsh's `CodeBlock` carries `margin: 16px
             // 0`, which collapses with the label's margin to the larger of the
             // two. The bare `<pre>` under Output carries none, which is why that
@@ -156,7 +160,7 @@ class _DetailsPanelState extends State<DetailsPanel> {
             const SizedBox(height: 16),
             CodeBlock(code: _pretty(node.arguments), lang: 'json'),
             const SizedBox(height: 16),
-            _sectionLabel(color, context.tr('output')),
+            _sectionLabel(color, AppLocalizations.of(context).output),
             const SizedBox(height: 6),
             _outputBody(color, node),
             // `.section { margin-bottom: 16px }` on the last section too: it
@@ -180,7 +184,7 @@ class _DetailsPanelState extends State<DetailsPanel> {
     final settled =
         node.status != ToolStatus.running &&
         node.status != ToolStatus.awaitingApproval;
-    if (!settled) return _message(color, context.tr('running'));
+    if (!settled) return _message(color, AppLocalizations.of(context).running);
     return _Pre(
       text: node.errorMessage ?? formatToolOutput(node.output) ?? '',
       isError: node.errorMessage != null,
@@ -220,7 +224,7 @@ class _CloseButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    final label = context.tr('closeDetails');
+    final label = AppLocalizations.of(context).closeDetails;
     return Tooltip(
       message: label,
       child: DswHoverTap(

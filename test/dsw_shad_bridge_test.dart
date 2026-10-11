@@ -9,6 +9,7 @@
 // ShadTheme through MaterialApp.builder and reads the brightness back out of
 // Theme.of(context), so `themeMode: dark` must reach ShadTheme as dark.
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/theme/dsw_alias.dart';
 import 'package:planstar/theme/dsw_shad_bridge.dart';
 import 'package:planstar/theme/dsw_theme.dart';
@@ -57,6 +58,10 @@ void main() {
     late ShadThemeData captured;
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         theme: dswThemeData(Brightness.light),
         darkTheme: dswThemeData(Brightness.dark),
         themeMode: ThemeMode.dark,

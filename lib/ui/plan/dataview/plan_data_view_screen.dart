@@ -17,7 +17,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:shadcn_ui/shadcn_ui.dart'
     show ShadButton, ShadDialog, ShadInput, showShadDialog;
 
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../model/plan_dataview.dart';
 import '../../../model/plan_object_type.dart';
 import '../../../model/plan_relation.dart';
@@ -98,7 +98,7 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
         color: context.dsw.bgBase,
         child: Center(
           child: Text(
-            context.tr('planCollectionMissing'),
+            AppLocalizations.of(context).planCollectionMissing,
             style: DswType.s14.copyWith(color: context.dsw.labelSecondary),
           ),
         ),
@@ -140,7 +140,7 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
               onRename: () async {
                 final name = await _askName(
                   context,
-                  title: context.tr('planRenameCollection'),
+                  title: AppLocalizations.of(context).planRenameCollection,
                   initial: collection.name,
                 );
                 if (name == null || name.isEmpty) return;
@@ -169,11 +169,11 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
             sheets: [
               if (viewer != null && viewer.kind.renderedByClient)
                 DswSheetPopover(
-                  label: context.tr('planFieldsTitle'),
+                  label: AppLocalizations.of(context).planFieldsTitle,
                   minWidth: 320,
                   trigger: (context) => PlanSheetTrigger(
                     icon: LucideIcons.list,
-                    label: context.tr('planFieldsTitle'),
+                    label: AppLocalizations.of(context).planFieldsTitle,
                     count: planVisibleColumns(viewer).length,
                   ),
                   content: (context, close) => SingleChildScrollView(
@@ -190,11 +190,11 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
                 ),
               if (viewer != null)
                 DswSheetPopover(
-                  label: context.tr('planSortBy'),
+                  label: AppLocalizations.of(context).planSortBy,
                   minWidth: 280,
                   trigger: (context) => PlanSheetTrigger(
                     icon: LucideIcons.arrow_up_down,
-                    label: context.tr('planSortBy'),
+                    label: AppLocalizations.of(context).planSortBy,
                     count: viewer.sorts.length,
                   ),
                   content: (context, close) => SingleChildScrollView(
@@ -211,11 +211,11 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
                 ),
               if (viewer != null)
                 DswSheetPopover(
-                  label: context.tr('planFilterTitle'),
+                  label: AppLocalizations.of(context).planFilterTitle,
                   minWidth: 320,
                   trigger: (context) => PlanSheetTrigger(
                     icon: LucideIcons.sliders_horizontal,
-                    label: context.tr('planFilterTitle'),
+                    label: AppLocalizations.of(context).planFilterTitle,
                     count: viewer.filters.length,
                   ),
                   content: (context, close) => SingleChildScrollView(
@@ -232,11 +232,11 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
                 ),
               if (viewer != null)
                 DswSheetPopover(
-                  label: context.tr('planLayoutTitle'),
+                  label: AppLocalizations.of(context).planLayoutTitle,
                   minWidth: 280,
                   trigger: (context) => PlanSheetTrigger(
                     icon: LucideIcons.layers,
-                    label: context.tr('planLayoutTitle'),
+                    label: AppLocalizations.of(context).planLayoutTitle,
                     count: 0,
                   ),
                   content: (context, close) => SingleChildScrollView(
@@ -364,13 +364,15 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
   // ---- handlers -----------------------------------------------------------
 
   String _columnTitle(PlanViewer viewer, String optionId) {
-    if (optionId.isEmpty) return context.tr('planColumnNoStatus');
+    if (optionId.isEmpty) {
+      return AppLocalizations.of(context).planColumnNoStatus;
+    }
     final relation = _store.relationByKey(viewer.groupRelationKey ?? '');
     // A checkbox group reads as the two checked states, not option ids.
     if (relation?.format == PlanRelationFormat.checkbox) {
-      return context.tr(
-        optionId == 'true' ? 'planColumnChecked' : 'planColumnUnchecked',
-      );
+      return optionId == 'true'
+          ? AppLocalizations.of(context).planColumnChecked
+          : AppLocalizations.of(context).planColumnUnchecked;
     }
     return relation?.optionText(optionId) ?? optionId;
   }
@@ -389,7 +391,7 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
       typeKey: typeKey,
       templateId: viewer.defaultTemplateId,
       values: {
-        PlanRelationKeys.name: context.tr('planUntitled'),
+        PlanRelationKeys.name: AppLocalizations.of(context).planUntitled,
         if (status != null && status.isNotEmpty) 'status': status,
       },
     );
@@ -433,17 +435,21 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
     final archived = record.relation('isArchived') == true;
     return [
       DswMenuEntry(
-        label: context.tr('planObjectInfoTitle'),
+        label: AppLocalizations.of(context).planObjectInfoTitle,
         icon: LucideIcons.info,
         onTap: () => _openObjectInfo(record),
       ),
       DswMenuEntry(
-        label: context.tr(favorite ? 'planUnfavorite' : 'planFavorite'),
+        label: favorite
+            ? AppLocalizations.of(context).planUnfavorite
+            : AppLocalizations.of(context).planFavorite,
         icon: favorite ? LucideIcons.star : LucideIcons.circle,
         onTap: () => _store.setFavorite(record.id, favorite: !favorite),
       ),
       DswMenuEntry(
-        label: context.tr(archived ? 'planRestore' : 'planMoveToBin'),
+        label: archived
+            ? AppLocalizations.of(context).planRestore
+            : AppLocalizations.of(context).planMoveToBin,
         icon: LucideIcons.x,
         destructive: !archived,
         onTap: () => archived
@@ -452,7 +458,7 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
       ),
       if (collection.kind == PlanCollectionKind.set)
         DswMenuEntry(
-          label: context.tr('planDuplicate'),
+          label: AppLocalizations.of(context).planDuplicate,
           icon: LucideIcons.copy,
           onTap: () => _store.createRecord(
             collectionId: collection.id,
@@ -475,7 +481,7 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
         final current = collection.dataView.viewerById(viewerId);
         final name = await _askName(
           context,
-          title: context.tr('planViewRename'),
+          title: AppLocalizations.of(context).planViewRename,
           initial: current?.name ?? '',
         );
         if (name != null && name.isNotEmpty) {
@@ -486,14 +492,14 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
       case PlanViewerMenuAction.delete:
         final confirmed = await showConfirmDialog(
           context,
-          title: context.tr('planViewDelete'),
-          description: context.tr('planViewDeleteBody'),
-          confirmLabel: context.tr('planDelete'),
+          title: AppLocalizations.of(context).planViewDelete,
+          description: AppLocalizations.of(context).planViewDeleteBody,
+          confirmLabel: AppLocalizations.of(context).planDelete,
         );
         if (!confirmed) return;
         await _store.removeViewer(collection.id, viewerId);
         if (!mounted) return;
-        showFeedback(context, context.tr('planViewDeleted'));
+        showFeedback(context, AppLocalizations.of(context).planViewDeleted);
       case PlanViewerMenuAction.moveLeft:
       case PlanViewerMenuAction.moveRight:
         final index = collection.dataView.viewers.indexWhere(
@@ -513,13 +519,15 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
       builder: (context) => ShadDialog(
         radius: BorderRadius.circular(DswShape.float),
         title: Text(
-          record.name.isEmpty ? context.tr('planUntitled') : record.name,
+          record.name.isEmpty
+              ? AppLocalizations.of(context).planUntitled
+              : record.name,
           style: DswType.l20,
         ),
         actions: [
           ShadButton.outline(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(context.tr('close')),
+            child: Text(AppLocalizations.of(context).close),
           ),
         ],
         child: SizedBox(
@@ -540,11 +548,14 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
       context: context,
       builder: (context) => ShadDialog(
         radius: BorderRadius.circular(DswShape.float),
-        title: Text(context.tr('planTemplatesTitleShort'), style: DswType.l20),
+        title: Text(
+          AppLocalizations.of(context).planTemplatesTitleShort,
+          style: DswType.l20,
+        ),
         actions: [
           ShadButton.outline(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(context.tr('close')),
+            child: Text(AppLocalizations.of(context).close),
           ),
         ],
         child: SizedBox(
@@ -568,15 +579,20 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
       context: context,
       builder: (context) => ShadDialog(
         radius: BorderRadius.circular(DswShape.float),
-        title: Text(context.tr('planRecordTitle'), style: DswType.l20),
+        title: Text(
+          AppLocalizations.of(context).planRecordTitle,
+          style: DswType.l20,
+        ),
         description: Text(
-          record.name.isEmpty ? context.tr('planUntitled') : record.name,
+          record.name.isEmpty
+              ? AppLocalizations.of(context).planUntitled
+              : record.name,
           style: DswType.xs13,
         ),
         actions: [
           ShadButton.outline(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(context.tr('close')),
+            child: Text(AppLocalizations.of(context).close),
           ),
         ],
         child: SizedBox(
@@ -595,7 +611,7 @@ class _PlanDataViewScreenState extends State<PlanDataViewScreen> {
                 ),
               if (viewer.relations.where((c) => c.isVisible).isEmpty)
                 Text(
-                  context.tr('planRecordNoFields'),
+                  AppLocalizations.of(context).planRecordNoFields,
                   style: DswType.xs13.copyWith(
                     color: context.dsw.labelTertiary,
                   ),
@@ -721,7 +737,7 @@ class _CollectionHeader extends StatelessWidget {
             ),
           ),
           Text(
-            context.tr('planRecordCount'),
+            AppLocalizations.of(context).planRecordCount,
             style: DswType.xxxs11.copyWith(color: color.labelTertiary),
           ),
           SizedBox(width: DswShape.xs, height: 20 * step),
@@ -733,16 +749,20 @@ class _CollectionHeader extends StatelessWidget {
             DswContextMenu(
               items: (menuContext) => [
                 DswMenuEntry(
-                  label: menuContext.tr('planTemplatesTitleShort'),
+                  label: AppLocalizations.of(
+                    menuContext,
+                  ).planTemplatesTitleShort,
                   icon: LucideIcons.file,
                   onTap: onTemplates,
                 ),
               ],
               child: Tooltip(
-                message: context.tr('planCollectionMenu'),
+                message: AppLocalizations.of(context).planCollectionMenu,
                 child: DswHoverTap(
                   onTap: null,
-                  semanticLabel: context.tr('planCollectionMenu'),
+                  semanticLabel: AppLocalizations.of(
+                    context,
+                  ).planCollectionMenu,
                   builder: (context, hovered, focused) => Padding(
                     padding: const EdgeInsets.only(left: DswShape.sm),
                     child: Icon(
@@ -800,7 +820,7 @@ class _SheetBar extends StatelessWidget {
                 left: DswShape.xs,
               ),
               child: Text(
-                context.tr('planFilterNestedUnsupported'),
+                AppLocalizations.of(context).planFilterNestedUnsupported,
                 style: DswType.xxxs11.copyWith(color: color.labelTertiary),
               ),
             ),
@@ -829,13 +849,13 @@ Future<String?> _askName(
           height:
               DswShape.controlMd * MediaQuery.textScalerOf(context).scale(1),
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(context.tr('planCancel')),
+          child: Text(AppLocalizations.of(context).planCancel),
         ),
         ShadButton(
           height:
               DswShape.controlMd * MediaQuery.textScalerOf(context).scale(1),
           onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-          child: Text(context.tr('planSave')),
+          child: Text(AppLocalizations.of(context).planSave),
         ),
       ],
       child: SizedBox(

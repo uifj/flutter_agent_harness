@@ -28,7 +28,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
-import '../../l10n/locales.dart';
+import '../../l10n/app_localizations.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_motion.dart';
 import '../../theme/dsw_shape.dart';
@@ -110,13 +110,13 @@ class WorkbenchTabBar extends StatelessWidget {
           if (showSplitControls) ...[
             _StripButton(
               icon: LucideIcons.columns_2,
-              tooltip: context.tr('splitDown'),
+              tooltip: AppLocalizations.of(context).splitDown,
               rotated: false,
               onTap: () => workbench.splitPane(SplitDirection.col),
             ),
             _StripButton(
               icon: LucideIcons.columns_2,
-              tooltip: context.tr('splitRight'),
+              tooltip: AppLocalizations.of(context).splitRight,
               rotated: true,
               onTap: () => workbench.splitPane(SplitDirection.row),
             ),
@@ -150,13 +150,13 @@ class _NewTabButton extends StatelessWidget {
     final prefs = WorkbenchPrefsScope.of(context);
     final root = workbench.workspaceRoot;
     return DswMenu(
-      label: context.tr('newTab'),
+      label: AppLocalizations.of(context).newTab,
       minWidth: 180,
       items: (context) => [
         if (prefs.tabEnabled(BuiltinTabType.explorer))
           DswMenuEntry(
             icon: LucideIcons.folder_open,
-            label: context.tr('explorer'),
+            label: AppLocalizations.of(context).explorer,
             // Disabled rather than hidden when there is no workspace, matching
             // `available` returning false (`Sidebar.tsx:162-179`).
             onTap: root == null ? null : () => workbench.openFolder(root),
@@ -164,31 +164,31 @@ class _NewTabButton extends StatelessWidget {
         if (prefs.tabEnabled(BuiltinTabType.terminal))
           DswMenuEntry(
             icon: LucideIcons.terminal,
-            label: context.tr('terminal'),
+            label: AppLocalizations.of(context).terminal,
             onTap: workbench.openTerminal,
           ),
         if (prefs.tabEnabled(BuiltinTabType.git))
           DswMenuEntry(
             icon: LucideIcons.git_branch,
-            label: context.tr('git'),
+            label: AppLocalizations.of(context).git,
             onTap: workbench.openGit,
           ),
         if (prefs.tabEnabled(BuiltinTabType.subagent))
           DswMenuEntry(
             icon: LucideIcons.network,
-            label: context.tr('subagents'),
+            label: AppLocalizations.of(context).subagents,
             onTap: workbench.openSubagents,
           ),
         if (prefs.tabEnabled(BuiltinTabType.browser))
           DswMenuEntry(
             icon: LucideIcons.globe,
-            label: context.tr('browser'),
+            label: AppLocalizations.of(context).browser,
             onTap: workbench.openBrowserUntitled,
           ),
         if (prefs.tabEnabled(BuiltinTabType.sidechat))
           DswMenuEntry(
             icon: LucideIcons.message_square_plus,
-            label: context.tr('sidechat'),
+            label: AppLocalizations.of(context).sidechat,
             onTap: workbench.openSideChat,
           ),
       ],
@@ -321,7 +321,7 @@ class _TabChipState extends State<_TabChip> {
           Flexible(
             child: Text(
               widget.tab.title.isEmpty
-                  ? context.tr('untitled')
+                  ? AppLocalizations.of(context).untitled
                   : widget.tab.title,
               style: DswType.xxs12.copyWith(
                 color: widget.active
@@ -341,7 +341,10 @@ class _TabChipState extends State<_TabChip> {
             child: AnimatedOpacity(
               opacity: _hovered || widget.active ? 1 : 0,
               duration: DswMotion.respecting(context, DswMotion.fast),
-              child: _CloseButton(onTap: _close, label: context.tr('close')),
+              child: _CloseButton(
+                onTap: _close,
+                label: AppLocalizations.of(context).close,
+              ),
             ),
           ),
         ],
@@ -423,19 +426,19 @@ class _TabChipState extends State<_TabChip> {
     return [
       DswMenuEntry(
         icon: LucideIcons.x,
-        label: context.tr('close'),
+        label: AppLocalizations.of(context).close,
         onTap: _close,
       ),
       if (others > 1)
         DswMenuEntry(
           icon: LucideIcons.list_x,
-          label: context.tr('closeOthers'),
+          label: AppLocalizations.of(context).closeOthers,
           onTap: () =>
               widget.workbench.closeOtherTabs(widget.paneId, widget.tab.id),
         ),
       DswMenuEntry(
         icon: LucideIcons.square_x,
-        label: context.tr('closeAll'),
+        label: AppLocalizations.of(context).closeAll,
         onTap: () => widget.workbench.closeAllTabs(widget.paneId),
       ),
       const DswMenuEntry.divider(),
@@ -444,14 +447,14 @@ class _TabChipState extends State<_TabChip> {
             ? LucideIcons.arrow_up_from_line
             : LucideIcons.arrow_down_to_line,
         label: inBottom
-            ? context.tr('sendToSidePanel')
-            : context.tr('sendToBottomPanel'),
+            ? AppLocalizations.of(context).sendToSidePanel
+            : AppLocalizations.of(context).sendToBottomPanel,
         onTap: () =>
             widget.workbench.sendTabToOtherPanel(widget.paneId, widget.tab.id),
       ),
       DswMenuEntry(
         icon: LucideIcons.picture_in_picture_2,
-        label: context.tr('floatInWindow'),
+        label: AppLocalizations.of(context).floatInWindow,
         onTap: _float,
       ),
     ];

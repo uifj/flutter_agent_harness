@@ -20,6 +20,7 @@
 // switch, extension rows, profile foot - and measure what only appears when it is
 // handed, then prove an amplified chrome can be scrolled past to reach sessions.
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/model/conversation.dart';
 import 'package:planstar/model/user_profile.dart';
 import 'package:planstar/state/session_index.dart';
@@ -70,6 +71,10 @@ void main() {
     ValueChanged<String>? onOpenNote,
   }) => tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+
       builder: (context, child) => amplifiedAppBuilder(scale, child),
       theme: dswThemeData(Brightness.light),
       home: Scaffold(

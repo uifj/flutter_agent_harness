@@ -13,7 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import '../../../model/plan_dataview.dart';
 
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../model/plan_object_type.dart';
 import '../../../model/plan_struct.dart';
 import '../../../state/plan_object_store.dart';
@@ -42,9 +42,9 @@ class PlanDateScreen extends StatelessWidget {
       now.month,
       now.day,
     ).difference(DateTime(day.year, day.month, day.day)).inDays;
-    if (difference == 0) return context.tr('planDateToday');
-    if (difference == 1) return context.tr('planDateYesterday');
-    if (difference == -1) return context.tr('planDateTomorrow');
+    if (difference == 0) return AppLocalizations.of(context).planDateToday;
+    if (difference == 1) return AppLocalizations.of(context).planDateYesterday;
+    if (difference == -1) return AppLocalizations.of(context).planDateTomorrow;
     return PlanDateFormat.monthAbbrBeforeDay.format(day);
   }
 
@@ -71,7 +71,7 @@ class PlanDateScreen extends StatelessWidget {
     if (record == null) {
       return Center(
         child: Text(
-          context.tr('planCollectionMissing'),
+          AppLocalizations.of(context).planCollectionMissing,
           style: DswType.xs13.copyWith(color: color.labelTertiary),
         ),
       );
@@ -108,7 +108,7 @@ class PlanDateScreen extends StatelessWidget {
                 ),
               ),
               Text(
-                context.tr('planRecordCount'),
+                AppLocalizations.of(context).planRecordCount,
                 style: DswType.xxxs11.copyWith(color: color.labelTertiary),
               ),
               const SizedBox(width: DswShape.xs),
@@ -124,7 +124,7 @@ class PlanDateScreen extends StatelessWidget {
               ? Padding(
                   padding: const EdgeInsets.all(DswShape.lg),
                   child: Text(
-                    context.tr('planDateNoObjects'),
+                    AppLocalizations.of(context).planDateNoObjects,
                     style: DswType.xs13.copyWith(color: color.labelTertiary),
                   ),
                 )
@@ -170,7 +170,9 @@ class _DateRecordRow extends StatelessWidget {
             const SizedBox(width: DswShape.sm),
             Expanded(
               child: Text(
-                record.name.isEmpty ? context.tr('planUntitled') : record.name,
+                record.name.isEmpty
+                    ? AppLocalizations.of(context).planUntitled
+                    : record.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: DswType.xs13.copyWith(

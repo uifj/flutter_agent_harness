@@ -30,7 +30,7 @@ import 'package:shadcn_ui/shadcn_ui.dart' show ShadInput, ShadOption;
 import 'package:path/path.dart' as p;
 
 import '../../../host/git.dart';
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/dsw_shape.dart';
 import '../../../theme/dsw_theme.dart';
 import '../../../theme/dsw_typography.dart';
@@ -408,9 +408,9 @@ class _GitTabState extends State<GitTab> {
     } on GitCommandError catch (error) {
       if (mounted) {
         setState(
-          () => _actionError = context.tr('historyLoadError', {
-            'message': error.message,
-          }),
+          () => _actionError = AppLocalizations.of(
+            context,
+          ).historyLoadError(error.message),
         );
       }
     } finally {
@@ -485,18 +485,20 @@ class _GitTabState extends State<GitTab> {
         !widget.workbench.disabledTabs.contains(BuiltinTabType.explorer);
     // Read while this context is certainly good: the strings are used after an
     // await inside the action below.
-    final discardTitle = context.tr('discardChanges');
-    final discardDesc = context.tr('discardDesc', {'path': entry.path});
+    final discardTitle = AppLocalizations.of(context).discardChanges;
+    final discardDesc = AppLocalizations.of(context).discardDesc(entry.path);
     return [
       if (openable != null)
         DswMenuEntry(
           icon: LucideIcons.code,
-          label: context.tr('openEditor'),
+          label: AppLocalizations.of(context).openEditor,
           onTap: () => widget.workbench.openFile(openable),
         ),
       DswMenuEntry(
         icon: staged ? LucideIcons.trash : LucideIcons.git_branch,
-        label: staged ? context.tr('unstage') : context.tr('stage'),
+        label: staged
+            ? AppLocalizations.of(context).unstage
+            : AppLocalizations.of(context).stage,
         onTap: () => _stageEntry(entry, staged),
       ),
       if (!isUntracked(entry))
@@ -513,17 +515,17 @@ class _GitTabState extends State<GitTab> {
       const DswMenuEntry.divider(),
       DswMenuEntry(
         icon: LucideIcons.copy,
-        label: context.tr('copyRelative'),
+        label: AppLocalizations.of(context).copyRelative,
         onTap: () => _copy(entry.path),
       ),
       DswMenuEntry(
         icon: LucideIcons.copy,
-        label: context.tr('copyAbsolute'),
+        label: AppLocalizations.of(context).copyAbsolute,
         onTap: () => _copy(absolute),
       ),
       DswMenuEntry(
         icon: LucideIcons.external_link,
-        label: context.tr('revealInFiles'),
+        label: AppLocalizations.of(context).revealInFiles,
         onTap: () => revealInFilesOrReport(context, absolute),
       ),
       // Two existing verbs in this order: without the first, the second expands
@@ -531,7 +533,7 @@ class _GitTabState extends State<GitTab> {
       if (hasTree)
         DswMenuEntry(
           icon: LucideIcons.folder_tree,
-          label: context.tr('revealInTree'),
+          label: AppLocalizations.of(context).revealInTree,
           onTap: () {
             widget.workbench.openFolder(treeRoot);
             widget.workbench.reveal([absolute]);
@@ -546,30 +548,30 @@ class _GitTabState extends State<GitTab> {
     GitLogEntry entry,
   ) {
     // Read before any await, as in `_fileMenuItems`.
-    final revertTitle = context.tr('revertCommit');
-    final revertDesc = context.tr('revertDesc', {'subject': entry.subject});
-    final cherryPickTitle = context.tr('cherryPickCommit');
-    final cherryPickDesc = context.tr('cherryPickDesc', {
-      'subject': entry.subject,
-    });
+    final revertTitle = AppLocalizations.of(context).revertCommit;
+    final revertDesc = AppLocalizations.of(context).revertDesc(entry.subject);
+    final cherryPickTitle = AppLocalizations.of(context).cherryPickCommit;
+    final cherryPickDesc = AppLocalizations.of(
+      context,
+    ).cherryPickDesc(entry.subject);
     return [
       DswMenuEntry(
-        label: context.tr('viewCommitDiff'),
+        label: AppLocalizations.of(context).viewCommitDiff,
         onTap: () => _openCommitDiff(entry),
       ),
       DswMenuEntry(
         icon: LucideIcons.copy,
-        label: context.tr('copyShortHash'),
+        label: AppLocalizations.of(context).copyShortHash,
         onTap: () => _copy(entry.hash),
       ),
       DswMenuEntry(
         icon: LucideIcons.copy,
-        label: context.tr('copyFullHash'),
+        label: AppLocalizations.of(context).copyFullHash,
         onTap: () => _copy(entry.hashFull),
       ),
       DswMenuEntry(
         icon: LucideIcons.copy,
-        label: context.tr('copySubject'),
+        label: AppLocalizations.of(context).copySubject,
         onTap: () => _copy(entry.subject),
       ),
       const DswMenuEntry.divider(),
@@ -601,7 +603,9 @@ class _GitTabState extends State<GitTab> {
   @override
   Widget build(BuildContext context) {
     if (widget.workbench.workspaceRoot == null) {
-      return _Notice(message: context.tr('noWorkspaceNothingToList'));
+      return _Notice(
+        message: AppLocalizations.of(context).noWorkspaceNothingToList,
+      );
     }
     final status = _status;
     return CustomScrollView(
@@ -610,35 +614,49 @@ class _GitTabState extends State<GitTab> {
         SliverToBoxAdapter(child: _header(context)),
         if (_loading)
           SliverToBoxAdapter(
-            child: _Notice(message: context.tr('loading'), center: true),
+            child: _Notice(
+              message: AppLocalizations.of(context).loading,
+              center: true,
+            ),
           ),
         if (!_loading && _error != null)
           SliverToBoxAdapter(child: _ErrorBox(message: _error!)),
         if (!_loading && _error == null && _repo == null)
           SliverToBoxAdapter(
-            child: _Notice(message: context.tr('gitNotARepo'), center: true),
+            child: _Notice(
+              message: AppLocalizations.of(context).gitNotARepo,
+              center: true,
+            ),
           ),
         if (!_loading && _error == null && status != null && status.isRepo) ...[
           if (status.truncated)
             SliverToBoxAdapter(
-              child: _Notice(message: context.tr('gitTooManyChanges')),
+              child: _Notice(
+                message: AppLocalizations.of(context).gitTooManyChanges,
+              ),
             ),
           ..._section(
-            title: context.tr('stagedCount', {
-              'n': status.entries.where(isStagedEntry).length,
-            }),
+            title: AppLocalizations.of(context).stagedCount(
+              status.entries.where(isStagedEntry).length.toString(),
+            ),
             link: status.entries.any(isStagedEntry)
-                ? (context.tr('unstageAll'), () => _stageAll(true))
+                ? (
+                    AppLocalizations.of(context).unstageAll,
+                    () => _stageAll(true),
+                  )
                 : null,
             entries: status.entries.where(isStagedEntry).toList(),
             staged: true,
           ),
           ..._section(
-            title: context.tr('unstagedCount', {
-              'n': status.entries.where(isUnstagedEntry).length,
-            }),
+            title: AppLocalizations.of(context).unstagedCount(
+              status.entries.where(isUnstagedEntry).length.toString(),
+            ),
             link: status.entries.any(isUnstagedEntry)
-                ? (context.tr('stageAll'), () => _stageAll(false))
+                ? (
+                    AppLocalizations.of(context).stageAll,
+                    () => _stageAll(false),
+                  )
                 : null,
             entries: status.entries.where(isUnstagedEntry).toList(),
             staged: false,
@@ -647,7 +665,7 @@ class _GitTabState extends State<GitTab> {
           if (_actionError != null)
             SliverToBoxAdapter(child: _ErrorBox(message: _actionError!)),
           SliverToBoxAdapter(
-            child: _SectionHeader(title: context.tr('history')),
+            child: _SectionHeader(title: AppLocalizations.of(context).history),
           ),
           SliverList.builder(
             itemCount: _log.length,
@@ -689,7 +707,7 @@ class _GitTabState extends State<GitTab> {
               onSelected: (branch) {
                 if (branch == current) return;
                 _run(
-                  context.tr('branchSwitchFailed'),
+                  AppLocalizations.of(context).branchSwitchFailed,
                   () => _repo!.checkout(branch),
                 );
               },
@@ -698,7 +716,7 @@ class _GitTabState extends State<GitTab> {
           const SizedBox(width: 8),
           DswIconButton(
             icon: LucideIcons.refresh_cw,
-            tooltip: context.tr('refresh'),
+            tooltip: AppLocalizations.of(context).refresh,
             onTap: _busy ? null : _refresh,
           ),
         ],
@@ -717,7 +735,9 @@ class _GitTabState extends State<GitTab> {
         child: _SectionHeader(title: title, link: link),
       ),
       if (entries.isEmpty)
-        SliverToBoxAdapter(child: _Notice(message: context.tr('noChanges')))
+        SliverToBoxAdapter(
+          child: _Notice(message: AppLocalizations.of(context).noChanges),
+        )
       else
         SliverList.builder(
           itemCount: entries.length,
@@ -762,7 +782,7 @@ class _GitTabState extends State<GitTab> {
                 enabled: !_busy,
                 style: DswType.xs13.copyWith(color: color.labelPrimary),
                 placeholder: Text(
-                  context.tr('commitPlaceholder'),
+                  AppLocalizations.of(context).commitPlaceholder,
                   // The hint is the one thing in this box that may be cut: the
                   // message the user types is what has to fit. Left to itself
                   // at 1.8x it wrapped to a second line this field then
@@ -777,7 +797,7 @@ class _GitTabState extends State<GitTab> {
           ),
           const SizedBox(width: 6),
           _CommitButton(
-            label: context.tr('commit'),
+            label: AppLocalizations.of(context).commit,
             enabled: canCommit,
             onTap: _commit,
           ),
@@ -929,7 +949,9 @@ class _FileRow extends StatelessWidget {
             const SizedBox(width: 6),
             DswIconButton(
               icon: staged ? LucideIcons.trash : LucideIcons.git_branch,
-              tooltip: staged ? context.tr('unstage') : context.tr('stage'),
+              tooltip: staged
+                  ? AppLocalizations.of(context).unstage
+                  : AppLocalizations.of(context).stage,
               onTap: busy ? null : onStage,
             ),
           ],
@@ -1172,7 +1194,9 @@ class _LoadMoreState extends State<_LoadMore> {
           child: Opacity(
             opacity: enabled ? 1 : 0.5,
             child: Text(
-              widget.loading ? context.tr('loading') : context.tr('loadMore'),
+              widget.loading
+                  ? AppLocalizations.of(context).loading
+                  : AppLocalizations.of(context).loadMore,
               style: DswType.xxs12.copyWith(
                 color: hovered && enabled
                     ? color.labelPrimary

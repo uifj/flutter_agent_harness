@@ -9,6 +9,7 @@
 // trapped nor be locked out. The trigger is pinned to the bottom-left so the
 // menu, which opens upward, is on-screen.
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/model/app_settings.dart' as settings;
 import 'package:planstar/theme/dsw_theme.dart';
 import 'package:planstar/ui/settings/widgets/settings_quick_menu.dart';
@@ -31,6 +32,10 @@ void main() {
     OverlayEntry? entry;
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         builder: (context, child) => amplifiedAppBuilder(step, child),
         theme: dswThemeData(Brightness.light),
         home: Scaffold(

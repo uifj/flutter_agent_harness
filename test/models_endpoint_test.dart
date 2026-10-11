@@ -8,6 +8,7 @@
 
 import 'dart:io';
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/genkit/models_endpoint.dart';
 import 'package:planstar/state/quick_phrase_store.dart';
 import 'package:planstar/state/instruction_card_store.dart';
@@ -102,6 +103,10 @@ void main() {
       double step = 1.0,
     }) => tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         theme: dswThemeData(Brightness.light),
         builder: (context, child) => ShadTheme(
           data: dswShadTheme(Theme.of(context).brightness),
@@ -246,6 +251,10 @@ void main() {
     testWidgets('no fetcher wired, no probe row at all', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+
           theme: dswThemeData(Brightness.light),
           builder: (context, child) => ShadTheme(
             data: dswShadTheme(Theme.of(context).brightness),

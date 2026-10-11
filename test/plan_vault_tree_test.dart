@@ -7,6 +7,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/theme/dsw_shad_bridge.dart' show dswShadTheme;
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadTheme;
 import 'package:planstar/theme/dsw_theme.dart';
@@ -37,6 +38,10 @@ void main() {
   Future<void> pump(WidgetTester tester, {String? selected}) async {
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         builder: (context, child) => ShadTheme(
           data: dswShadTheme(Theme.of(context).brightness),
           child: child!,
@@ -80,6 +85,10 @@ void main() {
     final opened = <String>[];
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         builder: (context, child) => ShadTheme(
           data: dswShadTheme(Theme.of(context).brightness),
           child: child!,
@@ -112,6 +121,10 @@ void main() {
     final opened = <String>[];
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         builder: (context, child) => ShadTheme(
           data: dswShadTheme(Theme.of(context).brightness),
           child: child!,

@@ -10,6 +10,7 @@
 // not a taste call: content that cannot fit is cut with no error (ADR-0017 S3's
 // measurement, ADR-0013-era narrow-column law from `composer_test.dart`).
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/ui/primitives/code_block.dart';
 import 'package:planstar/ui/primitives/copy_button.dart';
 import 'package:planstar/ui/primitives/diff_block.dart';
@@ -44,6 +45,10 @@ void main() {
   }) async {
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         builder: (context, child) => amplifiedAppBuilder(scale, child),
         theme: dswThemeData(Brightness.light),
         home: Scaffold(

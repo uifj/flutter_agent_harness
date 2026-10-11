@@ -8,6 +8,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/model/conversation.dart';
 import 'package:planstar/model/turn_event.dart';
 import 'package:planstar/state/conversation_controller.dart';
@@ -86,6 +87,10 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         builder: (context, child) => amplifiedAppBuilder(scale ?? 1.0, child),
         theme: dswThemeData(Brightness.light),
         home: Scaffold(

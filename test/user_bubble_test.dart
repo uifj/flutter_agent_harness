@@ -11,6 +11,7 @@
 // (`ConversationRowView.tsx:1253-1258`): a 12px corner with a near-square
 // top-right that points at the edge the message comes from, plus a hairline.
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/model/conversation.dart';
 import 'package:planstar/theme/dsw_alias.dart';
 import 'package:planstar/theme/dsw_shape.dart';
@@ -26,6 +27,10 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         theme: dswThemeData(Brightness.light),
         home: Scaffold(
           body: Center(

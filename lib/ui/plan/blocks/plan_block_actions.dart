@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter/services.dart';
 
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../model/plan_block.dart';
 import '../../../model/plan_markdown_codec.dart';
 import '../../../state/plan_block_document.dart';
@@ -65,7 +65,7 @@ List<DswMenuEntry> planBlockActions(
   PlanBlock block,
 ) => [
   DswMenuEntry(
-    label: context.tr('planActionCopy'),
+    label: AppLocalizations.of(context).planActionCopy,
     icon: LucideIcons.copy,
     onTap: () {
       PlanBlockClipboard.copy(block);
@@ -73,17 +73,17 @@ List<DswMenuEntry> planBlockActions(
     },
   ),
   DswMenuEntry(
-    label: context.tr('planActionPaste'),
+    label: AppLocalizations.of(context).planActionPaste,
     icon: LucideIcons.clipboard_paste,
     onTap: () => pasteFromClipboards(document, block.id),
   ),
   DswMenuEntry(
-    label: context.tr('planActionDuplicate'),
+    label: AppLocalizations.of(context).planActionDuplicate,
     icon: LucideIcons.copy_plus,
     onTap: () => document.duplicate(block.id),
   ),
   DswMenuEntry(
-    label: context.tr('planActionDelete'),
+    label: AppLocalizations.of(context).planActionDelete,
     icon: LucideIcons.trash,
     destructive: true,
     onTap: () => document.delete(block.id),
@@ -99,37 +99,37 @@ List<DswMenuEntry> planTableRowActions(
   String rowId,
 ) => [
   DswMenuEntry(
-    label: context.tr('planTableInsertAbove'),
+    label: AppLocalizations.of(context).planTableInsertAbove,
     icon: LucideIcons.arrow_up,
     onTap: () => doc.tableInsertRow(rowId, below: false),
   ),
   DswMenuEntry(
-    label: context.tr('planTableInsertBelow'),
+    label: AppLocalizations.of(context).planTableInsertBelow,
     icon: LucideIcons.arrow_down,
     onTap: () => doc.tableInsertRow(rowId, below: true),
   ),
   DswMenuEntry(
-    label: context.tr('planTableMoveUp'),
+    label: AppLocalizations.of(context).planTableMoveUp,
     icon: LucideIcons.chevron_up,
     onTap: () => doc.tableMoveRow(rowId, up: true),
   ),
   DswMenuEntry(
-    label: context.tr('planTableMoveDown'),
+    label: AppLocalizations.of(context).planTableMoveDown,
     icon: LucideIcons.chevron_down,
     onTap: () => doc.tableMoveRow(rowId, up: false),
   ),
   DswMenuEntry(
-    label: context.tr('planTableDuplicate'),
+    label: AppLocalizations.of(context).planTableDuplicate,
     icon: LucideIcons.copy,
     onTap: () => doc.duplicate(rowId),
   ),
   DswMenuEntry(
-    label: context.tr('planTableClear'),
+    label: AppLocalizations.of(context).planTableClear,
     icon: LucideIcons.eraser,
     onTap: () => doc.tableClearRow(rowId),
   ),
   DswMenuEntry(
-    label: context.tr('planTableDelete'),
+    label: AppLocalizations.of(context).planTableDelete,
     icon: LucideIcons.trash,
     destructive: true,
     onTap: () => doc.tableDeleteRow(rowId),
@@ -147,18 +147,18 @@ List<DswMenuEntry> planTableColumnActions(
   int cellIndex,
 ) => [
   DswMenuEntry(
-    label: context.tr('planTableInsertLeft'),
+    label: AppLocalizations.of(context).planTableInsertLeft,
     icon: LucideIcons.arrow_left,
     onTap: () => doc.tableInsertColumn(rowId, left: true),
   ),
   DswMenuEntry(
-    label: context.tr('planTableInsertRight'),
+    label: AppLocalizations.of(context).planTableInsertRight,
     icon: LucideIcons.arrow_right,
     onTap: () => doc.tableInsertColumn(rowId, left: false),
   ),
   if (doc.tableColumnCount(rowId) > 1)
     DswMenuEntry(
-      label: context.tr('planTableDeleteColumn'),
+      label: AppLocalizations.of(context).planTableDeleteColumn,
       icon: LucideIcons.trash,
       destructive: true,
       onTap: () => doc.tableDeleteColumn(rowId, cellIndex),

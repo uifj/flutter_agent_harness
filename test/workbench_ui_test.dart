@@ -16,6 +16,7 @@
 
 import 'dart:io';
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/host/terminal_manager.dart';
 import 'package:planstar/model/workbench_prefs.dart';
 import 'package:planstar/model/fs_revision.dart';
@@ -90,6 +91,10 @@ void main() {
     GitStatusStore? status,
   ]) => tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+
       // Above the Navigator, like the app's own composition: this walk opens
       // menus and a drag feedback, and a step set under the Navigator leaves
       // every overlay route at 1.0.
@@ -614,6 +619,10 @@ void main() {
     /// `main.dart` mounts. Each renders its own tree of the same layout.
     Future<void> pumpBoth(WidgetTester tester) => tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         theme: dswThemeData(Brightness.light),
         home: Scaffold(
           body: Column(

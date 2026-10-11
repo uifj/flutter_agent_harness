@@ -7,6 +7,7 @@
 // whole when the system amplifies text — the last is what the bottom group
 // measures, over a command, a long path, and a call with no subject at all.
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/model/conversation.dart';
 import 'package:planstar/theme/dsw_theme.dart';
 import 'package:planstar/ui/conversation/approval_panel.dart';
@@ -38,6 +39,10 @@ void main() {
     void Function(bool approved, {bool remember})? onRespond,
   }) => tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+
       builder: (context, child) => amplifiedAppBuilder(step, child),
       theme: dswThemeData(Brightness.light),
       home: Scaffold(
@@ -137,6 +142,10 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         theme: dswThemeData(Brightness.light),
         home: Scaffold(
           body: ApprovalPanel(

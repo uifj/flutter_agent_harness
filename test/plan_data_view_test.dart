@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/model/plan_dataview.dart';
 import 'package:planstar/state/app_database.dart';
 import 'package:planstar/model/plan_mock_content.dart';
@@ -61,6 +62,10 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         theme: dswThemeData(Brightness.light),
         builder: (context, child) => ShadTheme(
           data: dswShadTheme(Theme.of(context).brightness),

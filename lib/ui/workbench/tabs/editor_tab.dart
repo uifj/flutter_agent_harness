@@ -43,7 +43,9 @@ import 'package:re_highlight/styles/atom-one-dark.dart';
 import 'package:re_highlight/styles/atom-one-light.dart';
 
 import '../../../../theme/dsw_shape.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../l10n/locales.dart';
+import '../../../l10n/tr_key.dart';
 import '../../../model/workspace.dart';
 import '../../../theme/dsw_alias.dart';
 import '../../../theme/dsw_theme.dart';
@@ -147,12 +149,16 @@ class _EditorTabState extends State<EditorTab> {
   /// initState, where registering an inherited dependency is not allowed — so
   /// this reads the locale scope without depending on it. English, as ever,
   /// when no scope is mounted.
-  String _tr(String key, [Map<String, Object>? params]) => translate(
-    context.getInheritedWidgetOfExactType<AppLocaleScope>()?.locale ??
-        AppLocaleId.en,
-    key,
-    params,
-  );
+  String _tr(String key, [Map<String, Object>? params]) {
+    final locale =
+        context.getInheritedWidgetOfExactType<AppLocaleScope>()?.locale ??
+        AppLocaleId.en;
+    return trKey(
+      lookupAppLocalizations(Locale(locale == AppLocaleId.zh ? 'zh' : 'en')),
+      key,
+      params,
+    );
+  }
 
   /// Whether this tab's file is markdown, and so can be previewed.
   bool get _isMarkdown {
@@ -308,7 +314,7 @@ class _EditorTabState extends State<EditorTab> {
 
   void _report(String message) => showFeedback(
     context,
-    context.tr('couldNotSave', {'message': message}),
+    AppLocalizations.of(context).couldNotSave(message),
     destructive: true,
   );
 
@@ -351,7 +357,7 @@ class _EditorTabState extends State<EditorTab> {
           if (canPreview) ...[
             _BarIcon(
               icon: LucideIcons.eye,
-              tooltip: context.tr('preview'),
+              tooltip: AppLocalizations.of(context).preview,
               active: _preview,
               onTap: () => setState(() => _preview = !_preview),
             ),
@@ -361,7 +367,7 @@ class _EditorTabState extends State<EditorTab> {
           if (content is _Text && !_preview) ...[
             _BarIcon(
               icon: LucideIcons.text_wrap,
-              tooltip: context.tr('wrapLines'),
+              tooltip: AppLocalizations.of(context).wrapLines,
               active: _wrap,
               onTap: () => setState(() => _wrap = !_wrap),
             ),
@@ -369,7 +375,7 @@ class _EditorTabState extends State<EditorTab> {
           ],
           _BarIcon(
             icon: LucideIcons.refresh_cw,
-            tooltip: context.tr('reload'),
+            tooltip: AppLocalizations.of(context).reload,
             onTap: _refresh,
           ),
           const SizedBox(width: 6),
@@ -385,7 +391,7 @@ class _EditorTabState extends State<EditorTab> {
           if (content is _Text && readOnly == null) ...[
             if (_dirty)
               Text(
-                context.tr('unsaved'),
+                AppLocalizations.of(context).unsaved,
                 style: DswType.xxxs11.copyWith(color: color.stateWarnPrimary),
               ),
             const SizedBox(width: 6),
@@ -646,11 +652,11 @@ class _SaveButton extends StatelessWidget {
     final color = context.dsw;
     final tint = enabled ? color.labelSecondary : color.labelTertiary;
     return Tooltip(
-      message: context.tr('save'),
+      message: AppLocalizations.of(context).save,
       child: DswHoverTap(
         onTap: enabled ? onSave : null,
         enabled: enabled,
-        semanticLabel: context.tr('save'),
+        semanticLabel: AppLocalizations.of(context).save,
         excludeSemantics: true,
         builder: (context, _, _) => SizedBox.square(
           dimension: 20,

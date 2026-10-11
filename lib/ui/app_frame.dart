@@ -32,7 +32,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:path/path.dart' as p;
 
-import '../l10n/locales.dart';
+import '../l10n/app_localizations.dart';
 import '../state/layout_controller.dart';
 import '../state/session_index.dart';
 import '../theme/dsw_alias.dart';
@@ -651,7 +651,7 @@ class _CenterToggleStrip extends StatelessWidget {
     final menu = active == null || sessions == null
         ? null
         : DswMenu(
-            label: context.tr('conversationActions'),
+            label: AppLocalizations.of(context).conversationActions,
             minWidth: 220,
             // The trigger is visuals only: `DswMenu` supplies the tap, the focus
             // ring and the semantics, and `label` is both the tooltip and the
@@ -675,7 +675,7 @@ class _CenterToggleStrip extends StatelessWidget {
         if (root != null)
           DswHoverTap(
             onTap: onPickWorkspace,
-            semanticLabel: context.tr('workspaceStatusBar'),
+            semanticLabel: AppLocalizations.of(context).workspaceStatusBar,
             builder: (context, hovered, _) => Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
@@ -751,39 +751,39 @@ class _ToggleCluster extends StatelessWidget {
     children: [
       if (onOpenLink != null) ...[
         DswMenu(
-          label: context.tr('appName'),
+          label: AppLocalizations.of(context).appName,
           minWidth: 200,
           items: (menuContext) => [
             DswMenuEntry(
               icon: LucideIcons.book_open,
-              label: menuContext.tr('helpDocs'),
+              label: AppLocalizations.of(menuContext).helpDocs,
               onTap: () => onOpenLink!(AppMeta.docsUrl),
             ),
             DswMenuEntry(
               icon: LucideIcons.users,
-              label: menuContext.tr('helpCommunity'),
+              label: AppLocalizations.of(menuContext).helpCommunity,
               onTap: () => onOpenLink!(AppMeta.communityUrl),
             ),
             DswMenuEntry(
               icon: LucideIcons.bug,
-              label: menuContext.tr('helpReportIssue'),
+              label: AppLocalizations.of(menuContext).helpReportIssue,
               onTap: () => onOpenLink!(AppMeta.issuesUrl),
             ),
             DswMenuEntry(
               icon: LucideIcons.lightbulb,
-              label: menuContext.tr('helpFeatureRequest'),
+              label: AppLocalizations.of(menuContext).helpFeatureRequest,
               onTap: () => onOpenLink!(AppMeta.featureRequestUrl),
             ),
             if (onCheckUpdate != null)
               DswMenuEntry(
                 icon: LucideIcons.refresh_cw,
-                label: menuContext.tr('helpReleases'),
+                label: AppLocalizations.of(menuContext).helpReleases,
                 onTap: onCheckUpdate,
               ),
             if (onAbout != null)
               DswMenuEntry(
                 icon: LucideIcons.info,
-                label: menuContext.tr('helpAbout'),
+                label: AppLocalizations.of(menuContext).helpAbout,
                 onTap: onAbout,
               ),
           ],
@@ -810,8 +810,8 @@ class _ToggleCluster extends StatelessWidget {
           // Through the dictionary: these four sentences were literals here, so
           // a Chinese interface still said them in English (ADR-0008).
           tooltip: layout.bottom == 0
-              ? context.tr('openBottomPanel')
-              : context.tr('collapseBottomPanel'),
+              ? AppLocalizations.of(context).openBottomPanel
+              : AppLocalizations.of(context).collapseBottomPanel,
           onTap: layout.toggleBottom,
           size: 32 * step,
           iconSize: DswShape.iconLg,
@@ -819,8 +819,8 @@ class _ToggleCluster extends StatelessWidget {
       DswIconButton(
         icon: LucideIcons.panel_right,
         tooltip: layout.workbench == 0
-            ? context.tr('openWorkbenchPanel')
-            : context.tr('collapseWorkbenchPanel'),
+            ? AppLocalizations.of(context).openWorkbenchPanel
+            : AppLocalizations.of(context).collapseWorkbenchPanel,
         onTap: layout.toggleWorkbench,
         size: 32 * step,
         iconSize: DswShape.iconLg,

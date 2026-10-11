@@ -26,7 +26,7 @@ import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadInput;
 import 'package:flutter_lucide/flutter_lucide.dart';
 
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../state/side_chat_controller.dart';
 import '../../../theme/dsw_shad_bridge.dart';
 import '../../../theme/dsw_shape.dart';
@@ -169,14 +169,14 @@ class _SideChatTabState extends State<SideChatTab> {
         children: [
           Expanded(
             child: Text(
-              context.tr('sidechat'),
+              AppLocalizations.of(context).sidechat,
               style: DswType.s14.copyWith(color: color.labelSecondary),
               overflow: TextOverflow.ellipsis,
             ),
           ),
           _HeaderButton(
             icon: LucideIcons.message_square_plus,
-            tooltip: context.tr('sideChatNew'),
+            tooltip: AppLocalizations.of(context).sideChatNew,
             onTap: () => _chat?.reset(),
           ),
         ],
@@ -202,7 +202,7 @@ class _SideChatTabState extends State<SideChatTab> {
           ),
           const SizedBox(width: 6),
           Text(
-            context.tr('sideChatThinking'),
+            AppLocalizations.of(context).sideChatThinking,
             style: DswType.xxxs11.copyWith(color: color.labelTertiary),
           ),
         ],
@@ -233,7 +233,9 @@ class _SideChatTabState extends State<SideChatTab> {
                 padding: const EdgeInsets.symmetric(
                   vertical: 4,
                 ), // 8 overflows the 33 the toolbar gives
-                placeholder: dswInputHint(context.tr('sideChatPlaceholder')),
+                placeholder: dswInputHint(
+                  AppLocalizations.of(context).sideChatPlaceholder,
+                ),
                 placeholderStyle: DswType.xs13.copyWith(
                   color: color.labelTertiary,
                 ),
@@ -312,15 +314,17 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              ready ? context.tr('sideChatEmpty') : context.tr('settings'),
+              ready
+                  ? AppLocalizations.of(context).sideChatEmpty
+                  : AppLocalizations.of(context).settings,
               textAlign: TextAlign.center,
               style: DswType.xxs12.copyWith(color: color.labelTertiary),
             ),
             const SizedBox(height: 2),
             Text(
               ready
-                  ? context.tr('sideChatEmptyDesc')
-                  : context.tr('sideChatNoModel'),
+                  ? AppLocalizations.of(context).sideChatEmptyDesc
+                  : AppLocalizations.of(context).sideChatNoModel,
               textAlign: TextAlign.center,
               style: DswType.xxxs11.copyWith(color: color.labelDimmed),
             ),
@@ -348,7 +352,7 @@ class _SendButtonState extends State<_SendButton> {
     final color = context.dsw;
     return DswHoverTap(
       onTap: widget.onTap,
-      semanticLabel: context.tr('send'),
+      semanticLabel: AppLocalizations.of(context).send,
       excludeSemantics: true,
       builder: (context, hovered, _) => Container(
         width: 26,

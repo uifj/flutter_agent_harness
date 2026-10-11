@@ -13,6 +13,7 @@
 // no strip loses the toast without crashing — the behaviour the previews rely
 // on.
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/theme/dsw_shad_bridge.dart';
 import 'package:planstar/theme/dsw_theme.dart';
 import 'package:planstar/ui/primitives/feedback.dart';
@@ -31,6 +32,10 @@ void main() {
     double step = 1.0,
   }) => tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+
       // The same seam `main.dart` uses: the step composes ABOVE the Navigator,
       // and the strip's host sits inside the bridged theme so it takes
       // `DswAlias` colours.

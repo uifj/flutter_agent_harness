@@ -19,6 +19,7 @@
 
 import 'dart:async';
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/model/conversation.dart';
 import 'package:planstar/model/turn_event.dart';
 import 'package:planstar/state/conversation_controller.dart';
@@ -65,6 +66,10 @@ void main() {
     addTearDown(tester.view.reset);
     return tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         // Both steps are `copyWith` on what is already there, and the
         // disableAnimations layer sits BELOW the ruler's own `MediaQuery`: a
         // fresh `MediaQueryData(disableAnimations: …)` under `home:` replaces the
@@ -328,6 +333,10 @@ void main() {
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+
           theme: dswThemeData(Brightness.light),
           home: Scaffold(
             body: ConversationRoot(

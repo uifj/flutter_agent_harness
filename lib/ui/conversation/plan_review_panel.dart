@@ -12,7 +12,7 @@
 
 import 'package:flutter/material.dart';
 
-import '../../l10n/locales.dart';
+import '../../l10n/app_localizations.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_theme.dart';
@@ -119,7 +119,7 @@ class _PlanReviewPanelState extends State<PlanReviewPanel> {
         ),
         const SizedBox(width: 8),
         Text(
-          context.tr('planReviewHeader'),
+          AppLocalizations.of(context).planReviewHeader,
           style: DswType.xs13.copyWith(
             height: 18 / 13,
             color: color.stateBusinessPrimary,
@@ -146,20 +146,20 @@ class _PlanReviewPanelState extends State<PlanReviewPanel> {
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         CapsuleButton(
-          label: context.tr('planDiscuss'),
+          label: AppLocalizations.of(context).planDiscuss,
           enabled: !_acted,
           onTap: () => _act(widget.onDiscuss),
         ),
         const SizedBox(width: 8),
         CapsuleButton(
-          label: context.tr('planDecline'),
+          label: AppLocalizations.of(context).planDecline,
           enabled: !_acted,
           danger: true,
           onTap: () => _act(widget.onDecline),
         ),
         const SizedBox(width: 8),
         CapsuleButton(
-          label: context.tr('planApprove'),
+          label: AppLocalizations.of(context).planApprove,
           enabled: !_acted,
           variant: CapsuleVariant.primary,
           onTap: () => _act(widget.onApprove),

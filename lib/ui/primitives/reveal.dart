@@ -13,7 +13,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../host/reveal.dart';
-import '../../l10n/locales.dart';
+import '../../l10n/app_localizations.dart';
 import 'feedback.dart';
 
 /// Reveals [path] — a file or a folder — in the operating system's file
@@ -21,5 +21,9 @@ import 'feedback.dart';
 Future<void> revealInFilesOrReport(BuildContext context, String path) async {
   if (await revealInFileManager(path)) return;
   if (!context.mounted) return;
-  showFeedback(context, context.tr('revealFailed'), destructive: true);
+  showFeedback(
+    context,
+    AppLocalizations.of(context).revealFailed,
+    destructive: true,
+  );
 }

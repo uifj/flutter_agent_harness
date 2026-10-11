@@ -8,7 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadInput;
 
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/tr_key.dart';
 import '../../../model/plan_all_content.dart';
 import '../../../model/plan_struct.dart';
 import '../../../state/plan_object_store.dart';
@@ -122,7 +123,7 @@ class _PlanAllContentScreenState extends State<PlanAllContentScreen> {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text(
-                context.tr('planAllContentTitle'),
+                AppLocalizations.of(context).planAllContentTitle,
                 style: DswType.l20.copyWith(color: color.labelPrimary),
               ),
               SizedBox(
@@ -131,7 +132,7 @@ class _PlanAllContentScreenState extends State<PlanAllContentScreen> {
                   context,
                   ShadInput(
                     placeholder: dswInputHint(
-                      context.tr('planSearchInDoc'),
+                      AppLocalizations.of(context).planSearchInDoc,
                       style: DswType.xs13.copyWith(color: color.labelTertiary),
                     ),
                     style: DswType.xs13,
@@ -141,9 +142,9 @@ class _PlanAllContentScreenState extends State<PlanAllContentScreen> {
                 ),
               ),
               _ModeChip(
-                label: context.tr(
-                  _state.unlinked ? 'planModeUnlinked' : 'planModeAllContent',
-                ),
+                label: _state.unlinked
+                    ? AppLocalizations.of(context).planModeUnlinked
+                    : AppLocalizations.of(context).planModeAllContent,
                 onTap: () {
                   setState(() {
                     _state = _state.copyWith(unlinked: !_state.unlinked);
@@ -152,9 +153,9 @@ class _PlanAllContentScreenState extends State<PlanAllContentScreen> {
                 },
               ),
               _ModeChip(
-                label: context.tr(
-                  _state.ascending ? 'planSortAsc' : 'planSortDesc',
-                ),
+                label: _state.ascending
+                    ? AppLocalizations.of(context).planSortAsc
+                    : AppLocalizations.of(context).planSortDesc,
                 onTap: () {
                   setState(() {
                     _state = _state.copyWith(ascending: !_state.ascending);
@@ -169,7 +170,7 @@ class _PlanAllContentScreenState extends State<PlanAllContentScreen> {
                 (PlanAllContentSort.lastUsed, 'planSortLastUsed'),
               ])
                 _ModeChip(
-                  label: context.tr(label),
+                  label: trKey(AppLocalizations.of(context), label),
                   selected: _state.sort == sort,
                   onTap: () {
                     setState(() => _state = _state.copyWith(sort: sort));
@@ -188,13 +189,21 @@ class _PlanAllContentScreenState extends State<PlanAllContentScreen> {
               for (final tab in PlanAllContentTab.values)
                 _ModeChip(
                   label: switch (tab) {
-                    PlanAllContentTab.pages => context.tr('planTabPages'),
-                    PlanAllContentTab.lists => context.tr('planTabLists'),
-                    PlanAllContentTab.media => context.tr('planTabMedia'),
-                    PlanAllContentTab.bookmarks => context.tr(
-                      'planTabBookmarks',
-                    ),
-                    PlanAllContentTab.files => context.tr('planTabFiles'),
+                    PlanAllContentTab.pages => AppLocalizations.of(
+                      context,
+                    ).planTabPages,
+                    PlanAllContentTab.lists => AppLocalizations.of(
+                      context,
+                    ).planTabLists,
+                    PlanAllContentTab.media => AppLocalizations.of(
+                      context,
+                    ).planTabMedia,
+                    PlanAllContentTab.bookmarks => AppLocalizations.of(
+                      context,
+                    ).planTabBookmarks,
+                    PlanAllContentTab.files => AppLocalizations.of(
+                      context,
+                    ).planTabFiles,
                   },
                   selected: _state.tab == tab,
                   onTap: () {
@@ -210,7 +219,7 @@ class _PlanAllContentScreenState extends State<PlanAllContentScreen> {
               ? Padding(
                   padding: const EdgeInsets.all(DswShape.lg),
                   child: Text(
-                    context.tr('planAllContentEmpty'),
+                    AppLocalizations.of(context).planAllContentEmpty,
                     style: DswType.xs13.copyWith(color: color.labelTertiary),
                   ),
                 )
@@ -224,7 +233,10 @@ class _PlanAllContentScreenState extends State<PlanAllContentScreen> {
                           bottom: DswShape.xs,
                         ),
                         child: Text(
-                          context.tr(planAllContentGroupLabelCode(entry.key)),
+                          trKey(
+                            AppLocalizations.of(context),
+                            planAllContentGroupLabelCode(entry.key),
+                          ),
                           style: DswType.xxsStrong12.copyWith(
                             color: color.labelTertiary,
                           ),
@@ -234,7 +246,7 @@ class _PlanAllContentScreenState extends State<PlanAllContentScreen> {
                         _RecordRow(
                           name:
                               record.text(PlanRelationKeys.name) ??
-                              context.tr('planUntitled'),
+                              AppLocalizations.of(context).planUntitled,
                           typeKey: record.typeKey,
                           onTap: () {},
                         ),

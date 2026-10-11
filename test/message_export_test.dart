@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart' show kSecondaryButton;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/model/conversation.dart';
 import 'package:planstar/model/context_compression.dart';
 import 'package:planstar/theme/dsw_shad_bridge.dart';
@@ -25,6 +26,10 @@ void main() {
   Future<void> pumpMessage(WidgetTester tester, ConversationNode node) =>
       tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+
           builder: (context, child) =>
               ShadTheme(data: dswShadTheme(Brightness.light), child: child!),
           theme: dswThemeData(Brightness.light),

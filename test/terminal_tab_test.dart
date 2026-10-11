@@ -9,6 +9,7 @@
 
 import 'dart:io';
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/host/terminal_manager.dart';
 import 'package:planstar/model/sidebar_tab.dart';
 import 'package:planstar/model/split_node.dart';
@@ -63,6 +64,10 @@ void main() {
     WorkbenchController? withWorkbench,
   ]) => tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+
       theme: dswThemeData(Brightness.light),
       home: Scaffold(
         body: TerminalHost(
@@ -86,6 +91,10 @@ void main() {
     WorkbenchController? withWorkbench,
   ]) => tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+
       theme: dswThemeData(Brightness.light),
       home: Scaffold(
         body: SizedBox(

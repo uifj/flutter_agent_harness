@@ -14,7 +14,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadButton, ShadInput;
 
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/tr_key.dart';
 import '../../../model/plan_dataview.dart';
 import '../../../model/plan_filter_engine.dart';
 import '../../../model/plan_object_type.dart';
@@ -191,7 +192,7 @@ class PlanSortSheet extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        _SectionTitle(text: context.tr(_label)),
+        _SectionTitle(text: trKey(AppLocalizations.of(context), _label)),
         for (final sort in viewer.sorts)
           _SortRow(
             key: ValueKey('sort-${sort.relationKey}'),
@@ -220,7 +221,7 @@ class PlanSortSheet extends StatelessWidget {
                 if (other.relationKey != sort.relationKey) other,
             ]),
           ),
-        _SectionTitle(text: context.tr('planSortAdd')),
+        _SectionTitle(text: AppLocalizations.of(context).planSortAdd),
         _Rows(
           rows: [
             for (final relation in relations)
@@ -260,7 +261,7 @@ class _SortRow extends StatelessWidget {
       children: [
         Expanded(
           child: DswSheetPopover(
-            label: context.tr('planSortDirection'),
+            label: AppLocalizations.of(context).planSortDirection,
             minWidth: 180,
             trigger: (context) => SizedBox(
               height:
@@ -311,7 +312,7 @@ class _SortRow extends StatelessWidget {
           ),
         ),
         DswSheetPopover(
-          label: context.tr('planSortEmpty'),
+          label: AppLocalizations.of(context).planSortEmpty,
           minWidth: 160,
           trigger: (context) => Icon(
             LucideIcons.sliders_horizontal,
@@ -334,7 +335,7 @@ class _SortRow extends StatelessWidget {
         ),
         DswIconButton(
           icon: LucideIcons.x,
-          tooltip: context.tr('planRemove'),
+          tooltip: AppLocalizations.of(context).planRemove,
           onTap: onRemove,
           size: DswShape.controlMd,
           iconSize: DswShape.iconTiny,
@@ -362,24 +363,36 @@ class PlanFilterSheet extends StatelessWidget {
     BuildContext context,
     PlanFilterCondition condition,
   ) => switch (condition) {
-    PlanFilterCondition.equal => context.tr('planCondEqual'),
-    PlanFilterCondition.notEqual => context.tr('planCondNotEqual'),
-    PlanFilterCondition.greater => context.tr('planCondGreater'),
-    PlanFilterCondition.greaterOrEqual => context.tr('planCondGreaterOrEqual'),
-    PlanFilterCondition.less => context.tr('planCondLess'),
-    PlanFilterCondition.lessOrEqual => context.tr('planCondLessOrEqual'),
-    PlanFilterCondition.like => context.tr('planCondLike'),
-    PlanFilterCondition.notLike => context.tr('planCondNotLike'),
-    PlanFilterCondition.inSet => context.tr('planCondIn'),
-    PlanFilterCondition.notIn => context.tr('planCondNotIn'),
-    PlanFilterCondition.empty => context.tr('planCondEmpty'),
-    PlanFilterCondition.notEmpty => context.tr('planCondNotEmpty'),
-    PlanFilterCondition.allIn => context.tr('planCondAllIn'),
-    PlanFilterCondition.notAllIn => context.tr('planCondNotAllIn'),
-    PlanFilterCondition.none => context.tr('planCondNone'),
-    PlanFilterCondition.exactIn => context.tr('planCondExactIn'),
-    PlanFilterCondition.notExactIn => context.tr('planCondNotExactIn'),
-    PlanFilterCondition.exists => context.tr('planCondExists'),
+    PlanFilterCondition.equal => AppLocalizations.of(context).planCondEqual,
+    PlanFilterCondition.notEqual => AppLocalizations.of(
+      context,
+    ).planCondNotEqual,
+    PlanFilterCondition.greater => AppLocalizations.of(context).planCondGreater,
+    PlanFilterCondition.greaterOrEqual => AppLocalizations.of(
+      context,
+    ).planCondGreaterOrEqual,
+    PlanFilterCondition.less => AppLocalizations.of(context).planCondLess,
+    PlanFilterCondition.lessOrEqual => AppLocalizations.of(
+      context,
+    ).planCondLessOrEqual,
+    PlanFilterCondition.like => AppLocalizations.of(context).planCondLike,
+    PlanFilterCondition.notLike => AppLocalizations.of(context).planCondNotLike,
+    PlanFilterCondition.inSet => AppLocalizations.of(context).planCondIn,
+    PlanFilterCondition.notIn => AppLocalizations.of(context).planCondNotIn,
+    PlanFilterCondition.empty => AppLocalizations.of(context).planCondEmpty,
+    PlanFilterCondition.notEmpty => AppLocalizations.of(
+      context,
+    ).planCondNotEmpty,
+    PlanFilterCondition.allIn => AppLocalizations.of(context).planCondAllIn,
+    PlanFilterCondition.notAllIn => AppLocalizations.of(
+      context,
+    ).planCondNotAllIn,
+    PlanFilterCondition.none => AppLocalizations.of(context).planCondNone,
+    PlanFilterCondition.exactIn => AppLocalizations.of(context).planCondExactIn,
+    PlanFilterCondition.notExactIn => AppLocalizations.of(
+      context,
+    ).planCondNotExactIn,
+    PlanFilterCondition.exists => AppLocalizations.of(context).planCondExists,
   };
 
   @override
@@ -395,7 +408,7 @@ class PlanFilterSheet extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        _SectionTitle(text: context.tr('planFilterTitle')),
+        _SectionTitle(text: AppLocalizations.of(context).planFilterTitle),
         for (var index = 0; index < viewer.filters.length; index++)
           _FilterRow(
             key: ValueKey('filter-$index'),
@@ -412,11 +425,11 @@ class PlanFilterSheet extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: DswShape.xs),
             child: Text(
-              context.tr('planFilterNestedUnsupported'),
+              AppLocalizations.of(context).planFilterNestedUnsupported,
               style: DswType.xxxs11.copyWith(color: context.dsw.labelTertiary),
             ),
           ),
-        _SectionTitle(text: context.tr('planFilterAdd')),
+        _SectionTitle(text: AppLocalizations.of(context).planFilterAdd),
         _Rows(
           rows: [
             for (final relation in relations)
@@ -493,7 +506,7 @@ class _FilterRow extends StatelessWidget {
               Row(
                 children: [
                   DswSheetPopover(
-                    label: context.tr('planFilterCondition'),
+                    label: AppLocalizations.of(context).planFilterCondition,
                     minWidth: 200,
                     trigger: (context) => Text(
                       conditionLabel(filter.condition),
@@ -529,11 +542,13 @@ class _FilterRow extends StatelessWidget {
                     child: filter.condition.isValueless
                         ? const SizedBox.shrink()
                         : DswSheetPopover(
-                            label: context.tr('planFilterValue'),
+                            label: AppLocalizations.of(context).planFilterValue,
                             minWidth: 220,
                             trigger: (context) => Text(
                               valueLabel.isEmpty
-                                  ? context.tr('planFilterPickValue')
+                                  ? AppLocalizations.of(
+                                      context,
+                                    ).planFilterPickValue
                                   : valueLabel,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -588,7 +603,7 @@ class _FilterRow extends StatelessWidget {
           ),
         ),
         DswSheetPopover(
-          label: context.tr('planFilterOperator'),
+          label: AppLocalizations.of(context).planFilterOperator,
           minWidth: 140,
           trigger: (context) => Text(
             filter.operator.name,
@@ -619,7 +634,7 @@ class _FilterRow extends StatelessWidget {
         ),
         DswIconButton(
           icon: LucideIcons.x,
-          tooltip: context.tr('planRemove'),
+          tooltip: AppLocalizations.of(context).planRemove,
           onTap: onRemove,
           size: DswShape.controlMd,
           iconSize: DswShape.iconTiny,
@@ -732,9 +747,9 @@ class _ValuePickerState extends State<_ValuePicker> {
           padding: const EdgeInsets.only(top: DswShape.xs),
           child: _textRow(
             context,
-            label: context.tr(
-              widget.onAddOption != null ? 'planNewOption' : 'planFilterValue',
-            ),
+            label: widget.onAddOption != null
+                ? AppLocalizations.of(context).planNewOption
+                : AppLocalizations.of(context).planFilterValue,
           ),
         ),
       );
@@ -813,11 +828,11 @@ class PlanLayoutSheet extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        _SectionTitle(text: context.tr('planLayoutTitle')),
+        _SectionTitle(text: AppLocalizations.of(context).planLayoutTitle),
         _Rows(
           rows: [
             _Row(
-              label: context.tr('planLayoutHideIcon'),
+              label: AppLocalizations.of(context).planLayoutHideIcon,
               selected: viewer.hideIcon,
               onTap: () =>
                   onChange(viewer.copyWith(hideIcon: !viewer.hideIcon)),
@@ -825,7 +840,7 @@ class PlanLayoutSheet extends StatelessWidget {
           ],
         ),
         if (kind == PlanViewerKind.gallery) ...[
-          _SectionTitle(text: context.tr('planLayoutCardSize')),
+          _SectionTitle(text: AppLocalizations.of(context).planLayoutCardSize),
           _Rows(
             rows: [
               for (final size in PlanViewerSize.values)
@@ -836,11 +851,11 @@ class PlanLayoutSheet extends StatelessWidget {
                 ),
             ],
           ),
-          _SectionTitle(text: context.tr('planLayoutCover')),
+          _SectionTitle(text: AppLocalizations.of(context).planLayoutCover),
           _Rows(
             rows: [
               _Row(
-                label: context.tr('planLayoutNone'),
+                label: AppLocalizations.of(context).planLayoutNone,
                 selected: viewer.coverRelationKey == null,
                 onTap: () => onChange(viewer.copyWith(coverRelationKey: null)),
               ),
@@ -858,7 +873,7 @@ class PlanLayoutSheet extends StatelessWidget {
           _Rows(
             rows: [
               _Row(
-                label: context.tr('planLayoutCoverFit'),
+                label: AppLocalizations.of(context).planLayoutCoverFit,
                 selected: viewer.coverFit,
                 onTap: () =>
                     onChange(viewer.copyWith(coverFit: !viewer.coverFit)),
@@ -867,7 +882,7 @@ class PlanLayoutSheet extends StatelessWidget {
           ),
         ],
         if (kind == PlanViewerKind.board) ...[
-          _SectionTitle(text: context.tr('planLayoutGroupBy')),
+          _SectionTitle(text: AppLocalizations.of(context).planLayoutGroupBy),
           _Rows(
             rows: [
               // The upstream grouping whitelist is {STATUS, TAG, CHECKBOX}
@@ -889,7 +904,7 @@ class PlanLayoutSheet extends StatelessWidget {
           _Rows(
             rows: [
               _Row(
-                label: context.tr('planLayoutColorColumns'),
+                label: AppLocalizations.of(context).planLayoutColorColumns,
                 selected: viewer.groupBackgroundColors,
                 onTap: () => onChange(
                   viewer.copyWith(
@@ -900,7 +915,7 @@ class PlanLayoutSheet extends StatelessWidget {
             ],
           ),
         ],
-        _SectionTitle(text: context.tr('planLayoutDefaultType')),
+        _SectionTitle(text: AppLocalizations.of(context).planLayoutDefaultType),
         _Rows(
           rows: [
             for (final type in types)
@@ -913,11 +928,13 @@ class PlanLayoutSheet extends StatelessWidget {
               ),
           ],
         ),
-        _SectionTitle(text: context.tr('planLayoutDefaultTemplate')),
+        _SectionTitle(
+          text: AppLocalizations.of(context).planLayoutDefaultTemplate,
+        ),
         _Rows(
           rows: [
             _Row(
-              label: context.tr('planLayoutNone'),
+              label: AppLocalizations.of(context).planLayoutNone,
               selected: viewer.defaultTemplateId == null,
               onTap: () => onChange(viewer.copyWith(defaultTemplateId: null)),
             ),
@@ -973,7 +990,7 @@ class PlanFieldsSheet extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        _SectionTitle(text: context.tr('planFieldsTitle')),
+        _SectionTitle(text: AppLocalizations.of(context).planFieldsTitle),
         for (final relation in relations)
           Builder(
             builder: (context) {
@@ -1013,7 +1030,7 @@ class PlanFieldsSheet extends StatelessWidget {
                   ),
                   if (relation.format == PlanRelationFormat.date)
                     DswSheetPopover(
-                      label: context.tr('planFieldDateFormat'),
+                      label: AppLocalizations.of(context).planFieldDateFormat,
                       minWidth: 160,
                       trigger: (context) => Text(
                         column.dateFormat.name,
@@ -1039,7 +1056,7 @@ class PlanFieldsSheet extends StatelessWidget {
                       ),
                     ),
                   DswSheetPopover(
-                    label: context.tr('planFieldWidth'),
+                    label: AppLocalizations.of(context).planFieldWidth,
                     minWidth: 140,
                     trigger: (context) => Text(
                       column.width.name,

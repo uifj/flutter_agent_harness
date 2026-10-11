@@ -12,7 +12,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../model/plan_object_type.dart';
 import '../../../model/plan_template.dart';
 import '../../../state/plan_object_store.dart';
@@ -49,7 +49,7 @@ class PlanTemplatesScreen extends StatelessWidget {
     if (type == null || !PlanObjectTypeIds.allowsTemplates(typeKey)) {
       return Center(
         child: Text(
-          context.tr('planTemplatesNotAllowed'),
+          AppLocalizations.of(context).planTemplatesNotAllowed,
           style: DswType.xs13.copyWith(color: color.labelTertiary),
         ),
       );
@@ -66,26 +66,26 @@ class PlanTemplatesScreen extends StatelessWidget {
               const SizedBox(width: DswShape.sm),
               Expanded(
                 child: Text(
-                  context.tr('planTemplatesTitle', {'name': type.name}),
+                  AppLocalizations.of(context).planTemplatesTitle(type.name),
                   style: DswType.l20.copyWith(color: color.labelPrimary),
                 ),
               ),
               DswContextMenu(
                 items: (_) => [
                   DswMenuEntry(
-                    label: context.tr('planTemplateNew'),
+                    label: AppLocalizations.of(context).planTemplateNew,
                     icon: LucideIcons.plus,
                     onTap: () => store.createTemplate(
-                      name: context.tr('planTemplateNewName'),
+                      name: AppLocalizations.of(context).planTemplateNewName,
                       typeKey: typeKey,
                     ),
                   ),
                 ],
                 child: Tooltip(
-                  message: context.tr('planTemplateNew'),
+                  message: AppLocalizations.of(context).planTemplateNew,
                   child: DswHoverTap(
                     onTap: null,
-                    semanticLabel: context.tr('planTemplateNew'),
+                    semanticLabel: AppLocalizations.of(context).planTemplateNew,
                     builder: (context, hovered, focused) => Icon(
                       LucideIcons.ellipsis_vertical,
                       size: DswShape.iconSm,
@@ -100,7 +100,7 @@ class PlanTemplatesScreen extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: DswShape.md),
               child: Text(
-                context.tr('planTemplatesEmpty'),
+                AppLocalizations.of(context).planTemplatesEmpty,
                 style: DswType.xs13.copyWith(color: color.labelTertiary),
               ),
             )
@@ -132,7 +132,7 @@ class _TemplateRow extends StatelessWidget {
     return DswContextMenu(
       items: (menuContext) => [
         DswMenuEntry(
-          label: context.tr('planTemplateSetDefault'),
+          label: AppLocalizations.of(context).planTemplateSetDefault,
           icon: LucideIcons.star,
           trailing: template.isDefault
               ? Icon(
@@ -144,25 +144,28 @@ class _TemplateRow extends StatelessWidget {
           onTap: () => store.setDefaultTemplate(typeKey, template.id),
         ),
         DswMenuEntry(
-          label: context.tr('planTemplateDuplicate'),
+          label: AppLocalizations.of(context).planTemplateDuplicate,
           icon: LucideIcons.copy,
           onTap: () => store.duplicateTemplate(template.id),
         ),
         DswMenuEntry(
-          label: context.tr('planTemplateDelete'),
+          label: AppLocalizations.of(context).planTemplateDelete,
           icon: LucideIcons.trash,
           destructive: true,
           onTap: () async {
             final confirmed = await showConfirmDialog(
               menuContext,
-              title: context.tr('planTemplateDelete'),
+              title: AppLocalizations.of(context).planTemplateDelete,
               description: template.name,
-              confirmLabel: context.tr('planActionDelete'),
+              confirmLabel: AppLocalizations.of(context).planActionDelete,
             );
             if (!confirmed) return;
             await store.deleteTemplate(template.id);
             if (!menuContext.mounted) return;
-            showFeedback(menuContext, context.tr('planTemplateDeleted'));
+            showFeedback(
+              menuContext,
+              AppLocalizations.of(context).planTemplateDeleted,
+            );
           },
         ),
       ],
@@ -202,7 +205,7 @@ class _TemplateRow extends StatelessWidget {
               ),
               if (template.isDefault)
                 Text(
-                  context.tr('planTemplateDefault'),
+                  AppLocalizations.of(context).planTemplateDefault,
                   style: DswType.xxxs11.copyWith(color: color.brandPrimary),
                 ),
             ],

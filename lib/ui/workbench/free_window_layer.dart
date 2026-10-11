@@ -22,7 +22,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 
 import '../../host/git.dart';
 import '../../host/terminal_manager.dart';
-import '../../l10n/locales.dart';
+import '../../l10n/app_localizations.dart';
 import '../../state/conversation_controller.dart';
 import '../../state/side_chat_controller.dart';
 import '../../theme/dsw_alias.dart';
@@ -190,7 +190,9 @@ class _FreeWindowState extends State<_FreeWindow> {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Text(
-                            context.tr('unknownTabType', {'type': tab.type}),
+                            AppLocalizations.of(
+                              context,
+                            ).unknownTabType(tab.type),
                             textAlign: TextAlign.center,
                             style: DswType.xs13.copyWith(
                               color: color.labelTertiary,
@@ -275,12 +277,12 @@ class _FreeWindowState extends State<_FreeWindow> {
         items: (context) => [
           DswMenuEntry(
             icon: LucideIcons.panel_right,
-            label: context.tr('dockToSidebar'),
+            label: AppLocalizations.of(context).dockToSidebar,
             onTap: () => widget.workbench.dockFloat(widget.float.id),
           ),
           DswMenuEntry(
             icon: LucideIcons.x,
-            label: context.tr('close'),
+            label: AppLocalizations.of(context).close,
             onTap: () => widget.workbench.closeFloatByTab(widget.float.tab.id),
           ),
         ],
@@ -299,7 +301,9 @@ class _FreeWindowState extends State<_FreeWindow> {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  tab.title.isEmpty ? context.tr('untitled') : tab.title,
+                  tab.title.isEmpty
+                      ? AppLocalizations.of(context).untitled
+                      : tab.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: DswType.xxs12.copyWith(color: color.labelPrimary),
@@ -329,7 +333,7 @@ class _CloseButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    final label = context.tr('close');
+    final label = AppLocalizations.of(context).close;
     return DswHoverTap(
       onTap: onTap,
       semanticLabel: label,

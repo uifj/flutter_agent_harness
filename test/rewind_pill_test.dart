@@ -7,6 +7,7 @@
 // whether the report afterwards matches the preview before it. The store behind
 // it is a pair of closures: their behaviour is `checkpoint_test.dart`'s job.
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/model/conversation.dart';
 import 'package:planstar/state/checkpoint_store.dart';
 import 'package:planstar/theme/dsw_shad_bridge.dart';
@@ -54,6 +55,10 @@ void main() {
     );
     return tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         theme: dswThemeData(Brightness.light),
         // Mirrors main's MaterialApp.builder: the confirmation is a ShadDialog,
         // and the report the rewind ends with is a Sonner toast (ADR-0020), so

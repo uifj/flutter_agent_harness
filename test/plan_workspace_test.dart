@@ -12,6 +12,7 @@
 
 import 'dart:io';
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/l10n/locales.dart';
 import 'package:planstar/model/fs_revision.dart';
 import 'package:planstar/theme/dsw_shad_bridge.dart';
@@ -59,6 +60,9 @@ void main() {
     bool withoutWorkspace = false,
   }) => tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: Locale(locale == AppLocaleId.zh ? 'zh' : 'en'),
       theme: dswThemeData(Brightness.light),
       // The stuck-leave confirm dialog is a ShadDialog (reads the caller's
       // ShadTheme), the feedback strip is a ShadSonner, and the copy rides
@@ -301,7 +305,14 @@ void main() {
 
     // Entering a plan extension view swaps the center pane — the workspace
     // unmounts, and the pending edit leaves with it (ADR-0075 ②).
-    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+    await tester.pumpWidget(
+      const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: Locale('en'),
+        home: SizedBox.shrink(),
+      ),
+    );
     await pumpUntilFileContains(
       tester,
       '${root.path}/readme.md',

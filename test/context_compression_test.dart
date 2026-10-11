@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/genkit/instructions.dart';
 import 'package:planstar/model/approval_mode.dart';
 import 'package:planstar/model/context_compression.dart';
@@ -169,6 +170,10 @@ void main() {
       Future<void> Function()? onCompress,
     }) => tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         builder: (context, child) => ShadTheme(
           data: dswShadTheme(Brightness.light),
           child: ShadSonner(child: child!),

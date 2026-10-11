@@ -12,7 +12,7 @@ import 'package:board_panel/board_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../model/plan_dataview.dart';
 import '../../../model/plan_relation.dart';
 import '../../../model/plan_struct.dart';
@@ -280,7 +280,9 @@ class _BoardCard extends StatelessWidget {
               onTap: cellEditors ? onTap : null,
               semanticLabel: record.name,
               builder: (context, hovered, focused) => Text(
-                record.name.isEmpty ? context.tr('planUntitled') : record.name,
+                record.name.isEmpty
+                    ? AppLocalizations.of(context).planUntitled
+                    : record.name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: DswType.s14.copyWith(

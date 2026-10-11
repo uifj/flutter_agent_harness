@@ -14,7 +14,7 @@ import 'package:shadcn_ui/shadcn_ui.dart'
     show ShadButton, ShadDialog, showShadDialog;
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../l10n/locales.dart';
+import '../../l10n/app_localizations.dart';
 import '../../model/update_check.dart';
 import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_typography.dart';
@@ -37,18 +37,17 @@ Future<void> showUpdateDialog(
           const Icon(LucideIcons.refresh_cw, size: 18),
           const SizedBox(width: 8),
           Text(
-            dialogContext.tr('updateAvailableTitle', {
-              'version': remote.version,
-            }),
+            AppLocalizations.of(
+              dialogContext,
+            ).updateAvailableTitle(remote.version),
             style: DswType.sStrong14,
           ),
         ],
       ),
       description: Text(
-        dialogContext.tr('updateBody', {
-          'current': result.current,
-          'new': remote.version,
-        }),
+        AppLocalizations.of(
+          dialogContext,
+        ).updateBody(result.current, remote.version),
         style: DswType.xs13,
       ),
       actions: [
@@ -57,7 +56,7 @@ Future<void> showUpdateDialog(
             Navigator.pop(dialogContext);
             await onSkip(remote.version);
           },
-          child: Text(dialogContext.tr('updateSkip')),
+          child: Text(AppLocalizations.of(dialogContext).updateSkip),
         ),
         ShadButton.destructive(
           onPressed: () async {
@@ -67,7 +66,7 @@ Future<void> showUpdateDialog(
               await launchUrl(url, mode: LaunchMode.externalApplication);
             }
           },
-          child: Text(dialogContext.tr('updateDownload')),
+          child: Text(AppLocalizations.of(dialogContext).updateDownload),
         ),
       ],
     ),

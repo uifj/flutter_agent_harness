@@ -30,7 +30,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../host/git.dart';
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/dsw_alias.dart';
 import '../../../theme/dsw_shape.dart';
 import '../../../theme/dsw_theme.dart';
@@ -751,7 +751,7 @@ class _RefreshButtonState extends State<_RefreshButton> {
   @override
   Widget build(BuildContext context) {
     final color = context.dsw;
-    final label = context.tr('refresh');
+    final label = AppLocalizations.of(context).refresh;
     return Tooltip(
       message: label,
       child: DswHoverTap(

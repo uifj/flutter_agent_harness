@@ -32,7 +32,7 @@ import 'package:path/path.dart' as p;
 import 'package:re_editor/re_editor.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../l10n/locales.dart';
+import '../../l10n/app_localizations.dart';
 import '../../theme/dsw_alias.dart';
 import '../../theme/dsw_theme.dart';
 import '../../theme/dsw_typography.dart';
@@ -262,9 +262,9 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
     if (!mounted) return false;
     final proceed = await showConfirmDialog(
       context,
-      title: context.tr('planStuckTitle'),
-      description: context.tr('planStuckDesc', {'path': _selected ?? ''}),
-      confirmLabel: context.tr('planStuckConfirm'),
+      title: AppLocalizations.of(context).planStuckTitle,
+      description: AppLocalizations.of(context).planStuckDesc,
+      confirmLabel: AppLocalizations.of(context).planStuckConfirm,
     );
     if (proceed) {
       setState(() {
@@ -325,7 +325,7 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
         if (_markStuck() && !quiet && mounted) {
           showFeedback(
             context,
-            context.tr('planExternalChanged'),
+            AppLocalizations.of(context).planExternalChanged,
             destructive: true,
           );
         }
@@ -344,7 +344,7 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
         if (_markStuck() && !quiet && mounted) {
           showFeedback(
             context,
-            context.tr('planExternalChanged'),
+            AppLocalizations.of(context).planExternalChanged,
             destructive: true,
           );
         }
@@ -356,7 +356,11 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
       _markClean();
     } on FileSystemException {
       if (_markStuck() && !quiet && mounted) {
-        showFeedback(context, context.tr('planSaveFailed'), destructive: true);
+        showFeedback(
+          context,
+          AppLocalizations.of(context).planSaveFailed,
+          destructive: true,
+        );
       }
     } finally {
       _persisting = false;
@@ -418,7 +422,7 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
         if (_markStuck() && mounted) {
           showFeedback(
             context,
-            context.tr('planExternalChanged'),
+            AppLocalizations.of(context).planExternalChanged,
             destructive: true,
           );
         }
@@ -444,7 +448,7 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
           old?.dispose();
           oldDocument?.dispose();
         });
-        showFeedback(context, context.tr('planNoteVanished'));
+        showFeedback(context, AppLocalizations.of(context).planNoteVanished);
         return;
       }
       final text = await file.readAsString();
@@ -520,7 +524,7 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
     if (root == null) {
       return _centered(
         icon: LucideIcons.book_open,
-        message: context.tr('planNoWorkspace'),
+        message: AppLocalizations.of(context).planNoWorkspace,
       );
     }
     return _notePane(color);
@@ -555,7 +559,7 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
     if (controller == null || selected == null) {
       return _centered(
         icon: LucideIcons.file_text,
-        message: context.tr('planNoNoteSelected'),
+        message: AppLocalizations.of(context).planNoNoteSelected,
       );
     }
     return ColoredBox(
@@ -589,7 +593,7 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
                       if (parsed == null || !parsed.isAbsolute) {
                         showFeedback(
                           context,
-                          context.tr('planLinkFailed'),
+                          AppLocalizations.of(context).planLinkFailed,
                           destructive: true,
                         );
                         return;
@@ -603,7 +607,7 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
                         if (mounted) {
                           showFeedback(
                             context,
-                            context.tr('planLinkFailed'),
+                            AppLocalizations.of(context).planLinkFailed,
                             destructive: true,
                           );
                         }
@@ -677,7 +681,7 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
                   if (_stuck) ...[
                     const SizedBox(width: 8),
                     Text(
-                      context.tr('planStuckChip'),
+                      AppLocalizations.of(context).planStuckChip,
                       style: DswType.xxxs11.copyWith(
                         color: color.stateWarnLabel,
                       ),
@@ -693,9 +697,15 @@ class _PlanWorkspaceState extends State<PlanWorkspace>
             // flushes and hands the truth across (ADR-0075 ②③).
             CapsuleButton(
               label: switch (_mode) {
-                _PlanNoteMode.edit => context.tr('planEditorEdit'),
-                _PlanNoteMode.source => context.tr('planEditorSource'),
-                _PlanNoteMode.preview => context.tr('planEditorPreview'),
+                _PlanNoteMode.edit => AppLocalizations.of(
+                  context,
+                ).planEditorEdit,
+                _PlanNoteMode.source => AppLocalizations.of(
+                  context,
+                ).planEditorSource,
+                _PlanNoteMode.preview => AppLocalizations.of(
+                  context,
+                ).planEditorPreview,
               },
               size: CapsuleSize.sm,
               onTap: _cycleMode,

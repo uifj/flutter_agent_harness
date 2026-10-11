@@ -16,6 +16,7 @@
 
 import 'dart:async';
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/model/approval_mode.dart';
 import 'package:planstar/model/turn_event.dart';
 import 'package:planstar/state/conversation_controller.dart';
@@ -36,6 +37,10 @@ void main() {
 
     Future<void> pump(WidgetTester tester, String plan) => tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         theme: dswThemeData(Brightness.light),
         home: Scaffold(
           body: ListView(
@@ -127,6 +132,10 @@ void main() {
       addTearDown(tester.view.reset);
       return tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+
           theme: dswThemeData(Brightness.light),
           home: Scaffold(
             body: ConversationRoot(

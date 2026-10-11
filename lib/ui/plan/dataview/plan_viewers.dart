@@ -14,7 +14,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/tr_key.dart';
 import '../../../model/plan_dataview.dart';
 import '../../../model/plan_object_type.dart';
 import '../../../model/plan_relation.dart';
@@ -154,24 +155,24 @@ class PlanGridViewer extends StatelessWidget {
         header: true,
         menu: [
           DswMenuEntry(
-            label: context.tr('planSortAsc'),
+            label: AppLocalizations.of(context).planSortAsc,
             icon: LucideIcons.arrow_up,
             onTap: () => onSortColumn(column.key, PlanSortType.asc),
           ),
           DswMenuEntry(
-            label: context.tr('planSortDesc'),
+            label: AppLocalizations.of(context).planSortDesc,
             icon: LucideIcons.arrow_down,
             onTap: () => onSortColumn(column.key, PlanSortType.desc),
           ),
           if (activeSort.isNotEmpty)
             DswMenuEntry(
-              label: context.tr('planSortClear'),
+              label: AppLocalizations.of(context).planSortClear,
               icon: LucideIcons.arrow_up_down,
               onTap: () => onSortColumn(column.key, PlanSortType.custom),
             ),
           const DswMenuEntry.divider(),
           DswMenuEntry(
-            label: context.tr('planHideField'),
+            label: AppLocalizations.of(context).planHideField,
             icon: LucideIcons.eye_off,
             onTap: () => onHideColumn(column.key),
           ),
@@ -209,7 +210,7 @@ class PlanGridViewer extends StatelessWidget {
       header: true,
       width: planNameColumnWidth * step,
       child: Text(
-        context.tr('planFieldName'),
+        AppLocalizations.of(context).planFieldName,
         style: DswType.xxxsStrong11.copyWith(color: color.labelTertiary),
       ),
     );
@@ -291,7 +292,7 @@ class PlanGridViewer extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.all(DswShape.sm),
                         child: CapsuleButton(
-                          label: context.tr('planNewRow'),
+                          label: AppLocalizations.of(context).planNewRow,
                           icon: LucideIcons.plus,
                           size: CapsuleSize.sm,
                           enabled: onAddRow != null,
@@ -345,7 +346,9 @@ class _NameCell extends StatelessWidget {
         ],
         Expanded(
           child: Text(
-            record.name.isEmpty ? context.tr('planUntitled') : record.name,
+            record.name.isEmpty
+                ? AppLocalizations.of(context).planUntitled
+                : record.name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: style,
@@ -377,7 +380,7 @@ class _EmptyRow extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.only(left: DswShape.sm),
         child: Text(
-          context.tr('planNoRecords'),
+          AppLocalizations.of(context).planNoRecords,
           style: DswType.xs13.copyWith(color: context.dsw.labelTertiary),
         ),
       ),
@@ -426,7 +429,7 @@ class PlanListViewer extends StatelessWidget {
             child: DswHoverTap(
               onTap: () => onCellTap(record, PlanRelationKeys.name),
               semanticLabel: record.name.isEmpty
-                  ? context.tr('planUntitled')
+                  ? AppLocalizations.of(context).planUntitled
                   : record.name,
               builder: (context, hovered, focused) => Container(
                 color: hovered ? color.interactiveBgHover : null,
@@ -443,7 +446,7 @@ class PlanListViewer extends StatelessWidget {
                     Expanded(
                       child: Text(
                         record.name.isEmpty
-                            ? context.tr('planUntitled')
+                            ? AppLocalizations.of(context).planUntitled
                             : record.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -482,7 +485,7 @@ class PlanListViewer extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.all(DswShape.sm),
           child: CapsuleButton(
-            label: context.tr('planNewRow'),
+            label: AppLocalizations.of(context).planNewRow,
             icon: LucideIcons.plus,
             size: CapsuleSize.sm,
             enabled: onAddRow != null,
@@ -553,7 +556,7 @@ class PlanGalleryViewer extends StatelessWidget {
                   DswShape.controlMd *
                   MediaQuery.textScalerOf(context).scale(1),
               child: CapsuleButton(
-                label: context.tr('planNewRow'),
+                label: AppLocalizations.of(context).planNewRow,
                 icon: LucideIcons.plus,
                 size: CapsuleSize.sm,
                 enabled: onAddRow != null,
@@ -566,7 +569,7 @@ class PlanGalleryViewer extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: DswShape.md),
             child: Text(
-              context.tr('planNoRecords'),
+              AppLocalizations.of(context).planNoRecords,
               style: DswType.xs13.copyWith(color: color.labelTertiary),
             ),
           ),
@@ -676,7 +679,7 @@ class _GalleryCard extends StatelessWidget {
                   const SizedBox(height: DswShape.xs),
                   Text(
                     record.name.isEmpty
-                        ? context.tr('planUntitled')
+                        ? AppLocalizations.of(context).planUntitled
                         : record.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -720,7 +723,8 @@ class PlanUnsupportedViewer extends StatelessWidget {
               ),
               const SizedBox(height: DswShape.md),
               Text(
-                context.tr(
+                trKey(
+                  AppLocalizations.of(context),
                   kind.unsupportedL10nKey ?? 'planViewGraphUnsupported',
                 ),
                 textAlign: TextAlign.center,
@@ -747,9 +751,9 @@ class PlanCheckbox extends StatelessWidget {
     return DswHoverTap(
       onTap: onTap,
       toggled: checked,
-      semanticLabel: context.tr(
-        checked ? 'planCellChecked' : 'planCellUnchecked',
-      ),
+      semanticLabel: checked
+          ? AppLocalizations.of(context).planCellChecked
+          : AppLocalizations.of(context).planCellUnchecked,
       builder: (context, hovered, focused) => checked
           ? Container(
               width: DswShape.iconSm,

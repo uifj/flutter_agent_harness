@@ -10,6 +10,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/model/turn_event.dart';
 import 'package:planstar/model/turn_source.dart';
 import 'package:planstar/model/sidebar_tab.dart';
@@ -176,6 +177,10 @@ void main() {
     Future<void> pumpTab(WidgetTester tester, {SideChatController? withChat}) =>
         tester.pumpWidget(
           MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+
             theme: dswThemeData(Brightness.light),
             home: Scaffold(
               body: SideChatHost(

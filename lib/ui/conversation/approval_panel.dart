@@ -13,7 +13,7 @@
 
 import 'package:flutter/material.dart';
 
-import '../../l10n/locales.dart';
+import '../../l10n/app_localizations.dart';
 import '../../model/approval_rule.dart';
 import '../../model/conversation.dart';
 import '../../theme/dsw_alias.dart';
@@ -113,7 +113,7 @@ class _ApprovalPanelState extends State<ApprovalPanel> {
         ),
         const SizedBox(width: 8),
         Text(
-          context.tr('waitingForApproval'),
+          AppLocalizations.of(context).waitingForApproval,
           style: DswType.xs13.copyWith(
             // 13/18 here, not the token's 13/20: the strip is a band, not prose.
             height: 18 / 13,
@@ -136,7 +136,9 @@ class _ApprovalPanelState extends State<ApprovalPanel> {
           children: [
             // The headline is the panel's message, not a footnote.
             Text(
-              context.tr('approvalTitle', {'name': widget.request.toolName}),
+              AppLocalizations.of(
+                context,
+              ).approvalTitle(widget.request.toolName),
               style: DswType.panelHeadline15.copyWith(
                 color: color.labelPrimary,
               ),
@@ -176,7 +178,7 @@ class _ApprovalPanelState extends State<ApprovalPanel> {
       // every command, and the root is where a command runs unless it says
       // otherwise.
       return workdir is String && workdir.isNotEmpty && workdir != '.'
-          ? '$command  ·  ${context.tr('inWorkdir', {'dir': workdir})}'
+          ? '$command  ·  ${AppLocalizations.of(context).inWorkdir(workdir)}'
           : command;
     }
 
@@ -187,14 +189,16 @@ class _ApprovalPanelState extends State<ApprovalPanel> {
     if (replacements is num) {
       parts.add(
         replacements == 1
-            ? context.tr('oneReplacement')
-            : context.tr('nReplacements', {'n': replacements}),
+            ? AppLocalizations.of(context).oneReplacement
+            : AppLocalizations.of(
+                context,
+              ).nReplacements(replacements.toString()),
       );
     }
     final bytes = details['bytes'];
     if (bytes is num && replacements == null) parts.add('$bytes B');
     if (details['exists'] == true) {
-      parts.add(context.tr('overwritesExistingFile'));
+      parts.add(AppLocalizations.of(context).overwritesExistingFile);
     }
     return parts.join(' · ');
   }
@@ -221,19 +225,19 @@ class _ApprovalPanelState extends State<ApprovalPanel> {
         runSpacing: 8,
         children: [
           CapsuleButton(
-            label: context.tr('reject'),
+            label: AppLocalizations.of(context).reject,
             enabled: !_answered,
             danger: true,
             onTap: () => _answer(false),
           ),
           if (rememberable)
             CapsuleButton(
-              label: context.tr('alwaysAllow'),
+              label: AppLocalizations.of(context).alwaysAllow,
               enabled: !_answered,
               onTap: () => _answer(true, remember: true),
             ),
           CapsuleButton(
-            label: context.tr('allowOnce'),
+            label: AppLocalizations.of(context).allowOnce,
             enabled: !_answered,
             variant: CapsuleVariant.primary,
             onTap: () => _answer(true),

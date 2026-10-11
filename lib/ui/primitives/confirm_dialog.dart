@@ -18,7 +18,7 @@
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
-import '../../l10n/locales.dart';
+import '../../l10n/app_localizations.dart';
 import '../../theme/dsw_shape.dart';
 import '../../theme/dsw_typography.dart';
 
@@ -45,7 +45,7 @@ Future<bool> showConfirmDialog(
       actions: [
         ShadButton.outline(
           onPressed: () => Navigator.pop(context, false),
-          child: Text(context.tr('cancel')),
+          child: Text(AppLocalizations.of(context).cancel),
         ),
         ShadButton.destructive(
           onPressed: () => Navigator.pop(context, true),

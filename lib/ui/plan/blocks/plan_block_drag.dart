@@ -8,7 +8,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../state/plan_block_document.dart';
 import '../../../theme/dsw_shape.dart';
 import '../../../theme/dsw_theme.dart';
@@ -49,7 +49,7 @@ class PlanDragGrip extends StatelessWidget {
     final color = context.dsw;
     return DswHoverTap(
       onTap: null,
-      semanticLabel: context.tr('planActionDrag'),
+      semanticLabel: AppLocalizations.of(context).planActionDrag,
       builder: (context, hovered, focused) => Draggable<PlanBlockDrag>(
         data: PlanBlockDrag(blockId),
         feedback: _DragFeedback(text: text),
@@ -88,7 +88,7 @@ class _DragFeedback extends StatelessWidget {
           vertical: DswShape.xs,
         ),
         child: Text(
-          text.isEmpty ? context.tr('planUntitled') : text,
+          text.isEmpty ? AppLocalizations.of(context).planUntitled : text,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: DswType.xs13.copyWith(color: color.labelPrimary),

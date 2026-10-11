@@ -12,6 +12,7 @@ import 'package:flutter/gestures.dart' show kSecondaryButton, PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/model/conversation.dart';
 import 'package:planstar/model/workbench_prefs.dart';
 import 'package:planstar/state/session_index.dart';
@@ -89,6 +90,10 @@ void main() {
     await index.refresh();
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         // `main.dart`'s seam: the host for the app's one feedback surface sits
         // above the Navigator, and takes its colours from the bridge.
         builder: withStrip

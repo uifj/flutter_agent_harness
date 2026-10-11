@@ -6,6 +6,7 @@
 // so every assertion here is about wiring: a row that stays behind after its
 // input left the queue is the same bug as a drag that does nothing.
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/state/conversation_controller.dart';
 import 'package:planstar/state/streaming_tail.dart';
 import 'package:planstar/theme/dsw_theme.dart';
@@ -42,6 +43,9 @@ void main() {
   Future<void> pump(WidgetTester tester, {double step = 1.0}) async {
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
         builder: (context, child) => amplifiedAppBuilder(step, child),
         theme: dswThemeData(Brightness.light),
         home: Scaffold(body: _QueueHost(conversation: controller)),

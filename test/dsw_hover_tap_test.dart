@@ -14,6 +14,7 @@
 // If a future edit drops the FocusableActionDetector or the Semantics wrapper,
 // #2 and #3 fail and this file says so — the whole point of the primitive.
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/ui/primitives/tappable.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -21,6 +22,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Widget _host(Widget child) => MaterialApp(
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
+  locale: const Locale('en'),
+
   home: Directionality(textDirection: TextDirection.ltr, child: child),
 );
 

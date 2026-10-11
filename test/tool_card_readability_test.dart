@@ -10,6 +10,7 @@
 
 import 'dart:convert';
 
+import 'package:planstar/l10n/app_localizations.dart';
 import 'package:planstar/model/conversation.dart';
 import 'package:planstar/theme/dsw_shad_bridge.dart';
 import 'package:planstar/theme/dsw_theme.dart';
@@ -27,6 +28,10 @@ void main() {
     addTearDown(tester.view.reset);
     return tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+
         theme: dswThemeData(Brightness.light),
         builder: (context, child) => ShadTheme(
           data: dswShadTheme(Theme.of(context).brightness),

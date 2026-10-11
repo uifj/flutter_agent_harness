@@ -33,6 +33,11 @@ dependencies:
   file_picker: ^10.3.7
   flutter:
     sdk: flutter
+  # i18n: framework localizations + the gen-l10n runtime. The intl version is
+  # pinned by flutter_localizations, so `any` is the documented form.
+  flutter_localizations:
+    sdk: flutter
+  intl: any
   flutter_inappwebview: ^6.1.5
   flutter_lucide: ^1.33.0
   flutter_mermaid: ^0.1.0
@@ -81,6 +86,10 @@ flutter:
   # default chevron, selection handles); app code uses Lucide via
   # flutter_lucide.
   uses-material-design: true
+
+  # Regenerate lib/l10n/app_localizations*.dart from the .arb files on
+  # `flutter pub get` / build.
+  generate: true
 
   assets:
     - assets/icon/app_icon_source.png

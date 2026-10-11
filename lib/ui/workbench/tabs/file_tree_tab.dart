@@ -31,7 +31,7 @@ import 'package:path/path.dart' as p;
 
 import '../../../theme/dsw_shad_bridge.dart';
 import '../../../../theme/dsw_shape.dart';
-import '../../../l10n/locales.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../host/git.dart';
 import '../../../model/fs_revision.dart';
 import '../../../model/workspace.dart';
@@ -375,7 +375,9 @@ class _FileTreeTabState extends State<FileTreeTab> {
   Widget build(BuildContext context) {
     final color = context.dsw;
     if (_root.isEmpty) {
-      return _Empty(message: context.tr('noWorkspaceNothingToList'));
+      return _Empty(
+        message: AppLocalizations.of(context).noWorkspaceNothingToList,
+      );
     }
     final rows = _flatten();
     final current = _currentFile;
@@ -391,9 +393,11 @@ class _FileTreeTabState extends State<FileTreeTab> {
           child: rows.isEmpty
               ? _Empty(
                   message: switch ((_filter.isNotEmpty, _onlyChanged)) {
-                    (true, _) => context.tr('noMatches', {'query': _filter}),
-                    (_, true) => context.tr('nothingChanged'),
-                    _ => context.tr('folderEmpty'),
+                    (true, _) => AppLocalizations.of(
+                      context,
+                    ).noMatches(_filter),
+                    (_, true) => AppLocalizations.of(context).nothingChanged,
+                    _ => AppLocalizations.of(context).folderEmpty,
                   },
                 )
               : ListView.builder(
@@ -471,7 +475,9 @@ class _FileTreeTabState extends State<FileTreeTab> {
               // the surface, so the field draws no frame and no padding of its own.
               decoration: dswBareInput,
               padding: EdgeInsets.zero,
-              placeholder: dswInputHint(context.tr('searchFiles')),
+              placeholder: dswInputHint(
+                AppLocalizations.of(context).searchFiles,
+              ),
               placeholderStyle: DswType.xxs12.copyWith(
                 color: color.labelCaption,
               ),
@@ -481,7 +487,7 @@ class _FileTreeTabState extends State<FileTreeTab> {
         if (_filter.isNotEmpty)
           DswIconButton(
             icon: LucideIcons.x,
-            tooltip: context.tr('cancel'),
+            tooltip: AppLocalizations.of(context).cancel,
             onTap: () => setState(() => _filter = ''),
             size: 20,
             iconSize: DswShape.iconTiny,
@@ -500,32 +506,32 @@ class _FileTreeTabState extends State<FileTreeTab> {
     return [
       DswMenuEntry(
         icon: row.isDirectory ? LucideIcons.chevron_right : LucideIcons.file,
-        label: context.tr('open'),
+        label: AppLocalizations.of(context).open,
         onTap: () => row.isDirectory
             ? widget.workbench.toggleExpanded(row.path)
             : widget.workbench.openFile(row.path),
       ),
       DswMenuEntry(
         icon: LucideIcons.copy,
-        label: context.tr('copyRelative'),
+        label: AppLocalizations.of(context).copyRelative,
         onTap: () => Clipboard.setData(ClipboardData(text: relative)),
       ),
       DswMenuEntry(
         icon: LucideIcons.file_symlink,
-        label: context.tr('copyAbsolute'),
+        label: AppLocalizations.of(context).copyAbsolute,
         onTap: () => Clipboard.setData(ClipboardData(text: row.path)),
       ),
       // The same glyph the history uses for the same action: "where is this on
       // disk" is one question no matter which list asked it (ADR-0041).
       DswMenuEntry(
         icon: LucideIcons.external_link,
-        label: context.tr('revealInFiles'),
+        label: AppLocalizations.of(context).revealInFiles,
         onTap: () => revealInFilesOrReport(context, row.path),
       ),
       if (row.isDirectory)
         DswMenuEntry(
           icon: LucideIcons.list_tree,
-          label: context.tr('openInTreeTab'),
+          label: AppLocalizations.of(context).openInTreeTab,
           onTap: () => widget.workbench.openFolder(row.path),
         ),
     ];
@@ -554,7 +560,7 @@ class _FileTreeTabState extends State<FileTreeTab> {
         if (_changed.isNotEmpty)
           DswIconButton(
             icon: LucideIcons.list_filter,
-            tooltip: context.tr('showOnlyChanged'),
+            tooltip: AppLocalizations.of(context).showOnlyChanged,
             selected: _onlyChanged,
             onTap: () => setState(() => _onlyChanged = !_onlyChanged),
             size: 20,
@@ -562,7 +568,7 @@ class _FileTreeTabState extends State<FileTreeTab> {
           ),
         DswIconButton(
           icon: LucideIcons.refresh_cw,
-          tooltip: context.tr('refresh'),
+          tooltip: AppLocalizations.of(context).refresh,
           onTap: _refresh,
           size: 20,
           iconSize: DswShape.iconTiny,
