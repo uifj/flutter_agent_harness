@@ -186,4 +186,6 @@ as open items.
 
 ## License
 
-License not yet declared — see `LICENSE`. All rights reserved pending selection.
+This project is licensed under the **GNU General Public License v3.0 or later (GPL-3.0-or-later)** — see [`LICENSE`](LICENSE) for the full text.
+
+You are free to use, study, share, and modify this software, provided that derivative works you distribute are released under the same license and their source is disclosed.

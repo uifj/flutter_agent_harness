@@ -1,6 +1,7 @@
 name: planstar
 description: "企划星 PlanStar: a Flutter desktop agent workbench — chat UI, tool-call projection via Genkit, and a split-pane workbench."
 version: 0.1.0
+license: GPL-3.0-or-later
 # An app, never published — declared so the board_panel path dependency is
 # legitimate (a publishable package may not carry one).
 publish_to: 'none'
