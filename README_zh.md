@@ -108,6 +108,25 @@ Agent 做的每一件事都被投影成可查看、可回退的事件——绝�
 | 本地包 | `packages/` 三层 monorepo，由 `lib` 向下消费 —— `board_panel`（数据视图）、`plan_editor`（块编辑器）、`app_common`（反馈 + 应用内升级）；ADR-0083 / ADR-0084 |
 | 本地化 | `flutter gen-l10n`，ARB 为盘上唯一源（中英双语）；`app_common` 自带一份生成的语言束（`AppCommonLocalizations`） |
 
+### 架构总览
+
+严格分层——UI 经控制器读取，控制器驱动 Genkit 运行时，两侧共用一份纯 Dart 词汇表（`model/`）。运行时永不触碰 Flutter，组件永不直接调用 `dart:io`（一律经 `host/`）。
+
+```mermaid
+flowchart TD
+  UI["lib/ui — 组件（shadcn + dsw 令牌）"]
+  STATE["lib/state — 控制器与存储"]
+  HOST["lib/host — 宿主能力"]
+  GENKIT["lib/genkit — Genkit agent 运行时"]
+  MODEL["lib/model — 纯 Dart 词汇表"]
+
+  UI -->|providers| STATE
+  UI -->|系统调用| HOST
+  STATE -->|驱动| GENKIT
+  STATE --> MODEL
+  GENKIT -->|turn 事件| MODEL
+```
+
 ### 架构不变量
 
 分层不是靠约定，而是靠一道可执行的门禁来守：
@@ -125,8 +144,9 @@ dart tool/check_architecture.dart   # 8 条规则，指纹 baseline，只拦新�
 
 `packages/` 是三层 monorepo，依赖路线**单向**（ADR-0083 / ADR-0084）：
 
-```
-sentry ─▶ stone_core ─▶ pudding ─▶ appunits ─▶ lib
+```mermaid
+flowchart LR
+  S["sentry"] --> ST["stone_core"] --> P["pudding"] --> AP["appunits"] --> L["lib"]
 ```
 
 `lib/` 是唯一消费者——没有任何包可以 import `lib`。入库包中被 path 依赖接进 `lib`

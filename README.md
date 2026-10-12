@@ -114,6 +114,27 @@ on disk.
 | Local packages | In-repo monorepo under `packages/`, consumed downward by `lib` — `board_panel` (data views), `plan_editor` (block editor), `app_common` (feedback + in-app upgrade); ADR-0083 / ADR-0084 |
 | Localization | `flutter gen-l10n` with ARB as the single on-disk source (en/zh); `app_common` ships its own generated bundle (`AppCommonLocalizations`) |
 
+### Architecture at a glance
+
+Strict layering: the UI reads through controllers, controllers drive the Genkit
+runtime, and both sides speak one pure-Dart vocabulary (`model/`). The runtime never
+touches Flutter; the widgets never touch `dart:io` (they go through `host/`).
+
+```mermaid
+flowchart TD
+  UI["lib/ui — widgets (shadcn + dsw tokens)"]
+  STATE["lib/state — controllers & stores"]
+  HOST["lib/host — OS capabilities"]
+  GENKIT["lib/genkit — Genkit agent runtime"]
+  MODEL["lib/model — pure-Dart vocabulary"]
+
+  UI -->|providers| STATE
+  UI -->|OS calls| HOST
+  STATE -->|drive| GENKIT
+  STATE --> MODEL
+  GENKIT -->|turn events| MODEL
+```
+
 ### Architecture invariants
 
 The layering is enforced by an executable gate, not just convention:
@@ -133,8 +154,9 @@ dart tool/check_architecture.dart   # 8 rules, fingerprint baseline, blocks new 
 `packages/` is a three-layer monorepo with a **one-way** dependency route
 (ADR-0083 / ADR-0084):
 
-```
-sentry ─▶ stone_core ─▶ pudding ─▶ appunits ─▶ lib
+```mermaid
+flowchart LR
+  S["sentry"] --> ST["stone_core"] --> P["pudding"] --> AP["appunits"] --> L["lib"]
 ```
 
 `lib/` is the only consumer — no package may import `lib`. Three in-repo packages are
