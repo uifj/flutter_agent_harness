@@ -1,0 +1,27 @@
+name: stone_core
+description: >-
+  企业级基础设施层 — 网络、路由、日志、存储。
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.11.5
+  flutter: ">=3.41.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  dio: ^5.4.0
+  uuid: ^4.0.0
+  meta: ^1.3.0
+  logging: ^1.0.0
+  shared_preferences: ^2.5.0
+  flutter_secure_storage: ^9.0.0
+  sentry:
+    path: ../sentry
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^10.0.0
+  mocktail: ^1.0.4

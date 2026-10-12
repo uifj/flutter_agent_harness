@@ -1,0 +1,75 @@
+## 5.0.0
+
+### Breaking changes
+* Migrate appunits_core to version 5.0.0.
+* Migrate audio_player/audio_recorder/chat_setting/contact_list/conversation_list/emoji_picker/file_picker/image_picker/image_viewer/message_input/message_list/search/third_party/user_picker/video_picker/video_player/video_recorder components out.
+
+## 4.1.3
+* Optimized input field interaction for easier switching between text and voice messages.
+* Added the ability to convert voice to text after long-pressing the input field for recording.
+
+## 4.1.2
+* Fix UIScene lifecycle support for VideoRecorder and AlbumPicker window presentation. 
+
+# 4.1.1
+* Replaced with a new custom album picker. 
+* The new picker supports video compression with configurable target file size, provides comprehensive photo library permission handling, and allows UI customization through parameters such as background color and primary color.
+
+## 4.1.0
+* Added AI subtitles and AI real-time meeting summary features.
+* Optimized the BottomSheet dialog.
+* Fixed the message list lag issue when the keyboard is shown or hidden.
+* Fixed other known issues.
+
+## 4.0.2
+* Optimized input box styling and voice recording animations.
+* Enhanced the visual design of read receipts.
+* Image messages now support pinch-to-zoom gestures.
+* Resolved compatibility issues with Huawei Nova phones when the default system language is set to Traditional Chinese, including permission dialog displays.
+
+## 4.0.1
+* Added floating button features to the chat page: "Jump to Latest Position," "X Unread Messages," and "Someone @-ed Me".
+* Text message links now support opening in a browser.
+* Fixed issues with photo album selection.
+* Fixed failure to send messages after using camera or taking photos.
+* Improved alert experience for denied permission requests.
+* Enhanced voice recording experience.
+* Optimized keyboard interaction.
+* Restricted camera and video recording to portrait mode.
+* Fixed other known issues.
+
+## 4.0.0
+* Adapted for appunits_core 4.0.0.
+
+## 3.6.6
+* Fixed the conflict issue on the iOS platform after using the third-party library file_picker.
+* Removed dependencies on certain third-party libraries.
+
+## 3.6.5
+* Optimize the UI display effect of the settings page.
+
+## 3.6.4
+* Added UI elements related to AI transcription.
+
+## 3.6.3
+* Compatible with appunits_core version 3.6.3.
+* Optimized CallView effects, providing a picture-in-picture style.
+
+## 3.6.2
+* Added AtomicAlertDialog implemented with Overlay.
+* Added new features: search, message merge/individual forwarding, batch delete, @mentions, emoji reactions, speech-to-text, and text translation.
+
+## 3.6.1
+### bugfix
+* CallView adds AI translation support
+
+## 3.6.0
+### bugfix
+* Adapted for appunits_core 3.6.0.
+
+## 3.5.1
+### bugfix
+* Fix the issue of not finding resources.
+
+## 3.5.0
+* Provides basic UI components for chat and call based on appunits_core.

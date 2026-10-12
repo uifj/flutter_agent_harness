@@ -1,0 +1,77 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+  package="io.trtc.tuikit.atomicx">
+    <!-- Android 12 or lower -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
+    <!-- Android 13 or higher -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+
+    <!-- Android 14 or higher -->
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
+
+    <!-- System alert window / Display over other apps permission -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+
+    <application>
+        <activity
+            android:name="io.trtc.tuikit.atomicx.albumpicker.AlbumPickerHostActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+
+         <activity
+            android:name=".imageuploader.SystemImageSourceActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ImageUploader.Transparent"/>
+
+        <provider
+            android:name=".basecomponent.utils.ContextProvider"
+            android:authorities="${applicationId}.BaseComponent.ContextProvider"
+            android:exported="false"
+            android:initOrder="10000" />
+
+        <!-- FileProvider for opening files -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.BaseComponent.FileProvider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/base_component_file_paths" />
+        </provider>
+        
+        <provider
+                android:name=".imageuploader.ImageUploaderFileProvider"
+                android:authorities="${applicationId}.imageuploader.fileprovider"
+                android:exported="false"
+                android:grantUriPermissions="true">
+            <meta-data
+                    android:name="android.support.FILE_PROVIDER_PATHS"
+                    android:resource="@xml/imageuploader_file_paths" />
+        </provider>
+        <service
+            android:name="io.trtc.tuikit.atomicx.foregroundservice.AudioForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <service
+            android:name="io.trtc.tuikit.atomicx.foregroundservice.VideoForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="camera|microphone" />
+
+        <service
+            android:name="io.trtc.tuikit.atomicx.foregroundservice.MediaForegroundService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+    </application>
+</manifest>

@@ -51,7 +51,10 @@ devtools_options.yaml
 
 # Local clones of third-party reference repositories (appflowy-editor etc.),
 # intentionally untracked for source reading only; same policy as _archive_project.
+/_archive_docs/
+
 /_archive/
+/packages/_archive/
 
 # Vendored third-party UI reference clone, intentionally untracked.
 # It is not a pubspec dependency and no code imports it; keep provenance and

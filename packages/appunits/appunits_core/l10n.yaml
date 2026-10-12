@@ -1,0 +1,6 @@
+arb-dir: lib/base_component/l10n
+template-arb-file: l10n_en.arb
+nullable-getter: false
+output-dir: lib/base_component/localizations
+output-localization-file: atomic_localizations.dart
+output-class: AtomicLocalizations

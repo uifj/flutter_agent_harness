@@ -1,0 +1,30 @@
+name: pudding
+description: >-
+  grpc,link,remote_config这些与具体业务集成的模块
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.11.5
+  flutter: ">=3.41.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  sentry:
+    path: ../infras/sentry
+  # gRPC client instrumentation (SentryGrpcInterceptor)
+  grpc: '>=4.0.4 <6.0.0'
+  meta: ^1.9.0
+  # GraphQL / gql link instrumentation (SentryLink and friends)
+  gql: '>=0.14.0 <2.0.0'
+  gql_exec: '>=0.4.4 <2.0.0'
+  gql_link: '>=0.5.0 <2.0.0'
+  gql_error_link: '>=0.2.0 <2.0.0'
+  # Firebase Remote Config feature-flag instrumentation
+  firebase_remote_config: '>=5.4.3 <7.0.0'
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^4.0.0
