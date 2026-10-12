@@ -1,0 +1,79 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(pwd:*)",
+      "Bash(find:*)",
+      "Bash(file:*)",
+      "Bash(stat:*)",
+      "Bash(wc:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(cat:*)",
+      "Bash(tree:*)",
+      "Bash(grep:*)",
+
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git remote:*)",
+      "Bash(git tag:*)",
+      "Bash(git stash list:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git fetch:*)",
+      "Bash(git ls-files:*)",
+      "Bash(git blame:*)",
+
+      "Bash(flutter pub get:*)",
+      "Bash(flutter pub deps:*)",
+      "Bash(flutter pub outdated:*)",
+      "Bash(dart run build_runner build:*)",
+      "Bash(dart run build_runner watch:*)",
+      "Bash(flutter gen-l10n:*)",
+
+      "Bash(dart format:*)",
+      "Bash(dart analyze:*)",
+      "Bash(dart fix:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(flutter test:*)",
+      "Bash(dart tool/contrast_check.dart:*)",
+      "Bash(dart tool/check_architecture.dart:*)",
+      "Bash(dart run spike/agent_spike.dart:*)",
+      "Bash(dart run spike/runtime_smoke.dart:*)",
+      "Bash(npx repomix:*)",
+
+      "Bash(flutter build macos:*)",
+      "Bash(flutter build windows:*)",
+      "Bash(flutter build linux:*)",
+      "Bash(flutter doctor:*)",
+
+      "WebFetch(domain:dart.dev)",
+      "WebFetch(domain:docs.flutter.dev)",
+      "WebFetch(domain:pub.dev)",
+      "WebFetch(domain:github.com)",
+
+      "Skill(spec)",
+      "Skill(design-first)",
+      "Skill(architecture)",
+      "Skill(testing)",
+      "Skill(review)",
+      "Skill(git-commit)"
+    ],
+    "deny": []
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *.g.dart|*/app_localizations*.dart|*/tr_key.dart|*/architecture_baseline.json|*/_archive_project/*|*/_archive_docs/*|*/repomix-output.xml) printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"This is a generated artifact or a read-only archive — do not hand-edit it. Regenerate instead: `dart run build_runner build --force-jit` for *.g.dart, `flutter gen-l10n` for app_localizations*/tr_key.dart, `dart tool/check_architecture.dart --update` for architecture_baseline.json; _archive_project/ and _archive_docs/ are read-only references, and repomix-output.xml is rebuilt with `npx repomix@latest`.\"}}' ;; esac"
+          }
+        ]
+      }
+    ]
+  }
+}
