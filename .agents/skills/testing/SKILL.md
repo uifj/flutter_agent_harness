@@ -1,6 +1,6 @@
 ---
 name: testing
-description: Enforce PlanStar's test conventions — flutter test only, handwritten fakes, guard-per-invariant, reverse-verification, the known baseline failures. Use when writing tests, adding coverage, reproducing bugs with a failing test, TDD / red-green, regression tests, or refactoring tests. Apply alongside the architecture skill; load design-first for where the seams go.
+description: Enforce PlanStar's test conventions — flutter test only, handwritten fakes, guard-per-invariant, reverse-verification, the known baseline failures — with the general TDD discipline (red-green vertical slices, seams, good-test/bad-test 判据) folded in from the retired standalone tdd skill. Use when writing tests, adding coverage, doing tdd / TDD / red-green-refactor, reproducing bugs with a failing test, regression tests, or refactoring tests. Apply alongside the architecture skill; load design-first for where the seams go.
 ---
 
 把这些约定应用到本次改动新增或修改的所有测试。既有测试可能不遵循——**未被要求别顺手重构它们**。
@@ -22,9 +22,20 @@ description: Enforce PlanStar's test conventions — flutter test only, handwrit
 
 **通过条数会随加测试漂移，别把它当常数引用**——交付前跑一次记下失败集，只对"零新增失败"负责。别把它们说成自己改坏的，**也别为了让套件变绿去改那两条断言**。
 
-## Test-First Loop（垂直切片）
+## TDD 循环（红 → 绿，一次一片 · 通用原理落到本仓库）
 
-按**垂直切片**工作，不是水平的：一个失败测试 → 让它过的最小代码 → 重复。每个测试是一枚 **tracer bullet**——证一条薄的端到端路径，你从它学到的塑造下一个。**别**先写完所有测试再写所有实现（那种水平切片测的是*想象*的行为）。修 bug？先用一个失败测试复现它。
+以下是跨项目通用的 TDD 判据，一律用本仓库口径执行（跑法见 §只有一种跑法，替身见 §Fake 而不是 Mock）：
+
+- **好测试经由公共接口验证行为，不绑实现。** 代码可以整个重写而测试不该跟着变。一条好测试读起来像一份规格（`a workspace-only save re-points the live runtime, no rebuild` 就精确说了存在哪个能力），因为它不关心内部结构：测的是 WHAT 不是 HOW，一个逻辑断言一棵测试。
+- **测试只长在接缝（seam）上**——接缝是你观察行为而不伸手进内部的那道公共边界。动手写任何测试之前，**先写下本次要测的接缝并与用户确认**：没有确认过的接缝不写测试。你不可能什么都测，预先敲定接缝才是把力气压在关键路径与复杂逻辑（而不是每个边角）的办法。接缝在哪由 **design-first** 定；本仓库每条被专门守卫的不变量对应哪个 `*_test.dart` 见 [references/guards.md](references/guards.md)；接口/词汇对齐领域语言时读 `AGENTS.md` 与 `docs/adr/`（本仓库没有 GLOSSARY.md）。
+- **垂直切片，不是水平。** 一个失败测试 → 让它过的最小代码 → 重复。每棵测试是一枚 **tracer bullet**——证一条薄的端到端路径，你从上一片学到的塑造下一片。**别**先写完所有测试再写所有实现：那种水平切片测的是*想象*的行为（测东西的*形状*而非用户可见行为，对真变化不敏感，且在理解实现之前就把测试结构钉死）。修 bug？先用一个失败测试复现它。
+- **红在绿前，一次一片。** 先写失败测试，再只写够让它过的代码——不替未来测试预留、不加投机特性；一个接缝、一棵测试、一段最小实现。**重构不属于红-绿循环本身**，它归 review 阶段（见 `review` skill）。注意：这里说的"红"指**你新写的那棵先红**——基线里那 2 条已登记失败不归你修，见 §基线口径，别把它们"顺手修绿"。
+- **三类坏测试，逐个躲**：
+  - *绑实现*：mock 内部协作者、测私有方法、或绕道侧渠道验证（直接查库而不是走接口断言）。信号：行为没变、只是重构，测试就红了。
+  - *同义反复*：期望值用被测代码产出它的同一套方式重算（`expect(add(a, b), equals(a + b))`、常量断言等于它自己），构造即通过、永远不可能与代码 disagrees。期望值必须来自独立真源——一份已知正确的字面量、一个手算样例、规格本身（详见 §断言）。
+  - *水平切片*：上面已禁。
+
+> 这段原理原是一份外部通用 `tdd` skill（TypeScript/jest 示例）。融入时已按 Flutter 改写：不 `dart test`、不 `jest.mock`/mockito codegen（本仓库一律手写 fake），文件系统/数据库走真实临时目录而非 test DB。以本 skill 其余章节为落地口径。
 
 ## 每个测试文件守住"那一句话"
 
@@ -42,7 +53,7 @@ description: Enforce PlanStar's test conventions — flutter test only, handwrit
 
 ## Fake 而不是 Mock
 
-**替身一律手写** `test/fake_*.dart`（mockito 那套 codegen 路线与仓库约定冲突，已随 `dart-generate-test-mocks` 移除）。现成三个：`fake_turn_source.dart`、`fake_git.dart`、`fake_terminal_process.dart`。手写 fake 抗重构、可读如文档。测试难 fake 通常是被测代码该接受依赖而非自己造（design-first 的事）。`FakeGit` 有**两枚必用入口**（`inert()` / `stubRepo`）——见 [references/fakes.md](references/fakes.md)。
+**替身一律手写** `test/fake_*.dart`（mockito 那套 codegen 路线与仓库约定冲突，已随 `dart-generate-test-mocks` 移除）。现成三个：`fake_turn_source.dart`、`fake_git.dart`、`fake_terminal_process.dart`。手写 fake 抗重构、可读如文档。测试难 fake 通常是被测代码该接受依赖而非自己造（design-first 的事）。**替身只造在系统边界**（外部 API、broker、真进程、时间/随机数），**不 fake 自己的类与内部协作者**——那等于把测试绑到实现上（见 §TDD 循环的"绑实现"反模式）。边界接口按**具体入口**设计：一个操作一枚专用方法、各回一种形状，别塞一个带条件分支的通用入口，这样 fake 的 setup 里不写 `if`。`FakeGit` 有**两枚必用入口**（`inert()` / `stubRepo`）——见 [references/fakes.md](references/fakes.md)。
 
 ## 文件系统与真进程
 
