@@ -1,0 +1,108 @@
+import 'package:dio/dio.dart';
+import 'package:flutter_better_auth/core/models/session/session.dart';
+import 'package:retrofit/retrofit.dart';
+
+import 'adapter.dart';
+import 'default/sign_up/models/sign_up_response/sign_up_response.dart';
+import 'models/common/change_email/change_email_response.dart';
+import 'models/common/sign_out/sign_out_response.dart';
+import 'models/common/user_wrapper/user_wrapper_response.dart';
+import 'models/common/verify_email/verify_email_response.dart';
+import 'models/result/result.dart';
+import 'models/result/status_response.dart';
+import 'models/result/success_response.dart';
+import 'models/session/session_response.dart';
+
+part 'better_auth_client.g.dart';
+
+@RestApi(callAdapter: BetterAuthCallAdapter)
+abstract class BetterAuthClient {
+  factory BetterAuthClient(
+    Dio dio, {
+    String? baseUrl,
+    ParseErrorLogger? errorLogger,
+  }) = _BetterAuthClient;
+
+  @GET('/get-session')
+  Future<Result<SessionResponse?>> getSession();
+
+  @POST('/sign-out')
+  Future<Result<SignOutResponse>> signOut({
+    @Body(nullToAbsent: true) Map<String, dynamic> body = const {},
+  });
+
+  @POST('/request-password-reset')
+  Future<Result<StatusResponse>> forgotPassword({
+    @BodyExtra('email') required String email,
+    @BodyExtra('redirectTo') String? redirectTo,
+  });
+
+  @POST('/reset-password')
+  Future<Result<StatusResponse>> resetPassword({
+    @BodyExtra('newPassword') required String newPassword,
+    @BodyExtra('token') String? token,
+  });
+
+  @GET('/verify-email')
+  Future<Result<VerifyEmailResponse>> verifyEmail({
+    @Query("token") required String token,
+    @Query("callbackURL") String? callbackURL,
+  });
+
+  @POST('/send-verification-email')
+  Future<Result<StatusResponse>> sendVerificationEmail({
+    @BodyExtra('email') required String email,
+    @BodyExtra('callbackURL') String? callbackURL,
+  });
+
+  @POST('/change-email')
+  Future<Result<ChangeEmailResponse>> changeEmail({
+    @BodyExtra('newEmail') required String newEmail,
+    @BodyExtra('callbackURL') String? callbackURL,
+  });
+
+  @POST('/change-password')
+  Future<Result<SignUpResponse>> changePassword({
+    @BodyExtra('newPassword') required String newPassword,
+    @BodyExtra('currentPassword') required String currentPassword,
+    @BodyExtra('revokeOtherSessions') bool? revokeOtherSessions,
+  });
+
+  /// Raw `POST /update-user` body. Prefer the typed `updateUser` extension,
+  /// which builds this map and flat-merges `additionalFields`.
+  @POST('/update-user')
+  Future<Result<UserWrapperResponse>> updateUserRaw({
+    @Body(nullToAbsent: true) required Map<String, dynamic> body,
+  });
+
+  @POST('/delete-user')
+  Future<Result<SuccessResponse>> deleteUser({
+    @BodyExtra('callbackURL') String? callbackURL,
+    @BodyExtra('password') String? password,
+    @BodyExtra('token') String? token,
+  });
+
+  @GET('/list-sessions')
+  Future<Result<List<Session>>> listSessions();
+
+  @POST('/revoke-session')
+  Future<Result<StatusResponse>> revokeSession({
+    @BodyExtra('token') required String token,
+  });
+
+  @POST('/revoke-sessions')
+  Future<Result<StatusResponse>> revokeSessions({
+    @Body(nullToAbsent: true) Map<String, dynamic> body = const {},
+  });
+
+  @POST('/revoke-other-sessions')
+  Future<Result<StatusResponse>> revokeOtherSessions({
+    @Body(nullToAbsent: true) Map<String, dynamic> body = const {},
+  });
+
+  /// Verifies the current user's password (e.g. before a sensitive action).
+  @POST('/verify-password')
+  Future<Result<StatusResponse>> verifyPassword({
+    @BodyExtra('password') required String password,
+  });
+}
