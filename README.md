@@ -111,6 +111,8 @@ on disk.
 | Editor | `re_editor` + `gpt_markdown` (LaTeX + Mermaid fenced diagrams) |
 | Terminal / browser | `flutter_pty` + `xterm`, `flutter_inappwebview` |
 | Secrets | `flutter_secure_storage` — OS keychain (Keychain / DPAPI / libsecret) |
+| Local packages | In-repo monorepo under `packages/`, consumed downward by `lib` — `board_panel` (data views), `plan_editor` (block editor), `app_common` (feedback + in-app upgrade); ADR-0083 / ADR-0084 |
+| Localization | `flutter gen-l10n` with ARB as the single on-disk source (en/zh); `app_common` ships its own generated bundle (`AppCommonLocalizations`) |
 
 ### Architecture invariants
 
@@ -125,6 +127,23 @@ dart tool/check_architecture.dart   # 8 rules, fingerprint baseline, blocks new 
   runtime and the UI.
 - The runtime never reaches into `lib/state/` or touches `dart:ui`.
 - `lib/ui/` doesn't call `dart:io` directly (goes through `lib/host/`).
+
+### Local packages & the monorepo
+
+`packages/` is a three-layer monorepo with a **one-way** dependency route
+(ADR-0083 / ADR-0084):
+
+```
+sentry ─▶ stone_core ─▶ pudding ─▶ appunits ─▶ lib
+```
+
+`lib/` is the only consumer — no package may import `lib`. Three in-repo packages are
+path-deps wired into `lib` and actually used: **`board_panel`** (plan-mode board &
+calendar), **`plan_editor`** (the styled Markdown block editor), and **`app_common`**
+(the host-agnostic feedback form + in-app upgrade panel, whose UI copy lives in a
+package-owned gen-l10n bundle). The rest (`appunits_core`, `stone_core`, `pudding`)
+are vendored / parked and intentionally *not* consumed — ADR-0084's boundary map
+records why each is refused or deferred.
 
 ---
 
@@ -153,7 +172,7 @@ will not run on mobile (it hits unregistered desktop plugins at startup).
 flutter pub get                                  # first step on a new machine
 dart format --set-exit-if-changed lib test tool spike
 dart analyze --fatal-infos lib test tool spike
-flutter test                                     # 126 test files
+flutter test                                     # 127 test files
 dart tool/check_architecture.dart                # architecture gate
 dart tool/contrast_check.dart                    # WCAG contrast on theme tokens
 
@@ -172,7 +191,7 @@ after the gates pass.
 - [`AGENTS.md`](AGENTS.md) — entry point for AI coding agents; rules & conventions index.
 - [`docs/README.md`](docs/README.md) — the ADR system (classes, priorities, state machine).
 - [`docs/debt-register.md`](docs/debt-register.md) — single status source for known issues and technical debt.
-- [`docs/adr/`](docs/adr/) — 78 Architecture Decision Records documenting every design call.
+- [`docs/adr/`](docs/adr/) — Architecture Decision Records documenting every design call (latest: ADR-0084).
 - [`docs/production-readiness-gap-2026-10-02.md`](docs/production-readiness-gap-2026-10-02.md) — commercial-readiness gap register.
 
 ---

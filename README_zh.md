@@ -105,6 +105,8 @@ Agent 做的每一件事都被投影成可查看、可回退的事件——绝�
 | 编辑器 | `re_editor` + `gpt_markdown`（LaTeX + Mermaid 围栏图） |
 | 终端 / 浏览器 | `flutter_pty` + `xterm`，`flutter_inappwebview` |
 | 密钥 | `flutter_secure_storage` —— 系统钥匙串（Keychain / DPAPI / libsecret） |
+| 本地包 | `packages/` 三层 monorepo，由 `lib` 向下消费 —— `board_panel`（数据视图）、`plan_editor`（块编辑器）、`app_common`（反馈 + 应用内升级）；ADR-0083 / ADR-0084 |
+| 本地化 | `flutter gen-l10n`，ARB 为盘上唯一源（中英双语）；`app_common` 自带一份生成的语言束（`AppCommonLocalizations`） |
 
 ### 架构不变量
 
@@ -118,6 +120,20 @@ dart tool/check_architecture.dart   # 8 条规则，指纹 baseline，只拦新�
 - `lib/model/` 永不导入 Flutter——它是运行时与 UI 之间的纯 Dart 词汇表。
 - 运行时不许伸进 `lib/state/`，也不许碰 `dart:ui`。
 - `lib/ui/` 不直接调用 `dart:io`（一律经 `lib/host/`）。
+
+### 本地包与 monorepo
+
+`packages/` 是三层 monorepo，依赖路线**单向**（ADR-0083 / ADR-0084）：
+
+```
+sentry ─▶ stone_core ─▶ pudding ─▶ appunits ─▶ lib
+```
+
+`lib/` 是唯一消费者——没有任何包可以 import `lib`。入库包中被 path 依赖接进 `lib`
+且真正用到的有三个：**`board_panel`**（企划看板与日历）、**`plan_editor`**（样式化
+Markdown 块编辑器）、**`app_common`**（宿主无关的反馈表单 + 应用内升级面板，界面文案
+住在包自带的 gen-l10n 束里）。其余（`appunits_core`、`stone_core`、`pudding`）是
+vendored / parked 状态，**刻意不被 lib 消费**——逐个理由见 ADR-0084 的复用边界映射。
 
 ---
 
@@ -144,7 +160,7 @@ dart tool/check_architecture.dart   # 8 条规则，指纹 baseline，只拦新�
 flutter pub get                                  # 新机器第一步
 dart format --set-exit-if-changed lib test tool spike
 dart analyze --fatal-infos lib test tool spike
-flutter test                                     # 126 个测试文件
+flutter test                                     # 127 个测试文件
 dart tool/check_architecture.dart                # 架构门禁
 dart tool/contrast_check.dart                    # 主题令牌 WCAG 对比度
 
@@ -162,7 +178,7 @@ flutter build linux --release                    # 需 GTK 工具链
 - [`AGENTS.md`](AGENTS.md) —— AI 编码代理入口；规则与约定索引。
 - [`docs/README.md`](docs/README.md) —— ADR 体系（分类、优先级、状态机）。
 - [`docs/debt-register.md`](docs/debt-register.md) —— 已知问题与技术债的唯一状态源。
-- [`docs/adr/`](docs/adr/) —— 78 篇架构决策记录（ADR），记录每一个设计取舍。
+- [`docs/adr/`](docs/adr/) —— 架构决策记录（ADR），记录每一个设计取舍（最新为 ADR-0084）。
 - [`docs/production-readiness-gap-2026-10-02.md`](docs/production-readiness-gap-2026-10-02.md) —— 商用化差距盘点。
 
 ---
