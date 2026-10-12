@@ -13,6 +13,11 @@ dependencies:
     sdk: flutter
   sentry:
     path: ../infras/sentry
+  # Pure-Dart MQTT v3.1/3.1.1 client (TCP + WebSocket, VM & web).
+  # Wraps the ticket-auth flow (GetMqttTicket) in the first-party `mqtt/` module.
+  mqtt_client: ^10.12.0
+  # Uint8Buffer for MQTT publish payloads (mqtt_client's publishMessage arg).
+  typed_data: ^1.3.2
   # gRPC client instrumentation (SentryGrpcInterceptor)
   grpc: '>=4.0.4 <6.0.0'
   meta: ^1.9.0
