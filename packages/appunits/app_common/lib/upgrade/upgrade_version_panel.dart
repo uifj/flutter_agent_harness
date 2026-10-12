@@ -13,16 +13,15 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import 'package:upgrade/upgrade.dart';
 
-import 'package:./upgrade_ui_labels.dart';
+import '../localizations/app_common_localizations.dart';
+import './upgrade_contract.dart';
 
 /// 纯展示升级面板。
 class UpgradeVersionPanel extends StatelessWidget {
   const UpgradeVersionPanel({
     super.key,
     required this.snapshot,
-    this.labels = const UpgradeUiLabels(),
     this.isForce = false,
     this.releaseContent,
     this.onInstall,
@@ -32,8 +31,6 @@ class UpgradeVersionPanel extends StatelessWidget {
 
   /// 升级编排快照（[UpgradeController.snapshot] / watch() 事件）。
   final UpgradeSnapshot snapshot;
-
-  final UpgradeUiLabels labels;
 
   /// 强制升级：下载期间隐藏取消按钮（legacy L650-653 可见性语义）。
   final bool isForce;
@@ -47,27 +44,34 @@ class UpgradeVersionPanel extends StatelessWidget {
 
   String get _version => snapshot.check?.version ?? '';
 
+  /// 展示号截去构建后缀（'7.1.0-beta' → '7.1.0'，与 legacy `UpgradeUiLabels.fill`
+  /// 同义）；填入 `AppCommonLocalizations` 的 `{version}` 占位符。
+  String get _displayVersion => _version.split('-')[0];
+
   /// 提示文案（legacy: tipText L493-508）。
-  String _tipText() {
+  String _tipText(AppCommonLocalizations l10n) {
     return switch (snapshot.state) {
-      UpgradeState.DOWNLOADING || UpgradeState.UPDATE => UpgradeUiLabels.fill(
-        labels.downloadingText,
-        progress: snapshot.progress,
-      ),
-      UpgradeState.UNZIP => labels.unzipText,
-      UpgradeState.CHECKMD5 => labels.checkMd5Text,
-      UpgradeState.FAILED => snapshot.errorMessage ?? labels.downloadFailedText,
-      _ => labels.downloadedText,
+      UpgradeState.DOWNLOADING ||
+      UpgradeState.UPDATE =>
+        l10n.upgradeDownloadingText(snapshot.progress),
+      UpgradeState.UNZIP => l10n.upgradeUnzipText,
+      UpgradeState.CHECKMD5 => l10n.upgradeCheckMd5Text,
+      UpgradeState.FAILED =>
+        snapshot.errorMessage ?? l10n.upgradeDownloadFailedText,
+      _ => l10n.upgradeDownloadedText,
     };
   }
 
   /// 标题下提示（legacy: getUpgradeTitleTip L510-524）。
-  String _titleTip() {
+  String _titleTip(AppCommonLocalizations l10n) {
     final done = snapshot.state == UpgradeState.DONE;
-    final template = isForce
-        ? (done ? labels.tipForceDownloaded : labels.tipForceDownloading)
-        : (done ? labels.tipDownloaded : labels.tipDownloading);
-    return UpgradeUiLabels.fill(template, version: _version);
+    return isForce
+        ? (done
+            ? l10n.upgradeTipForceDownloaded(_displayVersion)
+            : l10n.upgradeTipForceDownloading(_displayVersion))
+        : (done
+            ? l10n.upgradeTipDownloaded(_displayVersion)
+            : l10n.upgradeTipDownloading(_displayVersion));
   }
 
   /// 进度值：'37%' → 0.37；非法输入回退 0（legacy int.parse 会直接崩溃）。
@@ -77,11 +81,11 @@ class UpgradeVersionPanel extends StatelessWidget {
   }
 
   /// 按钮三分支（legacy: onTap L654-704）。
-  (String, VoidCallback?) _action() {
+  (String, VoidCallback?) _action(AppCommonLocalizations l10n) {
     return switch (snapshot.state) {
-      UpgradeState.DONE => (labels.buttonInstall, onInstall),
-      UpgradeState.FAILED => (labels.buttonRetry, onRetry),
-      _ => (labels.buttonCancel, onCancel),
+      UpgradeState.DONE => (l10n.upgradeButtonInstall, onInstall),
+      UpgradeState.FAILED => (l10n.upgradeButtonRetry, onRetry),
+      _ => (l10n.upgradeButtonCancel, onCancel),
     };
   }
 
@@ -93,6 +97,7 @@ class UpgradeVersionPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppCommonLocalizations.of(context);
     final shad = ShadTheme.maybeOf(context);
     final theme = Theme.of(context);
     final foreground =
@@ -103,7 +108,7 @@ class UpgradeVersionPanel extends StatelessWidget {
     final track =
         shad?.colorScheme.accent ?? theme.colorScheme.surfaceContainerHighest;
     final failed = snapshot.state == UpgradeState.FAILED;
-    final (actionLabel, actionCallback) = _action();
+    final (actionLabel, actionCallback) = _action(l10n);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
@@ -112,8 +117,8 @@ class UpgradeVersionPanel extends StatelessWidget {
         children: [
           Text(
             snapshot.state == UpgradeState.LATEST
-                ? UpgradeUiLabels.fill(labels.titleLatest, version: _version)
-                : labels.titleUpgrade,
+                ? l10n.upgradeTitleLatest(_displayVersion)
+                : l10n.upgradeTitleUpgrade,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 16,
@@ -123,7 +128,7 @@ class UpgradeVersionPanel extends StatelessWidget {
           ),
           if (snapshot.state != UpgradeState.LATEST) ...[
             const SizedBox(height: 10),
-            Text(_titleTip(), textAlign: TextAlign.center),
+            Text(_titleTip(l10n), textAlign: TextAlign.center),
           ],
           const SizedBox(height: 24),
           Expanded(
@@ -142,7 +147,7 @@ class UpgradeVersionPanel extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _tipText(),
+                      _tipText(l10n),
                       style: TextStyle(
                         color: failed ? destructive : foreground,
                         fontWeight: FontWeight.w500,
@@ -182,7 +187,6 @@ class UpgradeVersionPanelHost extends StatefulWidget {
   const UpgradeVersionPanelHost({
     super.key,
     required this.controller,
-    this.labels = const UpgradeUiLabels(),
     this.isForce = false,
     this.autoStart = true,
     this.releaseContent,
@@ -191,7 +195,6 @@ class UpgradeVersionPanelHost extends StatefulWidget {
   });
 
   final UpgradeController controller;
-  final UpgradeUiLabels labels;
   final bool isForce;
 
   /// 挂载即开始下载（legacy: VersionInfo initState → updateVersion）。
@@ -235,7 +238,6 @@ class _UpgradeVersionPanelHostState extends State<UpgradeVersionPanelHost> {
       builder: (context, async) {
         return UpgradeVersionPanel(
           snapshot: async.data ?? widget.controller.snapshot,
-          labels: widget.labels,
           isForce: widget.isForce,
           releaseContent: widget.releaseContent,
           onInstall: _install,

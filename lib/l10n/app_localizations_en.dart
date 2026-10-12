@@ -1888,6 +1888,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'requests-*.jsonl and contexts-*.jsonl, one file per month.';
 
   @override
+  String get settingsFeedback => 'Send feedback';
+
+  @override
+  String get settingsFeedbackDesc =>
+      'Report a problem or suggest an idea. Opens a pre-filled draft on the GitHub issue tracker that you review and submit.';
+
+  @override
+  String get settingsFeedbackOpen => 'Open form';
+
+  @override
+  String get feedbackIssueOpened => 'Opened a feedback draft in your browser';
+
+  @override
   String get settingsReset => 'Reset';
 
   @override

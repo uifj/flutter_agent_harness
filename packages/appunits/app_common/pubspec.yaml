@@ -1,6 +1,7 @@
 name: app_common
 description: >-
-  应用更新、用户反馈、oauth登录、支付.
+  PlanStar 应用级通用能力：用户反馈表单 + 应用内升级面板（宿主无关纯 UI，
+  文案数据类注入、设备/后端能力经插槽与回调出让）。ADR-0084 D4 Tier A。
 version: 0.0.1
 publish_to: none
 
@@ -8,18 +9,27 @@ environment:
   sdk: ">=3.6.0 <4.0.0"
 
 dependencies:
-  # The span engine (marker-pair bank, insert/remove shifting, toggle with
-  # replace-overlap). ADR-0044: adopted from super_editor's MIT engine.
-  collection: ^1.19.0
-
   flutter:
     sdk: flutter
-    
-  stone_core:
-    path: ../../infras/stone_core
-
+  # app_common 自己的 gen-l10n 束（`AppCommonLocalizations`，镜像 appunits_core
+  # 的 `AtomicLocalizations`）：面板/弹窗直接读 `.of(context)`，文案不再由宿主注入。
+  flutter_localizations:
+    sdk: flutter
+  intl: any
+  # feedback + upgrade 面板的 shadcn 组件（ShadInput/ShadSelect/ShadButton/
+  # ShadCheckbox/ShadTheme + shadcn re-export 的 LucideIcons）。版本对齐宿主
+  # root pubspec（shadcn_ui 0.56.3），避免 monorepo 内解析漂移。
+  shadcn_ui: 0.56.3
+  # LogFileBrowser 打开本地日志文件（宿主设备能力）。
+  open_file: ^3.5.10
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+
+# gen-l10n：把 `lib/l10n/*.arb` 生成 `AppCommonLocalizations` 到
+# `lib/localizations/`（配置见 `l10n.yaml`），生成件入库。
+flutter:
+  uses-material-design: true
+  generate: true

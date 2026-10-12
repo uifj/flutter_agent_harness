@@ -1845,6 +1845,19 @@ class AppLocalizationsZh extends AppLocalizations {
       'requests-*.jsonl 与 contexts-*.jsonl，每月一个文件。';
 
   @override
+  String get settingsFeedback => '发送反馈';
+
+  @override
+  String get settingsFeedbackDesc =>
+      '反馈问题或提出建议。将在 GitHub issue 跟踪器上打开一份预填草稿，由你确认后提交。';
+
+  @override
+  String get settingsFeedbackOpen => '填写反馈';
+
+  @override
+  String get feedbackIssueOpened => '已在浏览器中打开反馈草稿';
+
+  @override
   String get settingsReset => '重置';
 
   @override

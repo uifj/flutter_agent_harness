@@ -10,14 +10,17 @@
 ///
 /// 去宿主化：截图/录音/图片挑选等设备能力经 [attachmentArea] 插槽出让；
 /// 历史记录跳转、二维码群组等宿主能力不纳入。提交动作经 [onSubmit] 出让
-/// （宿主组装 FeedbackDraft 交给 coreops/upgrade 的 FeedbackReporter）。
+/// （宿主组装 FeedbackDraft 交给自己的反馈通道）。文案不再由宿主注入：面板
+/// 直接读本包 gen-l10n 的 `AppCommonLocalizations.of(context)`（镜像
+/// appunits_core 的 `AtomicLocalizations`，ADR-0084 D4 Tier A）——宿主须在
+/// `MaterialApp.localizationsDelegates` 注册 `AppCommonLocalizations.delegate`。
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
-import './feedback_ui_labels.dart';
+import '../localizations/app_common_localizations.dart';
 
 /// 表单产出（宿主转换为 FeedbackDraft）。
 class FeedbackFormData {
@@ -41,7 +44,6 @@ class FeedbackFormPanel extends StatefulWidget {
   const FeedbackFormPanel({
     super.key,
     required this.onSubmit,
-    this.labels = const FeedbackUiLabels(),
     this.isLogin = false,
     this.isPersonal = false,
     this.submitting = false,
@@ -50,7 +52,6 @@ class FeedbackFormPanel extends StatefulWidget {
   });
 
   final void Function(FeedbackFormData data) onSubmit;
-  final FeedbackUiLabels labels;
 
   /// 已登录（legacy: account.login.state == '1'）。
   final bool isLogin;
@@ -106,17 +107,17 @@ class _FeedbackFormPanelState extends State<FeedbackFormPanel> {
           widget.isLogin ||
           widget.isPersonal);
 
-  String _typeLabel(int value) => value == 1
-      ? widget.labels.typeIssue
+  String _typeLabel(AppCommonLocalizations l10n, int value) => value == 1
+      ? l10n.feedbackTypeIssue
       : value == 3
-      ? widget.labels.typeAdvice
-      : widget.labels.typeHint;
+          ? l10n.feedbackTypeAdvice
+          : l10n.feedbackTypeHint;
 
-  String get _contentHint => _fbType == 1
-      ? widget.labels.contentHintIssue
+  String _contentHint(AppCommonLocalizations l10n) => _fbType == 1
+      ? l10n.feedbackContentHintIssue
       : _fbType == 3
-      ? widget.labels.contentHintAdvice
-      : '';
+          ? l10n.feedbackContentHintAdvice
+          : '';
 
   void _submit() {
     widget.onSubmit(
@@ -148,40 +149,41 @@ class _FeedbackFormPanelState extends State<FeedbackFormPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final labels = widget.labels;
+    final l10n = AppCommonLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          labels.title,
+          l10n.feedbackTitle,
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         ),
         if (_showCompanyId) ...[
-          _requiredLabel(context, labels.companyIdLabel),
+          _requiredLabel(context, l10n.feedbackCompanyIdLabel),
           ShadInput(
             controller: _companyIdController,
-            placeholder: Text(labels.companyIdHint),
+            placeholder: Text(l10n.feedbackCompanyIdHint),
             inputFormatters: [
               FilteringTextInputFormatter(_illegalChars, allow: false),
             ],
             onChanged: (_) => setState(() {}),
           ),
         ],
-        _requiredLabel(context, labels.typeLabel),
+        _requiredLabel(context, l10n.feedbackTypeLabel),
         ShadSelect<int>(
-          placeholder: Text(labels.typeHint),
+          placeholder: Text(l10n.feedbackTypeHint),
           options: [
             for (final type in _feedbackTypes)
-              ShadOption(value: type, child: Text(_typeLabel(type))),
+              ShadOption(value: type, child: Text(_typeLabel(l10n, type))),
           ],
-          selectedOptionBuilder: (context, value) => Text(_typeLabel(value)),
+          selectedOptionBuilder: (context, value) =>
+              Text(_typeLabel(l10n, value)),
           onChanged: (value) => setState(() => _fbType = value),
         ),
-        _requiredLabel(context, labels.contentLabel),
+        _requiredLabel(context, l10n.feedbackContentLabel),
         ShadInput(
           controller: _contentController,
-          placeholder: Text(_contentHint),
+          placeholder: Text(_contentHint(l10n)),
           minLines: 5,
           maxLines: 9,
           maxLength: 300,
@@ -197,13 +199,13 @@ class _FeedbackFormPanelState extends State<FeedbackFormPanel> {
         Padding(
           padding: const EdgeInsets.only(top: 16, bottom: 8),
           child: Text(
-            labels.contactLabel,
+            l10n.feedbackContactLabel,
             style: const TextStyle(fontWeight: FontWeight.w500),
           ),
         ),
         ShadInput(
           controller: _contactController,
-          placeholder: Text(labels.contactHint),
+          placeholder: Text(l10n.feedbackContactHint),
           inputFormatters: [
             FilteringTextInputFormatter(_illegalChars, allow: false),
           ],
@@ -216,7 +218,7 @@ class _FeedbackFormPanelState extends State<FeedbackFormPanel> {
               onChanged: (value) => setState(() => _uploadLog = value),
             ),
             const SizedBox(width: 8),
-            Expanded(child: Text(labels.uploadLogLabel)),
+            Expanded(child: Text(l10n.feedbackUploadLogLabel)),
           ],
         ),
         const SizedBox(height: 20),
@@ -225,13 +227,15 @@ class _FeedbackFormPanelState extends State<FeedbackFormPanel> {
           children: [
             ShadButton.outline(
               onPressed: widget.onCancel,
-              child: Text(labels.cancelText),
+              child: Text(l10n.feedbackCancel),
             ),
             const SizedBox(width: 12),
             ShadButton(
               onPressed: _submitEnabled ? _submit : null,
               child: Text(
-                widget.submitting ? labels.submittingText : labels.submitText,
+                widget.submitting
+                    ? l10n.feedbackSubmitting
+                    : l10n.feedbackSubmit,
               ),
             ),
           ],

@@ -28,6 +28,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadSonner, ShadTheme;
 import 'package:screen_retriever/screen_retriever.dart' as retriever;
 import 'package:window_manager/window_manager.dart';
+import 'package:app_common/app_common.dart';
 
 import 'genkit/models_endpoint.dart';
 import 'host/project_folder_ops.dart';
@@ -432,10 +433,16 @@ class _DshAppState extends ConsumerState<DshApp> with WindowListener {
     return MaterialApp(
       title: AppMeta.productName,
       debugShowCheckedModeBanner: false,
-      // Localized system widgets + the app's own copy (ADR-0082). `locale` is
-      // forced to the resolved en/zh — both listed in `supportedLocales` — so no
+      // Localized system widgets + the app's own copy (ADR-0082) + app_common's
+      // own gen-l10n bundle (ADR-0084 D4): the feedback panel/dialog read
+      // `AppCommonLocalizations.of(context)` directly, so its delegate rides
+      // along here. `locale` is forced to the resolved en/zh — both listed in
+      // `supportedLocales` (app_common supports the same two) — so no
       // resolution callback is needed.
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: const [
+        ...AppLocalizations.localizationsDelegates,
+        AppCommonLocalizations.delegate,
+      ],
       supportedLocales: AppLocalizations.supportedLocales,
       locale: locale,
       theme: dswThemeData(Brightness.light),

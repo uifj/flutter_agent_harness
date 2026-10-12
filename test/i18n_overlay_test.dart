@@ -27,14 +27,24 @@ void main() {
     final source = File('lib/main.dart').readAsStringSync();
     // The single locale seat: the MaterialApp's own delegates + locale. On the
     // MaterialApp they sit above the Navigator, so overlay routes inherit them.
+    // Since ADR-0084 D4 the list is a const spread that also carries
+    // app_common's own bundle, so the match is on the spread element.
     expect(
       source,
-      contains(
-        'localizationsDelegates: AppLocalizations.localizationsDelegates',
-      ),
+      contains('...AppLocalizations.localizationsDelegates'),
       reason:
           'without the delegate, AppLocalizations.of throws and the localized '
           'system widgets (text-selection menu, date picker) stay English',
+    );
+    // app_common's feedback panel/dialog read AppCommonLocalizations.of(context)
+    // directly (ADR-0084 D4); without its delegate on the same MaterialApp the
+    // lookup throws, so the guard covers the second bundle too.
+    expect(
+      source,
+      contains('AppCommonLocalizations.delegate'),
+      reason:
+          'the feedback panel reads AppCommonLocalizations.of(context); its '
+          'delegate must ride the same MaterialApp seat above the Navigator',
     );
     expect(
       source,

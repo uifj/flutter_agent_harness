@@ -19,6 +19,11 @@ dependencies:
     path: packages/appunits/board_panel
   plan_editor:
     path: packages/appunits/plan_editor
+  # ADR-0084 D4 Tier A: host-agnostic app capabilities — user feedback form +
+  # in-app upgrade panel (self-drawn shadcn UI driven by an engine-agnostic
+  # UpgradeController contract). Consumed downward by lib; never imports lib.
+  app_common:
+    path: packages/appunits/app_common
   # Editor link chips open the system browser (ADR-0044 P10-d); already in
   # the tree as pdfrx's transitive dependency, promoted so lib may import it.
   url_launcher: ^6.3.2

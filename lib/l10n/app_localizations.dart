@@ -3638,6 +3638,30 @@ abstract class AppLocalizations {
   /// **'requests-*.jsonl and contexts-*.jsonl, one file per month.'**
   String get diagnosticFolderDesc;
 
+  /// No description provided for @settingsFeedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Send feedback'**
+  String get settingsFeedback;
+
+  /// No description provided for @settingsFeedbackDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Report a problem or suggest an idea. Opens a pre-filled draft on the GitHub issue tracker that you review and submit.'**
+  String get settingsFeedbackDesc;
+
+  /// No description provided for @settingsFeedbackOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open form'**
+  String get settingsFeedbackOpen;
+
+  /// No description provided for @feedbackIssueOpened.
+  ///
+  /// In en, this message translates to:
+  /// **'Opened a feedback draft in your browser'**
+  String get feedbackIssueOpened;
+
   /// No description provided for @settingsReset.
   ///
   /// In en, this message translates to:

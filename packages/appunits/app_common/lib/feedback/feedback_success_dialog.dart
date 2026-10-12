@@ -2,20 +2,20 @@
 ///
 /// 行为保真：提示语 + 大号反馈 ID + 可复制 + 单确认按钮。
 /// 去宿主化：反馈记录 webview 跳转（authCode 拼接、launchWebView）与
-/// 客服会话链接均属宿主能力，经 [onSecondaryAction] 出让。
+/// 客服会话链接均属宿主能力，经 [onSecondaryAction] 出让。文案直接读本包
+/// gen-l10n 的 `AppCommonLocalizations.of(context)`（ADR-0084 D4 Tier A）。
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
-import './feedback_ui_labels.dart';
+import '../localizations/app_common_localizations.dart';
 
 class FeedbackSuccessDialog extends StatefulWidget {
   const FeedbackSuccessDialog({
     super.key,
     required this.issueId,
-    this.labels = const FeedbackUiLabels(),
     this.onConfirm,
     this.secondaryActionLabel,
     this.onSecondaryAction,
@@ -23,8 +23,6 @@ class FeedbackSuccessDialog extends StatefulWidget {
 
   /// 服务端返回的反馈单号。
   final String issueId;
-
-  final FeedbackUiLabels labels;
 
   final VoidCallback? onConfirm;
 
@@ -51,7 +49,7 @@ class _FeedbackSuccessDialogState extends State<FeedbackSuccessDialog> {
     final primary = shad?.colorScheme.primary ?? theme.colorScheme.primary;
     final muted =
         shad?.colorScheme.mutedForeground ?? theme.colorScheme.outline;
-    final labels = widget.labels;
+    final l10n = AppCommonLocalizations.of(context);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
@@ -60,7 +58,7 @@ class _FeedbackSuccessDialogState extends State<FeedbackSuccessDialog> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            labels.successTitle,
+            l10n.feedbackSuccessTitle,
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
           ),
@@ -71,7 +69,7 @@ class _FeedbackSuccessDialogState extends State<FeedbackSuccessDialog> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  labels.successTip,
+                  l10n.feedbackSuccessTip,
                   style: TextStyle(color: muted),
                 ),
               ),
@@ -89,7 +87,7 @@ class _FeedbackSuccessDialogState extends State<FeedbackSuccessDialog> {
           ),
           const SizedBox(height: 4),
           Text(
-            labels.successIdCaption,
+            l10n.feedbackSuccessIdCaption,
             textAlign: TextAlign.center,
             style: TextStyle(color: muted),
           ),
@@ -101,7 +99,7 @@ class _FeedbackSuccessDialogState extends State<FeedbackSuccessDialog> {
                 _copied ? LucideIcons.check : LucideIcons.copy,
                 size: 16,
               ),
-              child: Text(_copied ? labels.copiedText : labels.copyText),
+              child: Text(_copied ? l10n.feedbackCopied : l10n.feedbackCopy),
             ),
           ),
           const SizedBox(height: 20),
@@ -116,7 +114,7 @@ class _FeedbackSuccessDialogState extends State<FeedbackSuccessDialog> {
               if (widget.onSecondaryAction != null) const SizedBox(width: 12),
               ShadButton(
                 onPressed: widget.onConfirm,
-                child: Text(labels.confirmText),
+                child: Text(l10n.feedbackConfirm),
               ),
             ],
           ),

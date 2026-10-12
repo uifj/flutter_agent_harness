@@ -3,3 +3,10 @@ include: package:flutter_lints/flutter.yaml
 analyzer:
   exclude:
     - "**/*.g.dart"
+
+linter:
+  rules:
+    # legacy cloudspace UpgradeState 状态机逐值保真为大写（DOWNLOADING/UNZIP/
+    # CHECKMD5…），面板 switch 直接引用；改成 lowerCamelCase 会动 legacy 保真面。
+    # 循 ADR-0083 pudding 对 vendored src 豁免一方 lint 的先例。
+    constant_identifier_names: false

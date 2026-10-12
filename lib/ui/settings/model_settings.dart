@@ -19,6 +19,7 @@
 import 'dart:async' show TimeoutException;
 import 'dart:io' show Directory, HttpException, SocketException;
 
+import 'package:app_common/app_common.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
@@ -40,11 +41,13 @@ import 'package:shadcn_ui/shadcn_ui.dart'
         ShadSeparator,
         ShadSwitch,
         showShadDialog;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../genkit/models_endpoint.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../l10n/tr_key.dart';
+import '../../model/app_meta.dart';
 import '../../model/app_settings.dart' hide ThemeMode;
 import '../../model/app_settings.dart' as settings;
 import '../../model/approval_rule.dart';
@@ -2285,9 +2288,77 @@ class _SettingsPanelState extends State<SettingsPanel> {
             ),
             last: true,
           ),
+        _ActionRow(
+          title: AppLocalizations.of(context).settingsFeedback,
+          description: AppLocalizations.of(context).settingsFeedbackDesc,
+          button: CapsuleButton(
+            label: AppLocalizations.of(context).settingsFeedbackOpen,
+            onTap: _openFeedbackForm,
+          ),
+          last: true,
+        ),
       ],
     ),
   ];
+
+  /// Send feedback (ADR-0084 D4 Tier A) — lib's first real consumption of
+  /// `package:app_common`. PlanStar is single-machine with no feedback backend
+  /// (that is ADR-0045 form ②), so the form is de-account-ised (`isPersonal`,
+  /// which hides the legacy company-ID field) and submit composes a pre-filled
+  /// GitHub issue draft — the same channel the help menu's "report an issue"
+  /// uses — instead of pretending to POST to a server. The browser opens an
+  /// editable draft, so the user reviews it (and can strip the optional
+  /// contact) before submitting.
+  Future<void> _openFeedbackForm() async {
+    await showShadDialog<void>(
+      context: context,
+      builder: (dialogContext) => ShadDialog(
+        radius: BorderRadius.circular(DswShape.float),
+        child: FeedbackFormPanel(
+          isPersonal: true,
+          onCancel: () => Navigator.of(dialogContext).pop(),
+          onSubmit: (data) {
+            Navigator.of(dialogContext).pop();
+            _sendFeedback(data);
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Composes the submitted form into a GitHub new-issue draft and opens it in
+  /// the external browser. The optional contact and the version/platform block
+  /// land in the body only when the user supplied / opted into them; nothing is
+  /// sent anywhere the user cannot see and edit first.
+  Future<void> _sendFeedback(FeedbackFormData data) async {
+    final l10n = AppLocalizations.of(context);
+    // The type names live in app_common's own bundle now (ADR-0084 D4): the
+    // feedback panel renders them, so lib reads the same source for the issue
+    // title instead of keeping a second copy.
+    final ac = AppCommonLocalizations.of(context);
+    final type = data.fbType == 1
+        ? ac.feedbackTypeIssue
+        : ac.feedbackTypeAdvice;
+    final body = StringBuffer(data.description.trim());
+    final contact = data.contact.trim();
+    if (contact.isNotEmpty) body.write('\n\nContact: $contact');
+    if (data.uploadLog) {
+      body.write(
+        '\n\n---\n${AppMeta.productName} ${AppMeta.version} '
+        '(${defaultTargetPlatform.name})',
+      );
+    }
+    final uri = Uri.parse('${AppMeta.issuesUrl}/new').replace(
+      queryParameters: {'title': '[Feedback] $type', 'body': body.toString()},
+    );
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!mounted) return;
+    showFeedback(
+      context,
+      opened ? l10n.feedbackIssueOpened : l10n.planLinkFailed,
+      destructive: !opened,
+    );
+  }
 
   List<Widget> _backupSection(DswAlias color) => [
     _heading(

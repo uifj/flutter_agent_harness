@@ -1,0 +1,81 @@
+{
+  "@@locale": "en",
+  "feedbackTitle": "Feedback",
+  "feedbackTypeLabel": "Type",
+  "feedbackTypeHint": "Select a feedback type",
+  "feedbackTypeIssue": "Problem",
+  "feedbackTypeAdvice": "Suggestion",
+  "feedbackContentLabel": "Description",
+  "feedbackContentHintIssue": "Describe the problem, when it happened, and how to reproduce it",
+  "feedbackContentHintAdvice": "Describe your suggestion",
+  "feedbackCompanyIdLabel": "Company ID",
+  "feedbackCompanyIdHint": "Enter your company ID",
+  "feedbackContactLabel": "Contact (optional)",
+  "feedbackContactHint": "Email or phone so we can reach you",
+  "feedbackUploadLogLabel": "Include the app version and platform in the report",
+  "feedbackSubmit": "Submit",
+  "feedbackCancel": "Cancel",
+  "feedbackSubmitting": "Submitting…",
+  "feedbackSuccessTitle": "Submitted",
+  "feedbackSuccessTip": "Give this feedback ID to support so we can follow up.",
+  "feedbackSuccessIdCaption": "Feedback ID",
+  "feedbackCopy": "Copy",
+  "feedbackCopied": "Copied",
+  "feedbackConfirm": "Got it",
+  "upgradeTitleUpgrade": "New version available",
+  "upgradeTitleLatest": "Current version {version}",
+  "@upgradeTitleLatest": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "upgradeTipDownloading": "Version {version} is downloading",
+  "@upgradeTipDownloading": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "upgradeTipDownloaded": "Version {version} is ready; restart to finish upgrading",
+  "@upgradeTipDownloaded": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "upgradeTipForceDownloading": "Important update {version} is downloading; upgrade right after it finishes",
+  "@upgradeTipForceDownloading": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "upgradeTipForceDownloaded": "Important update {version} is ready; upgrading now is required",
+  "@upgradeTipForceDownloaded": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "upgradeDownloadingText": "Downloading {progress}",
+  "@upgradeDownloadingText": {
+    "placeholders": {
+      "progress": {
+        "type": "String"
+      }
+    }
+  },
+  "upgradeUnzipText": "Unzipping the update…",
+  "upgradeCheckMd5Text": "Verifying the installer…",
+  "upgradeDownloadedText": "Download complete",
+  "upgradeDownloadFailedText": "Download failed, please retry",
+  "upgradeButtonInstall": "Restart and install",
+  "upgradeButtonRetry": "Re-download",
+  "upgradeButtonCancel": "Cancel"
+}

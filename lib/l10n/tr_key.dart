@@ -1194,6 +1194,14 @@ String trKey(AppLocalizations l10n, String key, [Map<String, Object>? params]) {
       return l10n.diagnosticFolderTitle;
     case 'diagnosticFolderDesc':
       return l10n.diagnosticFolderDesc;
+    case 'settingsFeedback':
+      return l10n.settingsFeedback;
+    case 'settingsFeedbackDesc':
+      return l10n.settingsFeedbackDesc;
+    case 'settingsFeedbackOpen':
+      return l10n.settingsFeedbackOpen;
+    case 'feedbackIssueOpened':
+      return l10n.feedbackIssueOpened;
     case 'settingsReset':
       return l10n.settingsReset;
     case 'settingsResetDesc':
