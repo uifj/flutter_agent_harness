@@ -24,6 +24,10 @@ dependencies:
   # UpgradeController contract). Consumed downward by lib; never imports lib.
   app_common:
     path: packages/appunits/app_common
+  # ADR-0083 依赖路线（sentry → stone_core → pudding → appunits → lib）：lib 直接
+  # 消费 stone_core 基础设施层（lib/ui/auth 的 Google 登录服务经 StoneLogger 打日志）。
+  stone_core:
+    path: packages/infras/stone_core
   # Editor link chips open the system browser (ADR-0044 P10-d); already in
   # the tree as pdfrx's transitive dependency, promoted so lib may import it.
   url_launcher: ^6.3.2
@@ -34,6 +38,12 @@ dependencies:
   # The auth polling transport (ADR-0045 PE); already in the tree via genkit,
   # promoted so lib/state may import it.
   http: ^1.2.0
+  # ── BetterAuth 客户端 + Google 登录（lib/ui/auth，对接 agent_harness_server）──
+  # 后端 better-auth 挂载点：http://localhost:8000/api/auth（根 `.env` 的 BETTER_AUTH_URL）。
+  # dotenv 从打包的 `.env` 资源读 base URL 与 Google OAuth client id。
+  flutter_dotenv: ^5.2.1
+  google_sign_in: ^7.2.0
+  google_sign_in_web: ^1.1.0
   desktop_drop: ^0.8.4
   file_picker: ^10.3.7
   flutter:
@@ -103,6 +113,8 @@ flutter:
     # Desktop has no native launch-screen slot (unlike iOS's LaunchScreen.storyboard),
     # so the brand splash ships as an asset for app code to paint on the first frame.
     - assets/branding/
+    # flutter_dotenv 运行时读取的后端连接配置（BETTER_AUTH_URL / Google client id）。
+    - .env
 
   # To add assets to your package, add an assets section, like this:
   # assets:

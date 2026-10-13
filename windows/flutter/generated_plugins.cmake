@@ -3,7 +3,9 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  connectivity_plus
   desktop_drop
+  desktop_webview_window
   flutter_inappwebview_windows
   flutter_secure_storage_windows
   hotkey_manager_windows
@@ -12,6 +14,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   tray_manager
   url_launcher_windows
   window_manager
+  window_to_front
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

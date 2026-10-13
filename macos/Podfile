@@ -1,3 +1,10 @@
+# LOCAL BUILD WORKAROUND (network): this machine's route to the CocoaPods trunk
+# CDN file host `cdn.jsdelivr.net/cocoa/...` is reset (SSL connect error), so the
+# default source can't fetch podspecs (e.g. GoogleSignIn). Point CocoaPods at the
+# Tsinghua git mirror of the Specs index instead. CI/other machines with normal
+# CDN access don't need this — revert before committing if it's only for local use.
+source 'https://mirrors.tuna.tsinghua.edu.cn/git/CocoaPods/Specs.git'
+
 platform :osx, '10.15'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.

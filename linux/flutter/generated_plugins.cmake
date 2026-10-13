@@ -4,6 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   desktop_drop
+  desktop_webview_window
   flutter_secure_storage_linux
   hotkey_manager_linux
   open_file_linux
@@ -12,6 +13,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   tray_manager
   url_launcher_linux
   window_manager
+  window_to_front
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

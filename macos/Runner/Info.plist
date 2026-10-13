@@ -18,6 +18,23 @@
 	<string>企划星</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
+	<!-- OAuth / social sign-in deeplink callback scheme, consumed by
+		     flutter_web_auth_2. Must match `scheme: 'myapp'` in
+		     FlutterBetterAuth.initialize (lib/ui/auth) and the backend's
+		     trustedOrigins (`myapp://`). Registering it here lets macOS route a
+		     `myapp://...` redirect back to PlanStar when the flow falls through to
+		     the real system browser or relaunches the app. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>top.planstar.desktop</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>myapp</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleShortVersionString</key>
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleVersion</key>
