@@ -104,6 +104,15 @@ class FlutterBetterAuth {
     dioClient.options.headers['x-skip-oauth-proxy'] = 'true';
     if (origin != null) {
       dioClient.options.headers['expo-origin'] = origin;
+      // Better Auth's server reads the STANDARD `Origin` header (not
+      // `expo-origin`) and rejects cookie-mutating endpoints — e.g. `signOut`
+      // — with MISSING_OR_NULL_ORIGIN when it is absent. Native dart:io HTTP
+      // clients send no Origin of their own, so mirror the trusted scheme
+      // origin (which the backend lists in trustedOrigins) here. Skipped on
+      // web, where the browser supplies Origin itself.
+      if (!kIsWeb) {
+        dioClient.options.headers['origin'] = origin;
+      }
     }
     cookieJar = CustomPersistCookieJar(
       store: storage,
