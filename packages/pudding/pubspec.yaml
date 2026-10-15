@@ -3,6 +3,7 @@ description: >-
   grpc,link,remote_config这些与具体业务集成的模块
 version: 0.1.0
 publish_to: none
+resolution: workspace
 
 environment:
   sdk: ^3.11.5
@@ -32,4 +33,5 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  lints: ^4.0.0
+  # ADR-0085 D4: aligned with flutter_lints 6 (lints ^6.0.0) for workspace resolution.
+  lints: ^6.0.0

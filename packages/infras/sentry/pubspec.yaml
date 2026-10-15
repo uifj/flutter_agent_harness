@@ -8,8 +8,12 @@ repository: https://github.com/getsentry/sentry-dart
 issue_tracker: https://github.com/getsentry/sentry-dart/issues
 documentation: https://docs.sentry.io/platforms/dart/
 
+# ADR-0083: absorbed fork, never published from this repo.
+publish_to: none
+resolution: workspace
+
 environment:
-  sdk: '>=3.5.0 <4.0.0'
+  sdk: ^3.11.5
 
 platforms:
   android:
@@ -37,6 +41,7 @@ dev_dependencies:
   coverage: ^1.3.0
   intl: '>=0.17.0 <1.0.0'
   version: ^3.0.2
-  _sentry_testing:
-    path: ../_sentry_testing
+  # ADR-0085 D4: the upstream monorepo's private test helper was never
+  # vendored (the fork's own tests are not part of this repo's gates), and a
+  # dangling path dev-dependency breaks workspace resolution.
   fake_async: ^1.3.3

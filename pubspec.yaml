@@ -6,6 +6,20 @@ license: GPL-3.0-or-later
 # legitimate (a publishable package may not carry one).
 publish_to: 'none'
 
+# ADR-0085 D4: one resolution for the whole monorepo. Every packages/
+# directory is a member — including the not-yet-consumed appunits_core and
+# pudding (retained per ADR-0083, version-audited here rather than left
+# outside the resolved graph).
+workspace:
+  - packages/appunits/app_common
+  - packages/appunits/appunits_core
+  - packages/appunits/board_panel
+  - packages/appunits/board_panel/example
+  - packages/appunits/plan_editor
+  - packages/infras/sentry
+  - packages/infras/stone_core
+  - packages/pudding
+
 environment:
   sdk: ^3.11.5
   flutter: ">=1.17.0"

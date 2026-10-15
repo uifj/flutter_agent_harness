@@ -3,9 +3,11 @@ description: >-
   用户反馈表单 + 应用内升级面板 + 登录注册
 version: 0.0.1
 publish_to: none
+resolution: workspace
 
 environment:
-  sdk: ">=3.8.0 <4.0.0"
+  sdk: ^3.11.5
+  flutter: ">=3.41.0"
 
 dependencies:
   flutter:
@@ -44,9 +46,12 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   # better_auth 的 *.g.dart / *.freezed.dart 再生所需（生成物入库，比照 root）。
+  # ADR-0085 D4: 工作区统一求解，root 的 flutter_test 钉住 meta 1.17.0、
+  # riverpod_generator 4.0.3 要 analyzer ^9 —— json_serializable >=6.13.2 起
+  # 要 analyzer >=10，这里封顶在 6.13.1 让解析落在 analyzer 9 上。
   build_runner: ^2.15.1
   freezed: ^3.2.5
-  json_serializable: ^6.13.2
+  json_serializable: '>=6.11.0 <6.13.2'
   retrofit_generator: ^10.2.5
   mocktail: ^1.0.4
 

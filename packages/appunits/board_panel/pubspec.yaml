@@ -2,13 +2,14 @@ name: board_panel
 description: "A Flutter package for board/kanban panel UI."
 version: 0.0.1
 publish_to: 'none'
+resolution: workspace
 
-# ADR-0007 D5: consumed as a plain path dependency of the app (not a pub
-# workspace member), and shadcn_ui resolves to the HOSTED 0.56.3 the app itself
-# uses. The original `path: ../shadcn_ui` pointed at a directory that does not
-# exist (the vendored mirror is `../flutter-shadcn-ui`), and pointing there
-# instead would create a SECOND shadcn_ui package instance beside the hosted one
-# — two ShadTheme types that never find each other.
+# ADR-0007 D5 / ADR-0085 D4: an in-repo workspace member consumed by the app,
+# and shadcn_ui resolves to the HOSTED 0.56.3 the app itself uses. The original
+# `path: ../shadcn_ui` pointed at a directory that does not exist (the vendored
+# mirror is `../flutter-shadcn-ui`), and pointing there instead would create a
+# SECOND shadcn_ui package instance beside the hosted one — two ShadTheme types
+# that never find each other.
 environment:
   sdk: ^3.11.5
   flutter: ">=3.41.0"

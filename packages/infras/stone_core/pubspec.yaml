@@ -3,6 +3,7 @@ description: >-
   企业级基础设施层 — 网络、路由、日志、存储。
 version: 0.1.0
 publish_to: none
+resolution: workspace
 
 environment:
   sdk: ^3.11.5
