@@ -130,8 +130,12 @@ Future<void> main() async {
   // Warm the checks the settings page reads synchronously (ADR-0045 PC).
   crashArchive = crash;
   crash.knownNonEmpty = (await crash.files()).isNotEmpty;
+  // One database connection for every domain (ADR-0060/0071). The usage
+  // ledger shares it (ADR-0085 D3) instead of opening a second file.
+  final appDatabase = AppDatabase.open(File('${support.path}/planstar.db'));
   final usageLedger = UsageLedger(
-    directory: Directory('${support.path}/usage'),
+    appDatabase,
+    legacyDirectory: Directory('${support.path}/usage'),
   );
   await usageLedger.prune();
   final bootUsageSummary = UsageLedger.summarize(await usageLedger.entries());
@@ -142,8 +146,6 @@ Future<void> main() async {
   final prefsStore = await PrefsStore.open(support);
   // The plan workspace's object store (ADR-0037): the same bootstrap rule, and
   // the only place the mock seed is named.
-  // One database connection for every domain (ADR-0060/0071).
-  final appDatabase = AppDatabase.open(File('${support.path}/planstar.db'));
   // The seed's furniture names follow the launch locale (ADR-0074, ADR-0082
   // §6): resolve the persisted choice once, look the localizations up
   // synchronously, and read the seed names off the same generated getters the

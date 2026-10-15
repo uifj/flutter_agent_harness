@@ -75,9 +75,13 @@ class AppScope {
     // The in-app update check (ADR-0079): release channel + per-machine
     // check state under <support>/update.json.
     _updates = UpdateService.open(support);
-    // Local usage ledger (ADR-0045 PC): one JSONL line per finished model
-    // turn, 30-day window. The crash archive rides the same support root.
-    _usageLedger = UsageLedger(directory: Directory('${support.path}/usage'));
+    // Local usage ledger (ADR-0045 PC): one row per finished model turn,
+    // 30-day window, sharing the app's single database (ADR-0085 D3). The
+    // legacy usage/ directory is imported once and retired by the ledger.
+    _usageLedger = UsageLedger(
+      appDatabase,
+      legacyDirectory: Directory('${support.path}/usage'),
+    );
     // Diagnostics (ADR-0058): the requests/contexts logs. Not in the backup
     // manifest — like usage/, they stay on this machine.
     _diagnostics = DiagnosticLogStore(

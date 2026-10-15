@@ -1,13 +1,13 @@
-// Local usage ledger (ADR-0045 PC, carried into drift by ADR-0060): rows in
-// `<support>/planstar.db`, one per model turn, 30-day prune after every
-// append. Aggregation is a pure fold so the settings section can render
-// without re-reading; the heavy lifting (window delete, ordered read) now
-// lives in SQL.
+// Local usage ledger (ADR-0045 PC, carried into drift by ADR-0060, sharing the
+// app's single database by ADR-0085 D3): rows in `<support>/planstar.db`'s
+// usage_rows table, one per model turn, 30-day prune after every append.
+// Aggregation is a pure fold so the settings section can render without
+// re-reading; the heavy lifting (window delete, ordered read) lives in SQL.
 //
-// The JSONL era's files (`usage-YYYYMM.jsonl`) are imported once on first
-// use and deleted — a crash between a file's import and its deletion can
-// double-count a few rows inside the 30-day window, which is a bounded harm
-// against losing the old totals outright.
+// Two legacy shapes import once on first use and are retired: the JSONL era's
+// `usage-YYYYMM.jsonl` files and ADR-0060's standalone `<legacy>/usage.db`.
+// A crash between import and deletion can double-count a few rows inside the
+// 30-day window, which is a bounded harm against losing the old totals.
 
 import 'dart:convert';
 import 'dart:io';
@@ -74,20 +74,24 @@ class UsageSummary {
   double get errorRate => turns == 0 ? 0 : errorCount / turns;
 }
 
-/// Appends and prunes. The rows live in the AppDatabase's `usage_rows` table;
-/// the database file is `<directory>/usage.db` so the ledger's construction
-/// stays `UsageLedger(directory: …)`.
+/// Appends and prunes against the app's single database (ADR-0085 D3) — the
+/// rows live in the shared `usage_rows` table next to every other domain.
+/// [legacyDirectory], when given, is scanned once for the pre-merge shapes
+/// (monthly JSONL files, then a standalone `usage.db`), imported, and retired.
 class UsageLedger {
-  UsageLedger({required Directory directory, this.retentionDays = 30})
-    : _db = AppDatabase.open(File('${directory.path}/usage.db')),
-      _directory = directory {
+  UsageLedger(
+    AppDatabase db, {
+    Directory? legacyDirectory,
+    this.retentionDays = 30,
+  }) : _db = db,
+       _legacyDirectory = legacyDirectory {
     // One import, started at construction, awaited by every reader below —
     // so the first `record` cannot land ahead of the rows it would skew.
-    _imported = _importLegacyJsonl();
+    _imported = _importLegacy();
   }
 
   final AppDatabase _db;
-  final Directory _directory;
+  final Directory? _legacyDirectory;
   final int retentionDays;
   late final Future<void> _imported;
 
@@ -145,17 +149,51 @@ class UsageLedger {
   /// list.
   final List<UsageEntry> cache = [];
 
-  /// Releases the database. Tests call this; the app closes with the process.
-  Future<void> close() => _db.close();
+  /// Imports the pre-merge shapes, oldest format first: the monthly JSONL
+  /// files (ADR-0060), then ADR-0085 D3's standalone `usage.db`. Each source
+  /// is read, inserted, and deleted per source, so a torn line only costs its
+  /// own tail and a crash mid-import bounds the double-count to the 30-day
+  /// window. A file that cannot be parsed at all is deleted unread: the same
+  /// "corrupt metadata must not brick the app" stance `SettingsStore.open`
+  /// takes.
+  Future<void> _importLegacy() async {
+    await _importLegacyJsonl();
+    await _importLegacyUsageDb();
+  }
 
-  /// Imports the pre-drift monthly files (ADR-0060): read, insert, delete —
-  /// per file, so a torn line only costs its own file's tail. A file that
-  /// cannot be parsed at all is deleted unread: the same "corrupt metadata
-  /// must not brick the app" stance `SettingsStore.open` takes.
+  Future<void> _importLegacyUsageDb() async {
+    final directory = _legacyDirectory;
+    if (directory == null) return;
+    final file = File('${directory.path}/usage.db');
+    if (!await file.exists()) return;
+    final legacy = AppDatabase.open(file);
+    try {
+      final rows = await legacy.select(legacy.usageRows).get();
+      for (final row in rows) {
+        await _db
+            .into(_db.usageRows)
+            .insert(
+              UsageRowsCompanion.insert(
+                timestamp: row.timestamp,
+                model: row.model,
+                inputTokens: row.inputTokens,
+                outputTokens: row.outputTokens,
+                reasoningTokens: Value(row.reasoningTokens),
+                error: Value(row.error),
+              ),
+            );
+      }
+    } finally {
+      await legacy.close();
+    }
+    await file.delete();
+  }
+
   Future<void> _importLegacyJsonl() async {
-    if (!await _directory.exists()) return;
+    final directory = _legacyDirectory;
+    if (directory == null || !await directory.exists()) return;
     final files =
-        (await _directory.list().toList())
+        (await directory.list().toList())
             .whereType<File>()
             .where(
               (file) =>
