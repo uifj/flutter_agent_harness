@@ -166,6 +166,14 @@ class UsageLedger {
     if (directory == null) return;
     final file = File('${directory.path}/usage.db');
     if (!await file.exists()) return;
+    // drift's double-instantiation check keys on the database CLASS, so this
+    // one-shot read of a *different file* looks like the second live connection
+    // it was filed to warn about (ADR-0085 D3's whole point). The flag is the
+    // library's sanctioned answer; it is set around this handle only and
+    // restored in the `finally`, so a genuine second connection elsewhere in the
+    // app still logs the warning.
+    final warnedBefore = driftRuntimeOptions.dontWarnAboutMultipleDatabases;
+    driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
     final legacy = AppDatabase.open(file);
     try {
       final rows = await legacy.select(legacy.usageRows).get();
@@ -185,6 +193,7 @@ class UsageLedger {
       }
     } finally {
       await legacy.close();
+      driftRuntimeOptions.dontWarnAboutMultipleDatabases = warnedBefore;
     }
     await file.delete();
   }
