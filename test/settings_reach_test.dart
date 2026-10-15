@@ -21,7 +21,21 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 const _definition = 'lib/model/app_settings.dart';
-const _writer = 'lib/ui/settings/model_settings.dart';
+const _pageEntry = 'lib/ui/settings/model_settings.dart';
+
+/// The settings page is one library split across part files (ADR-0085 D7), so
+/// "the page that writes these fields" is the entry file *and* every file it
+/// declares as a part — otherwise a write-only field could hide in a section
+/// file and read as wired.
+List<String> _pageLibrary() {
+  final dir = _pageEntry.substring(0, _pageEntry.lastIndexOf('/') + 1);
+  return [
+    _pageEntry,
+    for (final line in File(_pageEntry).readAsLinesSync())
+      if (RegExp(r"^part '(.+)';").firstMatch(line) case final part?)
+        dir + part.group(1)!,
+  ];
+}
 
 void main() {
   group('a hint is a fact the user can act on', () {
@@ -79,7 +93,7 @@ void main() {
     // loop below vacuously green.
     expect(fields.length, greaterThan(8), reason: 'parsed $fields');
 
-    final sources = _libSources(excluding: {_definition, _writer});
+    final sources = _libSources(excluding: {_definition, ..._pageLibrary()});
     final unread = [
       for (final field in fields)
         if (!_readAnywhere(sources, field)) field,

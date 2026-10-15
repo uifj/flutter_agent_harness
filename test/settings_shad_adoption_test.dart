@@ -69,10 +69,23 @@ List<BorderSide> _visibleSides(Border border) => [
 ].where((side) => side.width > 0).toList();
 
 /// The settings page's own source, minus comments — the shapes that left the
-/// page must not come back one file at a time.
-List<String> _pageLines() => File(
-  'lib/ui/settings/model_settings.dart',
-).readAsLinesSync().where((line) => !line.trimLeft().startsWith('//')).toList();
+/// page must not come back one file at a time. Since ADR-0085 D7 the page is
+/// one library spread over part files, so the scan walks the entry file plus
+/// whatever it declares as a part.
+List<String> _pageLines() {
+  const entry = 'lib/ui/settings/model_settings.dart';
+  final dir = entry.substring(0, entry.lastIndexOf('/') + 1);
+  final head = File(entry).readAsLinesSync();
+  final files = [
+    entry,
+    for (final line in head)
+      if (RegExp(r"^part '(.+)';").firstMatch(line) case final part?)
+        dir + part.group(1)!,
+  ];
+  return [
+    for (final path in files) ...File(path).readAsLinesSync(),
+  ].where((line) => !line.trimLeft().startsWith('//')).toList();
+}
 
 void main() {
   group('a field has one edge', () {
