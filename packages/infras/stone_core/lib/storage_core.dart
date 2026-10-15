@@ -5,7 +5,7 @@
 /// - [Config] — SharedPreferences（普通 KV）+ FlutterSecureStorage（加密 KV）
 ///   的统一门面（get/set/delete、secure、json、umid、变更监听）。
 /// - [HiveStore] — Hive 盒存储的静态网关（init + list 读写）。
-library storage_core;
+library;
 
 export 'storage/config.dart';
 export 'storage/hive_store.dart';

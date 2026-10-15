@@ -38,7 +38,7 @@ class EditorMarkRange {
 
 class PlanEditorController extends TextEditingController {
   PlanEditorController({String? text, List<EditorMarkRange> marks = const []})
-      : super(text: text ?? '') {
+    : super(text: text ?? '') {
     _attributed = AttributedText(this.text);
     _syncedText = this.text;
     for (final range in marks) {
@@ -66,11 +66,10 @@ class PlanEditorController extends TextEditingController {
   /// fragmented (`he|X|llo` as three bold pieces); the host should never
   /// see that.
   List<EditorMarkRange> get marks => [
-        for (final run in _coalesced(_runsOf(_attributed)))
-          for (final mark in run.attributions)
-            if (mark is EditorMark)
-              EditorMarkRange(mark, run.start, run.end + 1),
-      ];
+    for (final run in _coalesced(_runsOf(_attributed)))
+      for (final mark in run.attributions)
+        if (mark is EditorMark) EditorMarkRange(mark, run.start, run.end + 1),
+  ];
 
   /// Marked runs, inclusive on both ends (the engine's own convention).
   static List<MultiAttributionSpan> _runsOf(AttributedText attributed) =>
@@ -81,14 +80,17 @@ class PlanEditorController extends TextEditingController {
 
   /// Joins adjacent runs carrying the same attribution set.
   static List<MultiAttributionSpan> _coalesced(
-      List<MultiAttributionSpan> runs) {
+    List<MultiAttributionSpan> runs,
+  ) {
     final merged = <MultiAttributionSpan>[];
     for (final run in runs) {
       final last = merged.isEmpty ? null : merged.last;
       if (last != null &&
           last.end + 1 == run.start &&
-          const SetEquality<Attribution>()
-              .equals(last.attributions, run.attributions)) {
+          const SetEquality<Attribution>().equals(
+            last.attributions,
+            run.attributions,
+          )) {
         merged[merged.length - 1] = last.copyWith(end: run.end);
       } else {
         merged.add(run);
@@ -108,8 +110,10 @@ class PlanEditorController extends TextEditingController {
       if (runsA[i].start != runsB[i].start || runsA[i].end != runsB[i].end) {
         return false;
       }
-      if (!const SetEquality<Attribution>()
-          .equals(runsA[i].attributions, runsB[i].attributions)) {
+      if (!const SetEquality<Attribution>().equals(
+        runsA[i].attributions,
+        runsB[i].attributions,
+      )) {
         return false;
       }
     }
@@ -228,7 +232,9 @@ class PlanEditorController extends TextEditingController {
   void toggleMark(EditorMark mark, TextSelection selection) {
     if (selection.isCollapsed) return;
     _attributed.toggleAttribution(
-        mark, SpanRange(selection.start, selection.end - 1));
+      mark,
+      SpanRange(selection.start, selection.end - 1),
+    );
     notifyListeners();
   }
 
@@ -245,7 +251,9 @@ class PlanEditorController extends TextEditingController {
 
   void removeMark(EditorMark mark, TextSelection selection) {
     _attributed.removeAttribution(
-        mark, SpanRange(selection.start, selection.end - 1));
+      mark,
+      SpanRange(selection.start, selection.end - 1),
+    );
     notifyListeners();
   }
 

@@ -29,10 +29,27 @@ jobs:
         run: flutter pub get
 
       - name: Dart format
-        run: dart format --set-exit-if-changed lib test tool spike
+        # ADR-0085 D5: first-party packages are gated alongside the app.
+        run: >
+          dart format --set-exit-if-changed
+          lib test tool spike
+          packages/appunits/app_common
+          packages/appunits/plan_editor
+          packages/infras/stone_core
 
       - name: Dart analyze
-        run: dart analyze --fatal-infos lib test tool spike
+        run: >
+          dart analyze --fatal-infos
+          lib test tool spike
+          packages/appunits/app_common
+          packages/appunits/plan_editor
+          packages/infras/stone_core
 
       - name: Flutter test
         run: flutter test
+
+      - name: Flutter test (first-party packages)
+        # app_common has no test/ directory yet (ADR-0085 finding 7: the test
+        # floor is recorded in ADR-0083); only packages with tests are listed —
+        # a path with no tests would fail the step and fake the gate.
+        run: flutter test packages/appunits/plan_editor packages/infras/stone_core

@@ -63,40 +63,34 @@ class Failure {
     required this.message,
     this.code = 'SERVER_ERROR',
     this.cause,
-  })  : type = FailureType.server,
-        statusCode = null;
+  }) : type = FailureType.server,
+       statusCode = null;
 
   /// 网络层错误。
-  const Failure.network({
-    required this.message,
-    this.code = 'NETWORK_ERROR',
-  })  : type = FailureType.network,
-        statusCode = null,
-        cause = null;
+  const Failure.network({required this.message, this.code = 'NETWORK_ERROR'})
+    : type = FailureType.network,
+      statusCode = null,
+      cause = null;
 
   /// 超时错误。
-  const Failure.timeout({
-    required this.message,
-    this.code = 'TIMEOUT',
-  })  : type = FailureType.timeout,
-        statusCode = null,
-        cause = null;
+  const Failure.timeout({required this.message, this.code = 'TIMEOUT'})
+    : type = FailureType.timeout,
+      statusCode = null,
+      cause = null;
 
   /// 认证 / 鉴权失败。
   const Failure.unauthorized({
     required this.message,
     this.code = 'UNAUTHORIZED',
     this.statusCode = 401,
-  })  : type = FailureType.authentication,
-        cause = null;
+  }) : type = FailureType.authentication,
+       cause = null;
 
   /// 输入校验失败（映射到 [FailureType.validation]）。
-  const Failure.input({
-    required this.message,
-    this.code = 'INPUT_ERROR',
-  })  : type = FailureType.validation,
-        statusCode = null,
-        cause = null;
+  const Failure.input({required this.message, this.code = 'INPUT_ERROR'})
+    : type = FailureType.validation,
+      statusCode = null,
+      cause = null;
 
   @override
   String toString() =>
@@ -109,14 +103,10 @@ class Result<T> {
   final Failure? _failure;
 
   /// 成功结果。
-  const Result.success(T data)
-      : _data = data,
-        _failure = null;
+  const Result.success(T data) : _data = data, _failure = null;
 
   /// 失败结果。
-  const Result.failure(Failure failure)
-      : _data = null,
-        _failure = failure;
+  const Result.failure(Failure failure) : _data = null, _failure = failure;
 
   /// 是否成功。
   bool get isSuccess => _failure == null;
@@ -134,8 +124,7 @@ class Result<T> {
   R fold<R>({
     required R Function(Failure failure) onFailure,
     required R Function(T data) onSuccess,
-  }) =>
-      isFailure ? onFailure(_failure!) : onSuccess(_data as T);
+  }) => isFailure ? onFailure(_failure!) : onSuccess(_data as T);
 
   @override
   String toString() =>

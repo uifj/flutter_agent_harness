@@ -24,9 +24,7 @@ class _LogFileBrowserState extends State<LogFileBrowser> {
     files.sort((a, b) => b.path.compareTo(a.path));
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(currentDirectory.path),
-      ),
+      appBar: AppBar(title: Text(currentDirectory.path)),
       body: ListView.builder(
         itemCount: files.length,
         itemBuilder: (context, index) {

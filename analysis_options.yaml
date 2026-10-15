@@ -2,10 +2,22 @@ include: package:flutter_lints/flutter.yaml
 
 analyzer:
   exclude:
-    # The vendored shadcn_ui reference clone (ADR-0001): not a dependency of
-    # this package, kept on disk only as a local source mirror. Its playground
-    # and example trees are not ours to lint.
-    - packages/**
+    # ADR-0085 D5: the old umbrella `packages/**` (justified by the deleted
+    # shadcn vendored mirror) is gone. First-party packages enter the gates via
+    # the explicit paths in pr-check.yml; what stays excluded here is listed
+    # per package with its reason, so an IDE-wide analysis sees the same scope.
+    # board_panel: in-repo board/calendar widget kit consumed by lib
+    # (ADR-0007 D5). Changes to it are verified inside the package, not by
+    # this repo's gate.
+    - packages/appunits/board_panel/**
+    # sentry: absorbed third-party fork (ADR-0083). Upstream code style is not
+    # ours to lint.
+    - packages/infras/sentry/**
+    # appunits_core / pudding: retained pending wiring (ADR-0083, ADR-0085
+    # finding 2) — zero consumers today. Gate entry lands with the ADR that
+    # wires a consumer, not before.
+    - packages/appunits/appunits_core/**
+    - packages/pudding/**
     # riverpod_generator output (ADR-0002 rev.1): generated, not hand-written.
     - "**/*.g.dart"
 

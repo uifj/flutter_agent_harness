@@ -52,8 +52,7 @@ class UpgradeVersionPanel extends StatelessWidget {
   String _tipText(AppCommonLocalizations l10n) {
     return switch (snapshot.state) {
       UpgradeState.DOWNLOADING ||
-      UpgradeState.UPDATE =>
-        l10n.upgradeDownloadingText(snapshot.progress),
+      UpgradeState.UPDATE => l10n.upgradeDownloadingText(snapshot.progress),
       UpgradeState.UNZIP => l10n.upgradeUnzipText,
       UpgradeState.CHECKMD5 => l10n.upgradeCheckMd5Text,
       UpgradeState.FAILED =>
@@ -67,11 +66,11 @@ class UpgradeVersionPanel extends StatelessWidget {
     final done = snapshot.state == UpgradeState.DONE;
     return isForce
         ? (done
-            ? l10n.upgradeTipForceDownloaded(_displayVersion)
-            : l10n.upgradeTipForceDownloading(_displayVersion))
+              ? l10n.upgradeTipForceDownloaded(_displayVersion)
+              : l10n.upgradeTipForceDownloading(_displayVersion))
         : (done
-            ? l10n.upgradeTipDownloaded(_displayVersion)
-            : l10n.upgradeTipDownloading(_displayVersion));
+              ? l10n.upgradeTipDownloaded(_displayVersion)
+              : l10n.upgradeTipDownloading(_displayVersion));
   }
 
   /// 进度值：'37%' → 0.37；非法输入回退 0（legacy int.parse 会直接崩溃）。

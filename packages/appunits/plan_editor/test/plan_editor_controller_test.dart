@@ -14,8 +14,9 @@ EditorMarkRange bold(int start, int end) =>
     EditorMarkRange(EditorMark.bold, start, end);
 
 List<EditorMarkRange> marksOf(
-        PlanEditorController controller, EditorMark mark) =>
-    controller.marks.where((range) => range.mark == mark).toList();
+  PlanEditorController controller,
+  EditorMark mark,
+) => controller.marks.where((range) => range.mark == mark).toList();
 
 Future<BuildContext> pumpContext(WidgetTester tester) async {
   BuildContext? captured;
@@ -156,10 +157,14 @@ void main() {
       const overlapped = TextSelection(baseOffset: 3, extentOffset: 5);
       const kept = TextSelection(baseOffset: 0, extentOffset: 3);
       expect(
-          controller.hasMark(EditorMark.textColor('blue'), overlapped), isTrue);
+        controller.hasMark(EditorMark.textColor('blue'), overlapped),
+        isTrue,
+      );
       expect(controller.hasMark(EditorMark.textColor('red'), kept), isTrue);
       expect(
-          controller.hasMark(EditorMark.textColor('red'), overlapped), isFalse);
+        controller.hasMark(EditorMark.textColor('red'), overlapped),
+        isFalse,
+      );
     });
 
     test('a different URL overwrites the overlap', () {
@@ -190,15 +195,17 @@ void main() {
       expect(controller.hasMark(EditorMark.italic, selection), isTrue);
     });
 
-    test('collapsed selections are a no-op (pending styles are a later stage)',
-        () {
-      final controller = PlanEditorController(text: 'hello world');
-      controller.toggleMark(
-        EditorMark.bold,
-        const TextSelection.collapsed(offset: 3),
-      );
-      expect(controller.marks, isEmpty);
-    });
+    test(
+      'collapsed selections are a no-op (pending styles are a later stage)',
+      () {
+        final controller = PlanEditorController(text: 'hello world');
+        controller.toggleMark(
+          EditorMark.bold,
+          const TextSelection.collapsed(offset: 3),
+        );
+        expect(controller.marks, isEmpty);
+      },
+    );
   });
 
   group('sync mirrors the document', () {
@@ -206,24 +213,31 @@ void main() {
     // every test here flushes that microtask before asserting.
     Future<void> flush() => Future<void>.delayed(Duration.zero);
 
-    test('a marks-only push keeps the caret and composing where they were',
-        () async {
-      final controller = PlanEditorController(text: 'hello world');
-      controller.value = const TextEditingValue(
-        text: 'hello world',
-        selection: TextSelection(baseOffset: 2, extentOffset: 5),
-        composing: TextRange.collapsed(3),
-      );
-      controller.sync(
-        AttributedText('hello world')
-          ..addAttribution(EditorMark.bold, const SpanRange(0, 5)),
-      );
-      await flush();
-      expect(controller.selection,
-          const TextSelection(baseOffset: 2, extentOffset: 5));
-      expect(controller.value.composing, const TextRange.collapsed(3));
-      expect(controller.hasMark(EditorMark.bold, controller.selection), isTrue);
-    });
+    test(
+      'a marks-only push keeps the caret and composing where they were',
+      () async {
+        final controller = PlanEditorController(text: 'hello world');
+        controller.value = const TextEditingValue(
+          text: 'hello world',
+          selection: TextSelection(baseOffset: 2, extentOffset: 5),
+          composing: TextRange.collapsed(3),
+        );
+        controller.sync(
+          AttributedText('hello world')
+            ..addAttribution(EditorMark.bold, const SpanRange(0, 5)),
+        );
+        await flush();
+        expect(
+          controller.selection,
+          const TextSelection(baseOffset: 2, extentOffset: 5),
+        );
+        expect(controller.value.composing, const TextRange.collapsed(3));
+        expect(
+          controller.hasMark(EditorMark.bold, controller.selection),
+          isTrue,
+        );
+      },
+    );
 
     test('a full push resets the text and collapses at the end', () async {
       final controller = PlanEditorController(text: 'hello world');
@@ -266,27 +280,31 @@ void main() {
       return style;
     }
 
-    testWidgets('marks become styled runs, plain stretches keep the base style',
-        (
-      tester,
-    ) async {
-      final context = await pumpContext(tester);
-      final controller = PlanEditorController(
-        text: 'plain bold tail',
-        marks: [bold(6, 10)],
-      )..styleResolver = resolver;
-      final span = controller.buildTextSpan(
-        context: context,
-        style: const TextStyle(fontSize: 14),
-        withComposing: false,
-      );
-      final runs = span.children!.cast<TextSpan>().toList();
-      expect(runs.map((run) => run.text).toList(), ['plain ', 'bold', ' tail']);
-      expect(runs[1].style!.fontWeight, FontWeight.w700);
-      expect(runs[0].style!.fontWeight, isNull);
-      // The base style rides on every run.
-      expect(runs[1].style!.fontSize, 14);
-    });
+    testWidgets(
+      'marks become styled runs, plain stretches keep the base style',
+      (tester) async {
+        final context = await pumpContext(tester);
+        final controller = PlanEditorController(
+          text: 'plain bold tail',
+          marks: [bold(6, 10)],
+        )..styleResolver = resolver;
+        final span = controller.buildTextSpan(
+          context: context,
+          style: const TextStyle(fontSize: 14),
+          withComposing: false,
+        );
+        final runs = span.children!.cast<TextSpan>().toList();
+        expect(runs.map((run) => run.text).toList(), [
+          'plain ',
+          'bold',
+          ' tail',
+        ]);
+        expect(runs[1].style!.fontWeight, FontWeight.w700);
+        expect(runs[0].style!.fontWeight, isNull);
+        // The base style rides on every run.
+        expect(runs[1].style!.fontSize, 14);
+      },
+    );
 
     testWidgets('the composing range underlines its stretch', (tester) async {
       final context = await pumpContext(tester);
@@ -302,13 +320,13 @@ void main() {
         style: const TextStyle(),
         withComposing: true,
       );
-      final composingRun = span.children!
-          .cast<TextSpan>()
-          .singleWhere((run) => run.text == 'world');
+      final composingRun = span.children!.cast<TextSpan>().singleWhere(
+        (run) => run.text == 'world',
+      );
       expect(composingRun.style!.decoration, TextDecoration.underline);
-      final plainRun = span.children!
-          .cast<TextSpan>()
-          .singleWhere((run) => run.text == 'hello ');
+      final plainRun = span.children!.cast<TextSpan>().singleWhere(
+        (run) => run.text == 'hello ',
+      );
       expect(plainRun.style!.decoration, isNull);
     });
 

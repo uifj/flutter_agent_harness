@@ -15,12 +15,13 @@
 
 ```
 flutter pub get
-dart format --set-exit-if-changed lib test tool spike
-dart analyze --fatal-infos lib test tool spike
+dart format --set-exit-if-changed lib test tool spike packages/appunits/app_common packages/appunits/plan_editor packages/infras/stone_core
+dart analyze --fatal-infos lib test tool spike packages/appunits/app_common packages/appunits/plan_editor packages/infras/stone_core
 flutter test
+flutter test packages/appunits/plan_editor packages/infras/stone_core
 ```
 
-- **与 `.github/workflows/pr-check.yml` 逐字同口径**：范围是 `lib test tool spike`（不是 `.`），analyze 带 `--fatal-infos`（info 级也算失败）。本地用 `flutter analyze` 快查可以，但交付前必须跑上面这条。
+- **与 `.github/workflows/pr-check.yml` 逐字同口径**：范围是 `lib test tool spike` + 三个一手包（ADR-0085 D5：`app_common`/`plan_editor`/`stone_core`；board_panel/sentry/appunits_core/pudding 排除理由逐包写在 `analysis_options.yaml` 与 ADR-0083），analyze 带 `--fatal-infos`（info 级也算失败）。本地用 `flutter analyze` 快查可以，但交付前必须跑上面这条。
 - 跑子集：`flutter test test/conversation_controller_test.dart`（单文件），`flutter test test/ -r expanded`（要看过程）。
 - **只能用 `flutter test`**：dev 依赖只有 `flutter_test`，没有 `package:test`，`dart test` 起不来。`test/` 下**每一个** `*_test.dart` 都 import `package:flutter_test`（含纯 Dart 逻辑的 `test/file_search_test.dart`），条数会变、不作为事实引用。
 - 主题相关改动另有一道确定性检查：`dart tool/contrast_check.dart`（dart:io/dart:math，无需 Flutter 工具链）。
@@ -62,7 +63,7 @@ flutter test
 
 ## 4B. CI 的构建事实（`.github/workflows/`，2026-09 起存在）
 
-- **`pr-check.yml`**：`push`/`pull_request` 到 `develop`·`main`，`runs-on: ubuntu-latest`，Flutter 由 `subosito/flutter-action@v2` 钉 `FLUTTER_VERSION: '3.41.9'`，依次跑 `flutter pub get` → `dart format --set-exit-if-changed lib test tool spike` → `dart analyze --fatal-infos lib test tool spike` → `flutter test`。**它就是 §1 那三条命令的权威口径**。
+- **`pr-check.yml`**：`push`/`pull_request` 到 `develop`·`main`，`runs-on: ubuntu-latest`，Flutter 由 `subosito/flutter-action@v2` 钉 `FLUTTER_VERSION: '3.41.9'`，依次跑 `flutter pub get` → `dart format --set-exit-if-changed` / `dart analyze --fatal-infos`（范围 = `lib test tool spike` + 三个一手包，见 §1）→ `flutter test` → `flutter test packages/appunits/plan_editor packages/infras/stone_core`。**它就是 §1 那组命令的权威口径**。
 - **`build.yml`**：**只有 `workflow_dispatch`**（不会自动跑），四个输入开关：`build_windows` / `build_macos` / `build_linux` / `publish_release` + `release_tag`。三个 job 分别 `runs-on: windows-latest` / `macos-latest` / `ubuntu-latest`（linux job 先 `apt-get install ninja-build libgtk-3-dev pkg-config libsecret-1-dev`；macos job 会 `cd macos && pod install`）。
 - 产物与打包：artifact 名 `windows-x64` / `macos` / `linux-x64`；`publish_release == true` 时 macos 用 `hdiutil` 造 `agent-harness-macos.dmg`、windows 用 7z 造 zip、linux 造 tar.gz，再由 `softprops/action-gh-release@v2` 发到 GitHub Release（tag 用输入框里的 `release_tag`，如 `v0.1.0`）。
 - **CI 里没有任何签名/公证步骤**（`grep -c "codesign\|notarytool\|CERTIFICATE\|secrets\." .github/workflows/build.yml` = 0，仓库不配 secrets）。所以"CI 绿"或"GitHub Release 有产物"**都不等于可对外分发**——macOS 产物仍 ad-hoc（§4），Gatekeeper 会拦，未公证。别把这两件事混为一谈。
@@ -70,7 +71,7 @@ flutter test
 
 ## 5. 出包检查清单（发布前逐项过，都要给证据）
 
-1. 在当前开发机上：`flutter pub get` → `dart format --set-exit-if-changed lib test tool spike` → `dart analyze --fatal-infos lib test tool spike` → `flutter test` 全绿（= pr-check 同口径），且 pr-check 在目标分支上确实绿。
+1. 在当前开发机上：§1 那组命令（format / analyze / 两侧 test）全绿（= pr-check 同口径），且 pr-check 在目标分支上确实绿。
 2. `dart run spike/agent_spike.dart` 重跑，头部 FINDINGS 仍然成立（genkit 版本没动过；或动过且 `lib/genkit/` 投影已适配）。
 3. 真实链路冒烟：`DEEPSEEK_API_KEY=... dart run spike/runtime_smoke.dart`，按该文件头的顺序验：流式回答 → 工具环（**哪一个工具由模型自己挑**，"列一下文件"很可能变成被审批挡住的 `bash ls`，脚本逐个应答）→ 审批往返（interrupt → resume）→ 覆盖写的 before 镜像断言（字节等于写前盘上内容、after 指纹等于写后、工具返回带 `checkpoint` id，ADR-0014）→ 会话从盘上恢复。判成败**不要接管道**：`… | tail` 会把退出码换成 tail 的，这道门第一次"通过"就是这么来的。它能编译的前提是 `lib/genkit/` 保持无 Flutter（ADR-0015 把共享的文件版本号放进了纯 Dart 的 `lib/model/fs_revision.dart`，并由 `check_architecture` 第 6 条规则守着）——若有人让 runtime 又摸到 `package:flutter`，这道门会在 `flutter test` 里红，而不是悄悄断掉。
 4. `flutter build macos --release` 成功且 `PlanStar.app` 能起；首次经 hero picker 授权工作区后，terminal / git / editor / browser 四类 tab 各至少打开一次不崩，并且**新加的表面也各走一遍**：双树（右栏 + 下栏各开 tab、跨树拖拽/右键移动）、企划模式（vault 树 + 块编辑器；一个集合的五档投影 Table/List/Gallery/Board/Calendar 与它的视图配置抽屉；侧栏扩展区的集合列表与 All Content／组件条／回收站／Gallery 四面——ADR-0037 之后按这些点名，"看板/日程/表格三块扩展面板"那套已经不存在了）、全屏设置与底部快捷菜单、托盘显示/隐藏与全局热键（`Cmd/Ctrl+Shift+H` 系统级、`Cmd/Ctrl+N`、`Cmd/Ctrl+,`）、拖文件入 composer 与 PDF 抽文本、LaTeX/Mermaid 渲染、本地备份/恢复（zip 里带 `checkpoints/` 与 `sessions/`——含 ADR-0039 那份 `sessions.json` 侧车；restore 现在会拒绝一个条目名越出支持目录的归档（ADR-0042 的 zip-slip 门），走查时可以拿一份手工改过条目名的 zip 试一次，看它是不是整次都不落地）、写入卡片上的回退 pill（预览 → 确认 → 报告，含"被用户自己的编辑挡住"与"镜像没存"那两格）。browser tab 在非 macOS 上是占位降级（§2B），那一格标"待 macOS 验证"或直接在 macOS 上验。

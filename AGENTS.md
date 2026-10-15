@@ -61,9 +61,10 @@ Genkit 变更只应砸 `lib/genkit/` 两个文件，而不是穿过 widget 树�
 ```bash
 flutter pub get                                # 每台新机器第一步（.dart_tool/、pubspec.lock、macOS ephemeral 都不入库）
 dart run build_runner build --force-jit        # 改了 drift 表后跑（aot 在 drift_dev 2.31 上失败，用 jit）
-dart format --set-exit-if-changed lib test tool spike   # 与 CI 同口径（不是 `.`）
-dart analyze --fatal-infos lib test tool spike          # 与 CI 同口径；flutter analyze 可作本地快查
+dart format --set-exit-if-changed lib test tool spike packages/appunits/app_common packages/appunits/plan_editor packages/infras/stone_core   # 与 CI 同口径（不是 `.`；ADR-0085 D5 三个一手包进闸）
+dart analyze --fatal-infos lib test tool spike packages/appunits/app_common packages/appunits/plan_editor packages/infras/stone_core          # 与 CI 同口径；flutter analyze 可作本地快查
 flutter test                                    # 只有 flutter test；dev 依赖没有 package:test，dart test 跑不起来
+flutter test packages/appunits/plan_editor packages/infras/stone_core   # 一手包的单测（app_common 暂无 test/，见 ADR-0083 治理标准）
 dart tool/contrast_check.dart                   # 主题令牌 WCAG 对比度三求值（ADR-0004）
 dart tool/check_architecture.dart               # 架构门禁（ADR-0011）；--update 只在债务减少时跑
 dart run spike/agent_spike.dart                 # genkit 升版后必跑，核对头部 FINDINGS

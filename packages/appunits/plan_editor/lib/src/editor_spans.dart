@@ -10,10 +10,8 @@ import 'package:flutter/widgets.dart';
 /// Turns a set of marks into the style delta for that run, with the field's
 /// own context (theme lookups are the host's business). Merged over the base
 /// style; an empty style leaves the base untouched.
-typedef EditorStyleResolver = TextStyle Function(
-  BuildContext context,
-  Set<Attribution> marks,
-);
+typedef EditorStyleResolver =
+    TextStyle Function(BuildContext context, Set<Attribution> marks);
 
 /// Builds the [TextSpan] children for [attributed]: one child per
 /// style-constant run, plus the composing region underlined the way the
@@ -30,7 +28,8 @@ List<InlineSpan> buildEditorRuns(
     return const [TextSpan(text: '')];
   }
 
-  final hasComposing = composing.isValid &&
+  final hasComposing =
+      composing.isValid &&
       !composing.isCollapsed &&
       composing.start <= text.length;
 

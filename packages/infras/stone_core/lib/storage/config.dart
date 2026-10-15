@@ -2,8 +2,8 @@ import 'dart:async';
 import 'config_service_impl.dart';
 
 typedef OnConfigChangedListener = void Function(String key, String value);
-typedef DMChangedListener = void Function(
-    String key, String value, bool isStrongControl);
+typedef DMChangedListener =
+    void Function(String key, String value, bool isStrongControl);
 
 abstract class Config {
   static Config? _instance;
@@ -38,7 +38,9 @@ abstract class Config {
   Future<bool> clearAllConfig();
   Future<bool> clearAllSecure();
   void registerOnConfigChangedListener(
-      String configKey, OnConfigChangedListener? listener);
+    String configKey,
+    OnConfigChangedListener? listener,
+  );
   void registerDMChangedListener(String configKey, DMChangedListener? listener);
   void close();
 }

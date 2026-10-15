@@ -48,7 +48,7 @@ class EditorMark implements Attribution {
     italic,
     underline,
     strikethrough,
-    keyboard
+    keyboard,
   };
 
   @override

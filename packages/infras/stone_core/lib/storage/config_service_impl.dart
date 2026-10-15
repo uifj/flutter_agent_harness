@@ -149,8 +149,10 @@ class ConfigServiceImpl implements Config {
     final existing = await getSecure(k);
     if (existing != null && existing.isNotEmpty) return existing;
     final r = Random();
-    final suffix =
-        List.generate(8, (_) => String.fromCharCode(97 + r.nextInt(26))).join();
+    final suffix = List.generate(
+      8,
+      (_) => String.fromCharCode(97 + r.nextInt(26)),
+    ).join();
     final v = '${DateTime.now().millisecondsSinceEpoch}_$suffix';
     await setSecure(k, v);
     return v;
@@ -168,13 +170,17 @@ class ConfigServiceImpl implements Config {
 
   @override
   void registerOnConfigChangedListener(
-      String configKey, OnConfigChangedListener? listener) {
+    String configKey,
+    OnConfigChangedListener? listener,
+  ) {
     _configListeners[configKey] = listener;
   }
 
   @override
   void registerDMChangedListener(
-      String configKey, DMChangedListener? listener) {
+    String configKey,
+    DMChangedListener? listener,
+  ) {
     _dmListeners[configKey] = listener;
   }
 

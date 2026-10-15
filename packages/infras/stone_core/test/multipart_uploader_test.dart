@@ -488,7 +488,7 @@ void main() {
       expect(result.failure!.code, 'REQUEST_CANCELLED');
     });
 
-    test('超时 → network Failure；401 → authentication Failure', () async {
+    test('超时 → timeout Failure；401 → authentication Failure', () async {
       final file = writeFile('p.bin', 4);
 
       stubPut(
@@ -503,7 +503,8 @@ void main() {
         partUrl: partUrl,
         config: _config(maxRetriesPerPart: 2),
       );
-      expect(result.failure!.type, FailureType.network);
+      // 与 api_client._handleError 一致：四种 timeout 都归 FailureType.timeout。
+      expect(result.failure!.type, FailureType.timeout);
 
       stubPut(
         onCall: (_) => throw DioException(

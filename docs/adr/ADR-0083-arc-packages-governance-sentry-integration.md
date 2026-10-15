@@ -153,6 +153,14 @@ sentry ──▶ stone_core ──▶ pudding ──▶ appunits ──▶ lib�
 
 **本批未做（后续 / 另立）**：D1-Tier1 `sentry_dio`→`stone_core/network/sentry/`（待本 ADR ACCEPTED 后实施）；D1-Tier2 `sentry_file`/`sentry_drift`；D3 分层守卫挂 `tool/check_architecture.dart`；`sentry_flutter` 崩溃监控（另立 ADR）。
 
+### 2026-10-15 批次：一手包治理标准（ADR-0085 D5 随附）
+
+D5 把三个一手包（`app_common`/`plan_editor`/`stone_core`）接进 format/analyze/test 门禁，随附的治理标准记在这里，后续任何包进闸按同一标准验收：
+
+1. **测试底线**：进闸的包必须带 `test/`，非平凡逻辑有行为测试（比照根包"不变量→守卫"文化）。`app_common` 当前无 `test/`，本次只接 format+analyze——测试落地前它的 test 门禁是有名无实的，登记为已知缺口，不假装已覆盖。
+2. **l10n 约定**：包内出现的用户可见字符串，进闸时要么接本仓 ARB 纪律（ADR-0082），要么在包内自带完整 gen-l10n 管线并在包 README 声明——不允许第三条静默路。`app_common` 自带一份 gen-l10n（`AppCommonLocalizations`），现状属后者，声明义务随它进闸生效。
+3. **便利静态方法 → host 注入**：`stone_core` 式的静态网关（`HiveStore` 静态 init + 读写这类）在被 `lib/` 依赖前，要长出 host 注入缝（构造注入或 zone 级覆盖），否则根包的"手写 fake、可测"约定到包边界就断。现有静态网关逐个补，新写的直接按可测形状来。
+
 ## 后果（Consequences）
 
 - **正面**：`stone_core`（Tier 1 后）可编译并给出生产级 HTTP 错误捕获/面包屑；断链清零；分层由守卫固化；`_archive` 的集成物料有了明确、分级的归宿，不再"整包搬来却不知放哪"。

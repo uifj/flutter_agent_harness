@@ -4,7 +4,7 @@
 /// via `path_provider`) and a named box's list read/write, so feature packages
 /// can persist list values without depending on `hive_ce` or `path_provider`
 /// directly.
-library hive_store;
+library;
 
 import 'package:hive_ce/hive_ce.dart';
 import 'package:path_provider/path_provider.dart';

@@ -63,13 +63,15 @@ import 'app_common_localizations_zh.dart';
 /// property.
 abstract class AppCommonLocalizations {
   AppCommonLocalizations(String locale)
-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
   static AppCommonLocalizations of(BuildContext context) {
     return Localizations.of<AppCommonLocalizations>(
-        context, AppCommonLocalizations)!;
+      context,
+      AppCommonLocalizations,
+    )!;
   }
 
   static const LocalizationsDelegate<AppCommonLocalizations> delegate =
@@ -87,16 +89,16 @@ abstract class AppCommonLocalizations {
   /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
-    delegate,
-    GlobalMaterialLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-  ];
+        delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
-    Locale('zh')
+    Locale('zh'),
   ];
 
   /// No description provided for @feedbackTitle.
@@ -323,7 +325,8 @@ class _AppCommonLocalizationsDelegate
   @override
   Future<AppCommonLocalizations> load(Locale locale) {
     return SynchronousFuture<AppCommonLocalizations>(
-        lookupAppCommonLocalizations(locale));
+      lookupAppCommonLocalizations(locale),
+    );
   }
 
   @override
@@ -344,8 +347,9 @@ AppCommonLocalizations lookupAppCommonLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-      'AppCommonLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppCommonLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.',
+  );
 }

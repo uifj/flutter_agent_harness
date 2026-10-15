@@ -110,14 +110,14 @@ class _FeedbackFormPanelState extends State<FeedbackFormPanel> {
   String _typeLabel(AppCommonLocalizations l10n, int value) => value == 1
       ? l10n.feedbackTypeIssue
       : value == 3
-          ? l10n.feedbackTypeAdvice
-          : l10n.feedbackTypeHint;
+      ? l10n.feedbackTypeAdvice
+      : l10n.feedbackTypeHint;
 
   String _contentHint(AppCommonLocalizations l10n) => _fbType == 1
       ? l10n.feedbackContentHintIssue
       : _fbType == 3
-          ? l10n.feedbackContentHintAdvice
-          : '';
+      ? l10n.feedbackContentHintAdvice
+      : '';
 
   void _submit() {
     widget.onSubmit(

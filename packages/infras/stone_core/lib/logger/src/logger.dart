@@ -35,7 +35,7 @@ enum LogLevel {
 /// - **Log history**: retains recent logs for debugging.
 class StoneLogger {
   static void Function(String message, [String? tag, LogLevel? level])?
-      _appLogger;
+  _appLogger;
 
   /// Minimum log level. Messages below this level are discarded.
   /// Defaults to [LogLevel.debug] in debug mode, [LogLevel.info] otherwise.
@@ -66,7 +66,8 @@ class StoneLogger {
   /// When set, all log calls will be forwarded to this logger
   /// instead of using the default [print].
   static set logger(
-      void Function(String message, [String? tag, LogLevel? level])? logger) {
+    void Function(String message, [String? tag, LogLevel? level])? logger,
+  ) {
     _appLogger = logger;
   }
 
@@ -85,7 +86,9 @@ class StoneLogger {
   /// callback is invoked with each batch of entries.
   ///
   /// Call [disableBatchMode] to revert to immediate output.
-  static void enableBatchMode({Duration flushInterval = const Duration(seconds: 10)}) {
+  static void enableBatchMode({
+    Duration flushInterval = const Duration(seconds: 10),
+  }) {
     if (_batchMode) return;
     _batchMode = true;
     _flushTimer?.cancel();
@@ -132,12 +135,9 @@ class StoneLogger {
 
     final now = DateTime.now();
     if (_batchMode) {
-      _buffer.add(LogEntry(
-        level: level,
-        message: message,
-        tag: tag,
-        timestamp: now,
-      ));
+      _buffer.add(
+        LogEntry(level: level, message: message, tag: tag, timestamp: now),
+      );
       if (_buffer.length >= _maxBufferSize) {
         flush();
       }
@@ -147,10 +147,15 @@ class StoneLogger {
   }
 
   static void _writeImmediate(
-      LogLevel level, String message, String tag, DateTime timestamp) {
+    LogLevel level,
+    String message,
+    String tag,
+    DateTime timestamp,
+  ) {
     if (_appLogger == null) {
       final levelTag = level.name.toUpperCase().padRight(5);
-      print('${timestamp.toIso8601String()} [$levelTag] [$tag] $message'); // ignore: avoid_print
+      // ignore: avoid_print
+      print('${timestamp.toIso8601String()} [$levelTag] [$tag] $message');
     } else {
       _appLogger?.call(message, tag, level);
     }
@@ -208,23 +213,23 @@ class LogEntry {
 
   /// Serializes to a map for structured storage / upload.
   Map<String, dynamic> toJson() => {
-        'level': level.name,
-        'message': message,
-        'tag': tag,
-        'timestamp': timestamp.toIso8601String(),
-      };
+    'level': level.name,
+    'message': message,
+    'tag': tag,
+    'timestamp': timestamp.toIso8601String(),
+  };
 
   /// Deserializes from a map.
   factory LogEntry.fromJson(Map<String, dynamic> json) => LogEntry(
-        level: LogLevel.values.firstWhere(
-          (l) => l.name == (json['level'] as String? ?? 'info'),
-          orElse: () => LogLevel.info,
-        ),
-        message: json['message'] as String? ?? '',
-        tag: json['tag'] as String? ?? '',
-        timestamp: DateTime.tryParse(json['timestamp'] as String? ?? '') ??
-            DateTime.now(),
-      );
+    level: LogLevel.values.firstWhere(
+      (l) => l.name == (json['level'] as String? ?? 'info'),
+      orElse: () => LogLevel.info,
+    ),
+    message: json['message'] as String? ?? '',
+    tag: json['tag'] as String? ?? '',
+    timestamp:
+        DateTime.tryParse(json['timestamp'] as String? ?? '') ?? DateTime.now(),
+  );
 
   @override
   String toString() {
