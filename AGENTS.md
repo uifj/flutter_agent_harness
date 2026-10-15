@@ -84,6 +84,7 @@ npx repomix@latest                              # 全仓库打包给 AI（产物
 - **动 `docs/debt-register.md` 已登记的问题前，对应 ADR 必须先 ACCEPTED**；新审计发现先补 ADR 再改代码。
 - **文案**：新/改 UI 字符串同时进 `lib/l10n/app_en.arb` + `app_zh.arb`，跑 `flutter gen-l10n` 把生成物一并提交（ADR-0082）；工具 description/error 文本不进 i18n。
 - **主题**：颜色/字号/动效/阴影/圆角只从 `lib/theme/dsw_*` 取；**组件用 shad、配色用 dsw**，别读 shad 调色板配色；新令牌必须带读者一起提交。
+- **手写文件 ≤1,000 行（含测试）**（ADR-0085 D7）：新增或改动的手写 Dart 文件超过 1,000 行就先拆再改。先例是设置页：`lib/ui/settings/model_settings.dart` 只剩入口 + `_content` 的 switch registry，每一节在自己的 `settings_section_*.dart`（同库 `part`）里——存量 ≥1,500 行的四个文件只在被改动时受这条约束。
 - **企划/代理两模式**与工作台链路的固定形状、关键词→动作的完整路由，见 `.qoder/rules/workflow.md` §1/§3——本文件不再重复。
 
 ## 6. Skills 流水线（`.agents/skills/`）
