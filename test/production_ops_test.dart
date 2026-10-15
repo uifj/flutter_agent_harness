@@ -84,11 +84,14 @@ void main() {
     test('records and reads back, ordered by time', () async {
       final ledger = UsageLedger(directory: Directory('${root.path}/usage'));
       try {
+        // Relative to the real clock: record() prunes against DateTime.now(),
+        // so fixed calendar dates age out of the 30-day window over time.
+        final now = DateTime.now();
         await ledger.record(
-          entry(DateTime.utc(2026, 9, 15).millisecondsSinceEpoch),
+          entry(now.subtract(const Duration(days: 2)).millisecondsSinceEpoch),
         );
         await ledger.record(
-          entry(DateTime.utc(2026, 10, 1).millisecondsSinceEpoch),
+          entry(now.subtract(const Duration(days: 1)).millisecondsSinceEpoch),
         );
         final entries = await ledger.entries();
         expect(entries, hasLength(2));
