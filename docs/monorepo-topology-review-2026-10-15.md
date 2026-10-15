@@ -8,7 +8,7 @@
 
 - 行数：`find <dir> -name '*.dart' -not -name '*.g.dart' | xargs wc -l`（手写口径，排除生成物）。
 - 消费者/被依赖关系：`flutter pub deps`（解析图）+ 各包 pubspec 声明交叉核对。
-- 测试基线：`+1490 -1`（唯一失败 `app_scope_test:60` 的 `/var`↔`/private/var` 已知 flake）。
+- 测试基线：**D1 落盘时写的 `+1490 -1` 是错的**（它只算了 `app_scope_test` 那棵 flake）。同日 HEAD `5bb1469` 实测 **`+1489 -3`**：`app_scope_test` 的 `/var`↔`/private/var` flake，加上 `shad_widget_adoption_test` 的 `no hand-drawn Material field is left in lib/ui` 与 `theme_token_test` 的 `no widget picks its own radius`——后两棵都只点名 `lib/ui/auth/lib/harness/widgets.dart`（`5bb1469` 带入的 harness，与本表八项发现无关）。收口时 **`+1490 -3`**，+1 是 D3 追加的那棵 `usage_migration_quiet_test`。逐批数字见 §6。
 - 门禁：`dart format --set-exit-if-changed` / `dart analyze --fatal-infos`（范围 `lib test tool spike`）/ `flutter test`。
 
 ## 1. 度量总表
@@ -52,7 +52,7 @@ D6 CI macOS 构建 job               （独立，可与 D5 并行评审）
 D7 model_settings.dart 拆分        （纯 lib 内部，最后做避免与 D5 交叉）
 ```
 
-每批收口标准：三条门禁零新增失败（基线 `+1490 -1`）+ 一个 Conventional Commit + 相关 ADR/登记表状态推进。
+每批收口标准：三条门禁零新增失败（基线见 §0 更正：`+1489 -3`，收口 `+1490 -3`）+ 一个 Conventional Commit + 相关 ADR/登记表状态推进。**七批已全部收口，逐批 commit 与实测见 §6。**
 
 ## 4. 验收口径（全部完成的定义）
 
@@ -68,3 +68,23 @@ D7 model_settings.dart 拆分        （纯 lib 内部，最后做避免与 D5 �
 - 依赖线、包溯源、sentry fork 路线：**ADR-0083**（本文不重复，只扩展其「实施清单」）。
 - 复用边界判定（Tier A/B/C）：**ADR-0084**。
 - 本文与 ADR-0085 是同一轮治理的评估面与决策面；后续每批完成的 commit 回填 ADR-0085「修复 commit」列。
+
+## 6. 收口表（2026-10-15，七批全部落码）
+
+| 批 | commit | 实测证据 |
+| --- | --- | --- |
+| D1 | `d1044fa` | 本文 + ADR-0085 + 登记表行落盘（docs 先行） |
+| D2 | `0b63d5e` | `grep -n sqlite3_flutter_libs pubspec.yaml` = 0、`flutter pub deps` 无该包；macOS 真机 sqlite3 经系统库打开（§0 更正过的基线在下一行） |
+| D3 | `e2c7e23` + `1d34b1f` | UsageLedger 注入共享 `AppDatabase`；旧 `<support>/usage/usage.db` 导入后删除。**真机跑才暴露的缺陷**：那枚一次性导入用第二个 `AppDatabase` 句柄读旧文件，而 drift 的双实例检查按**类**计数，所以 D3 想消掉的那条告警原封不动还在启动日志里——修复是把 drift 自己给的 `dontWarnAboutMultipleDatabases` 只在那一枚句柄周围置位、`finally` 还原（真机跑第二次的日志 `WARNING (drift)` = 0，`lsof` 只见一个 `.db` 句柄，`planstar.db` 的 `usage_rows` 有数据）。守卫 `test/usage_migration_quiet_test.dart` 单文件单 isolate：drift 计数是进程全局的，同一文件里先开先关过数据库就会**为错误的理由通过**（第一次挂在 `production_ops_test` 里就是这么假绿的） |
+| D4 | `02d39ff`（+ `98f8457`） | 根 `workspace:` 收 8 个成员（含 `board_panel/example`），各包 `resolution: workspace`、SDK `^3.11.5`；一次 `flutter pub get` 解析全仓。求解链：`flutter_test` 钉 meta 1.17.0 + `riverpod_generator` 要 analyzer ^9 ⇒ `json_serializable` 封顶 `<6.13.2`；`sentry/example` 不能入成员（`lints ^2` 与 `flutter_lints 6` 的 `lints ^6` 在统一求解里撞），它的野锁文件进 `.gitignore` |
+| D5 | `883bca8` | 三个一手包进 format/analyze/test（`app_common` 无 test/ 一事登记在 ADR-0083 治理标准）；stone_core 进门禁当场只暴露机械债：14 文件重排 + `dart fix` 7 处 + 一棵**过期断言**（`multipart_uploader_test` 期望 `FailureType.network`，而实现与 `api_client._handleError` 一致地给 `FailureType.timeout`——改测试那一侧，不动实现） |
+| D6 | `3217f87` | pr-check 第二个 job `build-macos`（`pod install` + `flutter build macos --debug`）。本机同口径代理证据：`flutter build macos --debug` → `✓ Built …/Debug/PlanStar.app`（这条同时是 D2 的端到端证据）。**job 本身是否绿要等 push**——本批只在本地验，未推 |
+| D7 | `f90fbd0` + `8f7a3a6` | `model_settings.dart` 3,839 → **751 行**，14 个同库 `part` 文件（最大 `settings_section_models.dart` 865），`_content` 的 `switch (_Section)` 仍是唯一 registry。节体逐字搬运（脚本对 HEAD 与产物做行级 `comm` 比对：除 `setState`→`rebuild` 与 part/extension 脚手架外**零增删**）；唯一必要改动是那枚 `rebuild`——extension 不是 `State` 子类，够不着 protected 的 `setState`。两棵扫源码的守卫（`settings_shad_adoption_test` 的 `_pageLines`、`settings_reach_test` 的「写入页」集合）改为顺着 `part` 声明读整棵库：**同一把尺子，不是更弱的尺子**（前者自带的 `hasLength(>500)` + 五类组件计数就是非空证）。设置页既有测试**一条断言未改**，全量 `flutter test` `+1490 -3`（与基线同三棵失败） |
+
+还债之外**没做的事**（别把本表读成全绿交付）：
+
+1. **Windows/Linux 未实测**——`winsqlite3.dll` 那条回退链是包源码事实，不是本机走查（`build.md` §0 的口径：没在当前平台跑过就标待验证）。
+2. **CI 的 macOS job 未见绿**——它需要 push 才跑；本地代理证据只是同一条 `flutter build macos --debug` 在本机过。
+3. **真机 UI 走查仍待人工**——本次能机器证的三件是：启动日志 0 告警 0 异常、单库单句柄（`lsof`）、旧 `usage.db` 被导入并删除且 `usage_rows` 有数据。「会话/企划/设置读写正常」这一格要眼睛，窗口截图不在本 harness 能力内。
+4. **`app_common` 仍无 test/**、`appunits_core`/`pudding` 仍零消费者、`board_panel/example` 之外 sentry 的 example 仍是野包——都按 ADR-0083/0085 记为「保留待接线」，接线另立 ADR。
+5. **存量四个 ≥1,500 行文件未拆**（`composer.dart` 2,040 / `sidebar.dart` 1,889 / `agent_runtime.dart` 1,852 / `plan_block_view.dart` 1,715）——D7 立的是「新增/改动文件 ≤1,000 行」这条律（已进 `AGENTS.md` §5 与两份 rules 镜像），不是批量重排的依据。

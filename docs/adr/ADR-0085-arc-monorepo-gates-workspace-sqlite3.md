@@ -1,12 +1,12 @@
 # ADR-0085: Monorepo 门禁对齐、pub workspace、drift 单库化与 sqlite3_flutter_libs 移除
 
-- **状态**: ACCEPTED
+- **状态**: RESOLVED（D1–D7 七批于 2026-10-15 全部落码；余留项见「验证」段的逐条标注与评估文档 §6 的「没做的事」清单）
 - **分类**: ARC
 - **优先级**: P1
 - **影响维度**: 评估阻断 / 幻觉源 / 生产功能
 - **日期**: 2026-10-15
 - **来源**: 用户拍板（packages/ 全量保留 + sqlite3_flutter_libs 弃用改 drift）+ 2026-10-15 monorepo 架构评估
-- **修复 commit**: 见各批次回填（D1–D7）
+- **修复 commit**: D1 `d1044fa` · D2 `0b63d5e` · D3 `e2c7e23` + `1d34b1f` · D4 `02d39ff`（+ `98f8457` 生成物重排）· D5 `883bca8` · D6 `3217f87` · D7 `f90fbd0` + 规则落盘 `8f7a3a6`
 
 ## 背景（Context）
 
@@ -30,7 +30,7 @@
 - **D4**：根 pubspec 加 `workspace:`（成员含全部 path 依赖包 + appunits_core/pudding），各包 `resolution: workspace`、SDK 对齐 `^3.11.5`；**全部包保留**，零消费者两包接入 workspace 以获得依赖审计与版本对齐（「保留 ≠ 豁免」），消费路径接线另立 ADR。
 - **D5**：门禁对齐——`app_common`/`plan_editor`/`stone_core` 进 format/analyze/单测；`board_panel`（ADR-0007 D5 先例）与 `sentry`（vendored fork，ADR-0083）保持排除，排除理由逐包写进 `analysis_options.yaml` 注释与 ADR-0083 实施清单；治理标准（包内测试底线、l10n 约定、stone_core 便利静态方法改 host 注入）一并落 ADR-0083。
 - **D6**：pr-check 加 `macos-latest` 构建 job（`flutter build macos --debug`，预算约 10 min）。
-- **D7**：`model_settings.dart` 按节拆分为多文件 + registry，新增/改动手写文件 ≤1,000 行预算自此生效。
+- **D7**：`model_settings.dart` 按节拆分为多文件 + registry，新增/改动手写文件 ≤1,000 行预算自此生效。**落地形状**（`f90fbd0`）：入口文件留 `_Section`、`SettingsPanel`、State 核心（字段/存盘/nav/`_content` 的 switch registry）与 `rebuild` 门，每一节与它的行件放进同库的 `part` 文件——选 `part` + `extension` 而不是「一节一个 widget 类 + 回调注入」，是因为前者让节体**逐字搬运**（行级 `comm` 比对：除 `setState`→`rebuild` 与脚手架外零增删），后者要重写三十八枚字段接线，把一次治理改动变成一次行为风险。预算文本进 `AGENTS.md` §5 与两份 rules 镜像（`8f7a3a6`）。
 
 取舍说明：D2 先于 D3（依赖面收窄后再动 ledger）；D4 先于 D5（workspace 解析是一次 `flutter pub get` 覆盖全仓的前提）；D7 最后（纯 lib 内部，避免与 D5 门禁交叉评审）。vendored sentry 不进 lint/format 的理由与 ADR-0083 一致：第三方 fork 的代码风格不应由本仓门禁负责，但其「能否编译」由 workspace 解析与 CI 构建天然覆盖。
 
@@ -42,12 +42,15 @@
 
 ## 验证（Verification）
 
-1. `grep -n sqlite3_flutter_libs pubspec.yaml` = 0；`flutter pub deps | grep sqlite3_flutter_libs` = 0。
-2. macOS 真机 `flutter run -d macos`：日志无 drift double-instantiation 告警、无 sqlite 加载异常；会话/企划/设置读写正常。
-3. `<support>/` 下 `usage.db` 不再被创建；旧数据经导入可在设置页用量视图读到。
-4. 根目录一次 `flutter pub get` 解析全部成员；`dart format --set-exit-if-changed` / `dart analyze --fatal-infos` 覆盖 `lib test tool spike packages/appunits/app_common packages/appunits/plan_editor packages/infras/stone_core` 零告警；`flutter test` 零新增失败（基线 `+1490 -1`）。
-5. pr-check 的 macOS job 绿。
-6. D7 后 `wc -l lib/ui/settings/model_settings.dart` < 1,000 且设置页全部既有测试不改断言全绿。
+逐条实测结果（2026-10-15，macOS 开发机；`+1490 -3` 里那三棵失败均为既有、与本 ADR 无关，见评估文档 §0 更正）：
+
+1. ✅ `grep -n sqlite3_flutter_libs pubspec.yaml` = 0；`flutter pub deps` 无该包。
+2. ⚠️ **这条最初没通过，而且是真机跑出来的**：D3 的一次性导入用第二个 `AppDatabase` 句柄读旧 `usage.db`，drift 的双实例检查按**类**计数，于是它想消掉的那条告警仍在启动日志里。修复 `1d34b1f`：`dontWarnAboutMultipleDatabases` 只在那枚句柄周围置位、`finally` 还原（drift 自己给的正当出口，不是全局消音——别处真出现两个活连接照样告警）。修后同一条真机路径 `WARNING (drift)` = 0，`lsof` 只见一个 `.db` 句柄，`planstar.db` 的 `usage_rows` 有数据。守卫 `test/usage_migration_quiet_test.dart` **单文件单 isolate**：drift 的计数是进程全局的，混在 `production_ops_test` 里它会**为错误的理由假绿**（第一版就是这么过的）。
+3. ✅ `<support>/usage/usage.db` 被导入并删除，`<support>/` 顶层不再出现第二个 db 文件；用量数据在共享库里可读。
+4. ✅ 根一次 `flutter pub get` 解析全部成员（含 `board_panel/example`；`sentry/example` 不能入成员，其野锁文件进 `.gitignore`）；format/analyze `--fatal-infos` 覆盖 `lib test tool spike packages/appunits/app_common packages/appunits/plan_editor packages/infras/stone_core` 零告警；`flutter test` 零新增失败。
+5. ⏸ pr-check 的 `build-macos` job 已落码（`3217f87`），**本地同口径代理证据** = `flutter build macos --debug` → `✓ Built …/Debug/PlanStar.app`；job 自身见绿要等 push（本 ADR 不代跑、也不声称已绿）。
+6. ✅ D7 后 `wc -l lib/ui/settings/model_settings.dart` = **751**（<1,000），14 个同库 `part` 文件、最大 865；设置页既有测试**一条断言未改**全绿。实操后果两条，改这块前先读：① 节体是 `extension _XxxSections on _SettingsPanelState`，而 **extension 不是 `State` 子类、够不着 protected 的 `setState`**，所以页面自己供一枚 `rebuild(VoidCallback)` 门给各节用（新节要走同一枚门，别在调用点手搓 ignore）；② 两棵扫源码的守卫（`settings_shad_adoption_test` 的 `_pageLines`、`settings_reach_test` 的「写入页」集合）必须顺着 `part` 声明读整棵库，只读入口文件会把设置页的写入点当成外部读取点，ADR-0022 那条律就空了。
+7. ⏸ **仍待**：Windows 的 `winsqlite3.dll` 回退链未实测（标「待 Windows 验证」）；真机 UI 走查（会话/企划/设置那一眼）不在本 harness 能力内；`app_common` 无 test/ 与两个零消费者包接线，各按 ADR-0083 追。
 
 ## 关联（Links）
 
