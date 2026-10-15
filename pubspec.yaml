@@ -81,7 +81,10 @@ dependencies:
   window_manager: ^0.5.2
   xterm: ^4.0.0
   drift: ^2.31.0
-  sqlite3_flutter_libs: ^0.6.0+eol
+  # Drift loads the system sqlite3 on all three desktop targets
+  # (sqlite3 ^2.9 falls back to /usr/lib/libsqlite3.dylib,
+  # libsqlite3.so, sqlite3.dll / winsqlite3.dll) — no bundled
+  # native library needed (ADR-0085 D2).
   screen_retriever: ^0.2.2
 
 dev_dependencies:
