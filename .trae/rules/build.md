@@ -68,6 +68,7 @@ flutter test packages/appunits/plan_editor packages/infras/stone_core
 - 产物与打包：artifact 名 `windows-x64` / `macos` / `linux-x64`；`publish_release == true` 时 macos 用 `hdiutil` 造 `agent-harness-macos.dmg`、windows 用 7z 造 zip、linux 造 tar.gz，再由 `softprops/action-gh-release@v2` 发到 GitHub Release（tag 用输入框里的 `release_tag`，如 `v0.1.0`）。
 - **CI 里没有任何签名/公证步骤**（`grep -c "codesign\|notarytool\|CERTIFICATE\|secrets\." .github/workflows/build.yml` = 0，仓库不配 secrets）。所以"CI 绿"或"GitHub Release 有产物"**都不等于可对外分发**——macOS 产物仍 ad-hoc（§4），Gatekeeper 会拦，未公证。别把这两件事混为一谈。
 - CI 也不跑 `spike/*` 与 `dart tool/contrast_check.dart`（它们不在 pr-check 的步骤里），这两类证据仍要本地跑或按 §7 立 TST/CFG 类 ADR 补进门禁。
+- **pr-check 还有第二个 job `build-macos`**（ADR-0085 D6）：`runs-on: macos-latest`，`pod install` 后 `flutter build macos --debug`——macOS 目标（Swift pods/entitlements/打包）从此每 push 真编译一次；签名的现状缺口不受它影响（§4）。
 
 ## 5. 出包检查清单（发布前逐项过，都要给证据）
 

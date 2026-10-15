@@ -53,3 +53,31 @@ jobs:
         # floor is recorded in ADR-0083); only packages with tests are listed —
         # a path with no tests would fail the step and fake the gate.
         run: flutter test packages/appunits/plan_editor packages/infras/stone_core
+
+  build-macos:
+    # ADR-0085 D6: the Ubuntu job only proves analysis and tests compile the
+    # Dart side; the macOS target itself (Swift pods, entitlements, app
+    # assembly) builds nowhere automatically. Debug keeps the ~10 min budget.
+    name: Build macOS
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: CocoaPods install
+        working-directory: macos
+        run: pod install
+
+      - name: Build macOS (debug)
+        run: flutter build macos --debug
